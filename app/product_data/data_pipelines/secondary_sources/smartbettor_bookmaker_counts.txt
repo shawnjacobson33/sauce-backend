@@ -1,0 +1,35 @@
+Aug 22, 2024 10:22 AM
+          bookmaker     0
+0             1XBET    68
+1         888 Sport    50
+2          BallyBet   152
+3      BetAnySports    28
+4           BetClic    42
+5            BetMGM  3365
+6         BetOnline   703
+7         BetRivers  3020
+8             BetUS   122
+9           Betsson    94
+10           Bovada  2295
+11          Coolbet   368
+12       DraftKings  2986
+13          ESPNBet  2598
+14        Everygame    52
+15          FanDuel  2648
+16            Fliff  1888
+17           GTbets    64
+18         HardRock  1993
+19  LiveScoreEU Bet   503
+20           LowVig   172
+21      Marathonbet    36
+22        Matchbook    88
+23        Nordicbet   102
+24         Pinnacle  1362
+25     SISportsbook    60
+26        Suprabets  1470
+27         UnibetEU   120
+28     William Hill   152
+29    WilliamHillUS  2109
+30        WindCreek   200
+31          betPARX   128
+Total Count: 29038
