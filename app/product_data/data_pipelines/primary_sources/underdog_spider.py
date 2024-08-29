@@ -125,7 +125,7 @@ class UnderdogSpider:
                     'multiplier': multiplier
                 })
 
-        with open('underdog_data.json', 'w') as f:
+        with open('../data_samples/underdog_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))

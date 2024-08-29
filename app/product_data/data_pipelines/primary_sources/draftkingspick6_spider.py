@@ -3,6 +3,7 @@ from datetime import datetime
 
 from bs4 import BeautifulSoup
 import cloudscraper
+import asyncio
 
 
 class DraftKingsPick6:
@@ -28,33 +29,41 @@ class DraftKingsPick6:
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
         }
 
-    def start_requests(self):
+    async def start_requests(self):
         url = "https://pick6.draftkings.com/"
 
-        response = self.scraper.get(url, headers=self.headers)
+        response = await self.async_get(url)
         if response.status_code == 200:
-            self.parse_sports(response)
+            await self.parse_sports(response)
         else:
             print(f"Failed to retrieve {url} with status code {response.status_code}")
 
-    def parse_sports(self, response):
-        soup = BeautifulSoup(response.text, 'html.parser')
+    async def async_get(self, url, **kwargs):
+        return await asyncio.to_thread(self.scraper.get, url, headers=self.headers, **kwargs)
+
+    async def parse_sports(self, response):
+        tasks, soup = [], BeautifulSoup(response.text, 'html.parser')
         for sport in [sport_div.text for sport_div in soup.find_all('div', {'class': 'dkcss-7q5fzm'}) if
                       not sport_div.text.isnumeric()]:
             url = response.url + f"?sport={sport}&_data=routes%2F_index"
 
-            new_response = self.scraper.get(url, headers=self.headers)
-            if new_response.status_code == 200:
-                self.parse_lines(new_response, sport)
-            else:
-                print(f"Failed to retrieve {url} with status code {new_response.status_code}")
+            tasks.append(self.fetch_and_parse_lines(url, sport))
 
-        with open('draftkingspick6_data.json', 'w') as f:
+        await asyncio.gather(*tasks)
+
+        with open('../data_samples/draftkingspick6_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))
 
-    def parse_lines(self, response, league):
+    async def fetch_and_parse_lines(self, url, sport):
+        response = await self.async_get(url)
+        if response.status_code == 200:
+            await self.parse_lines(response, sport)
+        else:
+            print(f"Failed to retrieve {url} with status code {response.status_code}")
+
+    async def parse_lines(self, response, league):
         text = response.text
 
         # needs cleaning
@@ -103,4 +112,9 @@ class DraftKingsPick6:
                 })
 
 
-DraftKingsPick6(batch_id="123-abc").start_requests()
+async def main():
+    spider = DraftKingsPick6(batch_id='123')
+    await spider.start_requests()
+
+if __name__ == "__main__":
+    asyncio.run(main())

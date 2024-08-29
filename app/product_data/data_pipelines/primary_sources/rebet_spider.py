@@ -1,18 +1,19 @@
 import json
 from datetime import datetime
-import aiohttp
+
 import asyncio
+import cloudscraper
 
 
 class RebetSpider:
     def __init__(self, batch_id: str):
         self.prop_lines = []
         self.batch_id = batch_id
-        self.session = None
+        self.scraper = cloudscraper.create_scraper()
 
     async def start_requests(self):
         url = 'https://api.rebet.app/prod/sportsbook-v3/get-new-odds-leagues'
-        headers = {
+        headers, json_data = {
             'Host': 'api.rebet.app',
             'content-type': 'application/json',
             'accept': 'application/json, text/plain, */*',
@@ -22,21 +23,21 @@ class RebetSpider:
             'sentry-trace': 'b6143e04f2ef4c4fa01c923aceca8cd8-69435e3a704f4230-0',
             'user-agent': 'rebetMobileApp/399 CFNetwork/1496.0.7 Darwin/23.5.0',
             'x_api_key': 'J9xowBQZM980G97zv9VoB9Ylady1pVtS5Ix9tuL1',
-        }
-        json_data = {
+        }, {
             'league_name': [],
         }
 
-        async with aiohttp.ClientSession() as session:
-            self.session = session
-            async with session.post(url, headers=headers, json=json_data) as response:
-                if response.status == 200:
-                    await self.parse_tourney_ids(response)
-                else:
-                    print(f"Failed to retrieve {url} with status code {response.status}")
+        response = await self.async_post(url, headers=headers, json=json_data)
+        if response.status_code == 200:
+            await self.parse_tourney_ids(response)
+        else:
+            print(f"Failed to retrieve {url} with status code {response.status}")
+
+    async def async_post(self, url, **kwargs):
+        return await asyncio.to_thread(self.scraper.post, url, **kwargs)
 
     async def parse_tourney_ids(self, response):
-        data = await response.json()
+        data = response.json()
 
         # get tournament_ids
         tournament_ids = dict()
@@ -68,20 +69,20 @@ class RebetSpider:
 
         await asyncio.gather(*tasks)
 
-        with open('rebet_data.json', 'w') as f:
+        with open('../data_samples/rebet_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))
 
     async def fetch_and_parse_lines(self, url, headers, json_data):
-        async with self.session.post(url, headers=headers, json=json_data) as response:
-            if response.status == 200:
-                await self.parse_lines(response)
-            else:
-                print(f"Failed to retrieve {url} with status code {response.status}")
+        response = await self.async_post(url, headers=headers, json=json_data)
+        if response.status_code == 200:
+            await self.parse_lines(response)
+        else:
+            print(f"Failed to retrieve {url} with status code {response.status}")
 
     async def parse_lines(self, response):
-        data = await response.json()
+        data = response.json()
 
         for event in data.get('data', {}).get('events', []):
             last_updated, league, game_time = event.get('updated_at'), event.get('league_name'), event.get('start_time')
@@ -109,10 +110,10 @@ class RebetSpider:
                                 subject = f'{player_name_components[1]} {player_name_components[0]}'
 
                         # get line
-                        outcomes = market.get('outcome', [])
+                        label, line, outcomes = '', '', market.get('outcome', [])
                         if isinstance(outcomes, list):
                             for outcome in outcomes:
-                                label, line, outcome_name, the_odds = '', '', outcome.get('name'), outcome.get('odds')
+                                outcome_name, the_odds = outcome.get('name'), outcome.get('odds')
                                 if (the_odds == '1.001') or (not the_odds):
                                     continue
 
@@ -141,7 +142,7 @@ class RebetSpider:
                                     'rebet_probability': rebet_probability
                                 })
                         else:
-                            label, line, outcome_name, the_odds = '', '', outcomes.get('name'), outcomes.get('odds')
+                            outcome_name, the_odds = outcomes.get('name'), outcomes.get('odds')
                             if (the_odds == '1.001') or (not the_odds):
                                 continue
 

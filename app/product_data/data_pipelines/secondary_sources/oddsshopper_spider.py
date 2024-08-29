@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 import json
 from urllib.parse import urlencode
@@ -11,8 +12,21 @@ class OddsShopperSpider:
         self.batch_id = batch_id
         self.scraper = cloudscraper.create_scraper()
 
-    def start_requests(self):
+    async def start_requests(self):
         url = f'https://www.oddsshopper.com/api/processingInfo/all'
+        headers = {
+            'accept': '*/*',
+            'accept-language': 'en-US,en;q=0.9',
+            'priority': 'u=1, i',
+            'referer': 'https://www.oddsshopper.com/liveodds/mlb',
+            'sec-ch-ua': '"Not)A;Brand";v="99", "Google Chrome";v="127", "Chromium";v="127"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
+        }
         cookies = {
             '_gcl_au': '1.1.1623273209.1722653498',
             '_ga': 'GA1.1.578395929.1722653499',
@@ -28,63 +42,47 @@ class OddsShopperSpider:
             '_ga_ZR0H6RP7T1': 'GS1.1.1722717778.9.1.1722719608.60.0.1437947439',
             '_hp2_id.2436895921': '%7B%22userId%22%3A%226206737379708108%22%2C%22pageviewId%22%3A%224229154290207751%22%2C%22sessionId%22%3A%228372167046692848%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D',
         }
-        headers = {
-            'accept': '*/*',
-            'accept-language': 'en-US,en;q=0.9',
-            'priority': 'u=1, i',
-            'referer': 'https://www.oddsshopper.com/liveodds/mlb',
-            'sec-ch-ua': '"Not)A;Brand";v="99", "Google Chrome";v="127", "Chromium";v="127"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"macOS"',
-            'sec-fetch-dest': 'empty',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-site': 'same-origin',
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
-        }
 
-        response = self.scraper.get(url=url, headers=headers, cookies=cookies)
+        response = await self.async_get(url, headers=headers, cookies=cookies)
         if response.status_code == 200:
-            self.parse_processing_info(response)
+            await self.parse_processing_info(response)
         else:
             print(f"Failed to retrieve {url} with status code {response.status_code}")
 
-    def parse_processing_info(self, response):
+    async def async_get(self, url, **kwargs):
+        return await asyncio.to_thread(self.scraper.get, url, **kwargs)
+
+    async def parse_processing_info(self, response):
         data = response.json()
 
         # Now proceed to fetch the matchups using the lastProcessed time
         url = f'https://www.oddsshopper.com/api/liveOdds/offers?league=all'
-        headers = {
-            'sec-ch-ua': '"Not)A;Brand";v="99", "Google Chrome";v="127", "Chromium";v="127"',
-            'Referer': 'https://www.oddsshopper.com/liveodds/mlb',
-            'sec-ch-ua-mobile': '?0',
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
-            'sec-ch-ua-platform': '"macOS"',
-        }
 
-        response = self.scraper.get(url=url, headers=headers)
+        response = await self.async_get(url)
         if response.status_code == 200:
-            self.parse_matchups(response, data['lastProcessed'])
+            await self.parse_matchups(response, data.get('lastProcessed'))
         else:
             print(f"Failed to retrieve {url} with status code {response.status_code}")
 
-    def parse_matchups(self, response, last_processed):
+    async def parse_matchups(self, response, last_processed):
         data = response.json()
 
-        for offer_category in data['offerCategories']:
-            if offer_category['name'] not in {'GameProps', 'PlayerFutures', 'TeamFutures'}:
-                for offer in offer_category['offers']:
-                    offer_id = offer['id']
+        tasks = []
+        for offer_category in data.get('offerCategories', []):
+            if offer_category.get('name') not in {'GameProps', 'PlayerFutures', 'TeamFutures'}:
+                market_category = offer_category.get('name')
+                for offer in offer_category.get('offers', []):
+                    offer_id, now = offer.get('id'), datetime.utcnow()
                     # Calculate current datetime and future date
-                    now = datetime.utcnow()
                     start_date = now.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
                     end_date = (now + timedelta(days=8)).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+
                     params = {
                         'state': 'NJ',
                         'startDate': start_date,
                         'endDate': end_date,
                         'edgeSportsbooks': 'Circa,FanDuel,Pinnacle',
                     }
-
                     url = f"https://api.oddsshopper.com/api/offers/{offer_id}/outcomes/live?{urlencode(params)}"
                     headers = {
                         'Accept': '*/*',
@@ -100,11 +98,10 @@ class OddsShopperSpider:
                         'sec-ch-ua-mobile': '?0',
                         'sec-ch-ua-platform': '"macOS"',
                     }
-                    response = self.scraper.get(url=url, headers=headers)
-                    if response.status_code == 200:
-                        self.parse_odds(response, last_processed, offer['leagueCode'], offer_category['name'])
-                    else:
-                        print(f"Failed to retrieve {url} with status code {response.status_code}")
+
+                    tasks.append(self.fetch_and_parse_lines(url, headers, params, last_processed, offer.get('leagueCode'), market_category))
+
+        await asyncio.gather(*tasks)
 
         self.count_lines_per_bookmaker()
         with open("oddsshopper_data.json", "w") as f:
@@ -112,25 +109,34 @@ class OddsShopperSpider:
 
         print(len(self.prop_lines))
 
-    def parse_odds(self, response, last_processed, league, market_category):
-        odds_data = json.loads(response.text)
+    async def fetch_and_parse_lines(self, url, headers, params, last_processed, league, market_category):
+        response = await self.async_get(url, headers=headers, params=params)
+        if response.status_code == 200:
+            await self.parse_lines(response, last_processed, league, market_category)
+        else:
+            print(f"Failed to retrieve {url} with status code {response.status_code}")
 
-        for event in odds_data:
+    async def parse_lines(self, response, last_processed, league, market_category):
+        data = response.json()
+
+        for event in data:
+            game_time, market, subject = event.get('startDate'), event.get('offerName'), event.get('eventName')
             for side in event.get('sides', []):
+                label = side.get('label', subject)
                 for outcome in side.get('outcomes', []):
                     prop_line = {
                         'batch_id': self.batch_id,
                         'time_processed': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         'last_updated': last_processed,
                         'league': league,
+                        'game_time': game_time,
                         'market_category': market_category,
-                        'market': event['offerName'],
-                        'start_date': event['startDate'],
-                        'subject': outcome.get('label', event['eventName']),
-                        'bookmaker': outcome['sportsbookCode'],
-                        'label': side.get('label', event['eventName']),
-                        'line': outcome.get('line', "0.5"),
-                        'odds': outcome['odds'],
+                        'market': market,
+                        'subject': outcome.get('label', subject),
+                        'bookmaker': outcome.get('sportsbookCode'),
+                        'label': label,
+                        'line': outcome.get('line', '0.5'),
+                        'odds': outcome.get('odds'),
                         'oddsshopper_ev': round(outcome.get('ev', float('nan')), 3)
                     }
 
@@ -142,4 +148,9 @@ class OddsShopperSpider:
         print(df.groupby('bookmaker').size().reset_index())
 
 
-OddsShopperSpider(batch_id="123-abc").start_requests()
+async def main():
+    spider = OddsShopperSpider(batch_id='123')
+    await spider.start_requests()
+
+if __name__ == "__main__":
+    asyncio.run(main())

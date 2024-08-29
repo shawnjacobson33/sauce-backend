@@ -85,7 +85,7 @@ class ThriveFantasySpider:
                     'line': line
                 })
 
-        with open('thrivefantasy_data.json', 'w') as f:
+        with open('../data_samples/thrivefantasy_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))

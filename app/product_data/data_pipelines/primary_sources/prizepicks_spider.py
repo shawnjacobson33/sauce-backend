@@ -114,7 +114,7 @@ class PrizePicksSpider:
                         'line': stat_line
                     })
 
-        with open('prizepicks_data.json', 'w') as f:
+        with open('../data_samples/prizepicks_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))

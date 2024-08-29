@@ -1,7 +1,10 @@
 import json
 from datetime import datetime
+
 import cloudscraper
 import asyncio
+
+from async_request_manager import AsyncRequestManager
 
 
 class HotStreakSpider:
@@ -27,14 +30,11 @@ class HotStreakSpider:
             'operationName': 'system',
         }
 
-        response = await self.async_post(url, json=json_data)
+        response = await AsyncRequestManager.post(url, headers=self.headers, json=json_data)
         if response.status_code == 200:
             await self.parse_league_aliases(response)
         else:
             print(f"Failed to retrieve {url} with status code {response.status_code}")
-
-    async def async_post(self, url, **kwargs):
-        return await asyncio.to_thread(self.scraper.post, url, headers=self.headers, **kwargs)
 
     async def parse_league_aliases(self, response):
         data = response.json().get('data')
@@ -63,7 +63,7 @@ class HotStreakSpider:
 
         await asyncio.gather(*tasks)
 
-        with open('hotstreak_data.json', 'w') as f:
+        with open('../data_samples/hotstreak_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))

@@ -34,13 +34,11 @@ class BoomFantasySpider:
             lines = file.readlines()
 
             # Assign the first and second lines to variables
-            self.access_token = lines[0].strip()
-            self.refresh_token = lines[1].strip()
+            self.access_token, self.refresh_token = lines[0].strip(), lines[1].strip()
 
     def start_requests(self):
         url = "https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/graphql"
-        headers = get_headers(self.access_token)
-        data = {
+        headers, data = get_headers(self.access_token), {
             "query": """query EvergreenContest(
             $id: ID!
             $questionStatuses: [QuestionStatus!]!
@@ -336,7 +334,7 @@ class BoomFantasySpider:
             print("Attempting to refresh tokens...")
 
             tokens_url = 'https://production-api.boomfantasy.com/api/v1/sessions'
-            tokens_headers = {
+            tokens_headers, json_data = {
                 'Host': 'production-api.boomfantasy.com',
                 'content-type': 'application/json',
                 'accept': 'application/json',
@@ -349,8 +347,7 @@ class BoomFantasySpider:
                 'x-app-build': '1',
                 'x-app-version': '785',
                 'x-platform': 'ios',
-            }
-            json_data = {
+            }, {
                 'authentication': {
                     'type': 'refresh',
                     'credentials': {
@@ -376,11 +373,9 @@ class BoomFantasySpider:
     def parse_tokens(self, response):
         data = response.json()
 
-        self.access_token = data.get('accessToken')
-        self.refresh_token = data.get('refreshToken')
+        self.access_token, self.refresh_token = data.get('accessToken'), data.get('refreshToken')
         with open(self.file_path, 'w') as file:
-            file.write(self.access_token + '\n')
-            file.write(self.refresh_token + '\n')
+            file.write(self.access_token + '\n'), file.write(self.refresh_token + '\n')
 
     def parse_lines(self, response):
         data = response.json().get('data')
@@ -446,7 +441,7 @@ class BoomFantasySpider:
                                         'line': line
                                     })
 
-            with open('boomfantasy_data.json', 'w') as f:
+            with open('../data_samples/boomfantasy_data.json', 'w') as f:
                 json.dump(self.prop_lines, f, default=str)
 
             print(len(self.prop_lines))

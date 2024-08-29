@@ -1,14 +1,15 @@
 import json
 from datetime import datetime
-import aiohttp
+
 import asyncio
+import cloudscraper
 
 
 class OwnersBoxSpider:
     def __init__(self, batch_id: str):
         self.prop_lines = []
         self.batch_id = batch_id
-        self.session = None
+        self.scraper = cloudscraper.create_scraper()
         self.headers = {
             'Host': 'app.ownersbox.com',
             'accept': 'application/json',
@@ -25,21 +26,22 @@ class OwnersBoxSpider:
     async def start_requests(self):
         url = 'https://app.ownersbox.com/fsp-marketing/getSportInfo'
 
-        async with aiohttp.ClientSession() as session:
-            self.session = session
-            async with session.get(url, headers=self.headers, cookies=self.cookies) as response:
-                if response.status == 200:
-                    await self.parse_leagues(response)
-                else:
-                    print(f"Failed to retrieve {url} with status code {response.status}")
-                    print(response.content)
+        response = await self.async_get(url)
+        if response.status_code == 200:
+            await self.parse_leagues(response)
+        else:
+            print(f"Failed to retrieve {url} with status code {response.status}")
+
+    async def async_get(self, url, **kwargs):
+        return await asyncio.to_thread(self.scraper.get, url, headers=self.headers, cookies=self.cookies, **kwargs)
 
     async def parse_leagues(self, response):
-        data = await response.json()
+        data = response.json()
+
+        url = 'https://app.ownersbox.com/fsp/v2/market'
 
         tasks = []
         for league in data:
-            url = 'https://app.ownersbox.com/fsp/v2/market'
             params = {
                 'sport': league,
             }
@@ -48,21 +50,21 @@ class OwnersBoxSpider:
 
         await asyncio.gather(*tasks)
 
-        with open('ownersbox_data.json', 'w') as f:
+        with open('../data_samples/ownersbox_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))
 
     async def fetch_and_parse_lines(self, url, params):
-        async with self.session.get(url, headers=self.headers, cookies=self.cookies, params=params) as response:
-            if response.status == 200:
-                await self.parse_lines(response)
-            else:
-                print(f"Failed to retrieve {url} with status code {response.status}")
+        response = await self.async_get(url, params=params)
+        if response.status_code == 200:
+            await self.parse_lines(response)
+        else:
+            print(f"Failed to retrieve {url} with status code {response.status}")
 
     async def parse_lines(self, response):
         # get body content in json format
-        data = await response.json()
+        data = response.json()
 
         for prop_line in data.get('markets', []):
             league = prop_line.get('sport')

@@ -11,7 +11,7 @@ class VividPicksSpider:
 
     def start_requests(self):
         url = 'https://api.betcha.one/v1/game/activePlayersForLeagueBoard'
-        headers = {
+        headers, json_data = {
             'Host': 'api.betcha.one',
             'x-px-authorization': '3:813cbf65244904a5212f61f40a60ed86a6f2f1a951def7deb5a99ddcf2f01b67:y1vgcvZN6Ft0n1AuKpbq7ky2Y9uxN6fMF22sGO7mbzy3FM5SW0tUsdOsM2OCTSZuIvuhdxVkcANEEmFBzkwPZw==:1000:lfXRuGZ3/0l/vJ0slGB0923Os2OyFyKuXFu9awQ/FN6W9iJkNUDGuMwzq+J2glanORDV6OA1InID5OG1mIdPnvXomHwAi07a05zRAlDRrfsZGlfodXmmbDFXp+Arm+DCi8mz+iQGJPldNrx9fEtSFSyWOFFdBLkgjzhQDj0raeFi/bfwdV9F9CIegRaRNtNlWftBmdYZWUiwK9OyrrTngFqeVm+LkbLn+olbEAZspnk=',
             'cache-control': 'no-cache',
@@ -32,8 +32,7 @@ class VividPicksSpider:
             'content-type': 'application/json',
             'x-px-uuid': 'de460224-5e97-11ef-ac2f-ad7d00d797ac',
             'sentry-trace': '2dc7d3ce69644329b9c80f91212dc785-08ef37f394df43a6-0',
-        }
-        json_data = {
+        }, {
             'league': 'Multi-Sport',
             'matchUp': False,
         }
@@ -104,7 +103,7 @@ class VividPicksSpider:
                                     'odds_jam_prop_sources': odds_jam_prop_sources
                                 })
 
-        with open('vividpicks_data.json', 'w') as f:
+        with open('../data_samples/vividpicks_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))

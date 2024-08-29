@@ -65,7 +65,7 @@ class DraftersSpider:
                         'line': line
                     })
 
-        with open('drafters_data.json', 'w') as f:
+        with open('../data_samples/drafters_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))

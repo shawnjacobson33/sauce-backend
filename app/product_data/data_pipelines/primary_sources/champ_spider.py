@@ -1,7 +1,8 @@
+import asyncio
 import json
 from datetime import datetime
 
-import cloudscraper
+from async_request_manager import AsyncRequestManager
 
 
 class ChampSpider:
@@ -9,7 +10,9 @@ class ChampSpider:
         self.prop_lines = []
         self.batch_id = batch_id
 
-    def start_requests(self):
+        self.arm = AsyncRequestManager()
+
+    async def start_requests(self):
         url = 'https://core-api.champfantasysports.com/'
         headers = {
             "Host": "core-api.champfantasysports.com",
@@ -27,6 +30,7 @@ class ChampSpider:
             "X-APOLLO-OPERATION-NAME": "ReadPicks"
         }
 
+        tasks = []
         for league in ['MLB', 'NFL', 'CFB', 'NBA', 'CBB', 'NHL']:
             data = {
                 "operationName": "ReadPicks",
@@ -138,26 +142,57 @@ class ChampSpider:
                 }
             }
 
-            scraper = cloudscraper.create_scraper()
-            response = scraper.post(url=url, headers=headers, json=data)
-            if response.status_code == 200:
-                self.parse_lines(response, league)
-            else:
-                print(f"Failed to retrieve {url} with status code {response.status_code}")
+            tasks.append(self.arm.post(url, self.parse_lines, league, headers=headers, json=data))
+
+        await asyncio.gather(*tasks)
+
+        with open('../data_samples/champ_data.json', 'w') as f:
+            json.dump(self.prop_lines, f, default=str)
+
+        print(len(self.prop_lines))
 
     def parse_lines(self, response, league):
         # get body content in json format
-        data = response.json()
+        data = response.json().get('data', {}).get('readPicks', {})
 
         for event in data.get('items', []):
             game_info = event.get('title')
             for player in event.get('competitors', []):
-                competitor = player.get('competitor')
+                subject, position, subject_team, competitor = '', '', '', player.get('competitor')
                 if competitor:
-                    subject = competitor.get('longName')
-                    position = competitor.get('position')
+                    subject, position = competitor.get('longName'), competitor.get('position')
                     team = competitor.get('team')
                     if team:
-                        player_team = team.get('shortName')
+                        subject_team = team.get('shortName')
+
+                for prop in player.get('props', []):
+                    market, line = prop.get('title'), prop.get('value')
+                    labels, multiplier, boost = ['Over', 'Under'], None, prop.get('boost')
+                    if boost:
+                        multiplier = boost.get('multiplier')
+                        labels = ['Under'] if multiplier < 1 else ['Over']
+
+                    for label in labels:
+                        self.prop_lines.append({
+                            'batch_id': self.batch_id,
+                            'time_processed': datetime.now(),
+                            'league': league,
+                            'game_info': game_info,
+                            'market_category': 'player_props',
+                            'market': market,
+                            'subject_team': subject_team,
+                            'subject': subject,
+                            'position': position,
+                            'bookmaker': 'Champ',
+                            'label': label,
+                            'line': line,
+                            'multiplier': multiplier
+                        })
 
 
+async def main():
+    spider = ChampSpider(batch_id='123')
+    await spider.start_requests()
+
+if __name__ == "__main__":
+    asyncio.run(main())

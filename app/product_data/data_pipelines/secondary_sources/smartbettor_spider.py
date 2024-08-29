@@ -54,17 +54,27 @@ class SmartBettorSpider:
             "hardrockbet": "HardRock", "betanysports": "BetAnySports"
         }
         for event in data:
+            last_updated, league = event.get('time_difference_formatted'), event.get('sport_league_display')
+            game_time, market = event.get('game_date'), event.get('market_display').strip()
+            bet_type, home_team, away_team = event.get('bet_type'), event.get('home_team'), event.get('away_team')
+
             for subject_key in ['wager_display', 'wager_display_other']:
+                subject = event.get(subject_key)
+
+                if subject_key == 'wager_display_other':
+                    line = event.get('outcome_point_other')
+                    if not line:
+                        line = '0.5'
+                else:
+                    line = event.get('outcome_point')
+                    if not line:
+                        line = '0.5'
+
                 for bookmaker_key, bookmaker_name in bookmaker_keys.items():
                     if (bookmaker_key not in event) or (f"{bookmaker_key}_other" not in event):
                         continue
 
-                    last_updated = event.get('time_difference_formatted')
-                    league = event.get('sport_league_display')
-                    start_date = event.get('game_date')
-
                     # get market
-                    market = event.get('market_display').strip()
                     if 'Moneylne' in market:
                         market = 'Moneyline'
 
@@ -74,7 +84,6 @@ class SmartBettorSpider:
                         market_category = 'player_props'
 
                     # weird edge case for soccer betting where the wager display only includes the subject
-                    subject = event[subject_key]
                     if market != 'Draw No Bet':
                         subject_components = subject.split()
                         if len(subject_components) > 2 and (subject_components[-2] == 'Over') or (subject_components[-2] == 'Under'):
@@ -82,30 +91,22 @@ class SmartBettorSpider:
                             subject = ' '.join(subject_components[:-2])
                         # Game Totals Market
                         elif (subject_components[0] == 'Over') or (subject_components[0] == 'Under'):
-                            subject = f"{event['home_team']} vs. {event['away_team']}"
+                            subject = f"{home_team} vs. {away_team}"
                         # Spread Market
                         elif ("+" in subject) or ("-" in subject):
                             subject = ' '.join(subject_components[:-1])
 
                     # get odds, label and line
                     if subject_key == 'wager_display_other':
-                        odds = event[f'{bookmaker_key}_other']
-                        label = event['outcome_name_other']
-
-                        line = event['outcome_point_other']
-                        if not line:
-                            line = "0.5"
+                        odds, label = event.get(f'{bookmaker_key}_other'), event.get('outcome_name_other')
                     else:
-                        odds = event[bookmaker_key]
-                        label = event['outcome_name']
+                        odds, label = event.get(bookmaker_key), event.get('outcome_name')
 
-                        line = event['outcome_point']
-                        if not line:
-                            line = "0.5"
                     if (not odds) or (odds == 0.0):
                         continue
+
                     # label would be empty otherwise
-                    if event['bet_type'] == 'moneyline':
+                    if bet_type == 'moneyline':
                         label = 'Moneyline'
                     # Label would otherwise be -3.5
                     elif label not in {'Over', 'Under'}:
@@ -119,9 +120,9 @@ class SmartBettorSpider:
                         'time_processed': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         'last_updated': last_updated,
                         'league': league,
+                        'game_time': game_time,
                         'market_category': market_category,
                         'market': market,
-                        'start_date': start_date,
                         'subject': subject,
                         'bookmaker': bookmaker_name,
                         'label': label,

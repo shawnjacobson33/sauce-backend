@@ -79,7 +79,7 @@ class ParlayPlaySpider:
                                 'is_boosted_payout': is_boosted_payout
                             })
 
-        with open('parlayplay_data.json', 'w') as f:
+        with open('../data_samples/parlayplay_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))

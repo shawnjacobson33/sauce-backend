@@ -1,5 +1,4 @@
 import json
-from collections import defaultdict
 from datetime import datetime
 
 import cloudscraper
@@ -95,7 +94,7 @@ class SleeperSpider:
                     'multiplier': multiplier
                 })
 
-        with open('sleeper_data.json', 'w') as f:
+        with open('../data_samples/sleeper_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))

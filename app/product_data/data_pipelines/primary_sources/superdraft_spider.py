@@ -101,7 +101,7 @@ class SuperDraftSpider:
                         'line': line
                     })
 
-        with open('superdraft_data.json', 'w') as f:
+        with open('../data_samples/superdraft_data.json', 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
         print(len(self.prop_lines))
