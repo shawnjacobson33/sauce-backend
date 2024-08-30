@@ -1,17 +1,20 @@
 import json
+import os
+import time
+import uuid
 from datetime import datetime
 
 import asyncio
 
-from async_request_manager import AsyncRequestManager
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class DabbleSpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = AsyncRequestManager()
+        self.arm = arm
         self.headers, self.cookies = {
             'Host': 'api.dabble.com',
             'accept': 'application/json',
@@ -22,12 +25,12 @@ class DabbleSpider:
             '__cf_bm': 'GqRmT59qXP4bcrTakr0U9arqC5aL_cYDP4z6c6pqJsU-1724117586-1.0.1.1-zVMLtycAgbyLZUP5nD_iyf4qGnB4Z0d4_XP4ChE1aGIy09l1G4qGnksw7POFGsTpeR_n9QcKjd_wOk7_Ae_Uww',
         }
 
-    async def start_requests(self):
+    async def start(self):
         url = 'https://api.dabble.com/competitions/active/'
 
-        await self.arm.get(url, self.parse_competitions, headers=self.headers, cookies=self.cookies)
+        await self.arm.get(url, self._parse_competitions, headers=self.headers, cookies=self.cookies)
 
-    async def parse_competitions(self, response):
+    async def _parse_competitions(self, response):
         data = response.json().get('data')
 
         tasks = []
@@ -43,16 +46,18 @@ class DabbleSpider:
                 ],
             }
 
-            tasks.append(self.arm.get(url, self.parse_events, league, params=params))
+            tasks.append(self.arm.get(url, self._parse_events, league, params=params))
 
         await asyncio.gather(*tasks)
 
-        with open('../data_samples/dabble_data.json', 'w') as f:
+        relative_path = 'data_samples/dabble_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(len(self.prop_lines))
+        print(f'[Dabble]: {len(self.prop_lines)} lines')
 
-    async def parse_events(self, response, league):
+    async def _parse_events(self, response, league):
         data = response.json()
 
         tasks = []
@@ -62,11 +67,11 @@ class DabbleSpider:
             if event.get('isDisplayed'):
                 url = f'https://api.dabble.com/sportfixtures/details/{event_id}'
 
-                tasks.append(self.arm.get(url, self.parse_lines, league, game_info, last_updated))
+                tasks.append(self.arm.get(url, self._parse_lines, league, game_info, last_updated))
 
         await asyncio.gather(*tasks)
 
-    async def parse_lines(self, response, league, game_info, last_updated):
+    async def _parse_lines(self, response, league, game_info, last_updated):
         data = response.json().get('data')
 
         # get market groups
@@ -102,8 +107,12 @@ class DabbleSpider:
 
 
 async def main():
-    spider = DabbleSpider(batch_id='123')
-    await spider.start_requests()
+    spider = DabbleSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[Dabble]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":
     asyncio.run(main())

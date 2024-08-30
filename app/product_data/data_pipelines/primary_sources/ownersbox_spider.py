@@ -1,16 +1,21 @@
 import json
+import os
+import time
+import uuid
 from datetime import datetime
 
 import asyncio
-import cloudscraper
+
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class OwnersBoxSpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
-        self.scraper = cloudscraper.create_scraper()
-        self.headers = {
+
+        self.arm = arm
+        self.headers, self.cookies = {
             'Host': 'app.ownersbox.com',
             'accept': 'application/json',
             'content-type': 'application/json',
@@ -18,24 +23,16 @@ class OwnersBoxSpider:
             'ownersbox_version': '7.12.0',
             'accept-language': 'en-US,en;q=0.9',
             'ownersbox_device': 'ios',
-        }
-        self.cookies = {
+        }, {
             'obauth': 'eyJhbGciOiJIUzUxMiJ9.eyJvYnRva2VuIjoiMFE2SzJRMVkxTjhEIiwidXNlclN0YXRlIjoiQUNUSVZFIiwiaXNzIjoiT3duZXJzQm94IiwidmVyaWZpZWQiOmZhbHNlLCJ0b2tlbkV4cGlyeSI6MTcyNDEyMDAxMjc4MCwic2Vzc2lvbklkIjozNDE5MDU1MDk2fQ.9dcOi9DJ8_R1PTD4-m3VqXebAj1pZ0LAFzaXsaIGkIsvrjLOjF9jW5KNQEoDYOKjLhyzahtGd7VObdR1ABwNUA',
         }
 
-    async def start_requests(self):
+    async def start(self):
         url = 'https://app.ownersbox.com/fsp-marketing/getSportInfo'
 
-        response = await self.async_get(url)
-        if response.status_code == 200:
-            await self.parse_leagues(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status}")
+        await self.arm.get(url, self._parse_leagues, headers=self.headers, cookies=self.cookies)
 
-    async def async_get(self, url, **kwargs):
-        return await asyncio.to_thread(self.scraper.get, url, headers=self.headers, cookies=self.cookies, **kwargs)
-
-    async def parse_leagues(self, response):
+    async def _parse_leagues(self, response):
         data = response.json()
 
         url = 'https://app.ownersbox.com/fsp/v2/market'
@@ -46,23 +43,18 @@ class OwnersBoxSpider:
                 'sport': league,
             }
 
-            tasks.append(self.fetch_and_parse_lines(url, params))
+            tasks.append(self.arm.get(url, self._parse_lines, headers=self.headers, cookies=self.cookies, params=params))
 
         await asyncio.gather(*tasks)
 
-        with open('../data_samples/ownersbox_data.json', 'w') as f:
+        relative_path = 'data_samples/ownersbox_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(len(self.prop_lines))
+        print(f'[OwnersBox]: {len(self.prop_lines)} lines')
 
-    async def fetch_and_parse_lines(self, url, params):
-        response = await self.async_get(url, params=params)
-        if response.status_code == 200:
-            await self.parse_lines(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status}")
-
-    async def parse_lines(self, response):
+    async def _parse_lines(self, response):
         # get body content in json format
         data = response.json()
 
@@ -130,8 +122,12 @@ class OwnersBoxSpider:
 
 
 async def main():
-    spider = OwnersBoxSpider(batch_id='12345')
-    await spider.start_requests()
+    spider = OwnersBoxSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[OwnersBox]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":
     asyncio.run(main())

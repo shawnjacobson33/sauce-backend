@@ -1,15 +1,21 @@
+import asyncio
 import json
+import os
+import time
+import uuid
 from datetime import datetime
 
-import cloudscraper
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class ParlayPlaySpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
 
-    def start_requests(self):
+        self.arm = arm
+
+    async def start(self):
         url = 'https://parlayplay.io/api/v1/crossgame/search/?sport=All&league=&includeAlt=true'
         headers = {
             'sec-ch-ua': '"Not)A;Brand";v="99", "Google Chrome";v="127", "Chromium";v="127"',
@@ -24,13 +30,9 @@ class ParlayPlaySpider:
             'sec-ch-ua-platform': '"macOS"',
         }
 
-        response = cloudscraper.create_scraper().get(url, headers=headers)
-        if response.status_code == 200:
-            self.parse_lines(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
+        await self.arm.get(url, self._parse_lines, headers=headers)
 
-    def parse_lines(self, response):
+    async def _parse_lines(self, response):
         data = response.json()
         last_updated = data.get('lastUpdated')
         if last_updated:
@@ -79,10 +81,21 @@ class ParlayPlaySpider:
                                 'is_boosted_payout': is_boosted_payout
                             })
 
-        with open('../data_samples/parlayplay_data.json', 'w') as f:
+        relative_path = 'data_samples/parlayplay_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(len(self.prop_lines))
+        print(f'[ParlayPlay]: {len(self.prop_lines)} lines')
 
 
-ParlayPlaySpider(batch_id="123-abc").start_requests()
+async def main():
+    spider = ParlayPlaySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[ParlayPlay]: {round(end_time - start_time, 2)}s')
+
+if __name__ == "__main__":
+    asyncio.run(main())

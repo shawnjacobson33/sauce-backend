@@ -1,17 +1,21 @@
 import json
+import os
+import time
+import uuid
+import random
 from datetime import datetime
 
-import cloudscraper
 import asyncio
 
-from async_request_manager import AsyncRequestManager
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class HotStreakSpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
-        self.scraper = cloudscraper.create_scraper()
+
+        self.arm = arm
         self.headers = {
             'Host': 'api.hotstreak.gg',
             'accept': '*/*',
@@ -22,7 +26,7 @@ class HotStreakSpider:
             'accept-language': 'en-US,en;q=0.9',
         }
 
-    async def start_requests(self):
+    async def start(self):
         url = 'https://api.hotstreak.gg/graphql'
         json_data = {
             'query': 'query system { system {\n        __typename\ngeneratedAt\nmaximumDeposit\nmaximumInPlayWager\nmaximumPregameWager\nmaximumReferrals\nminimumDeposit\nminimumInPlayWager\nminimumPregameWager\nminimumWithdraw\npublicBroadcastChannel\npusherAppKey\npusherCluster\nreferrerBonus\nsports {\n\n__typename\nid\nactive\ncreatedAt\ngeneratedAt\ninPlay\nleagues {\n\n__typename\nid\nalias\ncreatedAt\ngeneratedAt\nname\novertimeClock\novertimePeriods\nregulationClock\nregulationPeriods\nsportId\nupdatedAt\n\n}\nname\nupdatedAt\n\n}\n\n      } }',
@@ -30,13 +34,9 @@ class HotStreakSpider:
             'operationName': 'system',
         }
 
-        response = await AsyncRequestManager.post(url, headers=self.headers, json=json_data)
-        if response.status_code == 200:
-            await self.parse_league_aliases(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
+        await self.arm.post(url, self._parse_league_aliases, headers=self.headers, json=json_data)
 
-    async def parse_league_aliases(self, response):
+    async def _parse_league_aliases(self, response):
         data = response.json().get('data')
 
         system = data.get('system')
@@ -48,7 +48,7 @@ class HotStreakSpider:
         }
 
         tasks = []
-        for i in range(1, 50):
+        for i in range(1, random.randint(45, 55)):
             url = 'https://api.hotstreak.gg/graphql'
             json_data = {
                 'query': 'query search($query: String, $page: Int, $gameFilter: [String!], $sportFilter: [String!], $teamFilter: [String!], $positionFilter: [String!], $categoryFilter: [String!], $promotedFilter: Boolean, $participantFilter: [String!], $leagueFilter: [String!]) { search(query: $query, page: $page, gameFilter: $gameFilter, sportFilter: $sportFilter, teamFilter: $teamFilter, positionFilter: $positionFilter, categoryFilter: $categoryFilter, promotedFilter: $promotedFilter, participantFilter: $participantFilter, leagueFilter: $leagueFilter) {\n        __typename\ngeneratedAt\ncategoryFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\ngameFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\ngames {\n\n__typename\nid\n... on EsportGame {\n\n__typename\nid\nminimumNumberOfGames\nvideogameTitle\n\n}\n... on GolfGame {\n\n__typename\nid\npairings {\n\n__typename\nid\nbackNine\ncreatedAt\ngameId\ngeneratedAt\nparticipantIds\nteeTime\nupdatedAt\n\n}\ntournament {\n\n__typename\nid\nname\n\n}\n\n}\nleagueId\nopponents {\n\n__typename\nid\ndesignation\ngameId\nteam {\n\n__typename\nid\ncreatedAt\ngeneratedAt\nlogoUrl\nmarket\nname\nshortName\nupdatedAt\n\n}\n\n}\nperiod\nreplay\nscheduledAt\nstatus\n\n}\nleagueFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\nmarkets {\n\n__typename\nid\ngeneratedAt\nlines\noptions\nprobabilities\n\n}\nparticipants {\n\n__typename\nid\ncategories\nopponentId\nplayer {\n\n__typename\nid\ndisplayName\nexternalId\nfirstName\nheadshotUrl\ninjuries {\n\n__typename\nid\ncomment\ncreatedAt\ndescription\ngeneratedAt\nstatus\nstatusDate\nupdatedAt\n\n}\nlastName\nnickname\nnumber\nposition\nshortDisplayName\ntraits\n\n}\nposition\n\n}\npositionFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\nsportFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\nteamFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\nstats\ntotalCount\n\n      } }',
@@ -59,23 +59,18 @@ class HotStreakSpider:
                 'operationName': 'search',
             }
 
-            tasks.append(self.fetch_and_parse_lines(url, json_data, league_aliases))
+            tasks.append(self.arm.post(url, self._parse_lines, league_aliases, headers=self.headers, json=json_data))
 
         await asyncio.gather(*tasks)
 
-        with open('../data_samples/hotstreak_data.json', 'w') as f:
+        relative_path = 'data_samples/hotstreak_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(len(self.prop_lines))
+        print(f'[HotStreak]: {len(self.prop_lines)} lines')
 
-    async def fetch_and_parse_lines(self, url, json_data, league_aliases):
-        response = await self.async_post(url, json=json_data)
-        if response.status_code == 200:
-            await self.parse_lines(response, league_aliases)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
-
-    async def parse_lines(self, response, league_aliases):
+    async def _parse_lines(self, response, league_aliases):
         # get body content in json format
         data = response.json().get('data')
         search = data.get('search')
@@ -152,8 +147,12 @@ class HotStreakSpider:
 
 
 async def main():
-    spider = HotStreakSpider(batch_id='123')
-    await spider.start_requests()
+    spider = HotStreakSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[HotStreak]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,14 +1,19 @@
+import asyncio
 import json
+import os
+import time
+import uuid
 from datetime import datetime
 
-import cloudscraper
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class SleeperSpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
-        self.scraper = cloudscraper.create_scraper()
+
+        self.arm = arm
         self.headers = {
             'Host': 'api.sleeper.app',
             'x-amp-session': '1724697278937',
@@ -23,19 +28,15 @@ class SleeperSpider:
             'x-bundle': 'com.blitzstudios.sleeperbot',
         }
 
-    def start_requests(self):
+    async def start(self):
         url = 'https://api.sleeper.app/players'
         params = {
             'exclude_injury': 'false',
         }
 
-        response = self.scraper.get(url, headers=self.headers, params=params)
-        if response.status_code == 200:
-            self.parse_players(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
+        await self.arm.get(url, self._parse_players, headers=self.headers, params=params)
 
-    def parse_players(self, response):
+    async def _parse_players(self, response):
         data = response.json()
 
         # get players
@@ -55,13 +56,9 @@ class SleeperSpider:
 
         url = 'https://api.sleeper.app/lines/available?dynamic=true&include_preseason=true&eg=15.control'
 
-        response = self.scraper.get(url, headers=self.headers)
-        if response.status_code == 200:
-            self.parse_lines(response, players)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
+        await self.arm.get(url, self._parse_lines, players, headers=self.headers)
 
-    def parse_lines(self, response, players):
+    async def _parse_lines(self, response, players):
         data = response.json()
 
         for line in data:
@@ -94,10 +91,21 @@ class SleeperSpider:
                     'multiplier': multiplier
                 })
 
-        with open('../data_samples/sleeper_data.json', 'w') as f:
+        relative_path = 'data_samples/sleeper_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(len(self.prop_lines))
+        print(f'[Sleeper]: {len(self.prop_lines)} lines')
 
 
-SleeperSpider(batch_id='123').start_requests()
+async def main():
+    spider = SleeperSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[Sleeper]: {round(end_time - start_time, 2)}s')
+
+if __name__ == "__main__":
+    asyncio.run(main())

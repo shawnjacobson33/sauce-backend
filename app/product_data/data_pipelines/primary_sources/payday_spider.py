@@ -1,15 +1,20 @@
 import json
+import os
+import time
+import uuid
 from datetime import datetime
 
 import asyncio
-import cloudscraper
+
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class PaydaySpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
-        self.scraper = cloudscraper.create_scraper()
+
+        self.arm = arm
         self.headers = {
             'Host': 'api.paydayfantasy.com',
             'accept': '*/*',
@@ -19,22 +24,15 @@ class PaydaySpider:
             'accept-language': 'en-US,en;q=0.9',
         }
 
-    async def start_requests(self):
+    async def start(self):
         url = 'https://api.paydayfantasy.com/api/v2/app/contests/total'
         params = {
             'include_solo_contests': '1',
         }
 
-        response = await self.async_get(url, params=params)
-        if response.status_code == 200:
-            await self.parse_leagues(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status}")
+        await self.arm.get(url, self._parse_leagues, headers=self.headers, params=params)
 
-    async def async_get(self, url, **kwargs):
-        return await asyncio.to_thread(self.scraper.get, url, headers=self.headers, **kwargs)
-
-    async def parse_leagues(self, response):
+    async def _parse_leagues(self, response):
         data = response.json()
 
         url = 'https://api.paydayfantasy.com/api/v2/app/contests'
@@ -48,23 +46,18 @@ class PaydaySpider:
                     'include_solo_contests': '1',
                 }
 
-                tasks.append(self.fetch_and_parse_contests(url, params, league))
+                tasks.append(self.arm.get(url, self._parse_contests, league, headers=self.headers, params=params))
 
         await asyncio.gather(*tasks)
 
-        with open('../data_samples/payday_data.json', 'w') as f:
+        relative_path = 'data_samples/payday_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(len(self.prop_lines))
+        print(f'[Payday]: {len(self.prop_lines)} lines')
 
-    async def fetch_and_parse_contests(self, url, params, league):
-        response = await self.async_get(url, params=params)
-        if response.status_code == 200:
-            await self.parse_contests(response, league)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status}")
-
-    async def parse_contests(self, response, league):
+    async def _parse_contests(self, response, league):
         data = response.json()
 
         contests = data.get('data', {}).get('contests')
@@ -75,13 +68,9 @@ class PaydaySpider:
 
                 url = f'https://api.paydayfantasy.com/api/v2/app/contests/{parlay_contest_id}/games'
 
-                response = await self.async_get(url)
-                if response.status_code == 200:
-                    await self.parse_lines(response, league)
-                else:
-                    print(f"Failed to retrieve {url} with status code {response.status}")
+                await self.arm.get(url, self._parse_lines, league, headers=self.headers)
 
-    async def parse_lines(self, response, league):
+    async def _parse_lines(self, response, league):
         data = response.json()
 
         for game in data.get('data', {}).get('games', []):
@@ -107,8 +96,12 @@ class PaydaySpider:
 
 
 async def main():
-    spider = PaydaySpider(batch_id='12345')
-    await spider.start_requests()
+    spider = PaydaySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[Payday]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":
     asyncio.run(main())

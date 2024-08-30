@@ -1,17 +1,22 @@
 import json
+import os
+import time
+import uuid
 from datetime import datetime
 
 import asyncio
-import cloudscraper
+
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class RebetSpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
-        self.scraper = cloudscraper.create_scraper()
 
-    async def start_requests(self):
+        self.arm = arm
+
+    async def start(self):
         url = 'https://api.rebet.app/prod/sportsbook-v3/get-new-odds-leagues'
         headers, json_data = {
             'Host': 'api.rebet.app',
@@ -27,16 +32,9 @@ class RebetSpider:
             'league_name': [],
         }
 
-        response = await self.async_post(url, headers=headers, json=json_data)
-        if response.status_code == 200:
-            await self.parse_tourney_ids(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status}")
+        await self.arm.post(url, self._parse_tourney_ids, headers=headers, json=json_data)
 
-    async def async_post(self, url, **kwargs):
-        return await asyncio.to_thread(self.scraper.post, url, **kwargs)
-
-    async def parse_tourney_ids(self, response):
+    async def _parse_tourney_ids(self, response):
         data = response.json()
 
         # get tournament_ids
@@ -65,23 +63,18 @@ class RebetSpider:
                 'game_type': 3,
             }
 
-            tasks.append(self.fetch_and_parse_lines(url, headers, json_data))
+            tasks.append(self.arm.post(url, self._parse_lines, headers=headers, json=json_data))
 
         await asyncio.gather(*tasks)
 
-        with open('../data_samples/rebet_data.json', 'w') as f:
+        relative_path = 'data_samples/rebet_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(len(self.prop_lines))
+        print(f'[Rebet]: {len(self.prop_lines)} lines')
 
-    async def fetch_and_parse_lines(self, url, headers, json_data):
-        response = await self.async_post(url, headers=headers, json=json_data)
-        if response.status_code == 200:
-            await self.parse_lines(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status}")
-
-    async def parse_lines(self, response):
+    async def _parse_lines(self, response):
         data = response.json()
 
         for event in data.get('data', {}).get('events', []):
@@ -173,8 +166,12 @@ class RebetSpider:
 
 
 async def main():
-    spider = RebetSpider(batch_id='12345')
-    await spider.start_requests()
+    spider = RebetSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[Rebet]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":
     asyncio.run(main())

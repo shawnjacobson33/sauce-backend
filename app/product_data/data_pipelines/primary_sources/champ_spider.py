@@ -1,18 +1,21 @@
 import asyncio
 import json
+import os
+import time
+import uuid
 from datetime import datetime
 
-from async_request_manager import AsyncRequestManager
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class ChampSpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = AsyncRequestManager()
+        self.arm = arm
 
-    async def start_requests(self):
+    async def start(self):
         url = 'https://core-api.champfantasysports.com/'
         headers = {
             "Host": "core-api.champfantasysports.com",
@@ -142,16 +145,18 @@ class ChampSpider:
                 }
             }
 
-            tasks.append(self.arm.post(url, self.parse_lines, league, headers=headers, json=data))
+            tasks.append(self.arm.post(url, self._parse_lines, league, headers=headers, json=data))
 
         await asyncio.gather(*tasks)
 
-        with open('../data_samples/champ_data.json', 'w') as f:
+        relative_path = 'data_samples/champ_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(len(self.prop_lines))
+        print(f'[Champ]: {len(self.prop_lines)} lines')
 
-    def parse_lines(self, response, league):
+    async def _parse_lines(self, response, league):
         # get body content in json format
         data = response.json().get('data', {}).get('readPicks', {})
 
@@ -191,8 +196,12 @@ class ChampSpider:
 
 
 async def main():
-    spider = ChampSpider(batch_id='123')
-    await spider.start_requests()
+    spider = ChampSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[Champ]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":
     asyncio.run(main())

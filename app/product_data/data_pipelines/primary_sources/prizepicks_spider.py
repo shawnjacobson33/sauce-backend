@@ -1,26 +1,27 @@
+import asyncio
 import json
+import os
+import time
+import uuid
 from datetime import datetime
 
-import cloudscraper
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class PrizePicksSpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
-        self.scraper = cloudscraper.create_scraper()
 
-    def start_requests(self):
+        self.arm = arm
+
+    async def start(self):
         url = 'https://api.prizepicks.com/leagues?game_mode=pickem'
 
         # Get response.
-        response = self.scraper.get(url)
-        if response.status_code == 200:
-            self.parse_leagues(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
+        await self.arm.get(url, self._parse_leagues)
 
-    def parse_leagues(self, response):
+    async def _parse_leagues(self, response):
         leagues_data = response.json().get('data')
 
         # collect all the league ids
@@ -40,13 +41,9 @@ class PrizePicksSpider:
 
         url = "https://api.prizepicks.com/projections?"
 
-        new_response = self.scraper.get(url)
-        if new_response.status_code == 200:
-            self.parse_lines(new_response, leagues)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
+        await self.arm.get(url, self._parse_lines, leagues)
 
-    def parse_lines(self, response, leagues):
+    async def _parse_lines(self, response, leagues):
         data = response.json()
 
         # collect all the player ids
@@ -114,10 +111,21 @@ class PrizePicksSpider:
                         'line': stat_line
                     })
 
-        with open('../data_samples/prizepicks_data.json', 'w') as f:
+        relative_path = 'data_samples/prizepicks_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(len(self.prop_lines))
+        print(f'[PrizePicks]: {len(self.prop_lines)} lines')
 
 
-PrizePicksSpider(batch_id="1234").start_requests()
+async def main():
+    spider = PrizePicksSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[PrizePicks]: {round(end_time - start_time, 2)}s')
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -1,44 +1,24 @@
+import asyncio
 import json
+import os
+import time
+import uuid
 from datetime import datetime
+from uuid import UUID
 
-import cloudscraper
-
-
-def get_headers(access_token):
-    return {
-        "Host": "production-boom-dfs-backend-api.boomfantasy.com",
-        "content-type": "application/json",
-        "access-control-allow-origin": "*",
-        "accept": "application/json, text/plain, */*",
-        "x-product-id": "sports_predictor",
-        "authorization": f"Bearer {access_token}",
-        "x-app-name": "Predictor",
-        "accept-language": "en-US,en;q=0.9",
-        "user-agent": "Predictor/1 CFNetwork/1496.0.7 Darwin/23.5.0",
-        "x-device-id": "9498D138-1139-42BA-81A1-2E25990EA696",
-        "x-app-build": "1",
-        "x-app-version": "785",
-        "x-platform": "ios"
-    }
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class BoomFantasySpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
-        self.scraper = cloudscraper.create_scraper()
 
-        self.file_path = 'boomfantasy_tokens.txt'
-        with open(self.file_path, 'r') as file:
-            # Read all lines from the file
-            lines = file.readlines()
+        self.arm = arm
 
-            # Assign the first and second lines to variables
-            self.access_token, self.refresh_token = lines[0].strip(), lines[1].strip()
-
-    def start_requests(self):
+    async def start(self):
         url = "https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/graphql"
-        headers, data = get_headers(self.access_token), {
+        json_data = {
             "query": """query EvergreenContest(
             $id: ID!
             $questionStatuses: [QuestionStatus!]!
@@ -326,58 +306,20 @@ class BoomFantasySpider:
             "operationName": "EvergreenContest"
         }
 
-        response = self.scraper.post(url, headers=headers, json=data)
-        if response.status_code == 200:
-            self.parse_lines(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
-            print("Attempting to refresh tokens...")
+        # get access tokens in order to make successful requests
+        relative_path = 'primary_sources/boomfantasy_tokens.txt'
+        absolute_path = os.path.abspath(relative_path)
 
-            tokens_url = 'https://production-api.boomfantasy.com/api/v1/sessions'
-            tokens_headers, json_data = {
-                'Host': 'production-api.boomfantasy.com',
-                'content-type': 'application/json',
-                'accept': 'application/json',
-                'x-product-id': 'sports_predictor',
-                'authorization': 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXIiOjIsInR5cCI6ImFub24iLCJ0aWQiOiJwcmVkaWN0b3IiLCJwaWQiOiJzcG9ydHNfcHJlZGljdG9yIiwiaWF0IjoxNjg3OTY1MjQwfQ.sKySbA5uKlb3TO1i9k1wlQSdhJeQfpB0H1G3VkqRRIA1IrJyxcwwB74PmP1r16_Zs00tP1QXYV2toBFLZDadaxxiI3XI9_n0r6K8DW4O71iEUz3lNZtYx3b890nNQySYG7RLLAQ4vpGEyktjxE9xSD4TE0jvTJa-nibp6s1d8Ncm7RNNb5Xkz0ugvp06wWcBAa9rZPuaMTlP4DtKdKewjFC6B4AlESdLRaEBYg8tNviyGJS4mcV8iEt3Zbd5B7XRMwUU90IvxbQKF1HSUGQW0qHIZEXgiw_HUxHs-9V4jM77r2hj0nwAIr6YlMweiNhZ09vMtTUcT6dWDEKDWyXGkMpZrzGlTuT9y5jCNNoNxmzrFwu4sFjKc4MXXu4A5vqWwe4KjbAZ7U9_f6m1DhdvsdPhgUaoqA19CUd0sVRcJCpccvdlA3qPcuP332tiVkZ8Pi2h4PyF2gS1WIwqfYAGb4VYmxgMqxFhmCKpk2oWDAB0908KkfvqAvtYxbH1s3uZORy0duZyWkQ7I7EnqsHnBayX6-SdhUocYrQJsUAWnQYcoJ9vOKwcV6je8lnQcMFaBOfHcbTmd9Vp92wEwPVsn1UtKlkhJHAy_bzMEzPPBH2e8fGNpkiSbF7Rkz5r5X5imV1PMI8ZuXmfQT_WJjmxp4RtaB2JEOXM8xSPSM4IDYg',
-                'x-app-name': 'Predictor',
-                'accept-language': 'en-US,en;q=0.9',
-                'user-agent': 'Predictor/1 CFNetwork/1496.0.7 Darwin/23.5.0',
-                'x-device-id': '9498D138-1139-42BA-81A1-2E25990EA696',
-                'x-app-build': '1',
-                'x-app-version': '785',
-                'x-platform': 'ios',
-            }, {
-                'authentication': {
-                    'type': 'refresh',
-                    'credentials': {
-                        'refreshToken': self.refresh_token,
-                        'accessToken': self.access_token,
-                    },
-                },
-                'eventInfo': {},
-            }
+        with open(absolute_path, 'r') as file:
+            # Read all lines from the file
+            lines = file.readlines()
 
-            tokens_response = self.scraper.post(tokens_url, headers=tokens_headers, json=json_data)
-            if tokens_response.status_code == 200:
-                self.parse_tokens(tokens_response)
+            # Assign the first and second lines to variables
+            access_token, refresh_token = lines[0].strip(), lines[1].strip()
 
-                response = self.scraper.post(url, headers=get_headers(self.access_token), json=data)
-                if response.status_code == 200:
-                    self.parse_lines(response)
-                else:
-                    print(f"Failed to retrieve {url} with status code {response.status_code}")
-            else:
-                print(f"Failed to retrieve {url} with status code {response.status_code}")
+        await self.arm.post_bf(url, self._parse_lines, absolute_path, refresh_token, access_token, json_data)
 
-    def parse_tokens(self, response):
-        data = response.json()
-
-        self.access_token, self.refresh_token = data.get('accessToken'), data.get('refreshToken')
-        with open(self.file_path, 'w') as file:
-            file.write(self.access_token + '\n'), file.write(self.refresh_token + '\n')
-
-    def parse_lines(self, response):
+    async def _parse_lines(self, response):
         data = response.json().get('data')
 
         contest = data.get('contest')
@@ -441,10 +383,21 @@ class BoomFantasySpider:
                                         'line': line
                                     })
 
-            with open('../data_samples/boomfantasy_data.json', 'w') as f:
+            relative_path = 'data_samples/boomfantasy_data.json'
+            absolute_path = os.path.abspath(relative_path)
+            with open(absolute_path, 'w') as f:
                 json.dump(self.prop_lines, f, default=str)
 
-            print(len(self.prop_lines))
+            print(f'[BoomFantasy]: {len(self.prop_lines)} lines')
 
 
-BoomFantasySpider(batch_id='abc').start_requests()
+async def main():
+    spider = BoomFantasySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[BoomFantasy]: {round(end_time - start_time, 2)}s')
+
+if __name__ == "__main__":
+    asyncio.run(main())

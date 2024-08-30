@@ -1,15 +1,21 @@
+import asyncio
 import json
+import os
+import time
+import uuid
 from datetime import datetime
 
-import cloudscraper
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class VividPicksSpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
 
-    def start_requests(self):
+        self.arm = arm
+
+    async def start(self):
         url = 'https://api.betcha.one/v1/game/activePlayersForLeagueBoard'
         headers, json_data = {
             'Host': 'api.betcha.one',
@@ -37,13 +43,9 @@ class VividPicksSpider:
             'matchUp': False,
         }
 
-        response = cloudscraper.create_scraper().post(url, headers=headers, json=json_data)
-        if response.status_code == 200:
-            self.parse_lines(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
+        await self.arm.post(url, self._parse_lines, headers=headers, json=json_data)
 
-    def parse_lines(self, response):
+    async def _parse_lines(self, response):
         # get body content in json format
         data = response.json()
 
@@ -103,10 +105,21 @@ class VividPicksSpider:
                                     'odds_jam_prop_sources': odds_jam_prop_sources
                                 })
 
-        with open('../data_samples/vividpicks_data.json', 'w') as f:
+        relative_path = 'data_samples/vividpicks_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(len(self.prop_lines))
+        print(f'[Vivid Picks]: {len(self.prop_lines)} lines')
 
 
-VividPicksSpider(batch_id="1230ab").start_requests()
+async def main():
+    spider = VividPicksSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[Vivid Picks]: {round(end_time - start_time, 2)}s')
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -1,16 +1,24 @@
+import asyncio
 import json
+import os
+import time
+import uuid
+import re
 from datetime import datetime
-import cloudscraper
+
 import pandas as pd
+
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class SmartBettorSpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
-        self.scraper = cloudscraper.create_scraper()
 
-    def start_requests(self):
+        self.arm = arm
+
+    async def start(self):
         # going to get the odds for all in-season leagues
         url = "https://smartbettor.ai/api/get_pos_ev_data_react"
         headers = {
@@ -27,29 +35,28 @@ class SmartBettorSpider:
             'sec-ch-ua-platform': '"macOS"',
         }
 
-        response = self.scraper.get(url=url, headers=headers)
-        if response.status_code == 200:
-            self.parse_odds(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
+        await self.arm.get(url, self._parse_odds, headers=headers)
 
-    def parse_odds(self, response):
+    async def _parse_odds(self, response):
         data = response.json()
 
         bookmaker_keys = {
-            "betonlineag": "BetOnline", "betmgm": "BetMGM", "betrivers": "BetRivers", "betus": "BetUS", "bovada": "Bovada",
+            "betonlineag": "BetOnline", "betmgm": "BetMGM", "betrivers": "BetRivers", "betus": "BetUS",
+            "bovada": "Bovada",
             "draftkings": "DraftKings", "fanduel": "FanDuel", "lowvig": "LowVig", "mybookieag": "MyBookie",
             "pointsbetus": "PointsBetUS", "superbook": "SuperBook", "twinspires": "TwinSpires", "unibet_us": "UnibetUS",
             "williamhill_us": "WilliamHillUS", "wynnbet": "WynnBET", "betparx": "betPARX", "espnbet": "ESPNBet",
             "fliff": "Fliff", "sisportsbook": "SISportsbook", "tipico_us": "Tipico", "windcreek": "WindCreek",
-            "betvictor": "BetVictor", "betway": "Betway", "boylesports": "BoyleSports", "casumo": "Casumo", "coral": "Coral",
+            "betvictor": "BetVictor", "betway": "Betway", "boylesports": "BoyleSports", "casumo": "Casumo",
+            "coral": "Coral",
             "grosvenor": "Grosvenor", "leovegas": "LeoVegas", "livescorebet": "LiveScore Bet", "matchbook": "Matchbook",
             "mrgreen": "Mr Green", "paddypower": "Paddy Power", "skybet": "Sky Bet", "unibet_uk": "UnibetUK",
             "virginbet": "Virgin Bet", "williamhill": "William Hill", "onexbet": "1XBET", "sport888": "888 Sport",
             "betclic": "BetClic", "betsson": "Betsson", "coolbet": "Coolbet", "everygame": "Everygame",
             "livescorebet_eu": "LiveScoreEU Bet", "marathonbet": "Marathonbet", "nordicbet": "Nordicbet",
             "pinnacle": "Pinnacle", "suprabets": "Suprabets", "unibet_eu": "UnibetEU", "betr_au": "BetrAU",
-            "bluebet": "BlueBet", "ladbrokes_au": "LadbrokesAU", "neds": "Neds", "playup": "PlayUp", "pointsbetau": "PointsBetAU",
+            "bluebet": "BlueBet", "ladbrokes_au": "LadbrokesAU", "neds": "Neds", "playup": "PlayUp",
+            "pointsbetau": "PointsBetAU",
             "sportsbet": "Sportsbet", "tab": "TAB", "unibet": "Unibet", "ballybet": "BallyBet", "gtbets": "GTbets",
             "hardrockbet": "HardRock", "betanysports": "BetAnySports"
         }
@@ -86,15 +93,17 @@ class SmartBettorSpider:
                     # weird edge case for soccer betting where the wager display only includes the subject
                     if market != 'Draw No Bet':
                         subject_components = subject.split()
-                        if len(subject_components) > 2 and (subject_components[-2] == 'Over') or (subject_components[-2] == 'Under'):
-                            # get rid of extra parts
-                            subject = ' '.join(subject_components[:-2])
-                        # Game Totals Market
-                        elif (subject_components[0] == 'Over') or (subject_components[0] == 'Under'):
-                            subject = f"{home_team} vs. {away_team}"
-                        # Spread Market
-                        elif ("+" in subject) or ("-" in subject):
-                            subject = ' '.join(subject_components[:-1])
+                        if subject_components:
+                            if (len(subject_components) > 2) and ((subject_components[-2] == 'Over') or (
+                                    subject_components[-2] == 'Under')):
+                                # get rid of extra parts
+                                subject = ' '.join(subject_components[:-2])
+                            # Game Totals Market
+                            elif (subject_components[0] == 'Over') or (subject_components[0] == 'Under'):
+                                subject = f"{home_team} vs. {away_team}"
+                            # Spread Market
+                            elif ("+" in subject) or ("-" in subject):
+                                subject = ' '.join(subject_components[:-1])
 
                     # get odds, label and line
                     if subject_key == 'wager_display_other':
@@ -112,7 +121,7 @@ class SmartBettorSpider:
                     elif label not in {'Over', 'Under'}:
                         label = 'Spread'
                         # Keep with spread syntax
-                        if float(line) > 0:
+                        if (bool(re.match(r'^-?\d+(\.\d+)?$', line))) and (float(line) > 0):
                             line = f'+{line}'
 
                     self.prop_lines.append({
@@ -130,11 +139,13 @@ class SmartBettorSpider:
                         'odds': odds
                     })
 
-        self.count_lines_per_bookmaker()
-        with open("smartbettor_data.json", "w") as f:
+        # self.count_lines_per_bookmaker()
+        relative_path = 'data_samples/smartbettor_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(f"Total Count: {len(self.prop_lines)}")
+        print(f'[SmartBettor]: {len(self.prop_lines)} lines')
 
     def count_lines_per_bookmaker(self):
         df = pd.DataFrame(self.prop_lines)
@@ -142,4 +153,14 @@ class SmartBettorSpider:
         print(df.groupby('bookmaker').size().reset_index())
 
 
-SmartBettorSpider(batch_id="123-abc").start_requests()
+async def main():
+    spider = SmartBettorSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[SmartBettor]: {round(end_time - start_time, 2)}s')
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

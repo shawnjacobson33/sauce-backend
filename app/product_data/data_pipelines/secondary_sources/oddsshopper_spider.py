@@ -1,20 +1,25 @@
-import asyncio
+import os
+import time
+import uuid
 from datetime import datetime, timedelta
 import json
-from urllib.parse import urlencode
-import cloudscraper
+
 import pandas as pd
+import asyncio
+
+from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 
 class OddsShopperSpider:
-    def __init__(self, batch_id: str):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
         self.prop_lines = []
         self.batch_id = batch_id
-        self.scraper = cloudscraper.create_scraper()
 
-    async def start_requests(self):
+        self.arm = arm
+
+    async def start(self):
         url = f'https://www.oddsshopper.com/api/processingInfo/all'
-        headers = {
+        headers, cookies = {
             'accept': '*/*',
             'accept-language': 'en-US,en;q=0.9',
             'priority': 'u=1, i',
@@ -26,8 +31,7 @@ class OddsShopperSpider:
             'sec-fetch-mode': 'cors',
             'sec-fetch-site': 'same-origin',
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
-        }
-        cookies = {
+        }, {
             '_gcl_au': '1.1.1623273209.1722653498',
             '_ga': 'GA1.1.578395929.1722653499',
             '_clck': 'sq3dhw%7C2%7Cfo0%7C0%7C1676',
@@ -43,28 +47,17 @@ class OddsShopperSpider:
             '_hp2_id.2436895921': '%7B%22userId%22%3A%226206737379708108%22%2C%22pageviewId%22%3A%224229154290207751%22%2C%22sessionId%22%3A%228372167046692848%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D',
         }
 
-        response = await self.async_get(url, headers=headers, cookies=cookies)
-        if response.status_code == 200:
-            await self.parse_processing_info(response)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
+        await self.arm.get(url, self._parse_processing_info, headers=headers)
 
-    async def async_get(self, url, **kwargs):
-        return await asyncio.to_thread(self.scraper.get, url, **kwargs)
-
-    async def parse_processing_info(self, response):
+    async def _parse_processing_info(self, response):
         data = response.json()
 
         # Now proceed to fetch the matchups using the lastProcessed time
         url = f'https://www.oddsshopper.com/api/liveOdds/offers?league=all'
 
-        response = await self.async_get(url)
-        if response.status_code == 200:
-            await self.parse_matchups(response, data.get('lastProcessed'))
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
+        await self.arm.get(url, self._parse_matchups, data.get('lastProcessed'))
 
-    async def parse_matchups(self, response, last_processed):
+    async def _parse_matchups(self, response, last_processed):
         data = response.json()
 
         tasks = []
@@ -77,14 +70,8 @@ class OddsShopperSpider:
                     start_date = now.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
                     end_date = (now + timedelta(days=8)).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
-                    params = {
-                        'state': 'NJ',
-                        'startDate': start_date,
-                        'endDate': end_date,
-                        'edgeSportsbooks': 'Circa,FanDuel,Pinnacle',
-                    }
-                    url = f"https://api.oddsshopper.com/api/offers/{offer_id}/outcomes/live?{urlencode(params)}"
-                    headers = {
+                    url = f"https://api.oddsshopper.com/api/offers/{offer_id}/outcomes/live?"
+                    headers, params = {
                         'Accept': '*/*',
                         'Accept-Language': 'en-US,en;q=0.9',
                         'Connection': 'keep-alive',
@@ -97,26 +84,28 @@ class OddsShopperSpider:
                         'sec-ch-ua': '"Not)A;Brand";v="99", "Google Chrome";v="127", "Chromium";v="127"',
                         'sec-ch-ua-mobile': '?0',
                         'sec-ch-ua-platform': '"macOS"',
+                    }, {
+                        'state': 'NJ',
+                        'startDate': start_date,
+                        'endDate': end_date,
+                        'edgeSportsbooks': 'Circa,FanDuel,Pinnacle',
                     }
 
-                    tasks.append(self.fetch_and_parse_lines(url, headers, params, last_processed, offer.get('leagueCode'), market_category))
+                    tasks.append(
+                        self.arm.get(url, self._parse_lines, last_processed, offer.get('leagueCode'), market_category,
+                                     headers=headers, params=params))
 
         await asyncio.gather(*tasks)
 
-        self.count_lines_per_bookmaker()
-        with open("oddsshopper_data.json", "w") as f:
+        # self.count_lines_per_bookmaker()
+        relative_path = 'data_samples/oddsshopper_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
-        print(len(self.prop_lines))
+        print(f'[OddsShopper]: {len(self.prop_lines)} lines')
 
-    async def fetch_and_parse_lines(self, url, headers, params, last_processed, league, market_category):
-        response = await self.async_get(url, headers=headers, params=params)
-        if response.status_code == 200:
-            await self.parse_lines(response, last_processed, league, market_category)
-        else:
-            print(f"Failed to retrieve {url} with status code {response.status_code}")
-
-    async def parse_lines(self, response, last_processed, league, market_category):
+    async def _parse_lines(self, response, last_processed, league, market_category):
         data = response.json()
 
         for event in data:
@@ -149,8 +138,13 @@ class OddsShopperSpider:
 
 
 async def main():
-    spider = OddsShopperSpider(batch_id='123')
-    await spider.start_requests()
+    spider = OddsShopperSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    start_time = time.time()
+    await spider.start()
+    end_time = time.time()
+
+    print(f'[OddsShopper]: {round(end_time - start_time, 2)}s')
+
 
 if __name__ == "__main__":
     asyncio.run(main())
