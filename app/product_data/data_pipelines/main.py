@@ -2,6 +2,8 @@ import asyncio
 import time
 import uuid
 
+from pymongo import MongoClient
+
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
 
 from app.product_data.data_pipelines.primary_sources import BoomFantasySpider, ChampSpider, DabbleSpider, \
@@ -10,6 +12,10 @@ from app.product_data.data_pipelines.primary_sources import BoomFantasySpider, C
     PrizePicksSpider, \
     RebetSpider, SleeperSpider, SuperDraftSpider, ThriveFantasySpider, UnderdogSpider, VividPicksSpider
 from app.product_data.data_pipelines.secondary_sources import OddsShopperSpider, SmartBettorSpider
+
+client = MongoClient('mongodb://localhost:27017/')
+
+db = client['sauce']
 
 
 class DataPipeline:
@@ -22,6 +28,8 @@ class DataPipeline:
                    HotStreakSpider, MoneyLineSpider, OwnersBoxSpider, ParlayPlaySpider, PaydaySpider,
                    PrizePicksSpider, RebetSpider, SleeperSpider, SuperDraftSpider, ThriveFantasySpider,
                    UnderdogSpider, VividPicksSpider, OddsShopperSpider, SmartBettorSpider]
+
+        msc = db['markets']
 
         tasks = []
         for spider in spiders:

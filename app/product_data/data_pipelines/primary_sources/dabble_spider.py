@@ -7,14 +7,17 @@ from datetime import datetime
 import asyncio
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo import MongoClient
+from pymongo.collection import Collection
 
 
 class DabbleSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
         self.arm = arm
+        self.msc = msc
         self.headers, self.cookies = {
             'Host': 'api.dabble.com',
             'accept': 'application/json',
@@ -87,6 +90,14 @@ class DabbleSpider:
         for player_prop in data.get('playerProps', []):
             subject, subject_team = player_prop.get('playerName'), player_prop.get('teamAbbreviation')
             position, market = player_prop.get('position'), markets.get(player_prop.get('marketId'))
+            # don't want futures
+            if 'Regular Season' in market:
+                continue
+
+            market_id = self.msc.find_one({'Dabble': market}, {'_id': 1})
+            if market_id:
+                market_id = market_id.get('_id')
+
             label, line = player_prop.get('lineType').title(), player_prop.get('value')
 
             self.prop_lines.append({
@@ -96,7 +107,8 @@ class DabbleSpider:
                 'league': league,
                 'game_info': game_info,
                 'market_category': 'player_props',
-                'market': market,
+                'market_id': market_id,
+                'market_name': market,
                 'subject_team': subject_team,
                 'subject': subject,
                 'position': position,
@@ -107,7 +119,11 @@ class DabbleSpider:
 
 
 async def main():
-    spider = DabbleSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = DabbleSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

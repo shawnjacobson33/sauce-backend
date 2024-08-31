@@ -113,6 +113,7 @@ class OddsShopperSpider:
             for side in event.get('sides', []):
                 label = side.get('label', subject)
                 for outcome in side.get('outcomes', []):
+                    ev = outcome.get('ev')
                     prop_line = {
                         'batch_id': self.batch_id,
                         'time_processed': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -126,7 +127,7 @@ class OddsShopperSpider:
                         'label': label,
                         'line': outcome.get('line', '0.5'),
                         'odds': outcome.get('odds'),
-                        'oddsshopper_ev': round(outcome.get('ev', float('nan')), 3)
+                        'oddsshopper_ev': round(ev, 3) if ev else None
                     }
 
                     self.prop_lines.append(prop_line)

@@ -63,6 +63,7 @@ class SmartBettorSpider:
         for event in data:
             last_updated, league = event.get('time_difference_formatted'), event.get('sport_league_display')
             game_time, market = event.get('game_date'), event.get('market_display').strip()
+
             bet_type, home_team, away_team = event.get('bet_type'), event.get('home_team'), event.get('away_team')
 
             for subject_key in ['wager_display', 'wager_display_other']:
@@ -78,7 +79,7 @@ class SmartBettorSpider:
                         line = '0.5'
 
                 for bookmaker_key, bookmaker_name in bookmaker_keys.items():
-                    if (bookmaker_key not in event) or (f"{bookmaker_key}_other" not in event):
+                    if (bookmaker_key not in event) or (f"{bookmaker_key}_1_odds_other" not in event):
                         continue
 
                     # get market
@@ -121,7 +122,7 @@ class SmartBettorSpider:
                     elif label not in {'Over', 'Under'}:
                         label = 'Spread'
                         # Keep with spread syntax
-                        if (bool(re.match(r'^-?\d+(\.\d+)?$', line))) and (float(line) > 0):
+                        if (bool(re.match(r'^-?\d+(\.\d+)?$', str(line)))) and (float(line) > 0):
                             line = f'+{line}'
 
                     self.prop_lines.append({
@@ -140,7 +141,7 @@ class SmartBettorSpider:
                     })
 
         # self.count_lines_per_bookmaker()
-        relative_path = 'data_samples/smartbettor_data.json'
+        relative_path = '../data_samples/smartbettor_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)

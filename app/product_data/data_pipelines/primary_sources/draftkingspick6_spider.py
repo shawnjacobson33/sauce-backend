@@ -8,14 +8,17 @@ from bs4 import BeautifulSoup
 import asyncio
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo import MongoClient
+from pymongo.collection import Collection
 
 
 class DraftKingsPick6:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
         self.arm = arm
+        self.msc = msc
         self.headers = {
             'accept': '*/*',
             'accept-language': 'en-US,en;q=0.9',
@@ -67,12 +70,15 @@ class DraftKingsPick6:
         data = json.loads(clean_json()).get('pickableIdToPickableMap')
 
         for pick in data.values():
-            market, subject, subject_team, game_time, position, line = '', '', '', '', '', ''
+            market_id, market, subject, subject_team, game_time, position, line = '', '', '', '', '', '', ''
             pickable, active_market = pick.get('pickable'), pick.get('activeMarket')
             if pickable:
                 market_category = pickable.get('marketCategory')
                 if market_category:
                     market = market_category.get('marketName')
+                    market_id = self.msc.find_one({'DraftKings Pick6': market}, {'_id': 1})
+                    if market_id:
+                        market_id = market_id.get('_id')
                 for entity in pickable.get('pickableEntities', []):
                     subject, competitions = entity.get('displayName'), entity.get('pickableCompetitions')
                     if competitions:
@@ -95,7 +101,8 @@ class DraftKingsPick6:
                     'league': league,
                     'game_time': game_time,
                     'market_category': 'player_props',
-                    'market': market,
+                    'market_id': market_id,
+                    'market_name': market,
                     'subject_team': subject_team,
                     'subject': subject,
                     'position': position,
@@ -106,7 +113,11 @@ class DraftKingsPick6:
 
 
 async def main():
-    spider = DraftKingsPick6(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = DraftKingsPick6(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

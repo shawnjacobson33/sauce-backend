@@ -6,14 +6,17 @@ import uuid
 from datetime import datetime
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo import MongoClient
+from pymongo.collection import Collection
 
 
 class ChampSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
         self.arm = arm
+        self.msc = msc
 
     async def start(self):
         url = 'https://core-api.champfantasysports.com/'
@@ -172,6 +175,10 @@ class ChampSpider:
 
                 for prop in player.get('props', []):
                     market, line = prop.get('title'), prop.get('value')
+                    market_id = self.msc.find_one({'Champ': market}, {'_id': 1})
+                    if market_id:
+                        market_id = market_id.get('_id')
+
                     labels, multiplier, boost = ['Over', 'Under'], None, prop.get('boost')
                     if boost:
                         multiplier = boost.get('multiplier')
@@ -184,7 +191,8 @@ class ChampSpider:
                             'league': league,
                             'game_info': game_info,
                             'market_category': 'player_props',
-                            'market': market,
+                            'market_id': market_id,
+                            'market_name': market,
                             'subject_team': subject_team,
                             'subject': subject,
                             'position': position,
@@ -196,7 +204,11 @@ class ChampSpider:
 
 
 async def main():
-    spider = ChampSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = ChampSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

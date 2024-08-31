@@ -5,16 +5,19 @@ import time
 import uuid
 from datetime import datetime
 from uuid import UUID
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class BoomFantasySpider:
-    def __init__(self, batch_id: UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
         self.arm = arm
+        self.msc = msc
 
     async def start(self):
         url = "https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/graphql"
@@ -307,7 +310,7 @@ class BoomFantasySpider:
         }
 
         # get access tokens in order to make successful requests
-        relative_path = 'primary_sources/boomfantasy_tokens.txt'
+        relative_path = 'primary_source/boomfantasy_tokens.txt'
         absolute_path = os.path.abspath(relative_path)
 
         with open(absolute_path, 'r') as file:
@@ -353,7 +356,8 @@ class BoomFantasySpider:
 
                             for question in league_section.get('fullQuestions', []):
                                 # get line and market
-                                line, market, pick_selection_title = '', '', question.get('pickSelectionTitle')
+                                line, market, market_id = '', '', ''
+                                pick_selection_title = question.get('pickSelectionTitle')
                                 if pick_selection_title:
                                     additional_options = pick_selection_title.get('additionalOptions')
                                     if additional_options:
@@ -363,6 +367,9 @@ class BoomFantasySpider:
                                             stat_text_components = stat_text[0].split('.')
                                             if len(stat_text_components) == 4:
                                                 market = stat_text_components[-2].lower().title()
+                                                market_id = self.msc.find_one({'BoomFantasy': market}, {'_id': 1})
+                                                if market_id:
+                                                    market_id = market_id.get('_id')
 
                                 for choice in question.get('choices', []):
                                     label = choice.get('type')
@@ -374,7 +381,8 @@ class BoomFantasySpider:
                                         'time_processed': datetime.now(),
                                         'league': league_name,
                                         'market_category': 'player_props',
-                                        'market': market,
+                                        'market_id': market_id,
+                                        'market_name': market,
                                         'game_time': game_time,
                                         'subject_team': subject_team,
                                         'subject': subject,
@@ -392,7 +400,11 @@ class BoomFantasySpider:
 
 
 async def main():
-    spider = BoomFantasySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = BoomFantasySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

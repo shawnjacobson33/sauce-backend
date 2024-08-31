@@ -6,14 +6,17 @@ import uuid
 from datetime import datetime
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo import MongoClient
+from pymongo.collection import Collection
 
 
 class DraftersSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
         self.arm = arm
+        self.msc = msc
 
     async def start(self):
         url = 'https://node.drafters.com/props-game/get-props-games'
@@ -52,13 +55,17 @@ class DraftersSpider:
                     game_info = ' @ '.join([away_team, home_team])
 
                 market, line = player.get('bid_stats_name'), player.get('bid_stats_value')
+                market_id = self.msc.find_one({'Drafters': market}, {'_id': 1})
+                if market_id:
+                    market_id = market_id.get('_id')
 
                 for label in ['Over', 'Under']:
                     self.prop_lines.append({
                         'batch_id': self.batch_id,
                         'time_processed': datetime.now(),
                         'market_category': 'player_props',
-                        'market': market,
+                        'market_id': market_id,
+                        'market_name': market,
                         'game_info': game_info,
                         'subject': subject,
                         'position': position,
@@ -76,7 +83,11 @@ class DraftersSpider:
 
 
 async def main():
-    spider = DraftersSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = DraftersSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()
