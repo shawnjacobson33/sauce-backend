@@ -4,16 +4,18 @@ import os
 import time
 import uuid
 from datetime import datetime
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class MoneyLineSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
 
     async def start(self):
         url = 'https://moneylineapp.com/v3/API/v4/bets/all_available.php'
@@ -41,7 +43,24 @@ class MoneyLineSpider:
                 team_components = subject_components[-1]
                 subject, subject_team = ' '.join(subject_components[:-1]), team_components[1:-1]
 
-            league, market = bet.get('league'), bet.get('bet_text')
+            is_boosted, league, market = False, bet.get('league'), bet.get('bet_text')
+            # don't want futures
+            if 'Season' in market:
+                continue
+            if 'Discount' in market:
+                is_boosted = True
+                # removes the fluff from the name
+                market_components = market.split(' (')
+                if market_components:
+                    market = market_components[0]
+
+            # quick formatting adjustment
+            if market in {'Hitter Fantasy Score', 'Pitcher Fantasy Score'}:
+                market = 'Baseball Fantasy Points'
+
+            market_id = self.msc.find_one({'MoneyLine': market}, {'_id': 1})
+            if market_id:
+                market_id = market_id.get('_id')
 
             for i in range(1, 3):
                 label, line, option_components = '', '', bet.get(f'option_{i}')
@@ -55,12 +74,14 @@ class MoneyLineSpider:
                     'time_processed': datetime.now(),
                     'league': league,
                     'market_category': 'player_props',
-                    'market': market,
+                    'market_id': market_id,
+                    'market_name': market,
                     'subject_team': subject_team,
                     'subject': subject,
                     'bookmaker': 'MoneyLine',
                     'label': label,
-                    'line': line
+                    'line': line,
+                    'is_boosted': is_boosted
                 })
 
         relative_path = 'data_samples/moneyline_data.json'
@@ -72,7 +93,11 @@ class MoneyLineSpider:
 
 
 async def main():
-    spider = MoneyLineSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = MoneyLineSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

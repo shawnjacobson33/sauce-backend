@@ -6,16 +6,18 @@ import json
 
 import pandas as pd
 import asyncio
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class OddsShopperSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
 
     async def start(self):
         url = f'https://www.oddsshopper.com/api/processingInfo/all'
@@ -110,10 +112,42 @@ class OddsShopperSpider:
 
         for event in data:
             game_time, market, subject = event.get('startDate'), event.get('offerName'), event.get('eventName')
+
+            # different market names for the same market for NFL and NCAAF -- need to normalize
+            # Define the market mappings
+            market_mappings = {
+                'Total Rushing + Receiving Yards': 'Total Rush + Rec Yards',
+                'Total Passing + Rushing Yards': 'Total Pass + Rush Yards',
+                'Total Passing + Rushing + Receiving TDs': 'Total Pass + Rush + Rec TDs',
+            }
+
+            # Check if the market exists in the mappings
+            if market in market_mappings:
+                market = market_mappings[market]
+            elif 'Fantasy Score' in market:
+                fantasy_score_mappings = {
+                    'NBA': 'Basketball Fantasy Score',
+                    'WNBA': 'Basketball Fantasy Score',
+                    'NCAAB': 'Basketball Fantasy Score',
+                    'NCAAF': 'Football Fantasy Score',
+                    'NHL': 'Ice Hockey Fantasy Score',
+                    'UFC': 'Fighting Fantasy Score',
+                    'Tennis': 'Tennis Fantasy Score',
+                }
+                market = fantasy_score_mappings.get(league, market)
+            elif market == 'Fantasy Points' and league == 'NFL':
+                market = 'Football Fantasy Score'
+
+            market_id = ''
+            if market:
+                market_id = self.msc.find_one({'OddsShopper': market}, {'_id': 1})
+                if market_id:
+                    market_id = market_id.get('_id')
+
             for side in event.get('sides', []):
                 label = side.get('label', subject)
                 for outcome in side.get('outcomes', []):
-                    ev = outcome.get('ev')
+                    odds, ev = outcome.get('odds'), outcome.get('ev')
                     prop_line = {
                         'batch_id': self.batch_id,
                         'time_processed': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -121,12 +155,13 @@ class OddsShopperSpider:
                         'league': league,
                         'game_time': game_time,
                         'market_category': market_category,
-                        'market': market,
+                        'market_id': market_id,
+                        'market_name': market,
                         'subject': outcome.get('label', subject),
                         'bookmaker': outcome.get('sportsbookCode'),
                         'label': label,
                         'line': outcome.get('line', '0.5'),
-                        'odds': outcome.get('odds'),
+                        'odds': round(odds, 3) if odds else odds,
                         'oddsshopper_ev': round(ev, 3) if ev else None
                     }
 
@@ -139,7 +174,11 @@ class OddsShopperSpider:
 
 
 async def main():
-    spider = OddsShopperSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = OddsShopperSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

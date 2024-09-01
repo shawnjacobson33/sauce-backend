@@ -4,16 +4,18 @@ import os
 import time
 import uuid
 from datetime import datetime
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class VividPicksSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
 
     async def start(self):
         url = 'https://api.betcha.one/v1/game/activePlayersForLeagueBoard'
@@ -51,12 +53,23 @@ class VividPicksSpider:
 
         for event in data.get('gret', []):
             league, game_info, game_time = event.get('league'), event.get('gameInfo'), event.get('gameTime')
+            if 'Futures' in game_info:
+                continue
+
             for player in event.get('activePlayers', []):
                 last_updated = player.get('updatedAt')
-                subject, abv_team_name, position = player.get('name'), player.get('abvTeamName'), player.get('position')
+                subject, subject_team, position = player.get('name'), player.get('abvTeamName'), player.get('position')
+                if not subject_team:
+                    subject_team = player.get('teamName')
+
                 odds_jam_prop_sources = player.get('oddsJamProps')
                 for prop in player.get('visiblePlayerProps', []):
-                    multiplier_source, market, line, multiplier = '', prop.get('p'), prop.get('val'), 1.0
+                    market_id, multiplier_source, market, line, multiplier = '', '', prop.get('p'), prop.get('val'), 1.0
+                    if market:
+                        market_id = self.msc.find_one({'Vivid Picks': market}, {'_id': 1})
+                        if market_id:
+                            market_id = market_id.get('_id')
+
                     mult_player_props = player.get('configPlayerProps')
                     if mult_player_props:
                         mult_market = mult_player_props.get(market)
@@ -71,9 +84,10 @@ class VividPicksSpider:
                                 'league': league,
                                 'game_info': game_info,
                                 'market_category': 'player_props',
-                                'market': market,
+                                'market_id': market_id,
+                                'market_name': market,
                                 'game_time': game_time,
-                                'subject_team': abv_team_name,
+                                'subject_team': subject_team,
                                 'subject': subject,
                                 'position': position,
                                 'bookmaker': 'Vivid Picks',
@@ -84,26 +98,27 @@ class VividPicksSpider:
                                 'oddsjam_prop_sources': odds_jam_prop_sources
                             })
 
-                        else:
-                            for label in ['Over', 'Under']:
-                                self.prop_lines.append({
-                                    'batch_id': self.batch_id,
-                                    'time_processed': datetime.now(),
-                                    'last_updated': last_updated,
-                                    'league': league,
-                                    'game_info': game_info,
-                                    'market_category': 'player_props',
-                                    'market': market,
-                                    'game_time': game_time,
-                                    'abv_team_name': abv_team_name,
-                                    'subject': subject,
-                                    'position': position,
-                                    'bookmaker': 'Vivid Picks',
-                                    'label': label,
-                                    'line': line,
-                                    'multiplier': multiplier,
-                                    'odds_jam_prop_sources': odds_jam_prop_sources
-                                })
+                    else:
+                        for label in ['Over', 'Under']:
+                            self.prop_lines.append({
+                                'batch_id': self.batch_id,
+                                'time_processed': datetime.now(),
+                                'last_updated': last_updated,
+                                'league': league,
+                                'game_info': game_info,
+                                'market_category': 'player_props',
+                                'market_id': market_id,
+                                'market_name': market,
+                                'game_time': game_time,
+                                'abv_team_name': subject_team,
+                                'subject': subject,
+                                'position': position,
+                                'bookmaker': 'Vivid Picks',
+                                'label': label,
+                                'line': line,
+                                'multiplier': multiplier,
+                                'odds_jam_prop_sources': odds_jam_prop_sources
+                            })
 
         relative_path = 'data_samples/vividpicks_data.json'
         absolute_path = os.path.abspath(relative_path)
@@ -114,7 +129,11 @@ class VividPicksSpider:
 
 
 async def main():
-    spider = VividPicksSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = VividPicksSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

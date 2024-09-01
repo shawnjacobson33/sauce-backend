@@ -62,7 +62,9 @@ class SmartBettorSpider:
         }
         for event in data:
             last_updated, league = event.get('time_difference_formatted'), event.get('sport_league_display')
-            game_time, market = event.get('game_date'), event.get('market_display').strip()
+            game_time, market = event.get('game_date'), event.get('market_display')
+            if market:
+                market = market.strip()
 
             bet_type, home_team, away_team = event.get('bet_type'), event.get('home_team'), event.get('away_team')
 

@@ -4,16 +4,18 @@ import os
 import time
 import uuid
 from datetime import datetime
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class SleeperSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
         self.headers = {
             'Host': 'api.sleeper.app',
             'x-amp-session': '1724697278937',
@@ -68,7 +70,16 @@ class SleeperSpider:
                 if player:
                     team, subject, position = player.get('team'), player.get('player_name'), player.get('position')
 
-            last_updated, market = line.get('updated_at'), line.get('wager_type')
+            market_id, last_updated, market = '', line.get('updated_at'), line.get('wager_type')
+            if market:
+                if market == 'fantasy_points':
+                    if league == 'MLB':
+                        market = 'baseball_fantasy_points'
+
+                market_id = self.msc.find_one({'Sleeper': market}, {'_id': 1})
+                if market_id:
+                    market_id = market_id.get('_id')
+
             if last_updated:
                 # convert from unix to a datetime
                 last_updated = datetime.fromtimestamp(last_updated / 1000)
@@ -83,7 +94,8 @@ class SleeperSpider:
                     'last_updated': last_updated,
                     'league': league.upper(),
                     'market_category': 'player_props',
-                    'market': market,
+                    'market_id': market_id,
+                    'market_name': market,
                     'subject': subject,
                     'bookmaker': 'Sleeper',
                     'label': label,
@@ -100,7 +112,11 @@ class SleeperSpider:
 
 
 async def main():
-    spider = SleeperSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = SleeperSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

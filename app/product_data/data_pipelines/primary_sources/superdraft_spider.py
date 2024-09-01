@@ -4,16 +4,18 @@ import os
 import time
 import uuid
 from datetime import datetime
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class SuperDraftSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
 
     async def start(self):
         url = 'https://api.superdraft.io/api/prop/v3/active-fantasy'
@@ -57,13 +59,18 @@ class SuperDraftSpider:
                 league = sports.get(int(prop.get('sportId')))
 
                 # get market
-                market, choices = '', prop.get('choices')
+                market_id, market, choices = '', '', prop.get('choices')
                 if choices:
                     actor = choices[0].get('actor')
                     if actor:
                         requirements = actor.get('winningRequirement')
                         if requirements:
                             market = requirements[0].get('name')
+                            if market in {'Fantasy Hitting', 'Fantasy Pitching'}:
+                                market = 'Baseball Fantasy Score'
+                            market_id = self.msc.find_one({'SuperDraft': market}, {'_id': 1})
+                            if market_id:
+                                market_id = market_id.get('_id')
 
                 # get player data
                 player = prop.get('player')
@@ -92,7 +99,8 @@ class SuperDraftSpider:
                         'last_updated': last_updated,
                         'league': league,
                         'market_category': 'player_props',
-                        'market': market,
+                        'market_id': market_id,
+                        'market_name': market,
                         'game_info': game_info,
                         'game_time': game_time,
                         'team': team,
@@ -103,7 +111,7 @@ class SuperDraftSpider:
                         'line': line
                     })
 
-        relative_path = 'data_samples/superdraft_data.json'
+        relative_path = '../data_samples/superdraft_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
@@ -112,7 +120,11 @@ class SuperDraftSpider:
 
 
 async def main():
-    spider = SuperDraftSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = SuperDraftSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

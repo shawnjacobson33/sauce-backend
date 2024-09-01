@@ -4,16 +4,18 @@ import os
 import time
 import uuid
 from datetime import datetime
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class ParlayPlaySpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
 
     async def start(self):
         url = 'https://parlayplay.io/api/v1/crossgame/search/?sport=All&league=&includeAlt=true'
@@ -56,6 +58,18 @@ class ParlayPlaySpider:
                 is_boosted_payout, alt_lines = stat.get('isBoostedPayout'), stat.get('altLines')
                 if alt_lines:
                     market = alt_lines.get('market')
+                    if market == 'Player Fantasy Score':
+                        if league == 'MLB':
+                            market = 'Player Baseball Fantasy Score'
+                        elif league in {'WNBA', 'NBA'}:
+                            market = 'Player Basketball Fantasy Score'
+                        elif league in {'NFL'}:
+                            market = 'Player Football Fantasy Score'
+
+                    market_id = self.msc.find_one({'ParlayPlay': market}, {'_id': 1})
+                    if market_id:
+                        market_id = market_id.get('_id')
+
                     for line in alt_lines.get('values', []):
                         stat_line = line.get('selectionPoints')
                         for label in ['Over', 'Under']:
@@ -70,7 +84,8 @@ class ParlayPlaySpider:
                                 'league': league,
                                 'game_time': game_time,
                                 'market_category': 'player_props',
-                                'market': market,
+                                'market_id': market_id,
+                                'market_name': market,
                                 'subject_team': team,
                                 'subject': subject,
                                 'position': position,
@@ -78,7 +93,7 @@ class ParlayPlaySpider:
                                 'label': label,
                                 'line': stat_line,
                                 'odds': odds,
-                                'is_boosted_payout': is_boosted_payout
+                                'is_boosted': is_boosted_payout
                             })
 
         relative_path = 'data_samples/parlayplay_data.json'
@@ -90,7 +105,11 @@ class ParlayPlaySpider:
 
 
 async def main():
-    spider = ParlayPlaySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = ParlayPlaySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

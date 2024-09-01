@@ -5,16 +5,18 @@ import uuid
 from datetime import datetime
 
 import asyncio
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class PaydaySpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
         self.headers = {
             'Host': 'api.paydayfantasy.com',
             'accept': '*/*',
@@ -76,7 +78,13 @@ class PaydaySpider:
         for game in data.get('data', {}).get('games', []):
             game_info = game.get('title')
             for player_prop in game.get('player_props', []):
+                market_id = ''
                 market, line, player = player_prop.get('name'), player_prop.get('value'), player_prop.get('player')
+                if market:
+                    market_id = self.msc.find_one({'Payday': market}, {'_id': 1})
+                    if market_id:
+                        market_id = market_id.get('_id')
+
                 if player:
                     subject, position = player.get('name'), player.get('position')
 
@@ -87,7 +95,8 @@ class PaydaySpider:
                             'league': league,
                             'game_info': game_info,
                             'market_category': 'player_props',
-                            'market': market,
+                            'market_id': market_id,
+                            'market_name': market,
                             'subject': subject,
                             'bookmaker': 'Payday',
                             'label': label,
@@ -96,7 +105,11 @@ class PaydaySpider:
 
 
 async def main():
-    spider = PaydaySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = PaydaySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

@@ -5,16 +5,18 @@ import uuid
 from datetime import datetime
 
 import asyncio
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class RebetSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
 
     async def start(self):
         url = 'https://api.rebet.app/prod/sportsbook-v3/get-new-odds-leagues'
@@ -89,11 +91,16 @@ class RebetSpider:
                     tab_name = market.get('tab_name')
                     if tab_name == 'Player Props':
                         # get market
-                        market_name = market.get('name')
+                        market_name, market_id = market.get('name'), ''
                         if '{%player}' in market_name:
                             market_name_components = market_name.split(' (')
                             new_market_name_components = market_name_components[0].split()
                             market_name = ' '.join(new_market_name_components[1:]).title()
+
+                        if market_name:
+                            market_id = self.msc.find_one({'Rebet': market_name}, {'_id': 1})
+                            if market_id:
+                                market_id = market_id.get('_id')
 
                         # get subject
                         subject, player_name = '', market.get('player_name')
@@ -125,7 +132,8 @@ class RebetSpider:
                                     'last_updated': last_updated,
                                     'league': league,
                                     'market_category': 'player_props',
-                                    'market': market_name,
+                                    'market_id': market_id,
+                                    'market_name': market_name,
                                     'game_time': game_time,
                                     'subject': subject,
                                     'bookmaker': 'Rebet',
@@ -154,7 +162,8 @@ class RebetSpider:
                                 'last_updated': last_updated,
                                 'league': league,
                                 'market_category': 'player_props',
-                                'market': market_name,
+                                'market_id': market_id,
+                                'market_name': market_name,
                                 'game_time': game_time,
                                 'subject': subject,
                                 'bookmaker': 'Rebet',
@@ -166,7 +175,11 @@ class RebetSpider:
 
 
 async def main():
-    spider = RebetSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = RebetSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

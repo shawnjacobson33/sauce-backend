@@ -4,16 +4,18 @@ import os
 import time
 import uuid
 from datetime import datetime
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class UnderdogSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
 
     async def start(self):
         url = "https://api.underdogfantasy.com/beta/v5/over_under_lines"
@@ -83,12 +85,14 @@ class UnderdogSpider:
             line = game.get('stat_value')
             for option in game.get('options', []):
                 # retrieve the match data corresponding to the appearance id of this line
-                league, market, subject, game_time, over_under = '', '', '', '', game.get('over_under')
+                market_id, league, market, subject, game_time, over_under = '', '', '', '', '', game.get('over_under')
                 if over_under:
                     appearance_stat = over_under.get('appearance_stat')
                     if appearance_stat:
                         appearance_id = appearance_stat.get('appearance_id')
                         market = appearance_stat.get('display_stat')
+
+                        # get league and game time
                         if appearance_id:
                             game_id = game_ids.get(appearance_id)
                             if game_id:
@@ -97,7 +101,27 @@ class UnderdogSpider:
                                     match = solo_game_data.get(game_id)
 
                                 league, game_time = match.get('sport_id'), match.get('scheduled_at')
+                                # don't want futures
+                                if 'SZN' in league:
+                                    continue
 
+                        # get market and market id
+                        if market:
+                            market = market.strip()
+
+                            if market == 'Fantasy Points':
+                                if league in {'NBA', 'WNBA'}:
+                                    market = 'Basketball Fantasy Points'
+                                elif league == 'MLB':
+                                    market = 'Baseball Fantasy Points'
+                                elif league in {'NFL', 'CFB'}:
+                                    market = 'Football Fantasy Points'
+
+                            market_id = self.msc.find_one({'Underdog Fantasy': market}, {'_id': 1})
+                            if market_id:
+                                market_id = market_id.get('_id')
+
+                            # get subject
                             player_id = player_ids.get(appearance_id)
                             if player_id:
                                 player = player_data.get(player_id)
@@ -119,7 +143,8 @@ class UnderdogSpider:
                     'league': league,
                     'game_time': game_time,
                     'market_category': 'player_props',
-                    'market': market,
+                    'market_id': market_id,
+                    'market_name': market,
                     'subject': subject,
                     'bookmaker': 'Underdog Fantasy',
                     'label': label,
@@ -136,7 +161,11 @@ class UnderdogSpider:
 
 
 async def main():
-    spider = UnderdogSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = UnderdogSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

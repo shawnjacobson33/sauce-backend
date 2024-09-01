@@ -5,16 +5,18 @@ import uuid
 from datetime import datetime
 
 import asyncio
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class OwnersBoxSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
         self.headers, self.cookies = {
             'Host': 'app.ownersbox.com',
             'accept': 'application/json',
@@ -47,7 +49,7 @@ class OwnersBoxSpider:
 
         await asyncio.gather(*tasks)
 
-        relative_path = 'data_samples/ownersbox_data.json'
+        relative_path = '../data_samples/ownersbox_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
@@ -62,9 +64,12 @@ class OwnersBoxSpider:
             league = prop_line.get('sport')
 
             # get market
-            market, market_type = '', prop_line.get('marketType')
+            market_id, market, market_type = '', '', prop_line.get('marketType')
             if market_type:
                 market = market_type.get('name')
+                market_id = self.msc.find_one({'OwnersBox': market}, {'_id': 1})
+                if market_id:
+                    market_id = market_id.get('_id')
 
             # get game info
             game_info, game = '', prop_line.get('game')
@@ -96,7 +101,8 @@ class OwnersBoxSpider:
                             'league': league,
                             'game_info': game_info,
                             'market_category': 'player_props',
-                            'market': market,
+                            'market_id': market_id,
+                            'market_name': market,
                             'team': team,
                             'position': position,
                             'subject': subject,
@@ -111,7 +117,8 @@ class OwnersBoxSpider:
                         'league': league,
                         'game_info': game_info,
                         'market_category': 'player_props',
-                        'market': market,
+                        'market_id': market_id,
+                        'market_name': market,
                         'team': team,
                         'position': position,
                         'subject': subject,
@@ -122,7 +129,11 @@ class OwnersBoxSpider:
 
 
 async def main():
-    spider = OwnersBoxSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = OwnersBoxSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

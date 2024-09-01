@@ -16,8 +16,7 @@ class BoomFantasySpider:
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
-        self.msc = msc
+        self.arm, self.msc = arm, msc
 
     async def start(self):
         url = "https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/graphql"
@@ -310,7 +309,7 @@ class BoomFantasySpider:
         }
 
         # get access tokens in order to make successful requests
-        relative_path = 'primary_source/boomfantasy_tokens.txt'
+        relative_path = 'boomfantasy_tokens.txt'
         absolute_path = os.path.abspath(relative_path)
 
         with open(absolute_path, 'r') as file:
@@ -391,7 +390,7 @@ class BoomFantasySpider:
                                         'line': line
                                     })
 
-            relative_path = 'data_samples/boomfantasy_data.json'
+            relative_path = '../data_samples/boomfantasy_data.json'
             absolute_path = os.path.abspath(relative_path)
             with open(absolute_path, 'w') as f:
                 json.dump(self.prop_lines, f, default=str)

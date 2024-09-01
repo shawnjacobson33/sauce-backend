@@ -4,16 +4,18 @@ import os
 import time
 import uuid
 from datetime import datetime
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class PrizePicksSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
 
     async def start(self):
         url = 'https://api.prizepicks.com/leagues?game_mode=pickem'
@@ -63,15 +65,6 @@ class PrizePicksSpider:
 
         # second pass will actually extract data from all the lines
         for line in data.get('data', []):
-            last_updated, market, game_time, stat_line, line_attributes = '', '', '', '', line.get('attributes')
-            if line_attributes:
-                # for lines with multipliers ("demon" or "goblin") need to make a separate request to get the payout
-                if line_attributes.get('odds_type') != 'standard':
-                    continue
-
-                last_updated, market = line_attributes.get('updated_at'), line_attributes.get('stat_type')
-                game_time, stat_line = line_attributes.get('start_time'), line_attributes.get('line_score')
-
             league, relationships = '', line.get('relationships')
             if relationships:
                 relationship_league = relationships.get('league')
@@ -84,15 +77,40 @@ class PrizePicksSpider:
 
                         league = leagues.get(league_id)
 
-                team, subject, position, relationship_new_player = '', '', '', relationships.get('new_player')
-                if relationship_new_player:
-                    relationship_new_player_data = relationship_new_player.get('data')
-                    if relationship_new_player_data:
-                        player_id = relationship_new_player_data.get('id')
-                        player_data = players.get(str(player_id))
-                        if player_data:
-                            team, subject = player_data.get('team'), player_data.get('player_name')
-                            position = player_data.get('position')
+            team, subject, position, relationship_new_player = '', '', '', relationships.get('new_player')
+            if relationship_new_player:
+                relationship_new_player_data = relationship_new_player.get('data')
+                if relationship_new_player_data:
+                    player_id = relationship_new_player_data.get('id')
+                    player_data = players.get(str(player_id))
+                    if player_data:
+                        team, subject = player_data.get('team'), player_data.get('player_name')
+                        position = player_data.get('position')
+
+            market_id = ''
+            last_updated, market, game_time, stat_line, line_attributes = '', '', '', '', line.get('attributes')
+            if line_attributes:
+                # for lines with multipliers ("demon" or "goblin") need to make a separate request to get the payout
+                if line_attributes.get('odds_type') != 'standard':
+                    continue
+
+                last_updated, market = line_attributes.get('updated_at'), line_attributes.get('stat_type')
+                if market:
+                    if 'Fantasy Score' in market:
+                        if league in {'NBA', 'WNBA', 'WNBA1H'}:
+                            market = 'Basketball Fantasy Score'
+                        elif league == 'TENNIS':
+                            market = 'Tennis Fantasy Score'
+                        elif league in {'NFL', 'CFB', 'CFB2H'}:
+                            market = 'Football Fantasy Score'
+                        elif league in {'INDYCAR', 'NASCAR'}:
+                            market = 'Car Racing Fantasy Score'
+
+                    market_id = self.msc.find_one({'PrizePicks': market}, {'_id': 1})
+                    if market_id:
+                        market_id = market_id.get('_id')
+
+                game_time, stat_line = line_attributes.get('start_time'), line_attributes.get('line_score')
 
                 for label in ['Over', 'Under']:
                     self.prop_lines.append({
@@ -101,7 +119,8 @@ class PrizePicksSpider:
                         'last_updated': last_updated,
                         'league': league,
                         'market_category': 'player_props',
-                        'market': market,
+                        'market_id': market_id,
+                        'market_name': market,
                         'game_time': game_time,
                         'team': team,
                         'subject': subject,
@@ -120,7 +139,11 @@ class PrizePicksSpider:
 
 
 async def main():
-    spider = PrizePicksSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = PrizePicksSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

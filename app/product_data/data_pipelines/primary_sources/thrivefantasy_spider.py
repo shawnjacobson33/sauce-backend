@@ -4,16 +4,18 @@ import os
 import time
 import uuid
 from datetime import datetime
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from pymongo.collection import Collection
 
 
 class ThriveFantasySpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc = arm, msc
 
     async def start(self):
         url = 'https://api.thrivefantasy.com/houseProp/upcomingHouseProps'
@@ -50,7 +52,7 @@ class ThriveFantasySpider:
 
             # player info
             player = contest_prop.get('player1')
-            league, team, position, subject, market = '', '', '', '', ''
+            market_id, league, team, position, subject, market = '', '', '', '', '', ''
             if player:
                 league = player.get('leagueType')
                 team = player.get('teamAbbr')
@@ -68,6 +70,10 @@ class ThriveFantasySpider:
                 else:
                     market = prop_params[0]
 
+                market_id = self.msc.find_one({'ThriveFantasy': market}, {'_id': 1})
+                if market_id:
+                    market_id = market_id.get('_id')
+
             line = contest_prop.get('propValue')
 
             for label in ['Over', 'Under']:
@@ -76,7 +82,8 @@ class ThriveFantasySpider:
                     'time_processed': datetime.now(),
                     'league': league,
                     'market_category': 'player_props',
-                    'market': market,
+                    'market_id': market_id,
+                    'market_name': market,
                     'game_info': game_info,
                     'team': team,
                     'subject': subject,
@@ -95,7 +102,11 @@ class ThriveFantasySpider:
 
 
 async def main():
-    spider = ThriveFantasySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/')
+
+    db = client['sauce']
+
+    spider = ThriveFantasySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
     start_time = time.time()
     await spider.start()
     end_time = time.time()

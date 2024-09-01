@@ -55,6 +55,9 @@ class DraftersSpider:
                     game_info = ' @ '.join([away_team, home_team])
 
                 market, line = player.get('bid_stats_name'), player.get('bid_stats_value')
+                if market == 'Rush+Receiving Yds':
+                    market = 'Rush+Rec Yds'
+
                 market_id = self.msc.find_one({'Drafters': market}, {'_id': 1})
                 if market_id:
                     market_id = market_id.get('_id')
