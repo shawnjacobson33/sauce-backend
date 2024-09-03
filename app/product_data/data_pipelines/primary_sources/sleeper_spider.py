@@ -6,16 +6,18 @@ import uuid
 from datetime import datetime
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
-from pymongo.collection import Collection
+from app.product_data.data_pipelines.utils import DataCleaner as dc
+
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from pymongo.database import Database
 
 
 class SleeperSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm, self.msc = arm, msc
+        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
         self.headers = {
             'Host': 'api.sleeper.app',
             'x-amp-session': '1724697278937',
@@ -65,6 +67,9 @@ class SleeperSpider:
 
         for line in data:
             team, subject, position, player_id, league = '', '', '', line.get('subject_id'), line.get('sport')
+            if league:
+                league = dc.clean_league(league)
+
             if player_id:
                 player = players.get(league).get(player_id)
                 if player:
@@ -75,6 +80,10 @@ class SleeperSpider:
                 if market == 'fantasy_points':
                     if league == 'MLB':
                         market = 'baseball_fantasy_points'
+                    elif league in {'NFL', 'NCAAF'}:
+                        market = 'football_fantasy_points'
+                    elif league in {'NBA', 'WNBA'}:
+                        market = 'basketball_fantasy_points'
 
                 market_id = self.msc.find_one({'Sleeper': market}, {'_id': 1})
                 if market_id:
@@ -103,20 +112,22 @@ class SleeperSpider:
                     'multiplier': multiplier
                 })
 
-        relative_path = 'data_samples/sleeper_data.json'
+        relative_path = '../data_samples/sleeper_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
+
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[Sleeper]: {len(self.prop_lines)} lines')
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = SleeperSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = SleeperSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

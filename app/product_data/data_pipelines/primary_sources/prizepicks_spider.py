@@ -1,21 +1,24 @@
 import asyncio
 import json
 import os
+import re
 import time
 import uuid
 from datetime import datetime
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
-from pymongo.collection import Collection
+from app.product_data.data_pipelines.utils import DataCleaner as dc
+
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from pymongo.database import Database
 
 
 class PrizePicksSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm, self.msc = arm, msc
+        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
 
     async def start(self):
         url = 'https://api.prizepicks.com/leagues?game_mode=pickem'
@@ -76,6 +79,8 @@ class PrizePicksSpider:
                             continue
 
                         league = leagues.get(league_id)
+                        if league:
+                            league = dc.clean_league(league)
 
             team, subject, position, relationship_new_player = '', '', '', relationships.get('new_player')
             if relationship_new_player:
@@ -85,6 +90,8 @@ class PrizePicksSpider:
                     player_data = players.get(str(player_id))
                     if player_data:
                         team, subject = player_data.get('team'), player_data.get('player_name')
+                        if subject:
+                            subject = subject.strip()
                         position = player_data.get('position')
 
             market_id = ''
@@ -96,15 +103,25 @@ class PrizePicksSpider:
 
                 last_updated, market = line_attributes.get('updated_at'), line_attributes.get('stat_type')
                 if market:
+                    # in order to create more distinct markets
                     if 'Fantasy Score' in market:
-                        if league in {'NBA', 'WNBA', 'WNBA1H'}:
+                        if league in {'NBA', 'WNBA', 'WNBA1H', 'WNBA2H', 'WNBA1Q', 'WNBA2Q', 'WNBA3Q', 'WNBA4Q', 'WNBA1H'}:
                             market = 'Basketball Fantasy Score'
                         elif league == 'TENNIS':
                             market = 'Tennis Fantasy Score'
-                        elif league in {'NFL', 'CFB', 'CFB2H'}:
+                        elif league in {'NFL', 'NFL1Q', 'NFL2Q', 'NFL3Q', 'NFL4Q', 'NFL1H', 'NFL2H', 'NCAAF', 'NCAAF1Q'}:
                             market = 'Football Fantasy Score'
                         elif league in {'INDYCAR', 'NASCAR'}:
                             market = 'Car Racing Fantasy Score'
+                        elif league in {'MMA', 'UFC'}:
+                            market = 'Fighting Fantasy Score'
+                        elif league == 'MLB':
+                            market = 'Baseball Fantasy Score'
+
+                    # in order to create comparable market names
+                    if re.match(r'^.+[1-4]([QH])$', league):
+                        market = f'{league[-2:]} {market}'
+                        league = league[:-2]
 
                     market_id = self.msc.find_one({'PrizePicks': market}, {'_id': 1})
                     if market_id:
@@ -122,7 +139,7 @@ class PrizePicksSpider:
                         'market_id': market_id,
                         'market_name': market,
                         'game_time': game_time,
-                        'team': team,
+                        'subject_team': team,
                         'subject': subject,
                         'position': position,
                         'bookmaker': "PrizePicks",
@@ -130,20 +147,22 @@ class PrizePicksSpider:
                         'line': stat_line
                     })
 
-        relative_path = 'data_samples/prizepicks_data.json'
+        relative_path = '../data_samples/prizepicks_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
+
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[PrizePicks]: {len(self.prop_lines)} lines')
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = PrizePicksSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = PrizePicksSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

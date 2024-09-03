@@ -6,16 +6,18 @@ import uuid
 from datetime import datetime
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
-from pymongo.collection import Collection
+from app.product_data.data_pipelines.utils import DataCleaner as dc
+
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from pymongo.database import Database
 
 
 class VividPicksSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm, self.msc = arm, msc
+        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
 
     async def start(self):
         url = 'https://api.betcha.one/v1/game/activePlayersForLeagueBoard'
@@ -56,15 +58,17 @@ class VividPicksSpider:
             if 'Futures' in game_info:
                 continue
 
+            if league:
+                league = dc.clean_league(league)
+
             for player in event.get('activePlayers', []):
                 last_updated = player.get('updatedAt')
                 subject, subject_team, position = player.get('name'), player.get('abvTeamName'), player.get('position')
                 if not subject_team:
                     subject_team = player.get('teamName')
 
-                odds_jam_prop_sources = player.get('oddsJamProps')
                 for prop in player.get('visiblePlayerProps', []):
-                    market_id, multiplier_source, market, line, multiplier = '', '', prop.get('p'), prop.get('val'), 1.0
+                    market_id, market, line, multiplier = '', prop.get('p'), prop.get('val'), 1.0
                     if market:
                         market_id = self.msc.find_one({'Vivid Picks': market}, {'_id': 1})
                         if market_id:
@@ -75,7 +79,6 @@ class VividPicksSpider:
                         mult_market = mult_player_props.get(market)
                         if mult_market:
                             multiplier = mult_market.get('multiplier', multiplier)
-                            multiplier_source = mult_market.get('source')
 
                             self.prop_lines.append({
                                 'batch_id': self.batch_id,
@@ -94,8 +97,6 @@ class VividPicksSpider:
                                 'label': 'Over' if multiplier > 1.0 else 'Under',
                                 'line': line,
                                 'multiplier': multiplier,
-                                'multiplier_source': multiplier_source,
-                                'oddsjam_prop_sources': odds_jam_prop_sources
                             })
 
                     else:
@@ -110,30 +111,31 @@ class VividPicksSpider:
                                 'market_id': market_id,
                                 'market_name': market,
                                 'game_time': game_time,
-                                'abv_team_name': subject_team,
+                                'subject_team': subject_team,
                                 'subject': subject,
                                 'position': position,
                                 'bookmaker': 'Vivid Picks',
                                 'label': label,
                                 'line': line,
                                 'multiplier': multiplier,
-                                'odds_jam_prop_sources': odds_jam_prop_sources
                             })
 
-        relative_path = 'data_samples/vividpicks_data.json'
+        relative_path = '../data_samples/vividpicks_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
+
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[Vivid Picks]: {len(self.prop_lines)} lines')
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = VividPicksSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = VividPicksSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

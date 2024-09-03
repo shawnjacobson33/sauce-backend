@@ -6,18 +6,20 @@ from datetime import datetime
 
 import asyncio
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils import DataCleaner as dc
+
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
 from pymongo import MongoClient
-from pymongo.collection import Collection
+from pymongo.database import Database
 
 
 class DabbleSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
         self.arm = arm
-        self.msc = msc
+        self.msc, self.plc = db['markets'], db['prop_lines']
         self.headers, self.cookies = {
             'Host': 'api.dabble.com',
             'accept': 'application/json',
@@ -39,6 +41,8 @@ class DabbleSpider:
         tasks = []
         for competition in data.get('activeCompetitions', []):
             competition_id, league = competition.get('id'), competition.get('displayName')
+            if league:
+                league = dc.clean_league(league)
 
             url = f'https://api.dabble.com/competitions/{competition_id}/sport-fixtures'
             params = {
@@ -53,10 +57,12 @@ class DabbleSpider:
 
         await asyncio.gather(*tasks)
 
-        relative_path = 'data_samples/dabble_data.json'
+        relative_path = '../data_samples/dabble_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
+
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[Dabble]: {len(self.prop_lines)} lines')
 
@@ -119,11 +125,11 @@ class DabbleSpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = DabbleSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = DabbleSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

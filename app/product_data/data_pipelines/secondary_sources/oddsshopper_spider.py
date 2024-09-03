@@ -9,15 +9,15 @@ import asyncio
 from pymongo import MongoClient
 
 from app.product_data.data_pipelines.request_management import AsyncRequestManager
-from pymongo.collection import Collection
+from pymongo.database import Database
 
 
 class OddsShopperSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm, self.msc = arm, msc
+        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
 
     async def start(self):
         url = f'https://www.oddsshopper.com/api/processingInfo/all'
@@ -64,8 +64,15 @@ class OddsShopperSpider:
 
         tasks = []
         for offer_category in data.get('offerCategories', []):
-            if offer_category.get('name') not in {'GameProps', 'PlayerFutures', 'TeamFutures'}:
-                market_category = offer_category.get('name')
+            market_category = offer_category.get('name')
+            if market_category not in {'GameProps', 'PlayerFutures', 'TeamFutures', 'Futures'}:
+                if market_category:
+                    market_category = market_category.lower()
+                    if market_category == 'playerprops':
+                        market_category = '_'.join([market_category[:6], market_category[6:]])
+                    elif market_category == 'gamelines':
+                        market_category = '_'.join([market_category[:4], market_category[4:]])
+
                 for offer in offer_category.get('offers', []):
                     offer_id, now = offer.get('id'), datetime.utcnow()
                     # Calculate current datetime and future date
@@ -100,10 +107,12 @@ class OddsShopperSpider:
         await asyncio.gather(*tasks)
 
         # self.count_lines_per_bookmaker()
-        relative_path = 'data_samples/oddsshopper_data.json'
-        absolute_path = os.path.abspath(relative_path)
-        with open(absolute_path, 'w') as f:
-            json.dump(self.prop_lines, f, default=str)
+        # relative_path = 'data_samples/oddsshopper_data.json'
+        # absolute_path = os.path.abspath(relative_path)
+        # with open(absolute_path, 'w') as f:
+        #     json.dump(self.prop_lines, f, default=str)
+
+        self.plc.insert_many(self.prop_lines)
 
         print(f'[OddsShopper]: {len(self.prop_lines)} lines')
 
@@ -137,6 +146,8 @@ class OddsShopperSpider:
                 market = fantasy_score_mappings.get(league, market)
             elif market == 'Fantasy Points' and league == 'NFL':
                 market = 'Football Fantasy Score'
+            elif market == 'Hitter Fantasy Score' and league == 'MLB':
+                market = 'Baseball Fantasy Score'
 
             market_id = ''
             if market:
@@ -174,11 +185,11 @@ class OddsShopperSpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = OddsShopperSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = OddsShopperSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

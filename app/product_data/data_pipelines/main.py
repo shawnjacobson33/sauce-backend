@@ -16,12 +16,12 @@ from app.product_data.data_pipelines.secondary_sources import OddsShopperSpider,
 client = MongoClient('mongodb://localhost:27017/')
 
 db = client['sauce']
+arm = AsyncRequestManager()
 
 
 class DataPipeline:
     def __init__(self):
         self.batch_id = uuid.uuid4()
-        self.arm = AsyncRequestManager()
 
     async def collect(self):
         spiders = [BoomFantasySpider, ChampSpider, DabbleSpider, DraftersSpider, DraftKingsPick6,
@@ -29,11 +29,9 @@ class DataPipeline:
                    PrizePicksSpider, RebetSpider, SleeperSpider, SuperDraftSpider, ThriveFantasySpider,
                    UnderdogSpider, VividPicksSpider, OddsShopperSpider, SmartBettorSpider]
 
-        msc = db['markets']
-
         tasks = []
         for spider in spiders:
-            tasks.append(spider(self.batch_id, self.arm).start())
+            tasks.append(spider(self.batch_id, arm, db).start())
 
         await asyncio.gather(*tasks)
         print(f'Data Collection Complete: {self.batch_id}')

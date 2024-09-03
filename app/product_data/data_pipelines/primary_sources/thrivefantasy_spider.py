@@ -6,20 +6,24 @@ import uuid
 from datetime import datetime
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
-from pymongo.collection import Collection
+from app.product_data.data_pipelines.utils import DataCleaner as dc
+
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from pymongo.database import Database
 
 
 class ThriveFantasySpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm, self.msc = arm, msc
+        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
 
     async def start(self):
         url = 'https://api.thrivefantasy.com/houseProp/upcomingHouseProps'
-        headers, json_data = {
+        cookies, headers, json_data = {
+            '__cf_bm': 'jbc_SuDVg18rKbg7nFWKqtJAEecibV2S9p2bSZXjuDw-1725385621-1.0.1.1-J03cu6bfUVwCpT97F1cM5rCFYfMOOPBeW1Gx74FXuZfpcyjD.hxqCIK9LQMPdU8fvah4_bPNba3LCBcRnTSmJw',
+        }, {
             'Host': 'api.thrivefantasy.com',
             'accept': 'application/json, text/plain, */*',
             'content-type': 'application/json',
@@ -33,7 +37,7 @@ class ThriveFantasySpider:
             'currentSize': 20,
         }
 
-        await self.arm.post(url, self._parse_lines, headers=headers, json=json_data)
+        await self.arm.post(url, self._parse_lines, headers=headers, cookies=cookies, json=json_data)
 
     async def _parse_lines(self, response):
         # get body content in json format
@@ -55,6 +59,9 @@ class ThriveFantasySpider:
             market_id, league, team, position, subject, market = '', '', '', '', '', ''
             if player:
                 league = player.get('leagueType')
+                if league:
+                    league = dc.clean_league(league)
+
                 team = player.get('teamAbbr')
                 position = player.get('positionAbbreviation')
 
@@ -93,20 +100,22 @@ class ThriveFantasySpider:
                     'line': line
                 })
 
-        relative_path = 'data_samples/thrivefantasy_data.json'
+        relative_path = '../data_samples/thrivefantasy_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
+
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[ThriveFantasy]: {len(self.prop_lines)} lines')
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = ThriveFantasySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = ThriveFantasySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

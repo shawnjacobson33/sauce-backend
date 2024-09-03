@@ -5,18 +5,21 @@ import time
 import uuid
 import re
 from datetime import datetime
+from pymongo import MongoClient
 
 import pandas as pd
+from app.product_data.data_pipelines.utils import DataCleaner as dc
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from pymongo.database import Database
 
 
 class SmartBettorSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm = arm
+        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
 
     async def start(self):
         # going to get the odds for all in-season leagues
@@ -62,9 +65,18 @@ class SmartBettorSpider:
         }
         for event in data:
             last_updated, league = event.get('time_difference_formatted'), event.get('sport_league_display')
+            if league:
+                league = dc.clean_league(league)
+
             game_time, market = event.get('game_date'), event.get('market_display')
             if market:
                 market = market.strip()
+            else:
+                market = 'Spread'
+
+            market_id = self.msc.find_one({'SmartBettor': market}, {'_id': 1})
+            if market_id:
+                market_id = market_id.get('_id')
 
             bet_type, home_team, away_team = event.get('bet_type'), event.get('home_team'), event.get('away_team')
 
@@ -81,7 +93,7 @@ class SmartBettorSpider:
                         line = '0.5'
 
                 for bookmaker_key, bookmaker_name in bookmaker_keys.items():
-                    if (bookmaker_key not in event) or (f"{bookmaker_key}_1_odds_other" not in event):
+                    if (bookmaker_key not in event) or (f"{bookmaker_key}_other" not in event):
                         continue
 
                     # get market
@@ -134,7 +146,8 @@ class SmartBettorSpider:
                         'league': league,
                         'game_time': game_time,
                         'market_category': market_category,
-                        'market': market,
+                        'market_id': market_id,
+                        'market_name': market,
                         'subject': subject,
                         'bookmaker': bookmaker_name,
                         'label': label,
@@ -142,11 +155,12 @@ class SmartBettorSpider:
                         'odds': odds
                     })
 
-        # self.count_lines_per_bookmaker()
         relative_path = '../data_samples/smartbettor_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
+
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[SmartBettor]: {len(self.prop_lines)} lines')
 
@@ -157,7 +171,11 @@ class SmartBettorSpider:
 
 
 async def main():
-    spider = SmartBettorSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager())
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
+
+    db = client['sauce']
+
+    spider = SmartBettorSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

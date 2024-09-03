@@ -7,16 +7,18 @@ from datetime import datetime
 import asyncio
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
-from pymongo.collection import Collection
+from app.product_data.data_pipelines.utils import DataCleaner as dc
+
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from pymongo.database import Database
 
 
 class OwnersBoxSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm, self.msc = arm, msc
+        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
         self.headers, self.cookies = {
             'Host': 'app.ownersbox.com',
             'accept': 'application/json',
@@ -37,7 +39,7 @@ class OwnersBoxSpider:
     async def _parse_leagues(self, response):
         data = response.json()
 
-        url = 'https://app.ownersbox.com/fsp/v2/market'
+        url = 'https://app.ownersbox.com/fsp/marketType/active?'
 
         tasks = []
         for league in data:
@@ -45,7 +47,7 @@ class OwnersBoxSpider:
                 'sport': league,
             }
 
-            tasks.append(self.arm.get(url, self._parse_lines, headers=self.headers, cookies=self.cookies, params=params))
+            tasks.append(self.arm.get(url, self._parse_markets, league, headers=self.headers, cookies=self.cookies, params=params))
 
         await asyncio.gather(*tasks)
 
@@ -54,7 +56,29 @@ class OwnersBoxSpider:
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
+        # self.plc.insert_many(self.prop_lines)
+
         print(f'[OwnersBox]: {len(self.prop_lines)} lines')
+
+    async def _parse_markets(self, response, league):
+        data = response.json()
+
+        url = 'https://app.ownersbox.com/fsp/v2/market?'
+
+        tasks = []
+        for market in data:
+            market_id = market.get('id')
+            if not market_id:
+                continue
+
+            params = {
+                'sport': league,
+                'marketTypeId': market_id
+            }
+
+            tasks.append(self.arm.get(url, self._parse_lines, headers=self.headers, cookies=self.cookies, params=params))
+
+        await asyncio.gather(*tasks)
 
     async def _parse_lines(self, response):
         # get body content in json format
@@ -62,6 +86,9 @@ class OwnersBoxSpider:
 
         for prop_line in data.get('markets', []):
             league = prop_line.get('sport')
+
+            if league:
+                dc.clean_league(league)
 
             # get market
             market_id, market, market_type = '', '', prop_line.get('marketType')
@@ -129,11 +156,11 @@ class OwnersBoxSpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = OwnersBoxSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = OwnersBoxSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

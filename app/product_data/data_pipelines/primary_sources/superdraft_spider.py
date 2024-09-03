@@ -6,16 +6,18 @@ import uuid
 from datetime import datetime
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
-from pymongo.collection import Collection
+from app.product_data.data_pipelines.utils import DataCleaner as dc
+
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from pymongo.database import Database
 
 
 class SuperDraftSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm, self.msc = arm, msc
+        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
 
     async def start(self):
         url = 'https://api.superdraft.io/api/prop/v3/active-fantasy'
@@ -57,6 +59,8 @@ class SuperDraftSpider:
             if prop_type != 'matchup-prop':
                 last_updated, game_time = prop.get('updatedAt'), prop.get('startTimeUTC')
                 league = sports.get(int(prop.get('sportId')))
+                if league:
+                    league = dc.clean_league(league)
 
                 # get market
                 market_id, market, choices = '', '', prop.get('choices')
@@ -103,7 +107,7 @@ class SuperDraftSpider:
                         'market_name': market,
                         'game_info': game_info,
                         'game_time': game_time,
-                        'team': team,
+                        'subject_team': team,
                         'subject': subject,
                         'position': position,
                         'bookmaker': 'SuperDraft',
@@ -116,15 +120,17 @@ class SuperDraftSpider:
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
 
+        # self.plc.insert_many(self.prop_lines)
+
         print(f'[SuperDraft]: {len(self.prop_lines)} lines')
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = SuperDraftSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = SuperDraftSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

@@ -7,16 +7,18 @@ from datetime import datetime
 import asyncio
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
-from pymongo.collection import Collection
+from app.product_data.data_pipelines.utils import DataCleaner as dc
+
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from pymongo.database import Database
 
 
 class RebetSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm, self.msc = arm, msc
+        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
 
     async def start(self):
         url = 'https://api.rebet.app/prod/sportsbook-v3/get-new-odds-leagues'
@@ -69,10 +71,12 @@ class RebetSpider:
 
         await asyncio.gather(*tasks)
 
-        relative_path = 'data_samples/rebet_data.json'
+        relative_path = '../data_samples/rebet_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
+
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[Rebet]: {len(self.prop_lines)} lines')
 
@@ -81,6 +85,9 @@ class RebetSpider:
 
         for event in data.get('data', {}).get('events', []):
             last_updated, league, game_time = event.get('updated_at'), event.get('league_name'), event.get('start_time')
+            if league:
+                league = dc.clean_league(league)
+
             if last_updated:
                 # convert from unix to a datetime
                 last_updated = datetime.fromtimestamp(int(last_updated) / 1000)
@@ -124,8 +131,6 @@ class RebetSpider:
                                     elif '+' in outcome_name:
                                         label, line = 'Over', outcome_name_components[-1][:-1]
 
-                                rebet_probability = outcome.get('probabilities')
-
                                 self.prop_lines.append({
                                     'batch_id': self.batch_id,
                                     'time_processed': datetime.now(),
@@ -140,7 +145,6 @@ class RebetSpider:
                                     'label': label,
                                     'line': line,
                                     'odds': the_odds,
-                                    'rebet_probability': rebet_probability
                                 })
                         else:
                             outcome_name, the_odds = outcomes.get('name'), outcomes.get('odds')
@@ -153,8 +157,6 @@ class RebetSpider:
                                     label, line = outcome_name_components[0].title(), outcome_name_components[1]
                                 elif '+' in outcome_name:
                                     label, line = 'Over', outcome_name_components[-1][:-1]
-
-                            rebet_probability = outcomes.get('probabilities')
 
                             self.prop_lines.append({
                                 'batch_id': self.batch_id,
@@ -170,16 +172,15 @@ class RebetSpider:
                                 'label': label,
                                 'line': line,
                                 'odds': the_odds,
-                                'rebet_probability': rebet_probability
                             })
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = RebetSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = RebetSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

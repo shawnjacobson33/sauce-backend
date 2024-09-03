@@ -7,16 +7,18 @@ from datetime import datetime
 import asyncio
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
-from pymongo.collection import Collection
+from app.product_data.data_pipelines.utils import DataCleaner as dc
+
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from pymongo.database import Database
 
 
 class PaydaySpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm, self.msc = arm, msc
+        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
         self.headers = {
             'Host': 'api.paydayfantasy.com',
             'accept': '*/*',
@@ -48,14 +50,18 @@ class PaydaySpider:
                     'include_solo_contests': '1',
                 }
 
+                league = dc.clean_league(league)
+
                 tasks.append(self.arm.get(url, self._parse_contests, league, headers=self.headers, params=params))
 
         await asyncio.gather(*tasks)
 
-        relative_path = 'data_samples/payday_data.json'
+        relative_path = '../data_samples/payday_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
+
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[Payday]: {len(self.prop_lines)} lines')
 
@@ -105,11 +111,11 @@ class PaydaySpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = PaydaySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = PaydaySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

@@ -5,17 +5,19 @@ import time
 import uuid
 from datetime import datetime
 from pymongo import MongoClient
+from app.product_data.data_pipelines.utils import DataCleaner as dc
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
-from pymongo.collection import Collection
+
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from pymongo.database import Database
 
 
 class UnderdogSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
-        self.arm, self.msc = arm, msc
+        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
 
     async def start(self):
         url = "https://api.underdogfantasy.com/beta/v5/over_under_lines"
@@ -101,14 +103,15 @@ class UnderdogSpider:
                                     match = solo_game_data.get(game_id)
 
                                 league, game_time = match.get('sport_id'), match.get('scheduled_at')
-                                # don't want futures
-                                if 'SZN' in league:
+                                # don't want futures and don't want combos because they are niche and hard to normalize
+                                if ('SZN' in league) or ('COMBOS' in league):
                                     continue
 
                         # get market and market id
                         if market:
                             market = market.strip()
 
+                            # create more distinct markets
                             if market == 'Fantasy Points':
                                 if league in {'NBA', 'WNBA'}:
                                     market = 'Basketball Fantasy Points'
@@ -121,18 +124,29 @@ class UnderdogSpider:
                             if market_id:
                                 market_id = market_id.get('_id')
 
-                            # get subject
-                            player_id = player_ids.get(appearance_id)
-                            if player_id:
-                                player = player_data.get(player_id)
-                                # handle subject names
-                                first_name, last_name = player.get('first_name'), player.get('last_name')
-                                if not first_name:
-                                    subject = last_name
-                                elif not last_name:
-                                    subject = first_name
-                                else:
-                                    subject = ' '.join([first_name, last_name])
+                        # get subject
+                        player_id = player_ids.get(appearance_id)
+                        if player_id:
+                            player = player_data.get(player_id)
+                            # handle subject names
+                            first_name, last_name = player.get('first_name'), player.get('last_name')
+                            if not first_name:
+                                subject = last_name
+                            elif not last_name:
+                                subject = first_name
+                            else:
+                                subject = ' '.join([first_name, last_name])
+
+                            # fixes a formatting issues for ESPORTS subjects where Underdog formats like this:
+                            # CS: [subject_name] and I only want the subject
+                            if league == 'ESPORTS':
+                                subject_components = subject.split(': ')
+                                if subject_components and len(subject_components) == 2:
+                                    # assign the league to the more specific game in the ESPORTS realm
+                                    league, subject = subject_components[0], subject_components[1]
+
+                        if league:
+                            league = dc.clean_league(league)
 
                 label = 'Over' if option.get('choice') == 'higher' else 'Under'
                 multiplier = option.get('payout_multiplier')
@@ -152,20 +166,22 @@ class UnderdogSpider:
                     'multiplier': multiplier
                 })
 
-        relative_path = 'data_samples/underdog_data.json'
+        relative_path = '../data_samples/underdog_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
+
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[Underdog Fantasy]: {len(self.prop_lines)} lines')
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = UnderdogSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = UnderdogSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

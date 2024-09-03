@@ -6,16 +6,18 @@ import uuid
 from datetime import datetime
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
-from pymongo.collection import Collection
+from app.product_data.data_pipelines.utils import DataCleaner as dc
+
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from pymongo.database import Database
 
 
 class ParlayPlaySpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
-        self.batch_id = batch_id
+        self.batch_id, self.arm = batch_id, arm
 
-        self.arm, self.msc = arm, msc
+        self.msc, self.plc, self.sc = db['markets'], db['prop_lines'], db['subjects']
 
     async def start(self):
         url = 'https://parlayplay.io/api/v1/crossgame/search/?sport=All&league=&includeAlt=true'
@@ -46,7 +48,10 @@ class ParlayPlaySpider:
                 player_league, game_time = match.get('league'), match.get('matchDate')
                 if player_league:
                     league = player_league.get('leagueNameShort')
+                    if league:
+                        league = dc.clean_league(league)
 
+            # get subject data
             subject, position, team, player_data = '', '', '', player.get('player')
             if player_data:
                 subject, position = player_data.get('fullName'), player_data.get('position')
@@ -96,20 +101,22 @@ class ParlayPlaySpider:
                                 'is_boosted': is_boosted_payout
                             })
 
-        relative_path = 'data_samples/parlayplay_data.json'
+        relative_path = '../data_samples/parlayplay_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
+
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[ParlayPlay]: {len(self.prop_lines)} lines')
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = ParlayPlaySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = ParlayPlaySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

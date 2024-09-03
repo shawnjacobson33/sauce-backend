@@ -5,18 +5,18 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
 from pymongo import MongoClient
-from pymongo.collection import Collection
+from pymongo.database import Database
 
 
 class DraftersSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, msc: Collection):
+    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
         self.arm = arm
-        self.msc = msc
+        self.msc, self.plc = db['markets'], db['prop_lines']
 
     async def start(self):
         url = 'https://node.drafters.com/props-game/get-props-games'
@@ -55,8 +55,11 @@ class DraftersSpider:
                     game_info = ' @ '.join([away_team, home_team])
 
                 market, line = player.get('bid_stats_name'), player.get('bid_stats_value')
+                # quick formatting error fixes
                 if market == 'Rush+Receiving Yds':
                     market = 'Rush+Rec Yds'
+                elif market == 'Passing + Rushing Yards':
+                    market = 'Pass + Rush Yards'
 
                 market_id = self.msc.find_one({'Drafters': market}, {'_id': 1})
                 if market_id:
@@ -77,20 +80,22 @@ class DraftersSpider:
                         'line': line
                     })
 
-        relative_path = 'data_samples/drafters_data.json'
+        relative_path = '../data_samples/drafters_data.json'
         absolute_path = os.path.abspath(relative_path)
         with open(absolute_path, 'w') as f:
             json.dump(self.prop_lines, f, default=str)
+
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[Drafters]: {len(self.prop_lines)} lines')
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/')
+    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
 
     db = client['sauce']
 
-    spider = DraftersSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), msc=db['markets'])
+    spider = DraftersSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()
