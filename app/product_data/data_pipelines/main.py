@@ -4,19 +4,20 @@ import uuid
 
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer
 
-from app.product_data.data_pipelines.primary_sources import BoomFantasySpider, ChampSpider, DabbleSpider, \
+from app.product_data.data_pipelines.data_sourcing import BoomFantasySpider, ChampSpider, DabbleSpider, \
     DraftersSpider, \
     DraftKingsPick6, HotStreakSpider, MoneyLineSpider, OwnersBoxSpider, ParlayPlaySpider, PaydaySpider, \
     PrizePicksSpider, \
-    RebetSpider, SleeperSpider, SuperDraftSpider, ThriveFantasySpider, UnderdogSpider, VividPicksSpider
-from app.product_data.data_pipelines.secondary_sources import OddsShopperSpider, SmartBettorSpider
+    RebetSpider, SleeperSpider, SuperDraftSpider, ThriveFantasySpider, UnderdogSpider, VividPicksSpider, \
+    OddsShopperSpider
 
 client = MongoClient('mongodb://localhost:27017/')
 
 db = client['sauce']
-arm = AsyncRequestManager()
+arm = RequestManager()
+dn = DataNormalizer(db)
 
 
 class DataPipeline:
@@ -27,11 +28,11 @@ class DataPipeline:
         spiders = [BoomFantasySpider, ChampSpider, DabbleSpider, DraftersSpider, DraftKingsPick6,
                    HotStreakSpider, MoneyLineSpider, OwnersBoxSpider, ParlayPlaySpider, PaydaySpider,
                    PrizePicksSpider, RebetSpider, SleeperSpider, SuperDraftSpider, ThriveFantasySpider,
-                   UnderdogSpider, VividPicksSpider, OddsShopperSpider, SmartBettorSpider]
+                   UnderdogSpider, VividPicksSpider, OddsShopperSpider]
 
         tasks = []
         for spider in spiders:
-            tasks.append(spider(self.batch_id, arm, db).start())
+            tasks.append(spider(self.batch_id, arm, sn, mn).start())
 
         await asyncio.gather(*tasks)
         print(f'Data Collection Complete: {self.batch_id}')

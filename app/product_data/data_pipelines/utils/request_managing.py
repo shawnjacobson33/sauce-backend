@@ -3,7 +3,7 @@ import asyncio
 import cloudscraper
 
 
-class AsyncRequestManager:
+class RequestManager:
     def __init__(self):
         self.scraper = cloudscraper.create_scraper()
 

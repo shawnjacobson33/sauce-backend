@@ -8,12 +8,12 @@ from pymongo import MongoClient
 
 from app.product_data.data_pipelines.utils import DataCleaner as dc
 
-from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils import RequestManager
 from pymongo.database import Database
 
 
 class ThriveFantasySpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
+    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
@@ -92,7 +92,7 @@ class ThriveFantasySpider:
                     'market_id': market_id,
                     'market_name': market,
                     'game_info': game_info,
-                    'team': team,
+                    'subject_team': team,
                     'subject': subject,
                     'position': position,
                     'bookmaker': 'Thrive Fantasy',
@@ -115,7 +115,7 @@ async def main():
 
     db = client['sauce']
 
-    spider = ThriveFantasySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
+    spider = ThriveFantasySpider(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

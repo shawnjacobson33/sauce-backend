@@ -10,12 +10,12 @@ import asyncio
 
 from app.product_data.data_pipelines.utils import DataCleaner as dc
 
-from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils import RequestManager
 from pymongo.database import Database
 
 
 class HotStreakSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
+    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
@@ -116,16 +116,21 @@ class HotStreakSpider:
             participant_id, opponent_id = player.get('id').split(':')[1], player.get('opponentId')
             player_data = player.get('player')
             if player_data:
-                subject, position = player_data.get('displayName'), player_data.get('position')
-                participants[participant_id] = {'subject': subject, 'position': position, 'opponent_id': opponent_id}
+                subject, position, number = player_data.get('displayName'), player_data.get('position'), player_data.get('number')
+                participants[participant_id] = {'subject': subject, 'position': position, 'opponent_id': opponent_id, 'subject_number': number}
 
         # go through prop lines
         for market in search.get('markets', []):
+            market_id_components = market.get('id').split(':')[1:]
+            more_components = ''.join(market_id_components).split(',')
+            market_id, participant_id, the_market = '', more_components[0], more_components[1]
+
             # get player info and league
+            subject_number = ''
             game_time, subject, position, league, participant = '', '', '', '', participants.get(participant_id)
             if participant:
                 subject, position = participant.get('subject'), participant.get('position')
-                opponent_id = participant.get('opponent_id')
+                opponent_id, subject_number = participant.get('opponent_id'), participant.get('subject_number')
                 if opponent_id:
                     opponent = opponent_ids.get(opponent_id)
                     if opponent:
@@ -133,9 +138,6 @@ class HotStreakSpider:
                         if league:
                             league = dc.clean_league(league)
 
-            market_id_components = market.get('id').split(':')[1:]
-            more_components = ''.join(market_id_components).split(',')
-            market_id, participant_id, the_market = '', more_components[0], more_components[1]
             if the_market:
                 if the_market == 'fantasy_points':
                     if league in {'NBA', 'WNBA'}:
@@ -165,8 +167,9 @@ class HotStreakSpider:
                             'market_id': market_id,
                             'market_name': the_market,
                             'game_time': game_time,
-                            'subject': subject,
                             'position': position,
+                            'subject': subject,
+                            'subject_jersey_number': subject_number,
                             'bookmaker': 'HotStreak',
                             'label': labels[j],
                             'line': line,
@@ -179,7 +182,7 @@ async def main():
 
     db = client['sauce']
 
-    spider = HotStreakSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
+    spider = HotStreakSpider(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

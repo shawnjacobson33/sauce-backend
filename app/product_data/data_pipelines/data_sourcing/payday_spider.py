@@ -9,12 +9,12 @@ from pymongo import MongoClient
 
 from app.product_data.data_pipelines.utils import DataCleaner as dc
 
-from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils import RequestManager
 from pymongo.database import Database
 
 
 class PaydaySpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
+    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
@@ -83,6 +83,14 @@ class PaydaySpider:
 
         for game in data.get('data', {}).get('games', []):
             game_info = game.get('title')
+            # Need team ids and names for player info
+            teams_dict, home_team, away_team = dict(), game.get('home_team'), game.get('away_team')
+            if home_team and away_team:
+                for team in [home_team, away_team]:
+                    team_id, team_name = team.get('id'), team.get('code')
+                    if team_id and team_name:
+                        teams_dict[team_id] = team_name.upper()
+
             for player_prop in game.get('player_props', []):
                 market_id = ''
                 market, line, player = player_prop.get('name'), player_prop.get('value'), player_prop.get('player')
@@ -92,7 +100,12 @@ class PaydaySpider:
                         market_id = market_id.get('_id')
 
                 if player:
+                    subject_jersey_number = player.get('number')
                     subject, position = player.get('name'), player.get('position')
+
+                    subject_team, team_id = '', player.get('team_id')
+                    if team_id:
+                        subject_team = teams_dict.get(team_id)
 
                     for label in ['Over', 'Under']:
                         self.prop_lines.append({
@@ -103,6 +116,9 @@ class PaydaySpider:
                             'market_category': 'player_props',
                             'market_id': market_id,
                             'market_name': market,
+                            'subject_team': subject_team,
+                            'position': position,
+                            'subject_jersey_number': subject_jersey_number,
                             'subject': subject,
                             'bookmaker': 'Payday',
                             'label': label,
@@ -115,7 +131,7 @@ async def main():
 
     db = client['sauce']
 
-    spider = PaydaySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
+    spider = PaydaySpider(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

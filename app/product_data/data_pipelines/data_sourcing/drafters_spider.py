@@ -5,13 +5,13 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils import RequestManager
 from pymongo import MongoClient
 from pymongo.database import Database
 
 
 class DraftersSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
+    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
@@ -49,10 +49,10 @@ class DraftersSpider:
                 subject, position = player.get('player_name'), player.get('player_position')
 
                 # get game info
-                game_info, event = '', player.get('event')
+                subject_team, game_info, event = '', '', player.get('event')
                 if event:
                     home_team, away_team = event.get('home'), event.get('away')
-                    game_info = ' @ '.join([away_team, home_team])
+                    subject_team, game_info = event.get('own'), ' @ '.join([away_team, home_team])
 
                 market, line = player.get('bid_stats_name'), player.get('bid_stats_value')
                 # quick formatting error fixes
@@ -73,6 +73,7 @@ class DraftersSpider:
                         'market_id': market_id,
                         'market_name': market,
                         'game_info': game_info,
+                        'subject_team': subject_team,
                         'subject': subject,
                         'position': position,
                         'bookmaker': 'Drafters',
@@ -95,7 +96,7 @@ async def main():
 
     db = client['sauce']
 
-    spider = DraftersSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
+    spider = DraftersSpider(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

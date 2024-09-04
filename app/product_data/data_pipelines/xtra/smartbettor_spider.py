@@ -10,12 +10,12 @@ from pymongo import MongoClient
 import pandas as pd
 from app.product_data.data_pipelines.utils import DataCleaner as dc
 
-from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils import RequestManager
 from pymongo.database import Database
 
 
 class SmartBettorSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
+    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
@@ -80,6 +80,14 @@ class SmartBettorSpider:
 
             bet_type, home_team, away_team = event.get('bet_type'), event.get('home_team'), event.get('away_team')
 
+            # get market
+            if 'Moneylne' in market:
+                market = 'Moneyline'
+
+            # don't want game lines
+            if ('Spread' in market) or ('Total' in market) or ('Moneyline' in market):
+                continue
+
             for subject_key in ['wager_display', 'wager_display_other']:
                 subject = event.get(subject_key)
 
@@ -95,15 +103,6 @@ class SmartBettorSpider:
                 for bookmaker_key, bookmaker_name in bookmaker_keys.items():
                     if (bookmaker_key not in event) or (f"{bookmaker_key}_other" not in event):
                         continue
-
-                    # get market
-                    if 'Moneylne' in market:
-                        market = 'Moneyline'
-
-                    # get market category
-                    market_category = 'game_lines'
-                    if ('Spread' not in market) and ('Total' not in market) and ('Moneyline' not in market):
-                        market_category = 'player_props'
 
                     # weird edge case for soccer betting where the wager display only includes the subject
                     if market != 'Draw No Bet':
@@ -145,7 +144,7 @@ class SmartBettorSpider:
                         'last_updated': last_updated,
                         'league': league,
                         'game_time': game_time,
-                        'market_category': market_category,
+                        'market_category': 'player_props',
                         'market_id': market_id,
                         'market_name': market,
                         'subject': subject,
@@ -175,7 +174,7 @@ async def main():
 
     db = client['sauce']
 
-    spider = SmartBettorSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
+    spider = SmartBettorSpider(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

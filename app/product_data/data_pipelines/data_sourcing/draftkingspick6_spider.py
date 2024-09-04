@@ -9,13 +9,13 @@ import asyncio
 
 from app.product_data.data_pipelines.utils import DataCleaner as dc
 
-from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils import RequestManager
 from pymongo import MongoClient
 from pymongo.database import Database
 
 
 class DraftKingsPick6:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
+    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
@@ -123,7 +123,7 @@ async def main():
 
     db = client['sauce']
 
-    spider = DraftKingsPick6(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
+    spider = DraftKingsPick6(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

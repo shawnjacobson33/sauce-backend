@@ -8,12 +8,12 @@ import pandas as pd
 import asyncio
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils import RequestManager
 from pymongo.database import Database
 
 
 class OddsShopperSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
+    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
         self.prop_lines = []
         self.batch_id = batch_id
 
@@ -65,14 +65,7 @@ class OddsShopperSpider:
         tasks = []
         for offer_category in data.get('offerCategories', []):
             market_category = offer_category.get('name')
-            if market_category not in {'GameProps', 'PlayerFutures', 'TeamFutures', 'Futures'}:
-                if market_category:
-                    market_category = market_category.lower()
-                    if market_category == 'playerprops':
-                        market_category = '_'.join([market_category[:6], market_category[6:]])
-                    elif market_category == 'gamelines':
-                        market_category = '_'.join([market_category[:4], market_category[4:]])
-
+            if market_category not in {'Gamelines', 'GameProps', 'PlayerFutures', 'TeamFutures', 'Futures'}:
                 for offer in offer_category.get('offers', []):
                     offer_id, now = offer.get('id'), datetime.utcnow()
                     # Calculate current datetime and future date
@@ -101,22 +94,21 @@ class OddsShopperSpider:
                     }
 
                     tasks.append(
-                        self.arm.get(url, self._parse_lines, last_processed, offer.get('leagueCode'), market_category,
+                        self.arm.get(url, self._parse_lines, last_processed, offer.get('leagueCode'),
                                      headers=headers, params=params))
 
         await asyncio.gather(*tasks)
 
-        # self.count_lines_per_bookmaker()
-        # relative_path = 'data_samples/oddsshopper_data.json'
-        # absolute_path = os.path.abspath(relative_path)
-        # with open(absolute_path, 'w') as f:
-        #     json.dump(self.prop_lines, f, default=str)
+        relative_path = '../data_samples/oddsshopper_data.json'
+        absolute_path = os.path.abspath(relative_path)
+        with open(absolute_path, 'w') as f:
+            json.dump(self.prop_lines, f, default=str)
 
-        self.plc.insert_many(self.prop_lines)
+        # self.plc.insert_many(self.prop_lines)
 
         print(f'[OddsShopper]: {len(self.prop_lines)} lines')
 
-    async def _parse_lines(self, response, last_processed, league, market_category):
+    async def _parse_lines(self, response, last_processed, league):
         data = response.json()
 
         for event in data:
@@ -158,6 +150,7 @@ class OddsShopperSpider:
             for side in event.get('sides', []):
                 label = side.get('label', subject)
                 for outcome in side.get('outcomes', []):
+                    true_win_prob = outcome.get('trueWinProbability')
                     odds, ev = outcome.get('odds'), outcome.get('ev')
                     prop_line = {
                         'batch_id': self.batch_id,
@@ -165,23 +158,19 @@ class OddsShopperSpider:
                         'last_updated': last_processed,
                         'league': league,
                         'game_time': game_time,
-                        'market_category': market_category,
+                        'market_category': 'player_props',
                         'market_id': market_id,
                         'market_name': market,
                         'subject': outcome.get('label', subject),
                         'bookmaker': outcome.get('sportsbookCode'),
                         'label': label,
                         'line': outcome.get('line', '0.5'),
-                        'odds': round(odds, 3) if odds else odds,
+                        'odds': round(odds, 3) if odds else None,
+                        'true_win_prob': round(true_win_prob, 3) if true_win_prob else None,
                         'oddsshopper_ev': round(ev, 3) if ev else None
                     }
 
                     self.prop_lines.append(prop_line)
-
-    def count_lines_per_bookmaker(self):
-        df = pd.DataFrame(self.prop_lines)
-
-        print(df.groupby('bookmaker').size().reset_index())
 
 
 async def main():
@@ -189,7 +178,7 @@ async def main():
 
     db = client['sauce']
 
-    spider = OddsShopperSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
+    spider = OddsShopperSpider(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
     start_time = time.time()
     await spider.start()
     end_time = time.time()

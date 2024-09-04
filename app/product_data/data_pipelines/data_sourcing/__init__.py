@@ -5,6 +5,7 @@ from .drafters_spider import DraftersSpider
 from .draftkingspick6_spider import DraftKingsPick6
 from .hotstreak_spider import HotStreakSpider
 from .moneyline_spider import MoneyLineSpider
+from .oddsshopper_spider import OddsShopperSpider
 from .ownersbox_spider import OwnersBoxSpider
 from .parlayplay_spider import ParlayPlaySpider
 from .payday_spider import PaydaySpider
@@ -17,5 +18,6 @@ from .underdog_spider import UnderdogSpider
 from .vividpicks_spider import VividPicksSpider
 
 __all__ = ['BoomFantasySpider', 'ChampSpider', 'DabbleSpider', 'DraftersSpider', 'DraftKingsPick6', 'HotStreakSpider',
-           'MoneyLineSpider', 'OwnersBoxSpider', 'ParlayPlaySpider', 'PaydaySpider', 'PrizePicksSpider', 'RebetSpider',
-           'SleeperSpider', 'SuperDraftSpider', 'ThriveFantasySpider', 'UnderdogSpider', 'VividPicksSpider']
+           'MoneyLineSpider', 'OddsShopperSpider', 'OwnersBoxSpider', 'ParlayPlaySpider', 'PaydaySpider',
+           'PrizePicksSpider', 'RebetSpider', 'SleeperSpider', 'SuperDraftSpider',
+           'ThriveFantasySpider', 'UnderdogSpider', 'VividPicksSpider']

@@ -7,20 +7,15 @@ from datetime import datetime
 from uuid import UUID
 
 from pymongo import MongoClient
-from pymongo.database import Database
 
-from app.product_data.data_pipelines.utils import DataCleaner as dc
-from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
+from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, DataCleaner as dc
 
 
 class BoomFantasySpider:
-    def __init__(self, batch_id: UUID, arm: AsyncRequestManager, db: Database):
+    def __init__(self, batch_id: UUID, rm: RequestManager, dn: DataNormalizer):
         self.prop_lines = []
-        self.batch_id = batch_id
 
-        self.arm = arm
-
-        self.msc, self.plc = db['markets'], db['prop_lines']
+        self.batch_id, self.rm, self.dn = batch_id, rm, dn
 
     async def start(self):
         url = "https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/graphql"
@@ -323,7 +318,7 @@ class BoomFantasySpider:
             # Assign the first and second lines to variables
             access_token, refresh_token = lines[0].strip(), lines[1].strip()
 
-        await self.arm.post_bf(url, self._parse_lines, absolute_path, refresh_token, access_token, json_data)
+        await self.rm.post_bf(url, self._parse_lines, absolute_path, refresh_token, access_token, json_data)
 
     async def _parse_lines(self, response):
         data = response.json().get('data')
@@ -350,12 +345,15 @@ class BoomFantasySpider:
                                 subject_team = player_image.get('abbreviation')
 
                             # get subject
-                            subject, title = '', league_section.get('title')
+                            subject_id, subject, title = '', '', league_section.get('title')
                             if title:
                                 options = title.get('additionalOptions')
                                 if options:
                                     first_name, last_name = options.get('firstName'), options.get('lastName')
                                     subject = ' '.join([first_name, last_name])
+                                    if subject:
+                                        cleaned_subject = dc.clean_subject(subject)
+                                        subject_id = self.dn.get_subject_id(cleaned_subject, league=league_name)
 
                             for question in league_section.get('fullQuestions', []):
                                 # get line and market
@@ -370,9 +368,8 @@ class BoomFantasySpider:
                                             stat_text_components = stat_text[0].split('.')
                                             if len(stat_text_components) == 4:
                                                 market = stat_text_components[-2].lower().title()
-                                                market_id = self.msc.find_one({'BoomFantasy': market}, {'_id': 1})
-                                                if market_id:
-                                                    market_id = market_id.get('_id')
+                                                if market:
+                                                    market_id = self.dn.get_market_id('BoomFantasy', market)
 
                                 for choice in question.get('choices', []):
                                     label = choice.get('type')
@@ -388,6 +385,7 @@ class BoomFantasySpider:
                                         'market_name': market,
                                         'game_time': game_time,
                                         'subject_team': subject_team,
+                                        'subject_id': subject_id,
                                         'subject': subject,
                                         'bookmaker': 'BoomFantasy',
                                         'label': label,
@@ -409,7 +407,7 @@ async def main():
 
     db = client['sauce']
 
-    spider = BoomFantasySpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
+    spider = BoomFantasySpider(batch_id=uuid.uuid4(), rm=RequestManager(), dn=DataNormalizer(db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
