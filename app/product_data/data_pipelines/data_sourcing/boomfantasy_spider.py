@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import time
 import uuid
@@ -8,323 +7,36 @@ from uuid import UUID
 
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, DataCleaner as dc
+from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, Helper, DataCleaner as dc
+
+
+def read_tokens():
+    absolute_path = os.path.abspath('boomfantasy_tokens.txt')
+    with open(absolute_path, 'r') as file:
+        access_token, refresh_token = [line.strip() for line in file.readlines()[:2]]
+    return {'path': absolute_path, 'access_token': access_token, 'refresh_token': refresh_token}
 
 
 class BoomFantasySpider:
-    def __init__(self, batch_id: UUID, rm: RequestManager, dn: DataNormalizer):
+    def __init__(self, batch_id: UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+        self.batch_id = batch_id
+        self.helper = Helper(bookmaker='BoomFantasy')
+        self.rm = request_manager
+        self.dn = data_normalizer
         self.prop_lines = []
 
-        self.batch_id, self.rm, self.dn = batch_id, rm, dn
-
     async def start(self):
-        url = "https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/graphql"
-        json_data = {
-            "query": """query EvergreenContest(
-            $id: ID!
-            $questionStatuses: [QuestionStatus!]!
-            $overUnderSectionType: OverUnderSectionTypes
-            $renderType: EvergreenContestRenderTypes
-        ) {
-            contest(
-                id: $id
-                questionStatuses: $questionStatuses
-                overUnderSectionType: $overUnderSectionType
-                renderType: $renderType
-            ) {
-                _id
-                title
-                renderType
-                minLegs
-                maxLegs
-                minEntryFee
-                payoutPerLegPerPrizeType
-                minLegsPerPrizeType
-                maxLegsPerPrizeType
-                promotionalMaxEntryFee
-                entryFeePerLegPerPrizeType
-                restrictions {
-                    _id
-                }
-                returnToLobbyOnSubmit
-                sections {
-                    type
-                    leagues {
-                        league
-                        periodClassifier
-                        gameFilters {
-                            gameId
-                            title {
-                                i18nKey
-                                additionalOptions
-                            }
-                            fullTitle {
-                                i18nKey
-                                additionalOptions
-                            }
-                            numQuestions
-                        }
-                        tabTitle {
-                            i18nKey
-                            additionalOptions
-                        }
-                        icon {
-                            type
-                            source
-                            path
-                        }
-                        type
-                        status
-                        sections {
-                            ... on SingleSectionType {
-                                type
-                                fullQuestions {
-                                    __typename
-                                    _id
-                                    contestId
-                                    renderType
-                                    league
-                                    statistic
-                                    type
-                                    periodClassifier
-                                    title
-                                    status
-                                    sportsbookData
-                                    searchTerms
-                                    productIds
-                                    pickSelectionTitle {
-                                        i18nKey
-                                        additionalOptions
-                                    }
-                                    statPopup {
-                                        title {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        subTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        table {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        body {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                    }
-                                    lockBehavior {
-                                        type
-                                        details {
-                                            lockTime
-                                        }
-                                    }
-                                    questionGrouping {
-                                        identifier
-                                        type
-                                    }
-                                    choices {
-                                        _id
-                                        valueAdjustment
-                                        valueAdjustmentText {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        disabled
-                                        pickSelectionTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        questionTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        gameInfo {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        game {
-                                            _id
-                                        }
-                                        player {
-                                            _id
-                                            team {
-                                                _id
-                                            }
-                                        }
-                                        playerImage {
-                                            abbreviation
-                                            accentColor
-                                            color
-                                            image {
-                                                type
-                                                source
-                                                path
-                                            }
-                                            jerseyNumber
-                                            league
-                                            secondaryColor
-                                        }
-                                        team {
-                                            _id
-                                        }
-                                    }
-                                }
-                            }
-                            ... on PlayerGroupingSectionType {
-                                __typename
-                                type
-                                playerImage {
-                                    abbreviation
-                                    accentColor
-                                    color
-                                    image {
-                                        type
-                                        source
-                                        path
-                                    }
-                                    jerseyNumber
-                                    league
-                                    secondaryColor
-                                }
-                                title {
-                                    i18nKey
-                                    additionalOptions
-                                }
-                                gameInfo {
-                                    i18nKey
-                                    additionalOptions
-                                }
-                                timeInfo {
-                                    i18nKey
-                                    additionalOptions
-                                }
-                                promoData {
-                                    isPromo
-                                    lockTime
-                                }
-                                playerId
-                                teamId
-                                gameId
-                                periodClassifier
-                                lockTime
-                                fullQuestions {
-                                    _id
-                                    searchTerms
-                                    pickSelectionTitle {
-                                        i18nKey
-                                        additionalOptions
-                                    }
-                                    isPromo
-                                    statPopup {
-                                        title {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        subTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        table {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        body {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                    }
-                                    choices {
-                                        _id
-                                        type
-                                        pickSelectionTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        questionTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                    }
-                                }
-                            }
-                            ... on GameGroupingSectionType {
-                                type
-                                collapsible
-                                game {
-                                    _id
-                                    scheduled
-                                    league
-                                    homeTeam {
-                                        _id
-                                        league
-                                        abbreviation
-                                        color
-                                    }
-                                    awayTeam {
-                                        _id
-                                        league
-                                        abbreviation
-                                        color
-                                    }
-                                }
-                                questions {
-                                    _id
-                                }
-                            }
-                        }
-                    }
-                }
-                wheelsData {
-                    layout {
-                        value
-                        start
-                        end
-                        weight
-                        color
-                    }
-                    payoutTable {
-                        header {
-                            i18nKey
-                            additionalOptions
-                        }
-                        rows {
-                            i18nKey
-                            additionalOptions
-                        }
-                    }
-                }
-            }
-        }
-    """,
-            "variables": {
-                "id": "8ae8cea1-1e61-4524-a269-c053a1f938f9",
-                "questionStatuses": ["available"],
-                "overUnderSectionType": "playerGrouping",
-                "renderType": "evergreen"
-            },
-            "operationName": "EvergreenContest"
-        }
-
-        # get access tokens in order to make successful requests
-        relative_path = 'boomfantasy_tokens.txt'
-        absolute_path = os.path.abspath(relative_path)
-
-        with open(absolute_path, 'r') as file:
-            # Read all lines from the file
-            lines = file.readlines()
-
-            # Assign the first and second lines to variables
-            access_token, refresh_token = lines[0].strip(), lines[1].strip()
-
-        await self.rm.post_bf(url, self._parse_lines, absolute_path, refresh_token, access_token, json_data)
+        url = self.helper.get_url()
+        json_data = self.helper.get_json_data()
+        tokens = read_tokens()
+        await self.rm.post_bf(url, self._parse_lines, tokens['path'], tokens['refresh_token'], tokens['access_token'], json_data=json_data)
 
     async def _parse_lines(self, response):
         data = response.json().get('data')
 
         contest = data.get('contest')
         if contest:
+            subject_ids_dict = dict()
             for section in contest.get('sections', []):
                 selection_type = section.get('type')
                 # don't want the 'matchups' data
@@ -352,8 +64,12 @@ class BoomFantasySpider:
                                     first_name, last_name = options.get('firstName'), options.get('lastName')
                                     subject = ' '.join([first_name, last_name])
                                     if subject:
-                                        cleaned_subject = dc.clean_subject(subject)
-                                        subject_id = self.dn.get_subject_id(cleaned_subject, league=league_name)
+                                        # subjects show up more than once so don't need to get subject id every time.
+                                        if f'{subject}{league_name}{subject_team}' in subject_ids_dict:
+                                            subject_id = subject_ids_dict[f'{subject}{league_name}{subject_team}']
+                                        else:
+                                            subject_id = self.dn.get_subject_id(dc.clean_subject(subject), league=league_name, subject_team=subject_team)
+                                            subject_ids_dict[f'{subject}{league_name}{subject_team}'] = subject_id
 
                             for question in league_section.get('fullQuestions', []):
                                 # get line and market
@@ -369,7 +85,7 @@ class BoomFantasySpider:
                                             if len(stat_text_components) == 4:
                                                 market = stat_text_components[-2].lower().title()
                                                 if market:
-                                                    market_id = self.dn.get_market_id('BoomFantasy', market)
+                                                    market_id = self.dn.get_market_id(market)
 
                                 for choice in question.get('choices', []):
                                     label = choice.get('type')
@@ -392,14 +108,7 @@ class BoomFantasySpider:
                                         'line': line
                                     })
 
-            relative_path = '../data_samples/boomfantasy_data.json'
-            absolute_path = os.path.abspath(relative_path)
-            with open(absolute_path, 'w') as f:
-                json.dump(self.prop_lines, f, default=str)
-
-            # self.plc.insert_many(self.prop_lines)
-
-            print(f'[BoomFantasy]: {len(self.prop_lines)} lines')
+            self.helper.store(self.prop_lines)
 
 
 async def main():
@@ -407,7 +116,7 @@ async def main():
 
     db = client['sauce']
 
-    spider = BoomFantasySpider(batch_id=uuid.uuid4(), rm=RequestManager(), dn=DataNormalizer(db))
+    spider = BoomFantasySpider(uuid.uuid4(), RequestManager(), DataNormalizer('BoomFantasy', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

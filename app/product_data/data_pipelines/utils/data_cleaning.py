@@ -35,6 +35,7 @@ class DataCleaner:
             'UFC': 'MMA',
             'EPL': 'SOCCER',
             'MLS': 'SOCCER',
+            'EUROGOLF': 'GOLF'
 
 
         }

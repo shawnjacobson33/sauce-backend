@@ -37,7 +37,7 @@ class PrizePicksSpider:
                 league_name = attributes.get('name')
 
                 # don't want futures or leagues that aren't currently available
-                if ('SZN' in league_name) or (not attributes.get('active')):
+                if ('SZN' in league_name) or ('SPECIALS' in league_name) or (not attributes.get('active')):
                     continue
 
             league_id = league.get('id')
@@ -80,6 +80,8 @@ class PrizePicksSpider:
 
                         league = leagues.get(league_id)
                         if league:
+                            if league == 'WNBA':
+                                 asd = 213
                             league = dc.clean_league(league)
 
             team, subject, position, relationship_new_player = '', '', '', relationships.get('new_player')
@@ -103,6 +105,10 @@ class PrizePicksSpider:
 
                 last_updated, market = line_attributes.get('updated_at'), line_attributes.get('stat_type')
                 if market:
+                    # don't want combos...hard to index
+                    if '(Combo)' in market:
+                        continue
+
                     # in order to create more distinct markets
                     if 'Fantasy Score' in market:
                         if league in {'NBA', 'WNBA', 'WNBA1H', 'WNBA2H', 'WNBA1Q', 'WNBA2Q', 'WNBA3Q', 'WNBA4Q', 'WNBA1H'}:
