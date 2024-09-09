@@ -65,6 +65,7 @@ class DabbleSpider:
             if market.get('id')  # Ensure market_id exists
         }
 
+        subject_ids = dict()
         for player_prop in data.get('playerProps', []):
             market = markets.get(player_prop.get('marketId'))
             # don't want futures
@@ -78,7 +79,12 @@ class DabbleSpider:
 
             if subject:
                 cleaned_subject = DataCleaner.clean_subject(subject)
-                subject_id = self.dn.get_subject_id(cleaned_subject, league=league, subject_team=subject_team, position=position)
+                # Since the same subject has many prop lines it is much faster to keep a dictionary of subject ids
+                # to avoid redundant queries.
+                subject_id = subject_ids.get(f'{subject}{subject_team}')
+                if not subject_id:
+                    subject_id = self.dn.get_subject_id(cleaned_subject, league=league, subject_team=subject_team, position=position)
+                    subject_ids[f'{subject}{subject_team}'] = subject_id
 
             label, line = player_prop.get('lineType').title(), player_prop.get('value')
             self.prop_lines.append({

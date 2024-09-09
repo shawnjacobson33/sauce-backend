@@ -8,42 +8,25 @@ from pymongo import MongoClient
 
 import asyncio
 
-from app.product_data.data_pipelines.utils import DataCleaner as dc
-
-from app.product_data.data_pipelines.utils import RequestManager
-from pymongo.database import Database
+from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper
 
 
 class HotStreakSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
-        self.prop_lines = []
+    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
-
-        self.arm = arm
-        self.msc, self.plc = db['markets'], db['prop_lines']
-        self.headers = {
-            'Host': 'api.hotstreak.gg',
-            'accept': '*/*',
-            'content-type': 'application/json',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJIb3RTdHJlYWsgKHByb2R1Y3Rpb24pIiwic3ViIjoiSHNmOjpVc2VyOnBydEpBNnciLCJleHAiOjE3MjcyMzQ4MjEsImlhdCI6MTcyNDU1NjQyMX0.ZCo5mvLX2DzDYQpBqXW2HG72kwl5EYC9VbXMKB6wRS8',
-            'x-requested-with': 'ios',
-            'user-agent': 'HotStreak/1717696638 CFNetwork/1496.0.7 Darwin/23.5.0',
-            'accept-language': 'en-US,en;q=0.9',
-        }
+        self.helper = Helper(bookmaker='HotStreak')
+        self.rm = request_manager
+        self.dn = data_normalizer
+        self.prop_lines = []
+        self.url = self.helper.get_url()
+        self.headers = self.helper.get_headers()
 
     async def start(self):
-        url = 'https://api.hotstreak.gg/graphql'
-        json_data = {
-            'query': 'query system { system {\n        __typename\ngeneratedAt\nmaximumDeposit\nmaximumInPlayWager\nmaximumPregameWager\nmaximumReferrals\nminimumDeposit\nminimumInPlayWager\nminimumPregameWager\nminimumWithdraw\npublicBroadcastChannel\npusherAppKey\npusherCluster\nreferrerBonus\nsports {\n\n__typename\nid\nactive\ncreatedAt\ngeneratedAt\ninPlay\nleagues {\n\n__typename\nid\nalias\ncreatedAt\ngeneratedAt\nname\novertimeClock\novertimePeriods\nregulationClock\nregulationPeriods\nsportId\nupdatedAt\n\n}\nname\nupdatedAt\n\n}\n\n      } }',
-            'variables': {},
-            'operationName': 'system',
-        }
-
-        await self.arm.post(url, self._parse_league_aliases, headers=self.headers, json=json_data)
+        json_data = self.helper.get_json_data(name='leagues')
+        await self.rm.post(self.url, self._parse_league_aliases, headers=self.headers, json=json_data)
 
     async def _parse_league_aliases(self, response):
         data = response.json().get('data')
-
         system = data.get('system')
         league_aliases = {
             league.get('name'): league.get('alias')
@@ -52,19 +35,9 @@ class HotStreakSpider:
             if league.get('name') and league.get('alias')
         }
 
-        url = 'https://api.hotstreak.gg/graphql'
-
         async def fetch_page(page):
-            json_data = {
-                'query': 'query search($query: String, $page: Int, $gameFilter: [String!], $sportFilter: [String!], $teamFilter: [String!], $positionFilter: [String!], $categoryFilter: [String!], $promotedFilter: Boolean, $participantFilter: [String!], $leagueFilter: [String!]) { search(query: $query, page: $page, gameFilter: $gameFilter, sportFilter: $sportFilter, teamFilter: $teamFilter, positionFilter: $positionFilter, categoryFilter: $categoryFilter, promotedFilter: $promotedFilter, participantFilter: $participantFilter, leagueFilter: $leagueFilter) {\n        __typename\ngeneratedAt\ncategoryFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\ngameFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\ngames {\n\n__typename\nid\n... on EsportGame {\n\n__typename\nid\nminimumNumberOfGames\nvideogameTitle\n\n}\n... on GolfGame {\n\n__typename\nid\npairings {\n\n__typename\nid\nbackNine\ncreatedAt\ngameId\ngeneratedAt\nparticipantIds\nteeTime\nupdatedAt\n\n}\ntournament {\n\n__typename\nid\nname\n\n}\n\n}\nleagueId\nopponents {\n\n__typename\nid\ndesignation\ngameId\nteam {\n\n__typename\nid\ncreatedAt\ngeneratedAt\nlogoUrl\nmarket\nname\nshortName\nupdatedAt\n\n}\n\n}\nperiod\nreplay\nscheduledAt\nstatus\n\n}\nleagueFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\nmarkets {\n\n__typename\nid\ngeneratedAt\nlines\noptions\nprobabilities\n\n}\nparticipants {\n\n__typename\nid\ncategories\nopponentId\nplayer {\n\n__typename\nid\ndisplayName\nexternalId\nfirstName\nheadshotUrl\ninjuries {\n\n__typename\nid\ncomment\ncreatedAt\ndescription\ngeneratedAt\nstatus\nstatusDate\nupdatedAt\n\n}\nlastName\nnickname\nnumber\nposition\nshortDisplayName\ntraits\n\n}\nposition\n\n}\npositionFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\nsportFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\nteamFilters {\n\n__typename\ncount\ngeneratedAt\nkey\nmeta\nname\n\n}\nstats\ntotalCount\n\n      } }',
-                'variables': {
-                    'query': '*',
-                    'page': page,
-                },
-                'operationName': 'search',
-            }
-
-            page_response = await self.arm.post(url, self._parse_lines, league_aliases, headers=self.headers, json=json_data)
+            json_data = self.helper.get_json_data(var=page)
+            page_response = await self.rm.post(self.url, self._parse_lines, league_aliases, headers=self.headers, json=json_data)
             if page_response and ((page_response.status_code == 500) or (page_response.status_code == 429)):
                 raise Exception(f"[HotStreak]: Received status code 500 on page {i}. Breaking out of the loop.")
 
@@ -75,21 +48,12 @@ class HotStreakSpider:
             tasks.append(fetch_page(i))
 
         await asyncio.gather(*tasks)
-
-        relative_path = '../data_samples/hotstreak_data.json'
-        absolute_path = os.path.abspath(relative_path)
-        with open(absolute_path, 'w') as f:
-            json.dump(self.prop_lines, f, default=str)
-
-        # self.plc.insert_many(self.prop_lines)
-
-        print(f'[HotStreak]: {len(self.prop_lines)} lines')
+        self.helper.store(self.prop_lines)
 
     async def _parse_lines(self, response, league_aliases):
         # get body content in json format
         data = response.json().get('data')
         search = data.get('search')
-
         # to get league ids
         leagues = dict()
         for league in search.get('leagueFilters', []):
@@ -123,20 +87,21 @@ class HotStreakSpider:
         for market in search.get('markets', []):
             market_id_components = market.get('id').split(':')[1:]
             more_components = ''.join(market_id_components).split(',')
-            market_id, participant_id, the_market = '', more_components[0], more_components[1]
+            market_id, participant_id, the_market = None, more_components[0], more_components[1]
 
             # get player info and league
-            subject_number = ''
-            game_time, subject, position, league, participant = '', '', '', '', participants.get(participant_id)
+            subject_number, subject_id = None, None
+            game_time, subject, position, league, participant = None, None, None, None, participants.get(participant_id)
             if participant:
                 subject, position = participant.get('subject'), participant.get('position')
                 opponent_id, subject_number = participant.get('opponent_id'), participant.get('subject_number')
+                subject_id = self.dn.get_subject_id(subject, league, position=position, number=subject_number)
                 if opponent_id:
                     opponent = opponent_ids.get(opponent_id)
                     if opponent:
                         league, game_time = opponent.get('league'), opponent.get('game_time')
                         if league:
-                            league = dc.clean_league(league)
+                            league = DataCleaner.clean_league(league)
 
             if the_market:
                 if the_market == 'fantasy_points':
@@ -145,9 +110,7 @@ class HotStreakSpider:
                     elif league in {'NFL', 'NCAAF'}:
                         the_market = 'football_fantasy_points'
 
-                market_id = self.msc.find_one({'HotStreak': the_market}, {'_id': 1})
-                if market_id:
-                    market_id = market_id.get('_id')
+                market_id = self.dn.get_market_id(market)
 
             lines, probabilities = market.get('lines', []), market.get('probabilities', [])
             labels, n = ['Under', 'Over'], len(lines)
@@ -158,7 +121,6 @@ class HotStreakSpider:
                         probability = probabilities[i][j]
                         # convert probability to decimal odds
                         odds = round(1 / probability, 3)
-
                         self.prop_lines.append({
                             'batch_id': self.batch_id,
                             'time_processed': datetime.now(),
@@ -168,6 +130,7 @@ class HotStreakSpider:
                             'market_name': the_market,
                             'game_time': game_time,
                             'position': position,
+                            'subject_id': subject_id,
                             'subject': subject,
                             'subject_jersey_number': subject_number,
                             'bookmaker': 'HotStreak',
@@ -179,14 +142,11 @@ class HotStreakSpider:
 
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-
     db = client['sauce']
-
-    spider = HotStreakSpider(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
+    spider = HotStreakSpider(uuid.uuid4(), RequestManager(), DataNormalizer('HotStreak', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
-
     print(f'[HotStreak]: {round(end_time - start_time, 2)}s')
 
 

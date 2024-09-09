@@ -7,40 +7,25 @@ from datetime import datetime
 import asyncio
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import DataCleaner as dc
-
-from app.product_data.data_pipelines.utils import RequestManager
-from pymongo.database import Database
+from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper
 
 
 class RebetSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
-        self.prop_lines = []
+    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
-
-        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
+        self.helper = Helper(bookmaker='Rebet')
+        self.rm = request_manager
+        self.dn = data_normalizer
+        self.prop_lines = []
 
     async def start(self):
-        url = 'https://api.rebet.app/prod/sportsbook-v3/get-new-odds-leagues'
-        headers, json_data = {
-            'Host': 'api.rebet.app',
-            'content-type': 'application/json',
-            'accept': 'application/json, text/plain, */*',
-            'baggage': 'sentry-environment=production,sentry-public_key=d4c222a7c513d9292ee6814277c6e1aa,sentry-release=com.rebet.app%408.97%2B399,sentry-trace_id=b6143e04f2ef4c4fa01c923aceca8cd8',
-            'accept-language': 'en-US,en;q=0.9',
-            'x-api-key': 'J9xowBQZM980G97zv9VoB9Ylady1pVtS5Ix9tuL1',
-            'sentry-trace': 'b6143e04f2ef4c4fa01c923aceca8cd8-69435e3a704f4230-0',
-            'user-agent': 'rebetMobileApp/399 CFNetwork/1496.0.7 Darwin/23.5.0',
-            'x_api_key': 'J9xowBQZM980G97zv9VoB9Ylady1pVtS5Ix9tuL1',
-        }, {
-            'league_name': [],
-        }
-
-        await self.arm.post(url, self._parse_tourney_ids, headers=headers, json=json_data)
+        url = self.helper.get_url(name='tourney_ids')
+        headers = self.helper.get_headers(name='tourney_ids')
+        json_data = self.helper.get_json_data(name='tourney_ids')
+        await self.rm.post(url, self._parse_tourney_ids, headers=headers, json=json_data)
 
     async def _parse_tourney_ids(self, response):
         data = response.json()
-
         # get tournament_ids
         tournament_ids = dict()
         for league in data.get('data', []):
@@ -48,45 +33,22 @@ class RebetSpider:
             if league_name and tournament_id:
                 tournament_ids[tournament_id] = league_name
 
-        url = 'https://api.rebet.app/prod/sportsbook-v3/load-sportsbook-data-v3'
-        headers = {
-            'Host': 'api.rebet.app',
-            'accept': 'application/json, text/plain, */*',
-            'content-type': 'application/json',
-            'authorization': 'Bearer eyJraWQiOiI3WkdkV1Y5THJucmdIY25QUWdMNWd0VzJXSGlpV2o3K2VBQ1FsR2FQeGlVPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJhOWE4NmE3My0yMTYwLTQyM2UtOTViOS02NTA0ZGI3ZTJjODciLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYWRkcmVzcyI6eyJmb3JtYXR0ZWQiOiJNaW5uZWFwb2xpcywgTWlubmVzb3RhIn0sImJpcnRoZGF0ZSI6IjIwMDUtMDctMjciLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAudXMtZWFzdC0yLmFtYXpvbmF3cy5jb21cL3VzLWVhc3QtMl9lcHo2ZEF4UXUiLCJwaG9uZV9udW1iZXJfdmVyaWZpZWQiOmZhbHNlLCJjb2duaXRvOnVzZXJuYW1lIjoidGhlcmVhbHNsaW0iLCJvcmlnaW5fanRpIjoiNDk2ZWJjMWItYTYyYS00ZjkxLWEwOTctNjRlODgyOGQ2ZTcxIiwiYXVkIjoiNzN2dnZsY2tkcmpqb3ZiaXNzM2loYmQyNm8iLCJldmVudF9pZCI6ImUyMWYyMDBkLTk5ZjMtNDM4Mi05YTk3LTUyOGNhYzgwOTY4ZiIsInRva2VuX3VzZSI6ImlkIiwiYXV0aF90aW1lIjoxNzI0NDI2ODAyLCJwaG9uZV9udW1iZXIiOiIrMTUwNzg4NDAyODYiLCJleHAiOjE3MjQ1MTMyMDIsImlhdCI6MTcyNDQyNjgwMiwianRpIjoiYzY3MWIwM2YtZWMzZC00ZWY0LWJkNjktNDkzZGUyZmFiNzJlIiwiZW1haWwiOiJzaGF3bmphY29ic29uMzNAZ21haWwuY29tIn0.F8YZwRmOADpUNuWmJ6wjFk-fZvGMopa0KM8kcf_vbvWv_Kik8czycPpERpNS1T8gtjcUUni12Qt9JjF15vSryaQScYw6pCft9q0yFrXjMNReIHgTNVNQQiFA6vrto2VdF4t4D7iyxyfU4dRdr95b2tpzm9VjsHNIKahqj76OrdWzjUQMLtBCqw-e7Wm9jm3TaMMTHlcjIefw0JUBiJlL9Lk_mqKtwKObX9tRTaqIS9XvXRvh7Hz_1W6btwZiEzx37ponn7L-AqnSArXTKDl_rzgN0qr8U4KBTCHdcJx5j5x8t2DeTrm-NKh3oF5AX4qasbiy77YFpLyBP2pVkkqVgw',
-            'sentry-trace': 'b6143e04f2ef4c4fa01c923aceca8cd8-69435e3a704f4230-0',
-            'baggage': 'sentry-environment=production,sentry-public_key=d4c222a7c513d9292ee6814277c6e1aa,sentry-release=com.rebet.app%408.97%2B399,sentry-trace_id=b6143e04f2ef4c4fa01c923aceca8cd8',
-            'user-agent': 'rebetMobileApp/399 CFNetwork/1496.0.7 Darwin/23.5.0',
-            'accept-language': 'en-US,en;q=0.9',
-        }
-
+        url = self.helper.get_url()
+        headers = self.helper.get_headers()
         tasks = []
         for tournament_id in tournament_ids:
-            json_data = {
-                'tournament_id': tournament_id,
-                'game_type': 3,
-            }
-
-            tasks.append(self.arm.post(url, self._parse_lines, headers=headers, json=json_data))
+            json_data = self.helper.get_json_data(var=tournament_id)
+            tasks.append(self.rm.post(url, self._parse_lines, headers=headers, json=json_data))
 
         await asyncio.gather(*tasks)
-
-        relative_path = '../data_samples/rebet_data.json'
-        absolute_path = os.path.abspath(relative_path)
-        with open(absolute_path, 'w') as f:
-            json.dump(self.prop_lines, f, default=str)
-
-        # self.plc.insert_many(self.prop_lines)
-
-        print(f'[Rebet]: {len(self.prop_lines)} lines')
+        self.helper.store(self.prop_lines)
 
     async def _parse_lines(self, response):
         data = response.json()
-
         for event in data.get('data', {}).get('events', []):
             last_updated, league, game_time = event.get('updated_at'), event.get('league_name'), event.get('start_time')
             if league:
-                league = dc.clean_league(league)
+                league = DataCleaner.clean_league(league)
 
             if last_updated:
                 # convert from unix to a datetime
@@ -98,26 +60,26 @@ class RebetSpider:
                     tab_name = market.get('tab_name')
                     if tab_name == 'Player Props':
                         # get market
-                        market_name, market_id = market.get('name'), ''
+                        market_name, market_id = market.get('name'), None
                         if '{%player}' in market_name:
                             market_name_components = market_name.split(' (')
                             new_market_name_components = market_name_components[0].split()
                             market_name = ' '.join(new_market_name_components[1:]).title()
 
                         if market_name:
-                            market_id = self.msc.find_one({'Rebet': market_name}, {'_id': 1})
-                            if market_id:
-                                market_id = market_id.get('_id')
+                            market_id = self.dn.get_market_id(market)
 
                         # get subject
-                        subject, player_name = '', market.get('player_name')
+                        subject_id, subject, player_name = None, None, market.get('player_name')
                         if player_name:
                             player_name_components = player_name.split(', ')
                             if len(player_name_components) == 2:
                                 subject = f'{player_name_components[1]} {player_name_components[0]}'
+                                if subject:
+                                    subject_id = self.dn.get_subject_id(subject, league)
 
                         # get line
-                        label, line, outcomes = '', '', market.get('outcome', [])
+                        label, line, outcomes = None, None, market.get('outcome', [])
                         if isinstance(outcomes, list):
                             for outcome in outcomes:
                                 outcome_name, the_odds = outcome.get('name'), outcome.get('odds')
@@ -138,8 +100,9 @@ class RebetSpider:
                                     'league': league,
                                     'market_category': 'player_props',
                                     'market_id': market_id,
-                                    'market_name': market_name,
+                                    'market': market_name,
                                     'game_time': game_time,
+                                    'subject_id': subject_id,
                                     'subject': subject,
                                     'bookmaker': 'Rebet',
                                     'label': label,
@@ -165,8 +128,9 @@ class RebetSpider:
                                 'league': league,
                                 'market_category': 'player_props',
                                 'market_id': market_id,
-                                'market_name': market_name,
+                                'market': market_name,
                                 'game_time': game_time,
+                                'subject_id': subject_id,
                                 'subject': subject,
                                 'bookmaker': 'Rebet',
                                 'label': label,
@@ -177,14 +141,11 @@ class RebetSpider:
 
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-
     db = client['sauce']
-
-    spider = RebetSpider(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
+    spider = RebetSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Rebet', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
-
     print(f'[Rebet]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":

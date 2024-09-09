@@ -7,99 +7,65 @@ from datetime import datetime
 import asyncio
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import DataCleaner as dc
-
-from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
-from pymongo.database import Database
+from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, DataNormalizer, Helper
 
 
 class OwnersBoxSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
-        self.prop_lines = []
+    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
-
-        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
-        self.headers, self.cookies = {
-            'Host': 'app.ownersbox.com',
-            'accept': 'application/json',
-            'content-type': 'application/json',
-            'user-agent': 'OwnersBox/145 CFNetwork/1496.0.7 Darwin/23.5.0',
-            'ownersbox_version': '7.12.0',
-            'accept-language': 'en-US,en;q=0.9',
-            'ownersbox_device': 'ios',
-        }, {
-            'obauth': 'eyJhbGciOiJIUzUxMiJ9.eyJvYnRva2VuIjoiMFE2SzJRMVkxTjhEIiwidXNlclN0YXRlIjoiQUNUSVZFIiwiaXNzIjoiT3duZXJzQm94IiwidmVyaWZpZWQiOmZhbHNlLCJ0b2tlbkV4cGlyeSI6MTcyNDEyMDAxMjc4MCwic2Vzc2lvbklkIjozNDE5MDU1MDk2fQ.9dcOi9DJ8_R1PTD4-m3VqXebAj1pZ0LAFzaXsaIGkIsvrjLOjF9jW5KNQEoDYOKjLhyzahtGd7VObdR1ABwNUA',
-        }
+        self.helper = Helper(bookmaker='OwnersBox')
+        self.rm = request_manager
+        self.dn = data_normalizer
+        self.prop_lines = []
+        self.headers = self.helper.get_headers()
+        self.cookies = self.helper.get_cookies()
 
     async def start(self):
-        url = 'https://app.ownersbox.com/fsp-marketing/getSportInfo'
-
-        await self.arm.get(url, self._parse_leagues, headers=self.headers, cookies=self.cookies)
+        url = self.helper.get_url(name='leagues')
+        await self.rm.get(url, self._parse_leagues, headers=self.headers, cookies=self.cookies)
 
     async def _parse_leagues(self, response):
         data = response.json()
-
-        url = 'https://app.ownersbox.com/fsp/marketType/active?'
-
+        url = self.helper.get_url(name='markets')
         tasks = []
         for league in data:
-            params = {
-                'sport': league,
-            }
-
-            tasks.append(self.arm.get(url, self._parse_markets, league, headers=self.headers, cookies=self.cookies, params=params))
+            params = self.helper.get_params(name='markets', var_1=league)
+            tasks.append(self.rm.get(url, self._parse_markets, league, headers=self.headers, cookies=self.cookies, params=params))
 
         await asyncio.gather(*tasks)
-
-        relative_path = '../data_samples/ownersbox_data.json'
-        absolute_path = os.path.abspath(relative_path)
-        with open(absolute_path, 'w') as f:
-            json.dump(self.prop_lines, f, default=str)
-
-        # self.plc.insert_many(self.prop_lines)
-
-        print(f'[OwnersBox]: {len(self.prop_lines)} lines')
+        self.helper.store(self.prop_lines)
 
     async def _parse_markets(self, response, league):
         data = response.json()
-
-        url = 'https://app.ownersbox.com/fsp/v2/market?'
-
+        url = self.helper.get_url()
         tasks = []
         for market in data:
             market_id = market.get('id')
             if not market_id:
                 continue
 
-            params = {
-                'sport': league,
-                'marketTypeId': market_id
-            }
-
-            tasks.append(self.arm.get(url, self._parse_lines, headers=self.headers, cookies=self.cookies, params=params))
+            params = self.helper.get_params(var_1=league, var_2=market_id)
+            tasks.append(self.rm.get(url, self._parse_lines, headers=self.headers, cookies=self.cookies, params=params))
 
         await asyncio.gather(*tasks)
 
     async def _parse_lines(self, response):
         # get body content in json format
         data = response.json()
-
         for prop_line in data.get('markets', []):
             league = prop_line.get('sport')
-
             if league:
-                dc.clean_league(league)
+                DataCleaner.clean_league(league)
 
             # get market
-            market_id, market, market_type = '', '', prop_line.get('marketType')
+            market_id, market, market_type = None, None, prop_line.get('marketType')
             if market_type:
                 market = market_type.get('name')
-                market_id = self.msc.find_one({'OwnersBox': market}, {'_id': 1})
-                if market_id:
-                    market_id = market_id.get('_id')
+                if market:
+                    market_id = self.dn.get_market_id(market)
 
             # get game info
-            game_info, game = '', prop_line.get('game')
+            game_info, game = None, prop_line.get('game')
             if game:
                 away_team, home_team = game.get('awayTeam'), game.get('homeTeam')
                 if away_team and home_team:
@@ -107,11 +73,13 @@ class OwnersBoxSpider:
                     game_info = ' @ '.join([away_team_alias, home_team_alias])
 
             # get player
-            team, position, subject, player = '', '', '', prop_line.get('player')
+            subject_id, subject_team, position, subject, player = None, None, None, None, prop_line.get('player')
             if player:
-                team, position = player.get('teamAlias').upper(), player.get('position')
+                subject_team, position = player.get('teamAlias').upper(), player.get('position')
                 first_name, last_name = player.get('firstName'), player.get('lastName')
                 subject = ' '.join([first_name, last_name])
+                if subject:
+                    subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
 
             # get line
             line, balanced_line = 0, prop_line.get('line')
@@ -130,8 +98,9 @@ class OwnersBoxSpider:
                             'market_category': 'player_props',
                             'market_id': market_id,
                             'market_name': market,
-                            'subject_team': team,
+                            'subject_team': subject_team,
                             'position': position,
+                            'subject_id': subject_id,
                             'subject': subject,
                             'bookmaker': 'OwnersBox',
                             'label': label,
@@ -146,8 +115,9 @@ class OwnersBoxSpider:
                         'market_category': 'player_props',
                         'market_id': market_id,
                         'market_name': market,
-                        'subject_team': team,
+                        'subject_team': subject_team,
                         'position': position,
+                        'subject_id': subject_id,
                         'subject': subject,
                         'bookmaker': 'OwnersBox',
                         'label': 'Over' if 'MORE' in pick_options else 'Under',
@@ -157,14 +127,11 @@ class OwnersBoxSpider:
 
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-
     db = client['sauce']
-
-    spider = OwnersBoxSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
+    spider = OwnersBoxSpider(uuid.uuid4(), RequestManager(), DataNormalizer('OwnersBox', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
-
     print(f'[OwnersBox]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":

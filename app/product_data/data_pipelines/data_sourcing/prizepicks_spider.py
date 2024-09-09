@@ -7,32 +7,28 @@ import uuid
 from datetime import datetime
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import DataCleaner as dc
-
-from app.product_data.data_pipelines.utils import RequestManager
-from pymongo.database import Database
+from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper
 
 
 class PrizePicksSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
-        self.prop_lines = []
+    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
-
-        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
+        self.helper = Helper(bookmaker='PrizePicks')
+        self.rm = request_manager
+        self.dn = data_normalizer
+        self.prop_lines = []
 
     async def start(self):
-        url = 'https://api.prizepicks.com/leagues?game_mode=pickem'
-
+        url = self.helper.get_url(name='leagues')
         # Get response.
-        await self.arm.get(url, self._parse_leagues)
+        await self.rm.get(url, self._parse_leagues)
 
     async def _parse_leagues(self, response):
         leagues_data = response.json().get('data')
-
         # collect all the league ids
         leagues = dict()
         for league in leagues_data:
-            league_name, attributes = '', league.get('attributes')
+            league_name, attributes = None, league.get('attributes')
             if attributes:
                 league_name = attributes.get('name')
 
@@ -44,31 +40,29 @@ class PrizePicksSpider:
             if league_id:
                 leagues[league_id] = league_name
 
-        url = "https://api.prizepicks.com/projections?"
-
-        await self.arm.get(url, self._parse_lines, leagues)
+        url = self.helper.get_url()
+        await self.rm.get(url, self._parse_lines, leagues)
 
     async def _parse_lines(self, response, leagues):
         data = response.json()
-
         # collect all the player ids
         players = dict()
         for player in data.get('included', []):
             if player.get('type') == 'new_player':
                 player_id, player_attributes = player.get('id'), player.get('attributes')
                 if player_id and player_attributes:
-                    team, subject = player_attributes.get('team'), player_attributes.get('display_name')
-                    if not team:
-                        team = player_attributes.get('team_name')
+                    subject_team, subject = player_attributes.get('team'), player_attributes.get('display_name')
+                    if not subject_team:
+                        subject_team = player_attributes.get('team_name')
                     if not subject:
                         player_attributes.get('name')
 
                     position = player_attributes.get('position')
-                    players[player_id] = {'team': team, 'player_name': subject, 'position': position}
+                    players[player_id] = {'subject_team': subject_team, 'player_name': subject, 'position': position}
 
         # second pass will actually extract data from all the lines
         for line in data.get('data', []):
-            league, relationships = '', line.get('relationships')
+            league, relationships = None, line.get('relationships')
             if relationships:
                 relationship_league = relationships.get('league')
                 if relationship_league:
@@ -80,24 +74,24 @@ class PrizePicksSpider:
 
                         league = leagues.get(league_id)
                         if league:
-                            if league == 'WNBA':
-                                 asd = 213
-                            league = dc.clean_league(league)
+                            league = DataCleaner.clean_league(league)
 
-            team, subject, position, relationship_new_player = '', '', '', relationships.get('new_player')
+            subject_id = None
+            subject_team, subject, position, relationship_new_player = None, None, None, relationships.get('new_player')
             if relationship_new_player:
                 relationship_new_player_data = relationship_new_player.get('data')
                 if relationship_new_player_data:
                     player_id = relationship_new_player_data.get('id')
                     player_data = players.get(str(player_id))
                     if player_data:
-                        team, subject = player_data.get('team'), player_data.get('player_name')
+                        subject_team, subject = player_data.get('subject_team'), player_data.get('player_name')
+                        position = player_data.get('position')
                         if subject:
                             subject = subject.strip()
-                        position = player_data.get('position')
+                            subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
 
-            market_id = ''
-            last_updated, market, game_time, stat_line, line_attributes = '', '', '', '', line.get('attributes')
+            market_id = None
+            last_updated, market, game_time, stat_line, line_attributes = None, None, None, None, line.get('attributes')
             if line_attributes:
                 # for lines with multipliers ("demon" or "goblin") need to make a separate request to get the payout
                 if line_attributes.get('odds_type') != 'standard':
@@ -129,12 +123,10 @@ class PrizePicksSpider:
                         market = f'{league[-2:]} {market}'
                         league = league[:-2]
 
-                    market_id = self.msc.find_one({'PrizePicks': market}, {'_id': 1})
-                    if market_id:
-                        market_id = market_id.get('_id')
+                    if market:
+                        market_id = self.dn.get_market_id(market)
 
                 game_time, stat_line = line_attributes.get('start_time'), line_attributes.get('line_score')
-
                 for label in ['Over', 'Under']:
                     self.prop_lines.append({
                         'batch_id': self.batch_id,
@@ -145,34 +137,25 @@ class PrizePicksSpider:
                         'market_id': market_id,
                         'market_name': market,
                         'game_time': game_time,
-                        'subject_team': team,
-                        'subject': subject,
+                        'subject_team': subject_team,
                         'position': position,
+                        'subject_id': subject_id,
+                        'subject': subject,
                         'bookmaker': "PrizePicks",
                         'label': label,
                         'line': stat_line
                     })
 
-        relative_path = '../data_samples/prizepicks_data.json'
-        absolute_path = os.path.abspath(relative_path)
-        with open(absolute_path, 'w') as f:
-            json.dump(self.prop_lines, f, default=str)
-
-        # self.plc.insert_many(self.prop_lines)
-
-        print(f'[PrizePicks]: {len(self.prop_lines)} lines')
+        self.helper.store(self.prop_lines)
 
 
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-
     db = client['sauce']
-
-    spider = PrizePicksSpider(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
+    spider = PrizePicksSpider(uuid.uuid4(), RequestManager(), DataNormalizer('PrizePicks', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
-
     print(f'[PrizePicks]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":

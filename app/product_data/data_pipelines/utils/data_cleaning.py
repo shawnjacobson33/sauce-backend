@@ -11,6 +11,7 @@ class DataCleaner:
             'MTEN': 'TENNIS',
             'WTEN': 'TENNIS',
             'HDOG': 'HOTDOG',
+            'NASCARMANUAL': 'NASCAR',
             # Dabble
             'Tennis W': 'TENNIS',
             'Tennis M': 'TENNIS',

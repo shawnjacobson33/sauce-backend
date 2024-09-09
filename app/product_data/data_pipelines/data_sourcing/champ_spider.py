@@ -23,35 +23,35 @@ class ChampSpider:
     async def start(self):
         url = self.helper.get_url()
         headers = self.helper.get_headers()
-
         tasks = []
         for league in get_leagues():
             json_data = self.helper.get_json_data(sport=league)
             tasks.append(self.rm.post(url, self._parse_lines, league, headers=headers, json=json_data))
 
         await asyncio.gather(*tasks)
-
         self.helper.store(self.prop_lines)
 
     async def _parse_lines(self, response, league):
         # get body content in json format
         data = response.json().get('data', {}).get('readPicks', {})
-
         if league:
             league = DataCleaner.clean_league(league)
 
+        subject_ids = dict()
         for event in data.get('items', []):
             game_info = event.get('title')
             for player in event.get('competitors', []):
-                subject_id, subject, position, subject_team, competitor = '', '', '', '', player.get('competitor')
+                subject_id, subject, position, subject_team, competitor = None, None, None, None, player.get('competitor')
                 if competitor:
                     subject, position = competitor.get('longName'), competitor.get('position')
                     team = competitor.get('team')
                     if team:
                         subject_team = team.get('shortName')
                         if subject:
-                            cleaned_subject = DataCleaner.clean_subject(subject)
-                            subject_id = self.dn.get_subject_id(cleaned_subject, league=league, subject_team=subject_team, position=position)
+                            subject_id = subject_ids.get(f'{subject}{subject_team}')
+                            if not subject_id:
+                                subject_id = self.dn.get_subject_id(DataCleaner.clean_subject(subject), league, subject_team, position)
+                                subject_ids[f'{subject}{subject_team}'] = subject_id
                         else:
                             continue
 

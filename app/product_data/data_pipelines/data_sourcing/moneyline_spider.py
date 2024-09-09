@@ -6,46 +6,38 @@ import uuid
 from datetime import datetime
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import DataCleaner as dc
-
-from app.product_data.data_pipelines.utils.request_management import AsyncRequestManager
-from pymongo.database import Database
+from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, DataNormalizer, Helper
 
 
 class MoneyLineSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: AsyncRequestManager, db: Database):
-        self.prop_lines = []
+    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
-
-        self.arm, self.msc, self.plc = arm, db['markets'], db['prop_lines']
+        self.helper = Helper(bookmaker='MoneyLine')
+        self.rm = request_manager
+        self.dn = data_normalizer
+        self.prop_lines = []
 
     async def start(self):
-        url = 'https://moneylineapp.com/v3/API/v4/bets/all_available.php'
-        headers, cookies, params = {
-            'Host': 'moneylineapp.com',
-            'Accept': 'application/json, text/plain, */*',
-            'User-Agent': 'MoneyLine/1 CFNetwork/1496.0.7 Darwin/23.5.0',
-            'Accept-Language': 'en-US,en;q=0.9',
-        }, {
-            'PHPSESSID': '3kndhe1s5enl10i7q25klikeek',
-        }, {
-            'userUUID': 'google-oauth2|111871382655879132434',
-            'apiKey': '90c0720d-f666-4bb8-8af6-48221004028c',
-        }
-
-        await self.arm.get(url, self._parse_lines, headers=headers, cookies=cookies, params=params)
+        url = self.helper.get_url()
+        headers = self.helper.get_headers()
+        cookies = self.helper.get_cookies()
+        params = self.helper.get_params()
+        await self.rm.get(url, self._parse_lines, headers=headers, cookies=cookies, params=params)
 
     async def _parse_lines(self, response):
         data = response.json()
-
         for bet in data.get('bets', []):
-            subject, subject_team, subject_components = '', '', bet.get('title')
+            is_boosted, league, market = False, bet.get('league'), bet.get('bet_text')
+            if league:
+                DataCleaner.clean_league(league)
+
+            subject_id, subject, subject_team, subject_components = None, None, None, bet.get('title')
             if subject_components:
                 subject_components = subject_components.split()
                 team_components = subject_components[-1]
                 subject, subject_team = ' '.join(subject_components[:-1]), team_components[1:-1]
+                subject_id = self.dn.get_subject_id(subject, league, subject_team)
 
-            is_boosted, league, market = False, bet.get('league'), bet.get('bet_text')
             # don't want futures
             if 'Season' in market:
                 continue
@@ -56,9 +48,6 @@ class MoneyLineSpider:
                 if market_components:
                     market = market_components[0]
 
-            if league:
-                dc.clean_league(league)
-
             # quick formatting adjustment
             if market in {'Hitter Fantasy Score', 'Pitcher Fantasy Score', 'Hitter Fantasy Points', 'Pitcher Fantasy Points'}:
                 market = 'Baseball Fantasy Points'
@@ -66,12 +55,9 @@ class MoneyLineSpider:
                 if league in {'WNBA', 'NBA'}:
                     market = 'Basketball Fantasy Points'
 
-            market_id = self.msc.find_one({'MoneyLine': market}, {'_id': 1})
-            if market_id:
-                market_id = market_id.get('_id')
-
+            market_id = self.dn.get_market_id(market)
             for i in range(1, 3):
-                label, line, option_components = '', '', bet.get(f'option_{i}')
+                label, line, option_components = None, None, bet.get(f'option_{i}')
                 if option_components:
                     option_components = option_components.split()
                     if len(option_components) == 2:
@@ -85,6 +71,7 @@ class MoneyLineSpider:
                     'market_id': market_id,
                     'market_name': market,
                     'subject_team': subject_team,
+                    'subject_id': subject_id,
                     'subject': subject,
                     'bookmaker': 'MoneyLine',
                     'label': label,
@@ -92,26 +79,16 @@ class MoneyLineSpider:
                     'is_boosted': is_boosted
                 })
 
-        relative_path = '../data_samples/moneyline_data.json'
-        absolute_path = os.path.abspath(relative_path)
-        with open(absolute_path, 'w') as f:
-            json.dump(self.prop_lines, f, default=str)
-
-        # self.plc.insert_many(self.prop_lines)
-
-        print(f'[MoneyLine]: {len(self.prop_lines)} lines')
+        self.helper.store(self.prop_lines)
 
 
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-
     db = client['sauce']
-
-    spider = MoneyLineSpider(batch_id=uuid.uuid4(), arm=AsyncRequestManager(), db=db)
+    spider = MoneyLineSpider(uuid.uuid4(), RequestManager(), DataNormalizer('MoneyLine', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
-
     print(f'[MoneyLine]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":

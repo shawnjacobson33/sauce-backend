@@ -1,45 +1,29 @@
 import asyncio
-import json
-import os
 import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import RequestManager
+from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, DataCleaner, Helper
 from pymongo import MongoClient
-from pymongo.database import Database
 
 
 class DraftersSpider:
-    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
-        self.prop_lines = []
+    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
-
-        self.arm = arm
-        self.msc, self.plc = db['markets'], db['prop_lines']
+        self.helper = Helper(bookmaker='Drafters')
+        self.rm = request_manager
+        self.dn = data_normalizer
+        self.prop_lines = []
 
     async def start(self):
-        url = 'https://node.drafters.com/props-game/get-props-games'
-        headers = {
-            'Host': 'node.drafters.com',
-            'accept': '*/*',
-            'app_version': '13.7',
-            'if-none-match': 'W/"71e64-mEhxPh4ljtQEfs/ywHWFIsBrtwU"',
-            'accept-language': 'en-US,en;q=0.9',
-            'device_type': 'ios',
-            'user-agent': 'Drafters/1 CFNetwork/1496.0.7 Darwin/23.5.0',
-            'device_id': 'cwEL85ss0EYPrM04yxrkGf:APA91bG2MtKk_iLZ-_twLz8QU_6CscuU3DQkPVw9m-6mNPTssieqvi51X6MCBlVfGkx4ygTdi7vGCT2WZsGRe_GbY8sO4Scx34WxTErCaXBQwWZNMlDiZu9YODqBqv5MrnXBVN_nX9_f',
-            'authorizations': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MjQwOTkxMzUsImp0aSI6Ik5qQmxaalU1TXpRNFlqVTRObUkyWldVMk0yVTRNV1k0TVRVM1l6YzFOVE13WldZeVlqTXdNbUkzTkdObVpXTTNPREZsT1RRMU1EVTRaRGhtT0RNME1BPT0iLCJpc3MiOiJodHRwczpcL1wvYXBpLmRyYWZ0ZXJzLmNvbVwvIiwibmJmIjoxNzI0MDk5MTI1LCJleHAiOjE3NTUyMDMxMjUsImRhdGEiOnsiaWQiOiI4MTUwMyIsInVzZXJuYW1lIjoidGhlcmVhbHNsaW0iLCJkcmFmdGVyc19pZCI6InRoZXJlYWxzbGltIiwiZW1haWwiOiJzaGF3bmphY29ic29uMzNAZ21haWwuY29tIn19.p86Dtjv0L-mraFMhbcvHMdHparpUsR1tXEymQcdwMrg',
-            'user_agent': 'iPhone 14 Pro',
-            'access_token': 'draft_user',
-        }
-
-        await self.arm.get(url, self._parse_lines, headers=headers)
+        url = self.helper.get_url()
+        headers = self.helper.get_headers()
+        await self.rm.get(url, self._parse_lines, headers=headers)
 
     async def _parse_lines(self, response):
         # get body content in json format
         data = response.json()
-
+        subject_ids = dict()
         for event in data.get('entities', []):
             # do not want futures
             if 'Season' in event.get('_id'):
@@ -47,12 +31,16 @@ class DraftersSpider:
 
             for player in event.get('players', []):
                 subject, position = player.get('player_name'), player.get('player_position')
-
                 # get game info
-                subject_team, game_info, event = '', '', player.get('event')
+                subject_team, game_info, event = None, None, player.get('event')
                 if event:
                     home_team, away_team = event.get('home'), event.get('away')
                     subject_team, game_info = event.get('own'), ' @ '.join([away_team, home_team])
+
+                subject_id = subject_ids.get(subject)
+                if not subject_id:
+                    subject_id = self.dn.get_subject_id(subject, subject_team=subject_team, position=position)
+                    subject_ids[subject] = subject_id
 
                 market, line = player.get('bid_stats_name'), player.get('bid_stats_value')
                 # quick formatting error fixes
@@ -61,10 +49,7 @@ class DraftersSpider:
                 elif market == 'Passing + Rushing Yards':
                     market = 'Pass + Rush Yards'
 
-                market_id = self.msc.find_one({'Drafters': market}, {'_id': 1})
-                if market_id:
-                    market_id = market_id.get('_id')
-
+                market_id = self.dn.get_market_id(market)
                 for label in ['Over', 'Under']:
                     self.prop_lines.append({
                         'batch_id': self.batch_id,
@@ -81,14 +66,7 @@ class DraftersSpider:
                         'line': line
                     })
 
-        relative_path = '../data_samples/drafters_data.json'
-        absolute_path = os.path.abspath(relative_path)
-        with open(absolute_path, 'w') as f:
-            json.dump(self.prop_lines, f, default=str)
-
-        # self.plc.insert_many(self.prop_lines)
-
-        print(f'[Drafters]: {len(self.prop_lines)} lines')
+        self.helper.store(self.prop_lines)
 
 
 async def main():
@@ -96,7 +74,7 @@ async def main():
 
     db = client['sauce']
 
-    spider = DraftersSpider(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
+    spider = DraftersSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Drafters', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

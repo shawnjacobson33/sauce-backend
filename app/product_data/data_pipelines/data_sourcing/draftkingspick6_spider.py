@@ -1,5 +1,4 @@
 import json
-import os
 import time
 import uuid
 from datetime import datetime
@@ -7,63 +6,35 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import asyncio
 
-from app.product_data.data_pipelines.utils import DataCleaner as dc
-
-from app.product_data.data_pipelines.utils import RequestManager
+from app.product_data.data_pipelines.utils import RequestManager, DataCleaner, DataNormalizer, Helper
 from pymongo import MongoClient
-from pymongo.database import Database
 
 
 class DraftKingsPick6:
-    def __init__(self, batch_id: uuid.UUID, arm: RequestManager, db: Database):
-        self.prop_lines = []
+    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
-
-        self.arm = arm
-        self.msc, self.plc = db['markets'], db['prop_lines']
-        self.headers = {
-            'accept': '*/*',
-            'accept-language': 'en-US,en;q=0.9',
-            'newrelic': 'eyJ2IjpbMCwxXSwiZCI6eyJ0eSI6IkJyb3dzZXIiLCJhYyI6IjU0NjgyNSIsImFwIjoiNjAxNDMxMzM3IiwiaWQiOiJmNmU0N2RjMzlkN2NjZDZkIiwidHIiOiI0NDM2MTQ5YjFhNzY3ZmRlMTg0MDZhZDE2ODAwY2YwMCIsInRpIjoxNzIzNjE1NzY3NzUzfX0=',
-            'priority': 'u=1, i',
-            'referer': 'https://pick6.draftkings.com/?sport=WNBA',
-            'sec-ch-ua': '"Not)A;Brand";v="99", "Google Chrome";v="127", "Chromium";v="127"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"macOS"',
-            'sec-fetch-dest': 'empty',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-site': 'same-origin',
-            'traceparent': '00-4436149b1a767fde18406ad16800cf00-f6e47dc39d7ccd6d-01',
-            'tracestate': '546825@nr=0-1-546825-601431337-f6e47dc39d7ccd6d----1723615767753',
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
-        }
+        self.helper = Helper(bookmaker='DraftKingsPick6')
+        self.rm = request_manager
+        self.headers = self.helper.get_headers()
+        self.dn = data_normalizer
+        self.prop_lines = []
 
     async def start(self):
-        url = "https://pick6.draftkings.com/"
-
-        await self.arm.get(url, self._parse_sports, headers=self.headers)
+        url = self.helper.get_url()
+        await self.rm.get(url, self._parse_sports, headers=self.headers)
 
     async def _parse_sports(self, response):
         tasks, soup = [], BeautifulSoup(response.text, 'html.parser')
         for league in [sport_div.text for sport_div in soup.find_all('div', {'class': 'dkcss-7q5fzm'}) if
                        not sport_div.text.isnumeric()]:
             url = response.url + f"?sport={league}&_data=routes%2F_index"
-
             if league:
-                league = dc.clean_league(league)
+                league = DataCleaner.clean_league(league)
 
-            tasks.append(self.arm.get(url, self._parse_lines, league, headers=self.headers))
+            tasks.append(self.rm.get(url, self._parse_lines, league, headers=self.headers))
 
         await asyncio.gather(*tasks)
-
-        relative_path = '../data_samples/draftkingspick6_data.json'
-        absolute_path = os.path.abspath(relative_path)
-        with open(absolute_path, 'w') as f:
-            json.dump(self.prop_lines, f, default=str)
-
-        # self.plc.insert_many(self.prop_lines)
-
-        print(f'[DraftKingsPick6]: {len(self.prop_lines)} lines')
+        self.helper.store(self.prop_lines)
 
     async def _parse_lines(self, response, league):
         text = response.text
@@ -73,18 +44,17 @@ class DraftKingsPick6:
             first_index = text.find('data:{')
             return text[:first_index]
 
+        subject_ids = dict()
         data = json.loads(clean_json()).get('pickableIdToPickableMap')
-
         for pick in data.values():
-            market_id, market, subject, subject_team, game_time, position, line = '', '', '', '', '', '', ''
+            subject_id, line = None, None
+            market_id, market, subject, subject_team, game_time, position = None, None, None, None, None, None
             pickable, active_market = pick.get('pickable'), pick.get('activeMarket')
             if pickable:
                 market_category = pickable.get('marketCategory')
                 if market_category:
                     market = market_category.get('marketName')
-                    market_id = self.msc.find_one({'DraftKings Pick6': market}, {'_id': 1})
-                    if market_id:
-                        market_id = market_id.get('_id')
+                    market_id = self.dn.get_market_id(market)
                 for entity in pickable.get('pickableEntities', []):
                     subject, competitions = entity.get('displayName'), entity.get('pickableCompetitions')
                     if competitions:
@@ -92,6 +62,11 @@ class DraftKingsPick6:
                         position, team_data = first_competition.get('positionName'), first_competition.get('team')
                         if team_data:
                             subject_team = team_data.get('abbreviation')
+
+                        subject_id = subject_ids.get(subject)
+                        if not subject_id:
+                            subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                            subject_ids[subject] = subject_id
 
                         summary = first_competition.get('competitionSummary')
                         if summary:
@@ -110,9 +85,10 @@ class DraftKingsPick6:
                     'market_id': market_id,
                     'market_name': market,
                     'subject_team': subject_team,
+                    'subject_id': subject_id,
                     'subject': subject,
                     'position': position,
-                    'bookmaker': "DraftKings Pick6",
+                    'bookmaker': "DraftKingsPick6",
                     'label': label,
                     'line': line
                 })
@@ -123,7 +99,7 @@ async def main():
 
     db = client['sauce']
 
-    spider = DraftKingsPick6(batch_id=uuid.uuid4(), arm=RequestManager(), db=db)
+    spider = DraftKingsPick6(uuid.uuid4(), RequestManager(), DataNormalizer('DraftKingsPick6', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

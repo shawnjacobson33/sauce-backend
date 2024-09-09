@@ -1,3 +1,4 @@
+import math
 from typing import Optional
 import random
 from pymongo.database import Database
@@ -51,7 +52,7 @@ class DataNormalizer:
 
     def _find_most_similar_subject(self, target_subject, league=None, subject_team=None, position=None, number=None):
         query = self._build_second_query(league)
-        projection = {'bookmakers': 1}
+        projection = {'subject': 1, 'subject_team': 1, 'league': 1, 'position': 1, 'jersey_number': 1, 'bookmakers': 1}
         cursor = self.subject_collection.find(query, projection)
         return self._select_best_match(cursor, target_subject, subject_team, position, number)
 
@@ -78,7 +79,7 @@ class DataNormalizer:
                 subject_info = bookmakers[0].get('subject_info')
                 if subject_info:
                     distances = self._calculate_distances(subject_info, target_subject, subject_team, position, number)
-                    total_distance = sum(distances.values())
+                    total_distance = self._calculate_overall_distance(distances)
                     if total_distance < min_distance:
                         min_distance = total_distance
                         best_match, best_doc = self._build_match(subject_id, subject_info, distances), doc
@@ -88,13 +89,23 @@ class DataNormalizer:
 
         return best_match, best_doc
 
-    def _calculate_distances(self, subject_info, target_subject, subject_team, position, number):
-        return {
-            'subject_distance': lev.distance(target_subject, subject_info.get('subject', '')),
-            'subject_team_distance': lev.distance(subject_team, subject_info.get('subject_team', '')) if subject_team else 0,
-            'position_distance': lev.distance(position, subject_info.get('position', '')) if position else 0,
-            'jersey_number_distance': lev.distance(number, subject_info.get('jersey_number', '')) if number else 0
-        }
+    def _calculate_distances(self, subject_info, subject, subject_team, position, jersey_number):
+        args = locals()
+        distances = dict()
+        for field in ['subject', 'subject_team', 'position', 'jersey_number']:
+            target_field_value, stored_field_value = args[field], subject_info.get(field)
+            if target_field_value and stored_field_value:
+                distances[f'{field}_distance'] = lev.distance(target_field_value, stored_field_value)
+
+        return distances
+
+    def _calculate_overall_distance(self, distances):
+        total_weighted_distance = 0
+        for distance_type, distance in distances.items():
+            # Put the most weight on the distance between subject names and less, split evenly, across other factors
+            total_weighted_distance += distance * 0.65 if distance_type == 'subject_distance' else distance * 0.35 / len(distances)
+
+        return math.floor(total_weighted_distance)
 
     def _build_match(self, subject_id, subject_info, distances):
         match = {k: v for k, v in subject_info.items() if k in ['subject', 'subject_team', 'position', 'jersey_number']}
@@ -111,35 +122,42 @@ class DataNormalizer:
 
         # 2nd Search - most similar
         most_similar_subject, most_similar_doc = self._find_most_similar_subject(target_subject, league, subject_team, position, number)
-        if most_similar_subject and self._is_good_match(most_similar_subject):
+        if most_similar_subject and self._is_good_match(most_similar_subject, target_subject, league):
             # over time this will improve query speeds because it will find the subject in the first search.
             self._update_subject_document(most_similar_doc, target_subject, league, subject_team, position, number)
-            print(f'FOUND SIMILAR SUBJECT: {target_subject} {subject_team}, {most_similar_subject} SUCCESS')
+            print(f'FOUND SIMILAR SUBJECT: {target_subject} {subject_team} {position} {number}, {most_similar_subject} SUCCESS')
             return most_similar_subject['_id']
 
         if most_similar_subject and float('inf') not in most_similar_subject:
-            print(f'INSERTED NEW SUBJECT: {target_subject} {subject_team}, {most_similar_subject} FAIL')
+            print(f'INSERTED NEW SUBJECT: {target_subject} {subject_team} {position} {number}, {most_similar_subject} FAIL')
         else:
-            print(f'INSERTED NEW SUBJECT: {target_subject} {subject_team}, None Found With Given Criterion FAIL')
+            print(f'INSERTED NEW SUBJECT: {target_subject} {subject_team} {position} {number}, None Found With Given Criterion FAIL')
 
         # If no good match, insert a new subject
         return self._insert_new_subject(target_subject, league, subject_team, position, number)
 
-    def _is_good_match(self, match):
-        # Create thresholds for the most similar match to meet
-        subject_threshold = int(len(match['subject']) * 0.30)
-        subject_team_threshold = int(len(match['subject_team']) * 0.50) if match['subject_team'] else 0
-        position_threshold = int(len(match['position']) * 0.50) if match['position'] else 0
-        jersey_number_threshold = int(len(match['jersey_number']) * 0.50) if match['jersey_number'] else 0
+    def _is_good_match(self, match, target_subject, league):
+        thresholds = dict()
+        subject_percentage = 0.3
+        # Create leniency with the subject threshold with respect to the distance of the subject team
+        distance = match.get('subject_team_distance')
+        if distance:
+            subject_percentage += (1 / 0.5 if not distance else distance) * 0.15
 
-        # Check if both subject and subject_team distances are within their respective thresholds
-        is_subject_good = (match['subject_distance'] <= subject_threshold) or (match['subject_distance'] < 2)
-        is_subject_team_good = (match['subject_team_distance'] <= subject_team_threshold) or (match['subject_team_distance'] < 2)
-        is_position_good = (match['position_distance'] <= position_threshold) or (match['position_distance'] < 2)
-        is_jersey_number_good = (match['jersey_number_distance'] <= jersey_number_threshold) or (match['jersey_number_distance'] < 2)
+        # Create leniency with the subject threshold with respect to the distance of the position
+        distance = match.get('position_distance')
+        if distance:
+            subject_percentage += (1 / 0.6 if not distance else distance) * 0.1
 
-        # Return True if both subject and subject team and position and jersey number matches are good
-        return is_subject_good and is_subject_team_good and is_position_good and is_jersey_number_good
+        thresholds['subject_threshold'] = int(len(target_subject) * subject_percentage)
+        thresholds['subject_team_threshold'] = 3 if league in {'NCAAF'} else 1
+        thresholds['position_threshold'] = 0
+
+        is_good = True
+        for field in ['subject', 'subject_team', 'position']:
+            is_good &= (match[f'{field}_distance'] <= thresholds[f'{field}_threshold']) if f'{field}_distance' in match else is_good
+
+        return is_good
 
     def _update_subject_document(self, most_similar_doc, subject, league, subject_team, position, number):
         # Store all local variables in a dictionary for easy access
@@ -148,7 +166,6 @@ class DataNormalizer:
         update_fields = {}
         # Check and update fields only if they are not set
         for field in ['subject', 'league', 'subject_team', 'position', 'jersey_number']:
-            # Convert 'jersey_number' to 'number' to match the argument name
             arg_name = 'number' if field == 'jersey_number' else field
             if not most_similar_doc.get(field):
                 # Set the field in the document to the value of the corresponding argument

@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, Helper, DataCleaner as dc
+from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, Helper, DataCleaner
 
 
 def read_tokens():
@@ -36,7 +36,7 @@ class BoomFantasySpider:
 
         contest = data.get('contest')
         if contest:
-            subject_ids_dict = dict()
+            subject_ids = dict()
             for section in contest.get('sections', []):
                 selection_type = section.get('type')
                 # don't want the 'matchups' data
@@ -44,7 +44,7 @@ class BoomFantasySpider:
                     for league in section.get('leagues', []):
                         league_name = league.get('league')
                         if league_name:
-                            league_name = dc.clean_league(league_name.upper())
+                            league_name = DataCleaner.clean_league(league_name.upper())
                         for league_section in league.get('sections', []):
                             game_time = league_section.get('lockTime')
                             if game_time:
@@ -52,12 +52,12 @@ class BoomFantasySpider:
                                 game_time = datetime.fromtimestamp(game_time / 1000)
 
                             # get team
-                            subject_team, player_image = '', league_section.get('playerImage')
+                            subject_team, player_image = None, league_section.get('playerImage')
                             if player_image:
                                 subject_team = player_image.get('abbreviation')
 
                             # get subject
-                            subject_id, subject, title = '', '', league_section.get('title')
+                            subject_id, subject, title = None, None, league_section.get('title')
                             if title:
                                 options = title.get('additionalOptions')
                                 if options:
@@ -65,15 +65,14 @@ class BoomFantasySpider:
                                     subject = ' '.join([first_name, last_name])
                                     if subject:
                                         # subjects show up more than once so don't need to get subject id every time.
-                                        if f'{subject}{league_name}{subject_team}' in subject_ids_dict:
-                                            subject_id = subject_ids_dict[f'{subject}{league_name}{subject_team}']
-                                        else:
-                                            subject_id = self.dn.get_subject_id(dc.clean_subject(subject), league=league_name, subject_team=subject_team)
-                                            subject_ids_dict[f'{subject}{league_name}{subject_team}'] = subject_id
+                                        subject_id = subject_ids.get(f'{subject}{subject_team}')
+                                        if not subject_id:
+                                            subject_id = self.dn.get_subject_id(DataCleaner.clean_subject(subject), league=league_name, subject_team=subject_team)
+                                            subject_ids[f'{subject}{subject_team}'] = subject_id
 
                             for question in league_section.get('fullQuestions', []):
                                 # get line and market
-                                line, market, market_id = '', '', ''
+                                line, market, market_id = None, None, None
                                 pick_selection_title = question.get('pickSelectionTitle')
                                 if pick_selection_title:
                                     additional_options = pick_selection_title.get('additionalOptions')
@@ -113,14 +112,11 @@ class BoomFantasySpider:
 
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-
     db = client['sauce']
-
     spider = BoomFantasySpider(uuid.uuid4(), RequestManager(), DataNormalizer('BoomFantasy', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
-
     print(f'[BoomFantasy]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":
