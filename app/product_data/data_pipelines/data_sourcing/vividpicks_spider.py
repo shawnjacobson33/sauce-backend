@@ -24,6 +24,7 @@ class VividPicksSpider:
     async def _parse_lines(self, response):
         # get body content in json format
         data = response.json()
+        subject_ids = dict()
         for event in data.get('gret', []):
             league, game_info, game_time = event.get('league'), event.get('gameInfo'), event.get('gameTime')
             if 'Futures' in game_info:
@@ -34,12 +35,16 @@ class VividPicksSpider:
 
             for player in event.get('activePlayers', []):
                 subject_id, last_updated = None, player.get('updatedAt')
-                subject, subject_team, position = player.get('name'), player.get('abvTeamName'), player.get('position')
+                subject, subject_team = player.get('name'), player.get('abvTeamName')
                 if not subject_team:
                     subject_team = player.get('teamName')
 
                 if subject:
-                    subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                    subject_id = subject_ids.get(f'{subject}{subject_team}')
+                    if not subject_id:
+                        cleaned_subject = DataCleaner.clean_subject(subject)
+                        subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team)
+                        subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 for prop in player.get('visiblePlayerProps', []):
                     market_id, market, line, multiplier = None, prop.get('p'), prop.get('val'), 1.0
@@ -59,7 +64,7 @@ class VividPicksSpider:
                                 'game_info': game_info,
                                 'market_category': 'player_props',
                                 'market_id': market_id,
-                                'market_name': market,
+                                'market': market,
                                 'game_time': game_time,
                                 'subject_team': subject_team,
                                 'position': position,
@@ -81,7 +86,7 @@ class VividPicksSpider:
                                 'game_info': game_info,
                                 'market_category': 'player_props',
                                 'market_id': market_id,
-                                'market_name': market,
+                                'market': market,
                                 'game_time': game_time,
                                 'subject_team': subject_team,
                                 'position': position,

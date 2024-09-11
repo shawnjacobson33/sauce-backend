@@ -43,7 +43,7 @@ class SleeperSpider:
 
     async def _parse_lines(self, response, players):
         data = response.json()
-
+        subject_ids = dict()
         for line in data:
             subject_team, subject, position, player_id, league = None, None, None, line.get('subject_id'), line.get('sport')
             if league:
@@ -55,7 +55,10 @@ class SleeperSpider:
                 if player:
                     subject_team, subject, position = player.get('subject_team'), player.get('player_name'), player.get('position')
                     if subject:
-                        subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                        subject_id = subject_ids.get(f'{subject}{subject_team}')
+                        if not subject_id:
+                            subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                            subject_ids[f'{subject}{subject_team}'] = subject_id
 
             market_id, last_updated, market = None, line.get('updated_at'), line.get('wager_type')
             if market:

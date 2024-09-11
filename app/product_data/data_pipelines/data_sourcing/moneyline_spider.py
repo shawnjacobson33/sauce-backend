@@ -1,6 +1,4 @@
 import asyncio
-import json
-import os
 import time
 import uuid
 from datetime import datetime
@@ -26,17 +24,11 @@ class MoneyLineSpider:
 
     async def _parse_lines(self, response):
         data = response.json()
+        subject_ids = dict()
         for bet in data.get('bets', []):
             is_boosted, league, market = False, bet.get('league'), bet.get('bet_text')
             if league:
-                DataCleaner.clean_league(league)
-
-            subject_id, subject, subject_team, subject_components = None, None, None, bet.get('title')
-            if subject_components:
-                subject_components = subject_components.split()
-                team_components = subject_components[-1]
-                subject, subject_team = ' '.join(subject_components[:-1]), team_components[1:-1]
-                subject_id = self.dn.get_subject_id(subject, league, subject_team)
+                league = DataCleaner.clean_league(league)
 
             # don't want futures
             if 'Season' in market:
@@ -56,6 +48,18 @@ class MoneyLineSpider:
                     market = 'Basketball Fantasy Points'
 
             market_id = self.dn.get_market_id(market)
+            subject_id, subject, subject_team, subject_components = None, None, None, bet.get('title')
+            if subject_components:
+                subject_components = subject_components.split()
+                team_components = subject_components[-1]
+                subject, subject_team = ' '.join(subject_components[:-1]), team_components[1:-1].replace('r.(', '')
+                if subject:
+                    subject_id = subject_ids.get(f'{subject}{subject_team}')
+                    if not subject_id:
+                        cleaned_subject = DataCleaner.clean_subject(subject)
+                        subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team)
+                        subject_ids[f'{subject}{subject_team}'] = subject_id
+
             for i in range(1, 3):
                 label, line, option_components = None, None, bet.get(f'option_{i}')
                 if option_components:
@@ -69,7 +73,7 @@ class MoneyLineSpider:
                     'league': league,
                     'market_category': 'player_props',
                     'market_id': market_id,
-                    'market_name': market,
+                    'market': market,
                     'subject_team': subject_team,
                     'subject_id': subject_id,
                     'subject': subject,

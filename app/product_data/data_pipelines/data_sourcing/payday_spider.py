@@ -1,5 +1,3 @@
-import json
-import os
 import time
 import uuid
 from datetime import datetime
@@ -51,6 +49,7 @@ class PaydaySpider:
 
     async def _parse_lines(self, response, league):
         data = response.json()
+        subject_ids = dict()
         for game in data.get('data', {}).get('games', []):
             game_info = game.get('title')
             # Need team ids and names for player info
@@ -69,13 +68,25 @@ class PaydaySpider:
 
                 if player:
                     subject_jersey_number = player.get('number')
+                    # for tennis players that don't actually have jersey numbers
+                    if subject_jersey_number == 'N/A':
+                        subject_jersey_number = None
+
                     subject, position = player.get('name'), player.get('position')
                     subject_id, subject_team, team_id = None, None, player.get('team_id')
                     if team_id:
                         subject_team = teams_dict.get(team_id)
 
                     if subject:
-                        subject_id = self.dn.get_subject_id(subject, league, subject_team, position, subject_jersey_number)
+                        # For tennis players when they don't actually have a team
+                        if subject_team == subject.upper():
+                            subject_team = None
+
+                        subject_id = subject_ids.get(f'{subject}{subject_team}')
+                        if not subject_id:
+                            cleaned_subject = DataCleaner.clean_subject(subject)
+                            subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team, position, subject_jersey_number)
+                            subject_ids[f'{subject}{subject_team}'] = subject_id
 
                     for label in ['Over', 'Under']:
                         self.prop_lines.append({
@@ -85,12 +96,12 @@ class PaydaySpider:
                             'game_info': game_info,
                             'market_category': 'player_props',
                             'market_id': market_id,
-                            'market_name': market,
+                            'market': market,
                             'subject_team': subject_team,
                             'position': position,
-                            'jersey_number': subject_jersey_number,
                             'subject_id': subject_id,
                             'subject': subject,
+                            'jersey_number': subject_jersey_number,
                             'bookmaker': 'Payday',
                             'label': label,
                             'line': line

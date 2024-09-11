@@ -7,29 +7,7 @@ db = client['sauce']
 
 subjects = db['subjects']
 
-initial_document = {
-    'league': None,
-    'BoomFantasy': None,
-    'Champ': None,
-    'Dabble': None,
-    'Drafters': None,
-    'DraftKingsPick6': None,
-    'HotStreak': None,
-    'MoneyLine': None,
-    'OddsShopper': None,
-    'OwnersBox': None,
-    'ParlayPlay': None,
-    'Payday': None,
-    'PrizePicks': None,
-    'Rebet': None,
-    'Sleeper': None,
-    'SuperDraft': None,
-    'ThriveFantasy': None,
-    'Underdog Fantasy': None,
-    'VividPicks': None
-}
-
-subjects.insert_one(initial_document)
+subjects.update_many()
 
 #
 # prop_lines = pd.read_json('../data_samples/prizepicks_data.json')

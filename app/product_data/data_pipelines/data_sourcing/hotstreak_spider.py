@@ -1,5 +1,3 @@
-import json
-import os
 import time
 import uuid
 import random
@@ -84,6 +82,7 @@ class HotStreakSpider:
                 participants[participant_id] = {'subject': subject, 'position': position, 'opponent_id': opponent_id, 'subject_number': number}
 
         # go through prop lines
+        subject_ids = dict()
         for market in search.get('markets', []):
             market_id_components = market.get('id').split(':')[1:]
             more_components = ''.join(market_id_components).split(',')
@@ -95,13 +94,19 @@ class HotStreakSpider:
             if participant:
                 subject, position = participant.get('subject'), participant.get('position')
                 opponent_id, subject_number = participant.get('opponent_id'), participant.get('subject_number')
-                subject_id = self.dn.get_subject_id(subject, league, position=position, number=subject_number)
                 if opponent_id:
                     opponent = opponent_ids.get(opponent_id)
                     if opponent:
                         league, game_time = opponent.get('league'), opponent.get('game_time')
                         if league:
                             league = DataCleaner.clean_league(league)
+
+                if subject:
+                    subject = subject.strip()
+                    subject_id = subject_ids.get(f'{subject}{position}')
+                    if not subject_id:
+                        subject_id = self.dn.get_subject_id(subject, league, position=position, number=subject_number)
+                        subject_ids[f'{subject}{position}'] = subject_id
 
             if the_market:
                 if the_market == 'fantasy_points':
@@ -110,7 +115,7 @@ class HotStreakSpider:
                     elif league in {'NFL', 'NCAAF'}:
                         the_market = 'football_fantasy_points'
 
-                market_id = self.dn.get_market_id(market)
+                market_id = self.dn.get_market_id(the_market)
 
             lines, probabilities = market.get('lines', []), market.get('probabilities', [])
             labels, n = ['Under', 'Over'], len(lines)

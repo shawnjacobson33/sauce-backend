@@ -1,6 +1,4 @@
 import asyncio
-import json
-import os
 import re
 import time
 import uuid
@@ -61,6 +59,7 @@ class PrizePicksSpider:
                     players[player_id] = {'subject_team': subject_team, 'player_name': subject, 'position': position}
 
         # second pass will actually extract data from all the lines
+        subject_ids = dict()
         for line in data.get('data', []):
             league, relationships = None, line.get('relationships')
             if relationships:
@@ -75,20 +74,6 @@ class PrizePicksSpider:
                         league = leagues.get(league_id)
                         if league:
                             league = DataCleaner.clean_league(league)
-
-            subject_id = None
-            subject_team, subject, position, relationship_new_player = None, None, None, relationships.get('new_player')
-            if relationship_new_player:
-                relationship_new_player_data = relationship_new_player.get('data')
-                if relationship_new_player_data:
-                    player_id = relationship_new_player_data.get('id')
-                    player_data = players.get(str(player_id))
-                    if player_data:
-                        subject_team, subject = player_data.get('subject_team'), player_data.get('player_name')
-                        position = player_data.get('position')
-                        if subject:
-                            subject = subject.strip()
-                            subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
 
             market_id = None
             last_updated, market, game_time, stat_line, line_attributes = None, None, None, None, line.get('attributes')
@@ -126,6 +111,27 @@ class PrizePicksSpider:
                     if market:
                         market_id = self.dn.get_market_id(market)
 
+            subject_id = None
+            subject_team, subject, position, relationship_new_player = None, None, None, relationships.get('new_player')
+            if relationship_new_player:
+                relationship_new_player_data = relationship_new_player.get('data')
+                if relationship_new_player_data:
+                    player_id = relationship_new_player_data.get('id')
+                    player_data = players.get(str(player_id))
+                    if player_data:
+                        subject_team, subject = player_data.get('subject_team'), player_data.get('player_name')
+                        position = player_data.get('position')
+                        # for players with secondary positions
+                        if position and '-' in position:
+                            position = position.split('-')[0]
+
+                        if subject:
+                            subject = subject.strip()
+                            subject_id = subject_ids.get(f'{subject}{subject_team}')
+                            if not subject_id:
+                                subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                                subject_ids[f'{subject}{subject_team}'] = subject_id
+
                 game_time, stat_line = line_attributes.get('start_time'), line_attributes.get('line_score')
                 for label in ['Over', 'Under']:
                     self.prop_lines.append({
@@ -135,7 +141,7 @@ class PrizePicksSpider:
                         'league': league,
                         'market_category': 'player_props',
                         'market_id': market_id,
-                        'market_name': market,
+                        'market': market,
                         'game_time': game_time,
                         'subject_team': subject_team,
                         'position': position,

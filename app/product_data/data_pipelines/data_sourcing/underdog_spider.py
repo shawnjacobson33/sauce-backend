@@ -1,6 +1,4 @@
 import asyncio
-import json
-import os
 import time
 import uuid
 from datetime import datetime
@@ -81,6 +79,7 @@ class UnderdogSpider:
             if player_id:
                 player_data[player_id] = {'subject': subject, 'subject_team': subject_team}
 
+        subject_ids = dict()
         for game in data.get('over_under_lines', []):
             line = game.get('stat_value')
             for option in game.get('options', []):
@@ -134,11 +133,14 @@ class UnderdogSpider:
                                     # assign the league to the more specific game in the ESPORTS realm
                                     league, subject = subject_components[0], subject_components[1]
 
+                            if league:
+                                league = DataCleaner.clean_league(league)
+
+                            # subjects show up more than once so don't need to get subject id every time.
+                            subject_id = subject_ids.get(f'{subject}{subject_team}')
                             if subject:
                                 subject_id = self.dn.get_subject_id(subject, league, subject_team)
-
-                        if league:
-                            league = DataCleaner.clean_league(league)
+                                subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 label = 'Over' if option.get('choice') == 'higher' else 'Under'
                 multiplier = option.get('payout_multiplier')
@@ -149,7 +151,7 @@ class UnderdogSpider:
                     'game_time': game_time,
                     'market_category': 'player_props',
                     'market_id': market_id,
-                    'market_name': market,
+                    'market': market,
                     'subject_team': subject_team,
                     'subject_id': subject_id,
                     'subject': subject,
@@ -165,7 +167,7 @@ class UnderdogSpider:
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
     db = client['sauce']
-    spider = UnderdogSpider(uuid.uuid4(), RequestManager(), DataNormalizer('UnderdogFantasy', db))
+    spider = UnderdogSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Underdog Fantasy', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

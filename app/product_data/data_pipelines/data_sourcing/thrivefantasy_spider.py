@@ -25,6 +25,7 @@ class ThriveFantasySpider:
     async def _parse_lines(self, response):
         # get body content in json format
         data = response.json().get('response')
+        subject_ids = dict()
         for prop in data.get('data', []):
             contest_prop = prop.get('contestProp')
             # game info
@@ -51,7 +52,11 @@ class ThriveFantasySpider:
                     subject = ' '.join([first_name, last_name])
 
                 if subject:
-                    subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                    subject_id = subject_ids.get(f'{subject}{subject_team}')
+                    if not subject_id:
+                        cleaned_subject = DataCleaner.clean_subject(subject)
+                        subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team)
+                        subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 # market
                 prop_params = player.get('propParameters')
@@ -71,7 +76,7 @@ class ThriveFantasySpider:
                     'league': league,
                     'market_category': 'player_props',
                     'market_id': market_id,
-                    'market_name': market,
+                    'market': market,
                     'game_info': game_info,
                     'subject_team': subject_team,
                     'position': position,
@@ -88,7 +93,7 @@ class ThriveFantasySpider:
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
     db = client['sauce']
-    spider = ThriveFantasySpider(uuid.uuid4(), RequestManager(), DataNormalizer('ThriveFantasy', db))
+    spider = ThriveFantasySpider(uuid.uuid4(), RequestManager(), DataNormalizer('Thrive Fantasy', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

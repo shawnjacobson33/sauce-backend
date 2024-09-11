@@ -1,6 +1,5 @@
 import json
 import os
-from typing import Dict, List
 
 
 class Helper:
@@ -57,7 +56,7 @@ class Helper:
                 'prop_lines': 'https://api.thrivefantasy.com/houseProp/upcomingHouseProps'
             }, 'UnderdogFantasy': {
                 'teams': 'https://stats.underdogfantasy.com/v1/teams',
-                'prop_lines': 'https://api.underdogfantasy.com/beta/v5/over_under_lines'
+                'prop_lines': 'https://api.underdogfantasy.com/beta/v6/over_under_lines'
             }, 'VividPicks': {
                 'prop_lines': 'https://api.betcha.one/v1/game/activePlayersForLeagueBoard'
             }
@@ -219,44 +218,55 @@ class Helper:
                     'accept-language': 'en-US,en;q=0.9',
                 }
             }, 'Sleeper': {
-                'Host': 'api.sleeper.app',
-                'x-amp-session': '1724697278937',
-                'accept': 'application/json',
-                'authorization': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdmF0YXIiOiIxNWQ3Y2YyNTliYzMwZWFiOGY2MTIwZjQ1ZjY1MmZiNiIsImRpc3BsYXlfbmFtZSI6IlNoYXdudGhlcmVhbHNoYWR5IiwiZXhwIjoxNzU2MjMzMzEyLCJpYXQiOjE3MjQ2OTczMTIsImlzX2JvdCI6ZmFsc2UsImlzX21hc3RlciI6ZmFsc2UsInJlYWxfbmFtZSI6bnVsbCwidXNlcl9pZCI6NzI5MjAyODc1NTk4Nzc0MjcyLCJ2YWxpZF8yZmEiOiJwaG9uZSJ9.hvc8FXdweWwNkBvrhCJ8ytRcBkX5ilDZa77IQtgleJM',
-                'x-api-client': 'api.cached',
-                'accept-language': 'en-US,en;q=0.9',
-                'user-agent': 'Sleeper/93.1.0 CFNetwork/1496.0.7 Darwin/23.5.0',
-                'x-device-id': '71009696-F347-40AA-AE8C-5247A63041DF',
-                'x-platform': 'ios',
-                'x-build': '93.1.0',
-                'x-bundle': 'com.blitzstudios.sleeperbot',
+                'prop_lines': {
+                    'Host': 'api.sleeper.app',
+                    'x-amp-session': '1724697278937',
+                    'accept': 'application/json',
+                    'authorization': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdmF0YXIiOiIxNWQ3Y2YyNTliYzMwZWFiOGY2MTIwZjQ1ZjY1MmZiNiIsImRpc3BsYXlfbmFtZSI6IlNoYXdudGhlcmVhbHNoYWR5IiwiZXhwIjoxNzU2MjMzMzEyLCJpYXQiOjE3MjQ2OTczMTIsImlzX2JvdCI6ZmFsc2UsImlzX21hc3RlciI6ZmFsc2UsInJlYWxfbmFtZSI6bnVsbCwidXNlcl9pZCI6NzI5MjAyODc1NTk4Nzc0MjcyLCJ2YWxpZF8yZmEiOiJwaG9uZSJ9.hvc8FXdweWwNkBvrhCJ8ytRcBkX5ilDZa77IQtgleJM',
+                    'x-api-client': 'api.cached',
+                    'accept-language': 'en-US,en;q=0.9',
+                    'user-agent': 'Sleeper/93.1.0 CFNetwork/1496.0.7 Darwin/23.5.0',
+                    'x-device-id': '71009696-F347-40AA-AE8C-5247A63041DF',
+                    'x-platform': 'ios',
+                    'x-build': '93.1.0',
+                    'x-bundle': 'com.blitzstudios.sleeperbot',
+                }
             }, 'SuperDraft': {
-                'Host': 'api.superdraft.io',
-                'content-type': 'application/json',
-                'accept': 'application/json',
-                'baggage': 'sentry-environment=production,sentry-public_key=a1c7747ba00849cab409e4e842041a1c,sentry-release=dfs-mobile%401.7.93%20%287%29,sentry-trace_id=c33fcdef6fa742f8966c3a4c780c53cd',
-                'timestamp': '2024-08-19T19:19:44.652Z',
-                'api-key': 'cont*177',
-                'device-type': '1',
-                'session-key': '6fb93f6f2c83a5091724081704',
-                'product-type': 'sd-dfs',
-                'sentry-trace': 'c33fcdef6fa742f8966c3a4c780c53cd-d5e48157b681463a-0',
-                'accept-language': 'en-US,en;q=0.9',
-                'user-agent': 'SuperDraft/7 CFNetwork/1496.0.7 Darwin/23.5.0',
-                'datatype': 'json',
-                'attribution': '{"idfv":"6FB6DCDD-6CC1-46A7-B206-8AFAE050CE89","android_id":"","idfa":"00000000-0000-0000-0000-000000000000","gps_adid":"","messageId":"","templateId":"","campaignId":""}',
-                'geo-token': 'geoc84ee9df27b0e99a1724081704',
+                'prop_lines': {
+                    'Host': 'api.superdraft.io',
+                    'content-type': 'application/json',
+                    'accept': 'application/json',
+                    'baggage': 'sentry-environment=production,sentry-public_key=a1c7747ba00849cab409e4e842041a1c,sentry-release=dfs-mobile%401.7.93%20%287%29,sentry-trace_id=c33fcdef6fa742f8966c3a4c780c53cd',
+                    'timestamp': '2024-08-19T19:19:44.652Z',
+                    'api-key': 'cont*177',
+                    'device-type': '1',
+                    'session-key': '6fb93f6f2c83a5091724081704',
+                    'product-type': 'sd-dfs',
+                    'sentry-trace': 'c33fcdef6fa742f8966c3a4c780c53cd-d5e48157b681463a-0',
+                    'accept-language': 'en-US,en;q=0.9',
+                    'user-agent': 'SuperDraft/7 CFNetwork/1496.0.7 Darwin/23.5.0',
+                    'datatype': 'json',
+                    'attribution': '{"idfv":"6FB6DCDD-6CC1-46A7-B206-8AFAE050CE89","android_id":"","idfa":"00000000-0000-0000-0000-000000000000","gps_adid":"","messageId":"","templateId":"","campaignId":""}',
+                    'geo-token': 'geoc84ee9df27b0e99a1724081704',
+                }
             }, 'ThriveFantasy': {
                 'prop_lines': {
-                    'Host': 'api.thrivefantasy.com',
                     'accept': 'application/json, text/plain, */*',
-                    'content-type': 'application/json',
                     'accept-language': 'en-US,en;q=0.9',
+                    'content-type': 'application/json',
+                    'origin': 'https://app.thrivefantasy.com',
+                    'priority': 'u=1, i',
+                    'referer': 'https://app.thrivefantasy.com/',
+                    'sec-ch-ua': '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"macOS"',
+                    'sec-fetch-dest': 'empty',
+                    'sec-fetch-mode': 'cors',
+                    'sec-fetch-site': 'same-site',
+                    'token': 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0aGVyZWFsc2xpbSIsImF1ZGllbmNlIjoiSU9TIiwicGFzc3dvcmRMYXN0Q2hhbmdlZEF0IjpudWxsLCJpYXQiOjE3MjYwMjI1MDEsImV4cCI6MTcyNzc1MDUwMX0.HyH-Z73nMQi-fjSQhiFaxMNppLoxtYeEvVL9fp9K5wgjUYIIGyqR3mas_IZvhWBs0SWUZjRNb45Yqi1Ik0PDxw',
+                    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
                     'x-tf-version': '1.1.39',
-                    'user-agent': 'ThriveFantasy/1 CFNetwork/1496.0.7 Darwin/23.5.0',
-                    'token': 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0aGVyZWFsc2xpbSIsImF1ZGllbmNlIjoiSU9TIiwicGFzc3dvcmRMYXN0Q2hhbmdlZEF0IjpudWxsLCJpYXQiOjE3MjQwOTgwNDIsImV4cCI6MTcyNTgyNjA0Mn0.5NJJGuSmqGfPYYWwOWzr7t6BcJVvyZLgokvGgfbbCVOZz-rLjQYuWv2g_iQ-0A6mxTklflCH7Gv2XoMfrB8u6Q',
                 }
-
             }, 'UnderdogFantasy': {
                 'teams': {
                     'Host': 'stats.underdogfantasy.com',
@@ -296,26 +306,29 @@ class Helper:
                 }
             },
             'VividPicks': {
-                'Host': 'api.betcha.one',
-                'x-px-authorization': '3:813cbf65244904a5212f61f40a60ed86a6f2f1a951def7deb5a99ddcf2f01b67:y1vgcvZN6Ft0n1AuKpbq7ky2Y9uxN6fMF22sGO7mbzy3FM5SW0tUsdOsM2OCTSZuIvuhdxVkcANEEmFBzkwPZw==:1000:lfXRuGZ3/0l/vJ0slGB0923Os2OyFyKuXFu9awQ/FN6W9iJkNUDGuMwzq+J2glanORDV6OA1InID5OG1mIdPnvXomHwAi07a05zRAlDRrfsZGlfodXmmbDFXp+Arm+DCi8mz+iQGJPldNrx9fEtSFSyWOFFdBLkgjzhQDj0raeFi/bfwdV9F9CIegRaRNtNlWftBmdYZWUiwK9OyrrTngFqeVm+LkbLn+olbEAZspnk=',
-                'cache-control': 'no-cache',
-                'x-px-device-model': 'iPhone 14 Pro',
-                'x-px-device-fp': 'D9D02ACC-7330-4E54-BE30-81C3B80AA9CD',
-                'betcha-version': 'ios(17.5.1)/230/83512be3',
-                'betcha-timezone': 'America/Chicago',
-                'user-agent': 'VividPicks/230 CFNetwork/1496.0.7 Darwin/23.5.0',
-                'x-px-mobile-sdk-version': '3.0.3',
-                'betcha-device': 'D9D02ACC-7330-4E54-BE30-81C3B80AA9CD',
-                'baggage': 'sentry-environment=production,sentry-public_key=3da4c2e22ad24f418a283c246bb972a0,sentry-release=2.0.25%28230%29-83512be3,sentry-trace_id=2dc7d3ce69644329b9c80f91212dc785',
-                'x-px-os-version': '17.5.1',
-                'x-px-os': 'iOS',
-                'authorization': 'eyJraWQiOiJFeUpLSkNtYW9wdUw1VHpXZVVKNmd0aENXSTA3SUNoalUzejJ6ZEJLaE9NPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJmMTkyZmEwYi1iYWY0LTRiYWMtYWM3Zi02MDdhMTEwMDkyYzQiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiaXNzIjoiaHR0cHM6XC9cL2NvZ25pdG8taWRwLnVzLWVhc3QtMi5hbWF6b25hd3MuY29tXC91cy1lYXN0LTJfSXpnOHRIVnFhIiwiY29nbml0bzp1c2VybmFtZSI6ImphY29ic29uc2hhd24zMyIsInByZWZlcnJlZF91c2VybmFtZSI6ImphY29ic29uc2hhd24zMyIsImN1c3RvbTp1c2VySWQiOiI2NmFhOWI5MDFkYTRlN2ZjYTcxMGFmYWMiLCJhdWQiOiI1cDlrcDE4dXFmcGtndjExYzFtYWk2dDZqZiIsImV2ZW50X2lkIjoiZTk3ODVjZGYtMjIwOC00N2RhLThjNWYtNWJiMzg4ODAxMjBlIiwidG9rZW5fdXNlIjoiaWQiLCJhdXRoX3RpbWUiOjE3MjI0NTY5NjUsIl9pZCI6IjY2YWE5YjkwMWRhNGU3ZmNhNzEwYWZhYyIsImV4cCI6MTcyNDEyMjYwMCwiaWF0IjoxNzI0MTE5MDAwLCJ1c2VybmFtZSI6ImphY29ic29uc2hhd24zMyJ9.h6FSDRpUYZwOOPeULGWJYggW-_wGjPTUd0wDffgogbIXzKyKJZM4E7iJbOM2Z2BlUzPZnF5ckEUF-riAsHDrKlgdcXB1r0sCUK_uLO4rOgpqX0zA-KJbPb4a8OSOvsWm0ZjbGdGxamOBEW-uZlLOoJEnHeXbSDzGu1lnrU2g2496FjU70tYCQHmYOLOJ-pYR0pSDOgFiWqVbAbCt_Srz4PHkSpVWEIdR9BoKfwcbgCC9_uCBtSxt5HBBltY2_VR_XF1a0dZ5OxkEToPD6gncB1F0XD1O3hkmLJAzYPdjTeh2bB7Ho7GuPQVKuNXh9_mqEhq_ZW1iYAZX2gVmYIo3YA',
-                'accept-language': 'en-us',
-                'x-px-vid': '6fcc897e-4f79-11ef-81f2-7a4e1f9004de',
-                'accept': 'application/json',
-                'content-type': 'application/json',
-                'x-px-uuid': 'de460224-5e97-11ef-ac2f-ad7d00d797ac',
-                'sentry-trace': '2dc7d3ce69644329b9c80f91212dc785-08ef37f394df43a6-0',
+                'prop_lines': {
+                    'Host': 'api.betcha.one',
+                    'x-px-authorization': '3:813cbf65244904a5212f61f40a60ed86a6f2f1a951def7deb5a99ddcf2f01b67:y1vgcvZN6Ft0n1AuKpbq7ky2Y9uxN6fMF22sGO7mbzy3FM5SW0tUsdOsM2OCTSZuIvuhdxVkcANEEmFBzkwPZw==:1000:lfXRuGZ3/0l/vJ0slGB0923Os2OyFyKuXFu9awQ/FN6W9iJkNUDGuMwzq+J2glanORDV6OA1InID5OG1mIdPnvXomHwAi07a05zRAlDRrfsZGlfodXmmbDFXp+Arm+DCi8mz+iQGJPldNrx9fEtSFSyWOFFdBLkgjzhQDj0raeFi/bfwdV9F9CIegRaRNtNlWftBmdYZWUiwK9OyrrTngFqeVm+LkbLn+olbEAZspnk=',
+                    'cache-control': 'no-cache',
+                    'x-px-device-model': 'iPhone 14 Pro',
+                    'x-px-device-fp': 'D9D02ACC-7330-4E54-BE30-81C3B80AA9CD',
+                    'betcha-version': 'ios(17.5.1)/230/83512be3',
+                    'betcha-timezone': 'America/Chicago',
+                    'user-agent': 'VividPicks/230 CFNetwork/1496.0.7 Darwin/23.5.0',
+                    'x-px-mobile-sdk-version': '3.0.3',
+                    'betcha-device': 'D9D02ACC-7330-4E54-BE30-81C3B80AA9CD',
+                    'baggage': 'sentry-environment=production,sentry-public_key=3da4c2e22ad24f418a283c246bb972a0,sentry-release=2.0.25%28230%29-83512be3,sentry-trace_id=2dc7d3ce69644329b9c80f91212dc785',
+                    'x-px-os-version': '17.5.1',
+                    'x-px-os': 'iOS',
+                    'authorization': 'eyJraWQiOiJFeUpLSkNtYW9wdUw1VHpXZVVKNmd0aENXSTA3SUNoalUzejJ6ZEJLaE9NPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJmMTkyZmEwYi1iYWY0LTRiYWMtYWM3Zi02MDdhMTEwMDkyYzQiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiaXNzIjoiaHR0cHM6XC9cL2NvZ25pdG8taWRwLnVzLWVhc3QtMi5hbWF6b25hd3MuY29tXC91cy1lYXN0LTJfSXpnOHRIVnFhIiwiY29nbml0bzp1c2VybmFtZSI6ImphY29ic29uc2hhd24zMyIsInByZWZlcnJlZF91c2VybmFtZSI6ImphY29ic29uc2hhd24zMyIsImN1c3RvbTp1c2VySWQiOiI2NmFhOWI5MDFkYTRlN2ZjYTcxMGFmYWMiLCJhdWQiOiI1cDlrcDE4dXFmcGtndjExYzFtYWk2dDZqZiIsImV2ZW50X2lkIjoiZTk3ODVjZGYtMjIwOC00N2RhLThjNWYtNWJiMzg4ODAxMjBlIiwidG9rZW5fdXNlIjoiaWQiLCJhdXRoX3RpbWUiOjE3MjI0NTY5NjUsIl9pZCI6IjY2YWE5YjkwMWRhNGU3ZmNhNzEwYWZhYyIsImV4cCI6MTcyNDEyMjYwMCwiaWF0IjoxNzI0MTE5MDAwLCJ1c2VybmFtZSI6ImphY29ic29uc2hhd24zMyJ9.h6FSDRpUYZwOOPeULGWJYggW-_wGjPTUd0wDffgogbIXzKyKJZM4E7iJbOM2Z2BlUzPZnF5ckEUF-riAsHDrKlgdcXB1r0sCUK_uLO4rOgpqX0zA-KJbPb4a8OSOvsWm0ZjbGdGxamOBEW-uZlLOoJEnHeXbSDzGu1lnrU2g2496FjU70tYCQHmYOLOJ-pYR0pSDOgFiWqVbAbCt_Srz4PHkSpVWEIdR9BoKfwcbgCC9_uCBtSxt5HBBltY2_VR_XF1a0dZ5OxkEToPD6gncB1F0XD1O3hkmLJAzYPdjTeh2bB7Ho7GuPQVKuNXh9_mqEhq_ZW1iYAZX2gVmYIo3YA',
+                    'accept-language': 'en-us',
+                    'x-px-vid': '6fcc897e-4f79-11ef-81f2-7a4e1f9004de',
+                    'accept': 'application/json',
+                    'content-type': 'application/json',
+                    'x-px-uuid': 'de460224-5e97-11ef-ac2f-ad7d00d797ac',
+                    'sentry-trace': '2dc7d3ce69644329b9c80f91212dc785-08ef37f394df43a6-0',
+                }
+
             }
         }
 

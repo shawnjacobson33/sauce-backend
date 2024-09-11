@@ -1,6 +1,4 @@
 import asyncio
-import json
-import os
 import time
 import uuid
 from datetime import datetime
@@ -33,6 +31,7 @@ class SuperDraftSpider:
                 sports[sport_id] = sport_name
 
         # get props
+        subject_ids = dict()
         for prop in data.get('props', []):
             # not doing matchup props
             prop_type = prop.get('type')
@@ -64,7 +63,6 @@ class SuperDraftSpider:
                     for player in prop.get('players', []):
                         player_first_name = player.get('fName')
                         player_last_name = player.get('lName')
-
                         positions.append(player.get('posAbbr'))
                         teams.append(player.get('teamAbbr'))
                         players.append(' '.join([player_first_name, player_last_name]))
@@ -73,7 +71,11 @@ class SuperDraftSpider:
                 else:
                     subject_team, position = player.get('teamAbbr'), player.get('posAbbr')
                     if subject:
-                        subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                        subject_id = subject_ids.get(f'{subject}{subject_team}')
+                        if not subject_id:
+                            cleaned_subject = DataCleaner.clean_subject(subject)
+                            subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team, position)
+                            subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 game_info, line = player.get('eventName'), prop.get('line')
                 for label in ['Over', 'Under']:
@@ -84,7 +86,7 @@ class SuperDraftSpider:
                         'league': league,
                         'market_category': 'player_props',
                         'market_id': market_id,
-                        'market_name': market,
+                        'market': market,
                         'game_info': game_info,
                         'game_time': game_time,
                         'subject_team': subject_team,

@@ -56,9 +56,14 @@ class OddsShopperSpider:
 
     async def _parse_lines(self, response, last_processed, league):
         data = response.json()
+        subject_ids = dict()
         for event in data:
             game_time, market, subject = event.get('startDate'), event.get('offerName'), event.get('eventName')
-            subject_id = self.dn.get_subject_id(subject, league)
+            subject_id = subject_ids.get(f'{subject}{league}')
+            if not subject_id:
+                subject_id = self.dn.get_subject_id(subject, league=league)
+                subject_ids[f'{subject}{league}'] = subject_id
+
             # different market names for the same market for NFL and NCAAF -- need to normalize
             # Define the market mappings
             market_mappings = {
@@ -101,7 +106,7 @@ class OddsShopperSpider:
                         'game_time': game_time,
                         'market_category': 'player_props',
                         'market_id': market_id,
-                        'market_name': market,
+                        'market': market,
                         'subject_id': subject_id,
                         'subject': outcome.get('label', subject),
                         'bookmaker': outcome.get('sportsbookCode'),

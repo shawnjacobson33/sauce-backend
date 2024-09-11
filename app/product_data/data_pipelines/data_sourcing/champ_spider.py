@@ -2,10 +2,9 @@ import asyncio
 import time
 import uuid
 from datetime import datetime
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, DataCleaner, Helper
-
-from pymongo import MongoClient
 
 
 def get_leagues():
@@ -25,7 +24,7 @@ class ChampSpider:
         headers = self.helper.get_headers()
         tasks = []
         for league in get_leagues():
-            json_data = self.helper.get_json_data(sport=league)
+            json_data = self.helper.get_json_data(var=league)
             tasks.append(self.rm.post(url, self._parse_lines, league, headers=headers, json=json_data))
 
         await asyncio.gather(*tasks)
@@ -50,7 +49,8 @@ class ChampSpider:
                         if subject:
                             subject_id = subject_ids.get(f'{subject}{subject_team}')
                             if not subject_id:
-                                subject_id = self.dn.get_subject_id(DataCleaner.clean_subject(subject), league, subject_team, position)
+                                cleaned_subject = DataCleaner.clean_subject(subject)
+                                subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team, position)
                                 subject_ids[f'{subject}{subject_team}'] = subject_id
                         else:
                             continue
@@ -58,7 +58,6 @@ class ChampSpider:
                 for prop in player.get('props', []):
                     market, line = prop.get('title'), prop.get('value')
                     market_id = self.dn.get_market_id(market)
-
                     labels, multiplier, boost = ['Over', 'Under'], None, prop.get('boost')
                     if boost:
                         multiplier = boost.get('multiplier')
@@ -86,14 +85,11 @@ class ChampSpider:
 
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-
     db = client['sauce']
-
     spider = ChampSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Champ', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
-
     print(f'[Champ]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":

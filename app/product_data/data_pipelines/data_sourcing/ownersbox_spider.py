@@ -1,9 +1,6 @@
-import json
-import os
 import time
 import uuid
 from datetime import datetime
-
 import asyncio
 from pymongo import MongoClient
 
@@ -52,6 +49,7 @@ class OwnersBoxSpider:
     async def _parse_lines(self, response):
         # get body content in json format
         data = response.json()
+        subject_ids = dict()
         for prop_line in data.get('markets', []):
             league = prop_line.get('sport')
             if league:
@@ -78,8 +76,11 @@ class OwnersBoxSpider:
                 subject_team, position = player.get('teamAlias').upper(), player.get('position')
                 first_name, last_name = player.get('firstName'), player.get('lastName')
                 subject = ' '.join([first_name, last_name])
-                if subject:
-                    subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                subject_id = subject_ids.get(f'{subject}{subject_team}')
+                if not subject_id:
+                    cleaned_subject = DataCleaner.clean_subject(subject)
+                    subject_id = self.dn.get_subject_id(cleaned_subject, league=league, subject_team=subject_team, position=position)
+                    subject_ids[f'{subject}{subject_team}'] = subject_id
 
             # get line
             line, balanced_line = 0, prop_line.get('line')

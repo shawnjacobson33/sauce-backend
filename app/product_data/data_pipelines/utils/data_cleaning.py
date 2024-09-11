@@ -22,8 +22,10 @@ class DataCleaner:
             'Thunderpick World Championship': 'CS',
             'YaLLa Compass': 'CS',
             'CCT South America': 'CS',
+            'CCT North America': 'CS',
             'Elisa Invitational': 'CS',
             'ESL Challenger League': 'CS',
+            'LCK': 'LOL',
             'CS2': 'CS',
             'CSGO': 'CS',
             # OddsShopper
@@ -36,26 +38,21 @@ class DataCleaner:
             'UFC': 'MMA',
             'EPL': 'SOCCER',
             'MLS': 'SOCCER',
-            'EUROGOLF': 'GOLF'
+            'EUROGOLF': 'GOLF',
+            # Draftkings Pick6
+            'PGA TOUR': 'GOLF',
 
 
         }
-
-        return leagues_mapping.get(league, league)
+        return leagues_mapping.get(league, league).upper()
 
     @staticmethod
     def clean_subject(subject: str):
         # Define suffixes in a list with regex patterns to ensure they are standalone with spaces
         suffixes = [
-            r' Jr\.?$', r' Sr\.?$', r' II+$', r' III+$', r' IV$', r' V$'
+            'Jr.', 'jr.', 'jr', 'Jr', 'Sr.', 'sr.', 'sr', 'Sr', 'III', 'II', 'IV'
         ]
+        for suffix in suffixes:
+            subject = re.sub(fr' {suffix}$', '', subject)
 
-        # Create a regex pattern to match any of the suffixes
-        pattern = '|'.join(suffixes)
-
-        # Replace the found suffixes with nothing (remove them)
-        # Ensuring the suffix is either followed by the end of the string or has space around it
-        cleaned_subject = re.sub(pattern, '', subject).strip()
-
-        # Return the cleaned subject
-        return cleaned_subject
+        return subject

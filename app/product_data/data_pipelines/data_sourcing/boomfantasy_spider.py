@@ -4,7 +4,6 @@ import time
 import uuid
 from datetime import datetime
 from uuid import UUID
-
 from pymongo import MongoClient
 
 from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, Helper, DataCleaner
@@ -33,7 +32,6 @@ class BoomFantasySpider:
 
     async def _parse_lines(self, response):
         data = response.json().get('data')
-
         contest = data.get('contest')
         if contest:
             subject_ids = dict()
@@ -67,7 +65,8 @@ class BoomFantasySpider:
                                         # subjects show up more than once so don't need to get subject id every time.
                                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                                         if not subject_id:
-                                            subject_id = self.dn.get_subject_id(DataCleaner.clean_subject(subject), league=league_name, subject_team=subject_team)
+                                            cleaned_subject = DataCleaner.clean_subject(subject)
+                                            subject_id = self.dn.get_subject_id(cleaned_subject, league=league_name, subject_team=subject_team)
                                             subject_ids[f'{subject}{subject_team}'] = subject_id
 
                             for question in league_section.get('fullQuestions', []):

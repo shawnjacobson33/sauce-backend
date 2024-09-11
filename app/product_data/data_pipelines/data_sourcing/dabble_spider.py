@@ -1,12 +1,10 @@
 import time
 import uuid
 from datetime import datetime
-
 import asyncio
+from pymongo import MongoClient
 
 from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper
-
-from pymongo import MongoClient
 
 
 class DabbleSpider:
@@ -25,7 +23,6 @@ class DabbleSpider:
 
     async def _parse_competitions(self, response):
         data = response.json().get('data')
-
         tasks = []
         for competition in data.get('activeCompetitions', []):
             competition_id, league = competition.get('id'), competition.get('displayName')
@@ -37,12 +34,10 @@ class DabbleSpider:
             tasks.append(self.rm.get(url, self._parse_events, league, params=params))
 
         await asyncio.gather(*tasks)
-
         self.helper.store(self.prop_lines)
 
     async def _parse_events(self, response, league):
         data = response.json()
-
         tasks = []
         for event in data.get('data', []):
             event_id, game_info, last_updated = event.get('id'), event.get('name'), event.get('updated')
@@ -55,7 +50,6 @@ class DabbleSpider:
 
     async def _parse_lines(self, response, league, game_info, last_updated):
         data = response.json().get('data')
-
         # get market groups
         markets = {
             market.get('id'): market_data.get('name')
@@ -78,11 +72,11 @@ class DabbleSpider:
                 subject_team = subject_team.upper()
 
             if subject:
-                cleaned_subject = DataCleaner.clean_subject(subject)
                 # Since the same subject has many prop lines it is much faster to keep a dictionary of subject ids
                 # to avoid redundant queries.
                 subject_id = subject_ids.get(f'{subject}{subject_team}')
                 if not subject_id:
+                    cleaned_subject = DataCleaner.clean_subject(subject)
                     subject_id = self.dn.get_subject_id(cleaned_subject, league=league, subject_team=subject_team, position=position)
                     subject_ids[f'{subject}{subject_team}'] = subject_id
 
@@ -108,14 +102,11 @@ class DabbleSpider:
 
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-
     db = client['sauce']
-
     spider = DabbleSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Dabble', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
-
     print(f'[Dabble]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":

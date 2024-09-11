@@ -2,9 +2,9 @@ import asyncio
 import time
 import uuid
 from datetime import datetime
-
-from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, DataCleaner, Helper
 from pymongo import MongoClient
+
+from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, Helper, DataCleaner
 
 
 class DraftersSpider:
@@ -30,26 +30,32 @@ class DraftersSpider:
                 continue
 
             for player in event.get('players', []):
-                subject, position = player.get('player_name'), player.get('player_position')
+                subject_id, position, subject = None, None, player.get('player_name')
                 # get game info
                 subject_team, game_info, event = None, None, player.get('event')
                 if event:
                     home_team, away_team = event.get('home'), event.get('away')
                     subject_team, game_info = event.get('own'), ' @ '.join([away_team, home_team])
+                    if subject_team != 'MMA':
+                        position = player.get('player_position')
 
-                subject_id = subject_ids.get(subject)
-                if not subject_id:
-                    subject_id = self.dn.get_subject_id(subject, subject_team=subject_team, position=position)
-                    subject_ids[subject] = subject_id
+                if subject:
+                    subject_id = subject_ids.get(subject)
+                    if not subject_id:
+                        cleaned_subject = DataCleaner.clean_subject(subject)
+                        subject_id = self.dn.get_subject_id(cleaned_subject, subject_team=subject_team, position=position)
+                        subject_ids[subject] = subject_id
 
-                market, line = player.get('bid_stats_name'), player.get('bid_stats_value')
+                market_id, market, line = None, player.get('bid_stats_name'), player.get('bid_stats_value')
                 # quick formatting error fixes
                 if market == 'Rush+Receiving Yds':
                     market = 'Rush+Rec Yds'
                 elif market == 'Passing + Rushing Yards':
                     market = 'Pass + Rush Yards'
 
-                market_id = self.dn.get_market_id(market)
+                if market:
+                    market_id = self.dn.get_market_id(market)
+
                 for label in ['Over', 'Under']:
                     self.prop_lines.append({
                         'batch_id': self.batch_id,
@@ -59,6 +65,7 @@ class DraftersSpider:
                         'market_name': market,
                         'game_info': game_info,
                         'subject_team': subject_team,
+                        'subject_id': subject_id,
                         'subject': subject,
                         'position': position,
                         'bookmaker': 'Drafters',
@@ -71,14 +78,11 @@ class DraftersSpider:
 
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-
     db = client['sauce']
-
     spider = DraftersSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Drafters', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
-
     print(f'[Drafters]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":

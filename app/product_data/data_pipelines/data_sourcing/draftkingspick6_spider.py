@@ -2,12 +2,11 @@ import json
 import time
 import uuid
 from datetime import datetime
-
+from pymongo import MongoClient
 from bs4 import BeautifulSoup
 import asyncio
 
 from app.product_data.data_pipelines.utils import RequestManager, DataCleaner, DataNormalizer, Helper
-from pymongo import MongoClient
 
 
 class DraftKingsPick6:
@@ -60,12 +59,17 @@ class DraftKingsPick6:
                     if competitions:
                         first_competition = competitions[0]
                         position, team_data = first_competition.get('positionName'), first_competition.get('team')
+                        # When secondary positions are also given
+                        if position and '/' in position:
+                            position = position.split('/')[0]
+
                         if team_data:
                             subject_team = team_data.get('abbreviation')
 
                         subject_id = subject_ids.get(subject)
                         if not subject_id:
-                            subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                            cleaned_subject = DataCleaner.clean_subject(subject)
+                            subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team, position)
                             subject_ids[subject] = subject_id
 
                         summary = first_competition.get('competitionSummary')
@@ -96,14 +100,11 @@ class DraftKingsPick6:
 
 async def main():
     client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-
     db = client['sauce']
-
-    spider = DraftKingsPick6(uuid.uuid4(), RequestManager(), DataNormalizer('DraftKingsPick6', db))
+    spider = DraftKingsPick6(uuid.uuid4(), RequestManager(), DataNormalizer('DraftKings Pick6', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
-
     print(f'[DraftKingsPick6]: {round(end_time - start_time, 2)}s')
 
 
