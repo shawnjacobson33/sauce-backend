@@ -31,7 +31,6 @@ class DataNormalizer:
         if target_subject:
             query = {'bookmakers.bookmaker_name': self.bookmaker}
             query.update({'bookmakers.subject': target_subject})
-
             if league:
                 query.update({'subject_info.league': league})
 
@@ -39,10 +38,15 @@ class DataNormalizer:
             return query
 
     def _build_query_2(self, league):
+        # Because subjects in ESPORTS leagues sometimes play in multiple leagues the query should include all
+        # ESPORTS leagues.
+        esports_leagues = ['CS', 'VAL', 'DOTA', 'RL', 'R6']
+        if league in esports_leagues:
+            return {'subject_info.league': {'$in': esports_leagues}}
         # Only include the 'subject_info.league' in the query if 'league' is provided and not empty
-        if league:
+        elif league:
             return {'subject_info.league': league}
-        # If no league is provided, return an empty dictionary, or handle differently as per requirements
+
         return {}
 
     def _find_subject(self, target_subject, league):
@@ -54,15 +58,13 @@ class DataNormalizer:
                 return doc.get('_id')
 
     def _find_most_similar_subject(self, target_subject, league=None, subject_team=None, position=None, number=None):
-        query = self._build_query_2(league)
         projection = {'subject_info': 1}
-        cursor = self.subject_collection.find(query, projection) if query else self.subject_collection.find(projection)
+        cursor = self.subject_collection.find(self._build_query_2(league), projection)
         return self._select_best_match(cursor, target_subject, subject_team, position, number)
 
     def _select_best_match(self, cursor, target_subject, subject_team, position, number):
         best_match, best_doc = None, None
         min_distance = float('inf')
-
         for doc in cursor:
             # only need one bookmaker's player info for each id
             subject_id = doc['_id']
@@ -74,7 +76,7 @@ class DataNormalizer:
                     min_distance = total_distance
                     best_match, best_doc = self._build_match(subject_id, subject_info, distances), doc
 
-                if total_distance < 2:
+                if not total_distance:
                     break
 
         return best_match, best_doc
@@ -107,7 +109,7 @@ class DataNormalizer:
         # 1st Search - based upon data already stored in relation to the bookmaker
         subject_id = self._find_subject(target_subject, league)
         if subject_id:
-            print(f'FOUND {self.bookmaker.upper()} SUBJECT: {target_subject} {subject_team}, SUCCESS')
+            print(f'FOUND {self.bookmaker.upper()} SUBJECT: {target_subject} {league} {subject_team} {position} {number}, SUCCESS')
             return subject_id
 
         # 2nd Search - most similar
@@ -132,10 +134,10 @@ class DataNormalizer:
         first_distance_check = 0
         # get subject distance and threshold
         subject_distance = match.get('subject_distance')
-        if subject_distance < 2:
+        if not subject_distance:
             return is_good
 
-        subject_threshold = 3 if league not in {'CS', 'LOL', 'VAL', 'DOTA'} else 0
+        subject_threshold = 3 if league not in {'CS', 'LOL', 'VAL', 'DOTA', 'RL', 'R6'} else 0
         first_distance_check += subject_distance
 
         # Create leniency with the subject threshold with respect to the distance of the subject team

@@ -44,10 +44,13 @@ class SleeperSpider:
     async def _parse_lines(self, response, players):
         data = response.json()
         subject_ids = dict()
+        leagues = set()
         for line in data:
             subject_team, subject, position, player_id, league = None, None, None, line.get('subject_id'), line.get('sport')
+            cleaned_league = None
             if league:
-                league = DataCleaner.clean_league(league)
+                cleaned_league = DataCleaner.clean_league(league)
+                leagues.add(cleaned_league)
 
             subject_id = None
             if player_id:
@@ -57,7 +60,8 @@ class SleeperSpider:
                     if subject:
                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                         if not subject_id:
-                            subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                            cleaned_subject = DataCleaner.clean_subject(subject)
+                            subject_id = self.dn.get_subject_id(cleaned_subject, cleaned_league, subject_team, position)
                             subject_ids[f'{subject}{subject_team}'] = subject_id
 
             market_id, last_updated, market = None, line.get('updated_at'), line.get('wager_type')
@@ -83,7 +87,7 @@ class SleeperSpider:
                     'batch_id': self.batch_id,
                     'time_processed': datetime.now(),
                     'last_updated': last_updated,
-                    'league': league.upper(),
+                    'league': cleaned_league,
                     'market_category': 'player_props',
                     'market_id': market_id,
                     'market': market,

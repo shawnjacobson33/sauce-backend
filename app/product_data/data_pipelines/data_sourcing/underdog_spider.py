@@ -80,6 +80,7 @@ class UnderdogSpider:
                 player_data[player_id] = {'subject': subject, 'subject_team': subject_team}
 
         subject_ids = dict()
+        leagues = set()
         for game in data.get('over_under_lines', []):
             line = game.get('stat_value')
             for option in game.get('options', []):
@@ -135,11 +136,13 @@ class UnderdogSpider:
 
                             if league:
                                 league = DataCleaner.clean_league(league)
+                                leagues.add(league)
 
                             # subjects show up more than once so don't need to get subject id every time.
                             subject_id = subject_ids.get(f'{subject}{subject_team}')
                             if subject:
-                                subject_id = self.dn.get_subject_id(subject, league, subject_team)
+                                cleaned_subject = DataCleaner.clean_subject(subject)
+                                subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team)
                                 subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 label = 'Over' if option.get('choice') == 'higher' else 'Under'
@@ -162,6 +165,7 @@ class UnderdogSpider:
                 })
 
         self.helper.store(self.prop_lines)
+        print(leagues)
 
 
 async def main():

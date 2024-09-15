@@ -18,6 +18,7 @@ class HotStreakSpider:
         self.prop_lines = []
         self.url = self.helper.get_url()
         self.headers = self.helper.get_headers()
+        self.uniq_leagues = set()
 
     async def start(self):
         json_data = self.helper.get_json_data(name='leagues')
@@ -47,6 +48,7 @@ class HotStreakSpider:
 
         await asyncio.gather(*tasks)
         self.helper.store(self.prop_lines)
+        print(self.uniq_leagues)
 
     async def _parse_lines(self, response, league_aliases):
         # get body content in json format
@@ -83,6 +85,7 @@ class HotStreakSpider:
 
         # go through prop lines
         subject_ids = dict()
+
         for market in search.get('markets', []):
             market_id_components = market.get('id').split(':')[1:]
             more_components = ''.join(market_id_components).split(',')
@@ -100,6 +103,7 @@ class HotStreakSpider:
                         league, game_time = opponent.get('league'), opponent.get('game_time')
                         if league:
                             league = DataCleaner.clean_league(league)
+                            self.uniq_leagues.add(league)
 
                 if subject:
                     subject = subject.strip()
@@ -132,12 +136,12 @@ class HotStreakSpider:
                             'league': league,
                             'market_category': 'player_props',
                             'market_id': market_id,
-                            'market_name': the_market,
+                            'market': the_market,
                             'game_time': game_time,
                             'position': position,
                             'subject_id': subject_id,
                             'subject': subject,
-                            'subject_jersey_number': subject_number,
+                            'jersey_number': subject_number,
                             'bookmaker': 'HotStreak',
                             'label': labels[j],
                             'line': line,

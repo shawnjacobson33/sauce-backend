@@ -38,6 +38,8 @@ class DraftersSpider:
                     subject_team, game_info = event.get('own'), ' @ '.join([away_team, home_team])
                     if subject_team != 'MMA':
                         position = player.get('player_position')
+                        if position:
+                            position = position.strip()
 
                 if subject:
                     subject_id = subject_ids.get(subject)

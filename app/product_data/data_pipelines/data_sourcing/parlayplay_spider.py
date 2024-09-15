@@ -26,6 +26,7 @@ class ParlayPlaySpider:
         if last_updated:
             last_updated = datetime.fromtimestamp(last_updated)
 
+        subject_ids = dict()
         for player in data.get('players', []):
             league, game_time, match = None, None, player.get('match')
             if match:
@@ -43,8 +44,11 @@ class ParlayPlaySpider:
                 if team_data:
                     subject_team = team_data.get('teamAbbreviation')
 
-                if subject:
-                    subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                subject_id = subject_ids.get(f'{subject}{subject_team}')
+                if not subject_id:
+                    cleaned_subject = DataCleaner.clean_subject(subject)
+                    subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team, position)
+                    subject_ids[f'{subject}{subject_team}'] = subject_id
 
             for stat in player.get('stats', []):
                 is_boosted_payout, alt_lines = stat.get('isBoostedPayout'), stat.get('altLines')

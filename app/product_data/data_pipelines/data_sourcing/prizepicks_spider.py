@@ -45,6 +45,7 @@ class PrizePicksSpider:
         data = response.json()
         # collect all the player ids
         players = dict()
+        uniq_leagues = set()
         for player in data.get('included', []):
             if player.get('type') == 'new_player':
                 player_id, player_attributes = player.get('id'), player.get('attributes')
@@ -72,8 +73,6 @@ class PrizePicksSpider:
                             continue
 
                         league = leagues.get(league_id)
-                        if league:
-                            league = DataCleaner.clean_league(league)
 
             market_id = None
             last_updated, market, game_time, stat_line, line_attributes = None, None, None, None, line.get('attributes')
@@ -94,7 +93,7 @@ class PrizePicksSpider:
                             market = 'Basketball Fantasy Score'
                         elif league == 'TENNIS':
                             market = 'Tennis Fantasy Score'
-                        elif league in {'NFL', 'NFL1Q', 'NFL2Q', 'NFL3Q', 'NFL4Q', 'NFL1H', 'NFL2H', 'NCAAF', 'NCAAF1Q'}:
+                        elif league in {'NFL', 'NFL1Q', 'NFL2Q', 'NFL3Q', 'NFL4Q', 'NFL1H', 'NFL2H', 'CFB', 'CFB1Q', 'CFB2Q', 'CFB1H', 'CFB3Q', 'CFB4Q', 'CFB2H'}:
                             market = 'Football Fantasy Score'
                         elif league in {'INDYCAR', 'NASCAR'}:
                             market = 'Car Racing Fantasy Score'
@@ -107,6 +106,11 @@ class PrizePicksSpider:
                     if re.match(r'^.+[1-4]([QH])$', league):
                         market = f'{league[-2:]} {market}'
                         league = league[:-2]
+
+                    # clean league after extracting quarter or half info from it if it exists.
+                    if league:
+                        league = DataCleaner.clean_league(league)
+                        uniq_leagues.add(league)
 
                     if market:
                         market_id = self.dn.get_market_id(market)
@@ -126,10 +130,10 @@ class PrizePicksSpider:
                             position = position.split('-')[0]
 
                         if subject:
-                            subject = subject.strip()
+                            subject = DataCleaner.clean_subject(subject)
                             subject_id = subject_ids.get(f'{subject}{subject_team}')
                             if not subject_id:
-                                subject_id = self.dn.get_subject_id(subject, league, subject_team, position)
+                                subject_id = self.dn.get_subject_id(subject, league, subject_team if league not in {'SOCCER', 'CS', 'VAL', 'DOTA'} else None, position if league != 'SOCCER' else None)
                                 subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 game_time, stat_line = line_attributes.get('start_time'), line_attributes.get('line_score')
@@ -153,6 +157,7 @@ class PrizePicksSpider:
                     })
 
         self.helper.store(self.prop_lines)
+        print(uniq_leagues)
 
 
 async def main():

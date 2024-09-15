@@ -5,46 +5,61 @@ class DataCleaner:
 
     @staticmethod
     def clean_league(league: str):
+        # run the .replace() command for college football instead of hashing it into a dictionary because PrizePicks
+        # weird ass segments league names for each quarter, half, full game. Ex: CFB1Q, CFB1H, CFB
+        cleaned_league = league.strip().upper().replace('CFB', 'NCAAF')
         leagues_mapping = {
             # BOOM FANTASY
             'NCAAFB': 'NCAAF',  # and HotStreak
             'MTEN': 'TENNIS',
             'WTEN': 'TENNIS',
             'HDOG': 'HOTDOG',
-            'NASCARMANUAL': 'NASCAR',
-            # Dabble
-            'Tennis W': 'TENNIS',
-            'Tennis M': 'TENNIS',
+            'NASCARMANUAL': 'RACING',
+            'F1': 'RACING',
+            'NASCAR': 'RACING',
             # HotStreak
-            'Valorant': 'VAL',
-            'CCT Europe': 'CS',
-            'ESL Pro League': 'CS',
-            'Thunderpick World Championship': 'CS',
-            'YaLLa Compass': 'CS',
-            'CCT South America': 'CS',
-            'CCT North America': 'CS',
-            'Elisa Invitational': 'CS',
-            'ESL Challenger League': 'CS',
+            'VALORANT': 'VAL',
+            'CCT EUROPE': 'CS',
+            'ESL PRO LEAGUE': 'CS',
+            'THUNDERPICK WORLD CHAMPIONSHIP': 'CS',
+            'YALLA COMPASS': 'CS',
+            'CCT SOUTH AMERICA': 'CS',
+            'CCT NORTH AMERICA': 'CS',
+            'ELISA INVITATIONAL': 'CS',
+            'ESL CHALLENGER LEAGUE': 'CS',
+            'EUROPEAN PRO LEAGUE': 'CS',
+            'WINLINE INSIGHT': 'DOTA',
+            'FASTCUP': 'CS',
             'LCK': 'LOL',
             'CS2': 'CS',
             'CSGO': 'CS',
             # OddsShopper
             'WTA': 'TENNIS',
             'ATP': 'TENNIS',
-            # ParlayPlay
-            'CFB': 'NCAAF',
+            'TENNIS W': 'TENNIS',
+            'TENNIS M': 'TENNIS',
             # PrizePicks
             'MLBLIVE': 'MLB',
             'UFC': 'MMA',
             'EPL': 'SOCCER',
             'MLS': 'SOCCER',
+            'LALIGA': 'SOCCER',
+            'BUNDES': 'SOCCER',
+            'SERIEA': 'SOCCER',
+            'LIGUE1': 'SOCCER',
             'EUROGOLF': 'GOLF',
+            'LIVGOLF': 'GOLF',
+            'AUSSIE': 'AFL',
+            'DOTA2': 'DOTA',
+            'ESEA': 'CS',
             # Draftkings Pick6
             'PGA TOUR': 'GOLF',
-
+            'PGA': 'GOLF',
+            'WSOCCER': 'SOCCER',
+            'MSOCCER': 'SOCCER',
 
         }
-        return leagues_mapping.get(league, league).upper()
+        return leagues_mapping.get(cleaned_league, cleaned_league)
 
     @staticmethod
     def clean_subject(subject: str):
@@ -55,4 +70,4 @@ class DataCleaner:
         for suffix in suffixes:
             subject = re.sub(fr' {suffix}$', '', subject)
 
-        return subject
+        return subject.strip()
