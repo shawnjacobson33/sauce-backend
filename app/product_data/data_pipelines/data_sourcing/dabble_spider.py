@@ -4,7 +4,7 @@ from datetime import datetime
 import asyncio
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper
+from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
 
 
 class DabbleSpider:
@@ -89,7 +89,7 @@ class DabbleSpider:
                 'game_info': game_info,
                 'market_category': 'player_props',
                 'market_id': market_id,
-                'market_name': market,
+                'market': market,
                 'subject_team': subject_team,
                 'subject_id': subject_id,
                 'subject': subject,
@@ -101,8 +101,7 @@ class DabbleSpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-    db = client['sauce']
+    db = get_db()
     spider = DabbleSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Dabble', db))
     start_time = time.time()
     await spider.start()

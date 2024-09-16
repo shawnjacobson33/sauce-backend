@@ -1,8 +1,7 @@
 from pymongo import MongoClient
+from ..utils import get_db
 
-client = MongoClient('mongodb://localhost:27017/')
-
-local_db = client['sauce']
+local_db = get_db()
 
 local_subjects = local_db['subjects']
 
@@ -42,11 +41,10 @@ def remove_subjects(bookmaker: str):
 
 # # Configuration
 # local_uri = 'mongodb://localhost:27017/'
-# atlas_uri = "mongodb+srv://username:password@sauce.hvhxg.mongodb.net/?retryWrites=true&w=majority&appName=Sauce"
 # db_name = 'sauce'
 # collection_name = 'subjects'
 #
 # # Function call
 # transfer_data(local_uri, atlas_uri, db_name, collection_name)
 
-remove_subjects('Drafters')
+remove_subjects('OddsShopper')

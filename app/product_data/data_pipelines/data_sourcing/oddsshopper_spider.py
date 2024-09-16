@@ -1,11 +1,9 @@
 import time
 import uuid
 from datetime import datetime, timedelta
-
 import asyncio
-from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, DataCleaner, Helper
+from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, DataCleaner, Helper, get_db
 
 
 class OddsShopperSpider:
@@ -33,7 +31,7 @@ class OddsShopperSpider:
         tasks = []
         for offer_category in data.get('offerCategories', []):
             market_category = offer_category.get('name')
-            if market_category not in {'Gamelines', 'GameProps', 'PlayerFutures', 'TeamFutures', 'Futures'}:
+            if market_category == 'PlayerProps':
                 for offer in offer_category.get('offers', []):
                     league = offer.get('leagueCode')
                     if league:
@@ -58,12 +56,8 @@ class OddsShopperSpider:
         data = response.json()
         subject_ids = dict()
         for event in data:
-            game_time, market, subject = event.get('startDate'), event.get('offerName'), event.get('eventName')
-            subject_id = subject_ids.get(f'{subject}{league}')
-            if not subject_id:
-                subject_id = self.dn.get_subject_id(subject, league=league)
-                subject_ids[f'{subject}{league}'] = subject_id
-
+            # subject = event.get('eventName')
+            game_time, market = event.get('startDate'), event.get('offerName')
             # different market names for the same market for NFL and NCAAF -- need to normalize
             # Define the market mappings
             market_mappings = {
@@ -94,8 +88,16 @@ class OddsShopperSpider:
             if market:
                 market_id = self.dn.get_market_id(market)
             for side in event.get('sides', []):
-                label = side.get('label', subject)
+                label = side.get('label')
                 for outcome in side.get('outcomes', []):
+                    subject, subject_id = outcome.get('label'), None
+                    if subject:
+                        subject_id = subject_ids.get(f'{subject}{league}')
+                        if not subject_id:
+                            cleaned_subject = DataCleaner.clean_subject(subject)
+                            subject_id = self.dn.get_subject_id(cleaned_subject, league=league)
+                            subject_ids[f'{subject}{league}'] = subject_id
+
                     true_win_prob = outcome.get('trueWinProbability')
                     odds, ev = outcome.get('odds'), outcome.get('ev')
                     self.prop_lines.append({
@@ -119,8 +121,7 @@ class OddsShopperSpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-    db = client['sauce']
+    db = get_db()
     spider = OddsShopperSpider(uuid.uuid4(), RequestManager(), DataNormalizer('OddsShopper', db))
     start_time = time.time()
     await spider.start()

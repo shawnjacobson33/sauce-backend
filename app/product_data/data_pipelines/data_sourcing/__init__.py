@@ -14,7 +14,7 @@ from .rebet_spider import RebetSpider
 from .sleeper_spider import SleeperSpider
 from .superdraft_spider import SuperDraftSpider
 from .thrivefantasy_spider import ThriveFantasySpider
-from .underdog_spider import UnderdogSpider
+from .underdogfantasy_spider import UnderdogSpider
 from .vividpicks_spider import VividPicksSpider
 
 __all__ = ['BoomFantasySpider', 'ChampSpider', 'DabbleSpider', 'DraftersSpider', 'DraftKingsPick6', 'HotStreakSpider',

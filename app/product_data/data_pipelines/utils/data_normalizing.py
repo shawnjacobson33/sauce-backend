@@ -137,7 +137,7 @@ class DataNormalizer:
         if not subject_distance:
             return is_good
 
-        subject_threshold = 3 if league not in {'CS', 'LOL', 'VAL', 'DOTA', 'RL', 'R6'} else 0
+        subject_threshold = 2 if league not in {'CS', 'LOL', 'VAL', 'DOTA', 'RL', 'R6'} else 0
         first_distance_check += subject_distance
 
         # Create leniency with the subject threshold with respect to the distance of the subject team

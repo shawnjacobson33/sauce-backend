@@ -17,6 +17,7 @@ class DataCleaner:
             'NASCARMANUAL': 'RACING',
             'F1': 'RACING',
             'NASCAR': 'RACING',
+            'INDYCAR': 'RACING',
             # HotStreak
             'VALORANT': 'VAL',
             'CCT EUROPE': 'CS',
@@ -57,6 +58,7 @@ class DataCleaner:
             'PGA': 'GOLF',
             'WSOCCER': 'SOCCER',
             'MSOCCER': 'SOCCER',
+            'FIFA': 'SOCCER',
 
         }
         return leagues_mapping.get(cleaned_league, cleaned_league)

@@ -2,9 +2,8 @@ import asyncio
 import time
 import uuid
 from datetime import datetime
-from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, DataCleaner, Helper
+from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, DataCleaner, Helper, get_db
 
 
 def get_leagues():
@@ -71,7 +70,7 @@ class ChampSpider:
                             'game_info': game_info,
                             'market_category': 'player_props',
                             'market_id': market_id,
-                            'market_name': market,
+                            'market': market,
                             'subject_team': subject_team,
                             'subject_id': subject_id,
                             'subject': subject,
@@ -84,8 +83,7 @@ class ChampSpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-    db = client['sauce']
+    db = get_db()
     spider = ChampSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Champ', db))
     start_time = time.time()
     await spider.start()

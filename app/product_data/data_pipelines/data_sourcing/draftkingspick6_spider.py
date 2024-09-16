@@ -2,11 +2,10 @@ import json
 import time
 import uuid
 from datetime import datetime
-from pymongo import MongoClient
 from bs4 import BeautifulSoup
 import asyncio
 
-from app.product_data.data_pipelines.utils import RequestManager, DataCleaner, DataNormalizer, Helper
+from app.product_data.data_pipelines.utils import RequestManager, DataCleaner, DataNormalizer, Helper, get_db
 
 
 class DraftKingsPick6:
@@ -87,7 +86,7 @@ class DraftKingsPick6:
                     'game_time': game_time,
                     'market_category': 'player_props',
                     'market_id': market_id,
-                    'market_name': market,
+                    'market': market,
                     'subject_team': subject_team,
                     'subject_id': subject_id,
                     'subject': subject,
@@ -99,8 +98,7 @@ class DraftKingsPick6:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-    db = client['sauce']
+    db = get_db()
     spider = DraftKingsPick6(uuid.uuid4(), RequestManager(), DataNormalizer('DraftKings Pick6', db))
     start_time = time.time()
     await spider.start()

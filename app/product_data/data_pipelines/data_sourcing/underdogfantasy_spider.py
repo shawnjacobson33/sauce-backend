@@ -2,9 +2,8 @@ import asyncio
 import time
 import uuid
 from datetime import datetime
-from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, Helper, RequestManager
+from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, Helper, RequestManager, get_db
 
 
 class UnderdogSpider:
@@ -169,8 +168,7 @@ class UnderdogSpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-    db = client['sauce']
+    db = get_db()
     spider = UnderdogSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Underdog Fantasy', db))
     start_time = time.time()
     await spider.start()

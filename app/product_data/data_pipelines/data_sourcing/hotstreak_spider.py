@@ -6,7 +6,7 @@ from pymongo import MongoClient
 
 import asyncio
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper
+from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
 
 
 class HotStreakSpider:
@@ -150,8 +150,7 @@ class HotStreakSpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-    db = client['sauce']
+    db = get_db()
     spider = HotStreakSpider(uuid.uuid4(), RequestManager(), DataNormalizer('HotStreak', db))
     start_time = time.time()
     await spider.start()

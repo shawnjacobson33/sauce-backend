@@ -4,9 +4,8 @@ import time
 import uuid
 from datetime import datetime
 from uuid import UUID
-from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, Helper, DataCleaner
+from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, Helper, DataCleaner, get_db
 
 
 def read_tokens():
@@ -28,7 +27,8 @@ class BoomFantasySpider:
         url = self.helper.get_url()
         json_data = self.helper.get_json_data()
         tokens = read_tokens()
-        await self.rm.post_bf(url, self._parse_lines, tokens['path'], tokens['refresh_token'], tokens['access_token'], json_data=json_data)
+        await self.rm.post_bf(url, self._parse_lines, tokens['path'], tokens['refresh_token'], tokens['access_token'],
+                              json_data=json_data)
 
     async def _parse_lines(self, response):
         data = response.json().get('data')
@@ -66,7 +66,8 @@ class BoomFantasySpider:
                                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                                         if not subject_id:
                                             cleaned_subject = DataCleaner.clean_subject(subject)
-                                            subject_id = self.dn.get_subject_id(cleaned_subject, league=league_name, subject_team=subject_team)
+                                            subject_id = self.dn.get_subject_id(cleaned_subject, league=league_name,
+                                                                                subject_team=subject_team)
                                             subject_ids[f'{subject}{subject_team}'] = subject_id
 
                             for question in league_section.get('fullQuestions', []):
@@ -96,7 +97,7 @@ class BoomFantasySpider:
                                         'league': league_name,
                                         'market_category': 'player_props',
                                         'market_id': market_id,
-                                        'market_name': market,
+                                        'market': market,
                                         'game_time': game_time,
                                         'subject_team': subject_team,
                                         'subject_id': subject_id,
@@ -110,13 +111,13 @@ class BoomFantasySpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-    db = client['sauce']
+    db = get_db()
     spider = BoomFantasySpider(uuid.uuid4(), RequestManager(), DataNormalizer('BoomFantasy', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
     print(f'[BoomFantasy]: {round(end_time - start_time, 2)}s')
+
 
 if __name__ == "__main__":
     asyncio.run(main())

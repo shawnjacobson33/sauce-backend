@@ -2,9 +2,8 @@ import asyncio
 import time
 import uuid
 from datetime import datetime
-from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper
+from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
 
 
 class ParlayPlaySpider:
@@ -80,7 +79,7 @@ class ParlayPlaySpider:
                                 'game_time': game_time,
                                 'market_category': 'player_props',
                                 'market_id': market_id,
-                                'market_name': market,
+                                'market': market,
                                 'subject_team': subject_team,
                                 'position': position,
                                 'subject_id': subject_id,
@@ -96,8 +95,7 @@ class ParlayPlaySpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-    db = client['sauce']
+    db = get_db()
     spider = ParlayPlaySpider(uuid.uuid4(), RequestManager(), DataNormalizer('ParlayPlay', db))
     start_time = time.time()
     await spider.start()

@@ -26,6 +26,7 @@ class ThriveFantasySpider:
         # get body content in json format
         data = response.json().get('response')
         subject_ids = dict()
+        leagues = set()
         for prop in data.get('data', []):
             contest_prop = prop.get('contestProp')
             # game info
@@ -43,6 +44,7 @@ class ThriveFantasySpider:
                 league = player.get('leagueType')
                 if league:
                     league = DataCleaner.clean_league(league)
+                    leagues.add(league)
 
                 subject_team = player.get('teamAbbr')
                 position = player.get('positionAbbreviation')
@@ -88,6 +90,7 @@ class ThriveFantasySpider:
                 })
 
         self.helper.store(self.prop_lines)
+        print(leagues)
 
 
 async def main():

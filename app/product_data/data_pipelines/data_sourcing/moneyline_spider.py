@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, DataNormalizer, Helper
+from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, DataNormalizer, Helper, get_db
 
 
 class MoneyLineSpider:
@@ -87,8 +87,7 @@ class MoneyLineSpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-    db = client['sauce']
+    db = get_db()
     spider = MoneyLineSpider(uuid.uuid4(), RequestManager(), DataNormalizer('MoneyLine', db))
     start_time = time.time()
     await spider.start()

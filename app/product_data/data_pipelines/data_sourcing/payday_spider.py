@@ -1,11 +1,9 @@
 import time
 import uuid
 from datetime import datetime
-
 import asyncio
-from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper
+from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
 
 
 class PaydaySpider:
@@ -109,8 +107,7 @@ class PaydaySpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-    db = client['sauce']
+    db = get_db()
     spider = PaydaySpider(uuid.uuid4(), RequestManager(), DataNormalizer('Payday', db))
     start_time = time.time()
     await spider.start()

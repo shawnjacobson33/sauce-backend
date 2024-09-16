@@ -3,9 +3,8 @@ import re
 import time
 import uuid
 from datetime import datetime
-from pymongo import MongoClient
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper
+from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
 
 
 class PrizePicksSpider:
@@ -130,6 +129,10 @@ class PrizePicksSpider:
                             position = position.split('-')[0]
 
                         if subject:
+                            # don't want combo props
+                            if ' + ' in subject:
+                                continue
+
                             subject = DataCleaner.clean_subject(subject)
                             subject_id = subject_ids.get(f'{subject}{subject_team}')
                             if not subject_id:
@@ -161,8 +164,7 @@ class PrizePicksSpider:
 
 
 async def main():
-    client = MongoClient('mongodb://localhost:27017/', uuidRepresentation='standard')
-    db = client['sauce']
+    db = get_db()
     spider = PrizePicksSpider(uuid.uuid4(), RequestManager(), DataNormalizer('PrizePicks', db))
     start_time = time.time()
     await spider.start()
