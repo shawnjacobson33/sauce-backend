@@ -9,7 +9,7 @@ from app.product_data.data_pipelines.utils import RequestManager, DataCleaner, D
 
 
 class DraftKingsPick6:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='DraftKingsPick6')
         self.rm = request_manager
@@ -28,6 +28,8 @@ class DraftKingsPick6:
             url = response.url + f"?sport={league}&_data=routes%2F_index"
             if league:
                 league = DataCleaner.clean_league(league)
+                if not Helper.is_league_good(league):
+                    continue
 
             tasks.append(self.rm.get(url, self._parse_lines, league, headers=self.headers))
 
@@ -99,7 +101,12 @@ class DraftKingsPick6:
 
 async def main():
     db = get_db()
-    spider = DraftKingsPick6(uuid.uuid4(), RequestManager(), DataNormalizer('DraftKings Pick6', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = DraftKingsPick6(batch_id, RequestManager(), DataNormalizer(batch_id, 'DraftKings Pick6', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

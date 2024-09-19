@@ -7,7 +7,7 @@ from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, D
 
 
 class SleeperSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='Sleeper')
         self.rm = request_manager
@@ -45,17 +45,22 @@ class SleeperSpider:
         subject_ids = dict()
         leagues = set()
         for line in data:
-            subject_team, subject, position, player_id, league = None, None, None, line.get('subject_id'), line.get('sport')
+            subject_team, subject, position, player_id, league = None, None, None, line.get('subject_id'), line.get(
+                'sport')
             cleaned_league = None
             if league:
                 cleaned_league = DataCleaner.clean_league(league)
+                if not Helper.is_league_good(cleaned_league):
+                    continue
+
                 leagues.add(cleaned_league)
 
             subject_id = None
             if player_id:
                 player = players.get(league).get(player_id)
                 if player:
-                    subject_team, subject, position = player.get('subject_team'), player.get('player_name'), player.get('position')
+                    subject_team, subject, position = player.get('subject_team'), player.get('player_name'), player.get(
+                        'position')
                     if subject:
                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                         if not subject_id:
@@ -105,11 +110,17 @@ class SleeperSpider:
 
 async def main():
     db = get_db()
-    spider = SleeperSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Sleeper', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = SleeperSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'Sleeper', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
     print(f'[Sleeper]: {round(end_time - start_time, 2)}s')
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -2,13 +2,12 @@ import time
 import uuid
 from datetime import datetime
 import asyncio
-from pymongo import MongoClient
 
 from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
 
 
 class DabbleSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='Dabble')
         self.rm = request_manager
@@ -28,6 +27,8 @@ class DabbleSpider:
             competition_id, league = competition.get('id'), competition.get('displayName')
             if league:
                 league = DataCleaner.clean_league(league)
+                if not Helper.is_league_good(league):
+                    continue
 
             url = self.helper.get_url(name='events').format(competition_id)
             params = self.helper.get_params()
@@ -102,7 +103,12 @@ class DabbleSpider:
 
 async def main():
     db = get_db()
-    spider = DabbleSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Dabble', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = DabbleSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'Dabble', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

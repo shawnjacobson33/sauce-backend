@@ -11,7 +11,7 @@ def get_leagues():
 
 
 class ChampSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='Champ')
         self.rm = request_manager
@@ -23,6 +23,10 @@ class ChampSpider:
         headers = self.helper.get_headers()
         tasks = []
         for league in get_leagues():
+            if league:
+                if not Helper.is_league_good(DataCleaner.clean_league(league)):
+                    continue
+
             json_data = self.helper.get_json_data(var=league)
             tasks.append(self.rm.post(url, self._parse_lines, league, headers=headers, json=json_data))
 
@@ -32,9 +36,7 @@ class ChampSpider:
     async def _parse_lines(self, response, league):
         # get body content in json format
         data = response.json().get('data', {}).get('readPicks', {})
-        if league:
-            league = DataCleaner.clean_league(league)
-
+        league = DataCleaner.clean_league(league)
         subject_ids = dict()
         for event in data.get('items', []):
             game_info = event.get('title')
@@ -84,7 +86,12 @@ class ChampSpider:
 
 async def main():
     db = get_db()
-    spider = ChampSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Champ', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = ChampSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'Champ', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

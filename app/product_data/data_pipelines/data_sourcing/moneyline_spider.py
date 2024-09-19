@@ -2,13 +2,12 @@ import asyncio
 import time
 import uuid
 from datetime import datetime
-from pymongo import MongoClient
 
 from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, DataNormalizer, Helper, get_db
 
 
 class MoneyLineSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='MoneyLine')
         self.rm = request_manager
@@ -29,6 +28,8 @@ class MoneyLineSpider:
             is_boosted, league, market = False, bet.get('league'), bet.get('bet_text')
             if league:
                 league = DataCleaner.clean_league(league)
+                if not Helper.is_league_good(league):
+                    continue
 
             # don't want futures
             if 'Season' in market:
@@ -88,7 +89,12 @@ class MoneyLineSpider:
 
 async def main():
     db = get_db()
-    spider = MoneyLineSpider(uuid.uuid4(), RequestManager(), DataNormalizer('MoneyLine', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = MoneyLineSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'MoneyLine', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

@@ -7,7 +7,7 @@ from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, D
 
 
 class OwnersBoxSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='OwnersBox')
         self.rm = request_manager
@@ -25,6 +25,9 @@ class OwnersBoxSpider:
         url = self.helper.get_url(name='markets')
         tasks = []
         for league in data:
+            if not Helper.is_league_good(DataCleaner.clean_league(league)):
+                continue
+
             params = self.helper.get_params(name='markets', var_1=league)
             tasks.append(self.rm.get(url, self._parse_markets, league, headers=self.headers, cookies=self.cookies, params=params))
 
@@ -127,7 +130,12 @@ class OwnersBoxSpider:
 
 async def main():
     db = get_db()
-    spider = OwnersBoxSpider(uuid.uuid4(), RequestManager(), DataNormalizer('OwnersBox', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = OwnersBoxSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'OwnersBox', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

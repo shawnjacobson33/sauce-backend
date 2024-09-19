@@ -3,9 +3,8 @@ import os
 import time
 import uuid
 from datetime import datetime
-from uuid import UUID
 
-from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, Helper, DataCleaner, get_db
+from app.product_data.data_pipelines.utils import RequestManager, DataStandardizer, Helper, DataCleaner, get_db, Subject
 
 
 def read_tokens():
@@ -16,11 +15,11 @@ def read_tokens():
 
 
 class BoomFantasySpider:
-    def __init__(self, batch_id: UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='BoomFantasy')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
 
     async def start(self):
@@ -43,6 +42,9 @@ class BoomFantasySpider:
                         league_name = league.get('league')
                         if league_name:
                             league_name = DataCleaner.clean_league(league_name.upper())
+                            if not Helper.is_league_good(league_name):
+                                continue
+
                         for league_section in league.get('sections', []):
                             game_time = league_section.get('lockTime')
                             if game_time:
@@ -65,9 +67,9 @@ class BoomFantasySpider:
                                         # subjects show up more than once so don't need to get subject id every time.
                                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                                         if not subject_id:
-                                            cleaned_subject = DataCleaner.clean_subject(subject)
-                                            subject_id = self.dn.get_subject_id(cleaned_subject, league=league_name,
-                                                                                subject_team=subject_team)
+                                            cleaned_subj = DataCleaner.clean_subject(subject)
+                                            subject_obj = Subject(cleaned_subj, league_name, subject_team)
+                                            subject_id = self.ds.get_subject_id(subject_obj)
                                             subject_ids[f'{subject}{subject_team}'] = subject_id
 
                             for question in league_section.get('fullQuestions', []):
@@ -84,7 +86,7 @@ class BoomFantasySpider:
                                             if len(stat_text_components) == 4:
                                                 market = stat_text_components[-2].lower().title()
                                                 if market:
-                                                    market_id = self.dn.get_market_id(market)
+                                                    market_id = self.ds.get_market_id(market)
 
                                 for choice in question.get('choices', []):
                                     label = choice.get('type')
@@ -112,7 +114,12 @@ class BoomFantasySpider:
 
 async def main():
     db = get_db()
-    spider = BoomFantasySpider(uuid.uuid4(), RequestManager(), DataNormalizer('BoomFantasy', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = BoomFantasySpider(batch_id, RequestManager(), DataStandardizer(batch_id, 'BoomFantasy', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

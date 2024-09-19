@@ -7,7 +7,7 @@ from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer
 
 
 class DraftersSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='Drafters')
         self.rm = request_manager
@@ -79,7 +79,12 @@ class DraftersSpider:
 
 async def main():
     db = get_db()
-    spider = DraftersSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Drafters', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = DraftersSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'Drafters', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

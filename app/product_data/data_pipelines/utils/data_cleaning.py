@@ -44,6 +44,8 @@ class DataCleaner:
             'UFC': 'MMA',
             'EPL': 'SOCCER',
             'MLS': 'SOCCER',
+            'UCL': 'SOCCER',
+            'CHAMPIONSLEAGUE': 'SOCCER',
             'LALIGA': 'SOCCER',
             'BUNDES': 'SOCCER',
             'SERIEA': 'SOCCER',

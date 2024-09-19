@@ -8,7 +8,7 @@ from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, R
 
 
 class PrizePicksSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='PrizePicks')
         self.rm = request_manager
@@ -136,7 +136,7 @@ class PrizePicksSpider:
                             subject = DataCleaner.clean_subject(subject)
                             subject_id = subject_ids.get(f'{subject}{subject_team}')
                             if not subject_id:
-                                subject_id = self.dn.get_subject_id(subject, league, subject_team if league not in {'SOCCER', 'CS', 'VAL', 'DOTA'} else None, position if league != 'SOCCER' else None)
+                                subject_id = self.dn.get_subject_id(subject, league, subject_team if league not in {'SOCCER', 'CS', 'VAL', 'DOTA', 'R6', 'TENNIS'} else None, position if league != 'SOCCER' else None)
                                 subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 game_time, stat_line = line_attributes.get('start_time'), line_attributes.get('line_score')
@@ -165,7 +165,12 @@ class PrizePicksSpider:
 
 async def main():
     db = get_db()
-    spider = PrizePicksSpider(uuid.uuid4(), RequestManager(), DataNormalizer('PrizePicks', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = PrizePicksSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'PrizePicks', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

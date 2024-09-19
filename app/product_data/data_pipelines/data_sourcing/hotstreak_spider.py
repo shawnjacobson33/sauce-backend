@@ -2,15 +2,13 @@ import time
 import uuid
 import random
 from datetime import datetime
-from pymongo import MongoClient
-
 import asyncio
 
 from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
 
 
 class HotStreakSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='HotStreak')
         self.rm = request_manager
@@ -85,7 +83,6 @@ class HotStreakSpider:
 
         # go through prop lines
         subject_ids = dict()
-
         for market in search.get('markets', []):
             market_id_components = market.get('id').split(':')[1:]
             more_components = ''.join(market_id_components).split(',')
@@ -103,6 +100,9 @@ class HotStreakSpider:
                         league, game_time = opponent.get('league'), opponent.get('game_time')
                         if league:
                             league = DataCleaner.clean_league(league)
+                            if not Helper.is_league_good(league):
+                                continue
+
                             self.uniq_leagues.add(league)
 
                 if subject:
@@ -151,7 +151,12 @@ class HotStreakSpider:
 
 async def main():
     db = get_db()
-    spider = HotStreakSpider(uuid.uuid4(), RequestManager(), DataNormalizer('HotStreak', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = HotStreakSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'HotStreak', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
