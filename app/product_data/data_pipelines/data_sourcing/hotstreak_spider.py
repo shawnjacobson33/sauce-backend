@@ -4,15 +4,15 @@ import random
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
+from app.product_data.data_pipelines.utils import DataCleaner, DataStandardizer, RequestManager, Helper, get_db, Subject
 
 
 class HotStreakSpider:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='HotStreak')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
         self.url = self.helper.get_url()
         self.headers = self.helper.get_headers()
@@ -89,11 +89,12 @@ class HotStreakSpider:
             market_id, participant_id, the_market = None, more_components[0], more_components[1]
 
             # get player info and league
-            subject_number, subject_id = None, None
+            jersey_number, subject_id = None, None
             game_time, subject, position, league, participant = None, None, None, None, participants.get(participant_id)
             if participant:
                 subject, position = participant.get('subject'), participant.get('position')
-                opponent_id, subject_number = participant.get('opponent_id'), participant.get('subject_number')
+                opponent_id, jersey_number = participant.get('opponent_id'), participant.get('subject_number')
+                jersey_number = str(jersey_number) if jersey_number is not None else jersey_number
                 if opponent_id:
                     opponent = opponent_ids.get(opponent_id)
                     if opponent:
@@ -109,7 +110,8 @@ class HotStreakSpider:
                     subject = subject.strip()
                     subject_id = subject_ids.get(f'{subject}{position}')
                     if not subject_id:
-                        subject_id = self.dn.get_subject_id(subject, league, position=position, number=subject_number)
+                        subject_obj = Subject(subject, league, position=position, jersey_number=jersey_number)
+                        subject_id = self.ds.get_subject_id(subject_obj)
                         subject_ids[f'{subject}{position}'] = subject_id
 
             if the_market:
@@ -119,7 +121,7 @@ class HotStreakSpider:
                     elif league in {'NFL', 'NCAAF'}:
                         the_market = 'football_fantasy_points'
 
-                market_id = self.dn.get_market_id(the_market)
+                market_id = self.ds.get_market_id(the_market)
 
             lines, probabilities = market.get('lines', []), market.get('probabilities', [])
             labels, n = ['Under', 'Over'], len(lines)
@@ -141,7 +143,7 @@ class HotStreakSpider:
                             'position': position,
                             'subject_id': subject_id,
                             'subject': subject,
-                            'jersey_number': subject_number,
+                            'jersey_number': jersey_number,
                             'bookmaker': 'HotStreak',
                             'label': labels[j],
                             'line': line,
@@ -156,7 +158,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = HotStreakSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'HotStreak', db))
+    spider = HotStreakSpider(batch_id, RequestManager(), DataStandardizer(batch_id, 'HotStreak', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

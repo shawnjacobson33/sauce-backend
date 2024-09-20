@@ -13,17 +13,17 @@ from app.product_data.data_pipelines.utils.constants import LEAGUES, SUBJECT_COL
 def get_subjects(collection: Collection, bookmaker: str) -> dict[Any, dict[str, DataFrame]]:
     def get_queries():
         queries = {}
+        # Drafters doesn't include leagues
         if bookmaker != 'Drafters':
             for league in LEAGUES:
                 queries[league] = {'subject_info.league': league}
 
         return queries
 
-    subjects = {}
-    for league_name, query in get_queries().items():
-        all_subjects = []
-        bookmaker_specific_subjects = {}
-        for doc in collection.find(query):
+    def query_subjects(q: dict = None):
+        all_subjects, bookmaker_specific_subjects = [], {}
+        docs = collection.find(q) if q else collection.find()
+        for doc in docs:
             subject_id, subject_info = doc.get('_id'), doc.get('subject_info')
             if subject_info:
                 subject_info.update({'subject_id': subject_id})
@@ -37,7 +37,18 @@ def get_subjects(collection: Collection, bookmaker: str) -> dict[Any, dict[str, 
                         if subject:
                             bookmaker_specific_subjects[subject] = subject_id
 
-        subjects[league_name] = {'GEN': pd.DataFrame(all_subjects), bookmaker: bookmaker_specific_subjects}
+        return pd.DataFrame(all_subjects), bookmaker_specific_subjects
+
+    # Drafters will have a different initialization to handle all subjects from all leagues.
+    subjects = {}
+    if bookmaker == 'Drafters':
+        subjects['GEN'], subjects[bookmaker] = query_subjects()
+        return subjects
+
+    # otherwise get every subject from every league but separate them.
+    for league_name, query in get_queries().items():
+        subjects_df, bookmaker_subjects = query_subjects(query)
+        subjects[league_name] = {'GEN': subjects_df, bookmaker: bookmaker_subjects}
 
     return subjects
 
@@ -60,8 +71,8 @@ class DataStandardizer:
             return None
 
     def get_subject_id(self, subject: Subject):
-        # get filtered subjects based upon league
-        league_specific_subjects = self.subjects[subject.league] if subject.league else None
+        # get filtered subjects based upon league -- the condition is for 'Drafters' who doesn't include a league
+        league_specific_subjects = self.subjects[subject.league] if subject.league else self.subjects
 
         # 1st Search - based upon data already stored in relation to the bookmaker
         bookmaker_specific_subjects = league_specific_subjects[self.bookmaker]
@@ -84,6 +95,15 @@ class DataStandardizer:
             print(f'---------------------- {most_similar_subject} ----------------------')
             return most_similar_subject_info['subject_id']
 
+        # 3rd Search - most similar subject alt name
+        # Def. Search Mechanism: the subjects db will now only have subject info, and any different
+        # variation of subject's name, position, team, will be stored in a 'alt' key-value pair list
+        # ** Consider baking the alternate name distances into the 2nd Search Mechanism instead of having
+        # a completely new search.
+        # TODO: Implement 3rd Searching Mechanism and get rid of individual bookmaker formatting
+        # TODO: Modify the 'update_subject_document' method so that it updates 'alt' info in 'subject_info'
+        # TODO: Modify the 'insert_subject_document' method so that it only inserts 'subject_info' with some alt info
+
         # If no good match, insert a new subject
         print(f'INSERTING {subject.name}: FAILED MATCH -> {most_similar_subject_info["distance"]}')
         print(f'********************** {subject} **********************')
@@ -92,25 +112,29 @@ class DataStandardizer:
 
     @staticmethod
     def _get_most_similar_subject(subjects: DataFrame, subject: Subject):
-        def get_distances(row):
+        def get_distances(r):
             # so weights can be adjusted to be more strict if there is fewer data points on a subject
-            num_data_points = row[['team', 'position', 'jersey_number']].notnull().sum()
+            num_data_points = 0
             # initialize the overall distance with the subjects distance ---- weight goes down to 0.75 ----
-            total_distance = lev.distance(row['name'], subject.name) * (1 - num_data_points * 0.0625)
-            if subject.team and row['team']:
+            distance = 0
+            if subject.team and r['team']:
+                num_data_points += 1
                 # More variance with team name formatting in college football...so more leniency on distance for them
-                weight = 1 if row['league'] not in {'NCAAF'} else 0.75
-                total_distance += lev.distance(row['team'], subject.team) * weight
+                weight = 1 if r['league'] not in {'NCAAF'} else 0.75
+                distance += lev.distance(r['team'], subject.team) * weight
 
-            if subject.position and row['position']:
+            if subject.position and r['position']:
+                num_data_points += 1
                 # More variance with position formatting especially in MLB and NBA/WNBA...so more lenient on distance
-                total_distance += lev.distance(row['position'], subject.position) * 0.75
+                distance += lev.distance(r['position'], subject.position) * 0.75
 
-            if subject.jersey_number and row['jersey_number']:
+            if subject.jersey_number and r['jersey_number']:
+                num_data_points += 1
                 # shouldn't be many cases where jersey numbers don't match but subjects do...so punish distance more
-                total_distance += lev.distance(row['jersey_number'], subject.jersey_number) * 2
+                distance += lev.distance(r['jersey_number'], subject.jersey_number) * 2
 
-            return total_distance
+            distance += lev.distance(r['name'], subject.name) * (1 - num_data_points * 0.0625)
+            return distance
 
         subjects['distance'] = subjects.apply(get_distances, axis=1)
         return subjects.sort_values(by='distance').iloc[0]

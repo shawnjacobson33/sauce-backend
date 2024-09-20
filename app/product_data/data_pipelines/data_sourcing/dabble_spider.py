@@ -3,15 +3,15 @@ import uuid
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
+from app.product_data.data_pipelines.utils import DataCleaner, DataStandardizer, RequestManager, Helper, get_db, Subject
 
 
 class DabbleSpider:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='Dabble')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.headers = self.helper.get_headers()
         self.cookies = self.helper.get_cookies()
         self.prop_lines = []
@@ -67,7 +67,7 @@ class DabbleSpider:
             if 'Regular Season' in market:
                 continue
 
-            subject_id, market_id, position = None, self.dn.get_market_id(market), player_prop.get('position')
+            subject_id, market_id, position = None, self.ds.get_market_id(market), player_prop.get('position')
             subject, subject_team = player_prop.get('playerName'), player_prop.get('teamAbbreviation')
             if subject_team and league in {'NCAAF', 'NFL'}:
                 subject_team = subject_team.upper()
@@ -77,8 +77,9 @@ class DabbleSpider:
                 # to avoid redundant queries.
                 subject_id = subject_ids.get(f'{subject}{subject_team}')
                 if not subject_id:
-                    cleaned_subject = DataCleaner.clean_subject(subject)
-                    subject_id = self.dn.get_subject_id(cleaned_subject, league=league, subject_team=subject_team, position=position)
+                    cleaned_subj = DataCleaner.clean_subject(subject)
+                    subject_obj = Subject(cleaned_subj, league, subject_team, position)
+                    subject_id = self.ds.get_subject_id(subject_obj)
                     subject_ids[f'{subject}{subject_team}'] = subject_id
 
             label, line = player_prop.get('lineType').title(), player_prop.get('value')
@@ -108,7 +109,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = DabbleSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'Dabble', db))
+    spider = DabbleSpider(batch_id, RequestManager(), DataStandardizer(batch_id, 'Dabble', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

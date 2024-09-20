@@ -5,16 +5,16 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import asyncio
 
-from app.product_data.data_pipelines.utils import RequestManager, DataCleaner, DataNormalizer, Helper, get_db
+from app.product_data.data_pipelines.utils import RequestManager, DataCleaner, DataStandardizer, Helper, get_db, Subject
 
 
 class DraftKingsPick6:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='DraftKingsPick6')
         self.rm = request_manager
         self.headers = self.helper.get_headers()
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
 
     async def start(self):
@@ -54,7 +54,7 @@ class DraftKingsPick6:
                 market_category = pickable.get('marketCategory')
                 if market_category:
                     market = market_category.get('marketName')
-                    market_id = self.dn.get_market_id(market)
+                    market_id = self.ds.get_market_id(market)
                 for entity in pickable.get('pickableEntities', []):
                     subject, competitions = entity.get('displayName'), entity.get('pickableCompetitions')
                     if competitions:
@@ -67,11 +67,12 @@ class DraftKingsPick6:
                         if team_data:
                             subject_team = team_data.get('abbreviation')
 
-                        subject_id = subject_ids.get(subject)
+                        subject_id = subject_ids.get(f'{subject}{subject_team}')
                         if not subject_id:
-                            cleaned_subject = DataCleaner.clean_subject(subject)
-                            subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team, position)
-                            subject_ids[subject] = subject_id
+                            cleaned_subj = DataCleaner.clean_subject(subject)
+                            subject_obj = Subject(cleaned_subj, league, subject_team, position)
+                            subject_id = self.ds.get_subject_id(subject_obj)
+                            subject_ids[f'{subject}{subject_team}'] = subject_id
 
                         summary = first_competition.get('competitionSummary')
                         if summary:
@@ -106,7 +107,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = DraftKingsPick6(batch_id, RequestManager(), DataNormalizer(batch_id, 'DraftKings Pick6', db))
+    spider = DraftKingsPick6(batch_id, RequestManager(), DataStandardizer(batch_id, 'DraftKings Pick6', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

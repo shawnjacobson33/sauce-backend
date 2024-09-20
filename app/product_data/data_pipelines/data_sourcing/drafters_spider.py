@@ -3,15 +3,15 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, Helper, DataCleaner, get_db
+from app.product_data.data_pipelines.utils import RequestManager, DataStandardizer, Helper, DataCleaner, get_db, Subject
 
 
 class DraftersSpider:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='Drafters')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
 
     async def start(self):
@@ -41,11 +41,12 @@ class DraftersSpider:
                             position = position.strip()
 
                 if subject:
-                    subject_id = subject_ids.get(subject)
+                    subject_id = subject_ids.get(f'{subject}{subject_team}')
                     if not subject_id:
-                        cleaned_subject = DataCleaner.clean_subject(subject)
-                        subject_id = self.dn.get_subject_id(cleaned_subject, subject_team=subject_team, position=position)
-                        subject_ids[subject] = subject_id
+                        cleaned_subj = DataCleaner.clean_subject(subject)
+                        subject_obj = Subject(cleaned_subj, team=subject_team, position=position)
+                        subject_id = self.ds.get_subject_id(subject_obj)
+                        subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 market_id, market, line = None, player.get('bid_stats_name'), player.get('bid_stats_value')
                 # quick formatting error fixes
@@ -55,7 +56,7 @@ class DraftersSpider:
                     market = 'Pass + Rush Yards'
 
                 if market:
-                    market_id = self.dn.get_market_id(market)
+                    market_id = self.ds.get_market_id(market)
 
                 for label in ['Over', 'Under']:
                     self.prop_lines.append({
@@ -84,7 +85,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = DraftersSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'Drafters', db))
+    spider = DraftersSpider(batch_id, RequestManager(), DataStandardizer(batch_id, 'Drafters', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

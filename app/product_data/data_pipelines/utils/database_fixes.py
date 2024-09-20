@@ -50,6 +50,17 @@ def update_collection_field_names(collection: Collection):
 
 
 # update_collection_field_names(db['subjects'])
-remove_subjects(batch_id="8516e271-e238-42ec-9ece-cf58964cacb1")
+remove_subjects(batch_id="a287b91d-fb22-4ceb-a2d6-fac6e59d7c21")
 # remove_subjects(bookmaker='ParlayPlay')
 # update_subjects('UCL', 'SOCCER')
+
+# Iterate over all documents and convert 'jersey_number' to a string
+# for doc in subjects.find({'subject_info.jersey_number': {'$exists': True}}):
+#     jersey_number = doc.get('subject_info').get('jersey_number')
+#     if jersey_number is not None:
+#         # Convert jersey_number to string
+#         new_jersey_number = str(jersey_number)
+#
+#         # Update the document with the converted jersey_number
+#         subjects.update_one({'_id': doc['_id']}, {'$set': {'subject_info.jersey_number': new_jersey_number}})
+

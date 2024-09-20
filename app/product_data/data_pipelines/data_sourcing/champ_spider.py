@@ -3,7 +3,7 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import RequestManager, DataNormalizer, DataCleaner, Helper, get_db
+from app.product_data.data_pipelines.utils import RequestManager, DataStandardizer, DataCleaner, Helper, get_db, Subject
 
 
 def get_leagues():
@@ -11,11 +11,11 @@ def get_leagues():
 
 
 class ChampSpider:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='Champ')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
 
     async def start(self):
@@ -35,7 +35,10 @@ class ChampSpider:
 
     async def _parse_lines(self, response, league):
         # get body content in json format
-        data = response.json().get('data', {}).get('readPicks', {})
+        data = response.json() if response.json() else {}
+        if data:
+            data = data.get('data', {}).get('readPicks', {})
+
         league = DataCleaner.clean_league(league)
         subject_ids = dict()
         for event in data.get('items', []):
@@ -50,15 +53,16 @@ class ChampSpider:
                         if subject:
                             subject_id = subject_ids.get(f'{subject}{subject_team}')
                             if not subject_id:
-                                cleaned_subject = DataCleaner.clean_subject(subject)
-                                subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team, position)
+                                cleaned_subj = DataCleaner.clean_subject(subject)
+                                subject_obj = Subject(cleaned_subj, league, subject_team)
+                                subject_id = self.ds.get_subject_id(subject_obj)
                                 subject_ids[f'{subject}{subject_team}'] = subject_id
                         else:
                             continue
 
                 for prop in player.get('props', []):
                     market, line = prop.get('title'), prop.get('value')
-                    market_id = self.dn.get_market_id(market)
+                    market_id = self.ds.get_market_id(market)
                     labels, multiplier, boost = ['Over', 'Under'], None, prop.get('boost')
                     if boost:
                         multiplier = boost.get('multiplier')
@@ -91,7 +95,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = ChampSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'Champ', db))
+    spider = ChampSpider(batch_id, RequestManager(), DataStandardizer(batch_id, 'Champ', db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
