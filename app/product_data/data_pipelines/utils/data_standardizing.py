@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Optional, Any, Union, Dict
 
 from pandas import DataFrame
 from pymongo.database import Database
@@ -7,63 +7,74 @@ import pandas as pd
 import Levenshtein as lev
 
 from app.product_data.data_pipelines.utils import Subject
-from app.product_data.data_pipelines.utils.constants import LEAGUES, SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME
+from app.product_data.data_pipelines.utils.constants import IN_SEASON_LEAGUES, SUBJECT_COLLECTION_NAME as SCN, \
+    MARKETS_COLLECTION_NAME as MCN
 
 
-def get_subjects(collection: Collection, bookmaker: str) -> dict[Any, dict[str, DataFrame]]:
-    def get_queries():
+def get_subjects(collection: Collection, has_leagues: bool = True) -> Union[
+    dict[str, Union[dict[Any, dict[str, Optional[Any]]], DataFrame]], dict[
+        Any, dict[str, Union[dict[Any, dict[str, Optional[Any]]], DataFrame]]]]:
+    def get_queries() -> dict[Any, dict[str, Any]]:
         queries = {}
         # Drafters doesn't include leagues
-        if bookmaker != 'Drafters':
-            for league in LEAGUES:
-                queries[league] = {'subject_info.league': league}
+        if has_leagues:
+            for league in IN_SEASON_LEAGUES:
+                queries[league] = {'data.league': league}
 
         return queries
 
-    def query_subjects(q: dict = None):
-        all_subjects, bookmaker_specific_subjects = [], {}
+    def query_subjects(q: dict = None) -> dict[
+        str, Union[dict[Any, Union[dict[str, Optional[Any]], dict[str, Optional[Any]]]], DataFrame]]:
+
+        # TODO: Add more hashing mechanisms to improve search performance (by first letter of a subject's name)
+
+        nested_subjects, flattened_subjects = {}, []
+        # query by league otherwise just grab all subjects
         docs = collection.find(q) if q else collection.find()
         for doc in docs:
-            subject_id, subject_info = doc.get('_id'), doc.get('subject_info')
-            if subject_info:
-                subject_info.update({'subject_id': subject_id})
-                all_subjects.append(subject_info)
+            subject_id, attributes = doc.get('_id'), doc.get('subject_info')
+            if attributes:
+                # get the standardized name and add to subjects map
+                std_name = attributes.pop('name')
+                # bookmakers sometimes have different formats for subject names
+                alt_names = attributes.pop('alt_names')
+                # add the data for the standard subject name
+                nested_subjects[std_name] = {'id': subject_id, 'attributes': attributes}
+                flattened_subjects.append({'id': subject_id, 'name': std_name, **attributes})
+                if alt_names:
+                    # add the data for each of the alternate subject names
+                    for alt_name in alt_names:
+                        nested_subjects[alt_name] = {'id': subject_id, 'attributes': attributes}
+                        flattened_subjects.append({'id': subject_id, 'name': alt_name, **attributes})
 
-            bookmakers = doc.get('bookmakers')
-            if bookmakers:
-                for bookmaker_info in bookmakers:
-                    if bookmaker_info.get('bookmaker_name') == bookmaker:
-                        subject = bookmaker_info.get('subject')
-                        if subject:
-                            bookmaker_specific_subjects[subject] = subject_id
-
-        return pd.DataFrame(all_subjects), bookmaker_specific_subjects
+        return {'n': nested_subjects, 'f': pd.DataFrame(flattened_subjects)}
 
     # Drafters will have a different initialization to handle all subjects from all leagues.
     subjects = {}
-    if bookmaker == 'Drafters':
-        subjects['GEN'], subjects[bookmaker] = query_subjects()
-        return subjects
+    if not has_leagues:
+        return query_subjects()
 
     # otherwise get every subject from every league but separate them.
     for league_name, query in get_queries().items():
-        subjects_df, bookmaker_subjects = query_subjects(query)
-        subjects[league_name] = {'GEN': subjects_df, bookmaker: bookmaker_subjects}
+        subjects[league_name] = query_subjects(query)
 
     return subjects
 
 
 class DataStandardizer:
-    def __init__(self, batch_id: str, bookmaker: str, db: Database):
+    def __init__(self, batch_id: str, db: Database, has_leagues: bool = True):
         self.batch_id = batch_id
-        self.bookmaker = bookmaker
-        self.market_collection = db[MARKETS_COLLECTION_NAME]
-        self.subject_collection = db[SUBJECT_COLLECTION_NAME]
-        self.subjects = get_subjects(self.subject_collection, bookmaker)
+        self.market_collection = db[MCN]
+        self.subject_collection = db[SCN]
+        self.subjects = get_subjects(self.subject_collection, has_leagues=has_leagues)
+        self.nested_subjects, self.flattened_subjects = None, None
 
     def get_market_id(self, market: str) -> Optional[str]:
         try:
-            query = {self.bookmaker: market}
+            # TODO: Implement a standardizing procedure similar to the subject id process.
+            # TODO: i.e. you shouldn't have to rely on a bookmaker name to standardize market names.
+            # query = {self.bookmaker: market}
+            query = {}
             market_id = self.market_collection.find_one(query, {'_id': 1})
             return market_id.get('_id') if market_id else None
         except Exception as e:
@@ -72,28 +83,33 @@ class DataStandardizer:
 
     def get_subject_id(self, subject: Subject):
         # get filtered subjects based upon league -- the condition is for 'Drafters' who doesn't include a league
-        league_specific_subjects = self.subjects[subject.league] if subject.league else self.subjects
+        filtered_subjects = self.subjects[subject.league] if subject.league else self.subjects
+        # make reference to it because it will be used in updates to it later (self because both nest and flat
+        # structures need to be updated everytime there is a new subject record.)
+        self.nested_subjects = filtered_subjects['n']
+        # 1st Search - existing subject (format)
+        subject_match = self.nested_subjects.get(subject.name)
+        if subject_match:
+            print(f'FOUND SUBJECT: SUCCESS -> {subject}')
+            self._update_subject_document(subject, subject_match)
+            return subject_match['id']
 
-        # 1st Search - based upon data already stored in relation to the bookmaker
-        bookmaker_specific_subjects = league_specific_subjects[self.bookmaker]
-        subject_id = bookmaker_specific_subjects.get(subject.name)
-        if subject_id:
-            print(f'FOUND {self.bookmaker.upper()} SUBJECT: {subject}, SUCCESS')
-            return subject_id
-
+        # make reference to it because it will be used in updates to it later.
+        flattened_filtered_subjects = filtered_subjects['f']
         # 2nd Search - most similar
-        most_similar_subject_info = DataStandardizer._get_most_similar_subject(league_specific_subjects['GEN'], subject)
-        most_similar_subject = Subject(most_similar_subject_info['name'], most_similar_subject_info['league'],
-                                       most_similar_subject_info['team'], most_similar_subject_info['position'],
-                                       most_similar_subject_info['jersey_number'])
+        most_similar_subject_data = DataStandardizer._get_most_similar_subject(flattened_filtered_subjects, subject)
+        most_similar_subject = Subject(most_similar_subject_data['name'], most_similar_subject_data['league'],
+                                       most_similar_subject_data['team'], most_similar_subject_data['position'],
+                                       most_similar_subject_data['jersey_number'])
         # Threshold is flexible to change
-        if not most_similar_subject_info.empty and most_similar_subject_info['distance'] < 4:
+        if not most_similar_subject_data.empty and most_similar_subject_data['distance'] < 4:
             # over time this will improve query speeds because it will find the subject in the first search.
-            self._update_subject_document(subject, most_similar_subject_info)
-            print(f'FOUND SIMILAR SUBJECT: SUCCESSFUL MATCH -> {most_similar_subject_info["distance"]}')
+            # it can be predicted with certain that this subject name will be inserted into 'alt_names'
+            self._update_subject_document(subject, most_similar_subject_data, add_alt=True)
+            print(f'FOUND SIMILAR SUBJECT: SUCCESSFUL MATCH -> {most_similar_subject_data["distance"]}')
             print(f'********************** {subject} **********************')
             print(f'---------------------- {most_similar_subject} ----------------------')
-            return most_similar_subject_info['subject_id']
+            return most_similar_subject_data['id']
 
         # 3rd Search - most similar subject alt name
         # Def. Search Mechanism: the subjects db will now only have subject info, and any different
@@ -105,13 +121,13 @@ class DataStandardizer:
         # TODO: Modify the 'insert_subject_document' method so that it only inserts 'subject_info' with some alt info
 
         # If no good match, insert a new subject
-        print(f'INSERTING {subject.name}: FAILED MATCH -> {most_similar_subject_info["distance"]}')
+        print(f'INSERTING {subject.name}: FAILED MATCH -> {most_similar_subject_data["distance"]}')
         print(f'********************** {subject} **********************')
         print(f'---------------------- {most_similar_subject} ----------------------')
         return self._insert_new_subject(subject)
 
     @staticmethod
-    def _get_most_similar_subject(subjects: DataFrame, subject: Subject):
+    def _get_most_similar_subject(subjects, subject: Subject):
         def get_distances(r):
             # so weights can be adjusted to be more strict if there is fewer data points on a subject
             num_data_points = 0
@@ -139,52 +155,53 @@ class DataStandardizer:
         subjects['distance'] = subjects.apply(get_distances, axis=1)
         return subjects.sort_values(by='distance').iloc[0]
 
-    def _update_subject_document(self, subject: Subject, similar_subject_info: dict[Any]):
+    def _update_subject_document(self, subject: Subject, similar_subject_data: dict[Any], add_alt: bool = False):
         # Prepare the update document for conditional field updates
         update_fields = {}
         # Check and update fields only if they are not set
         for field, value in subject.__dict__.items():
-            if not similar_subject_info.get(field):
+            if not similar_subject_data.get(field):
                 # Set the field in the document to the value of the corresponding argument
-                update_fields[f'subject_info.{field}'] = value
+                update_fields[f'attributes.{field}'] = value
 
         # If there are fields to update, prepare the $set operation
-        set_operation = {'$set': update_fields} if update_fields else {}
-        # Always append new bookmaker info regardless of other conditions
-        push_operation = {
-            '$push': {
-                'bookmakers': {
-                    'batch_id': self.batch_id,
-                    'bookmaker_name': self.bookmaker,
-                    'subject': subject.name
+        push_operation, set_operation = {}, {'$set': update_fields} if update_fields else {}
+        # only need to add the alt name for a successful similarity match
+        if add_alt:
+            # Append a new alt name to the alt_names list in the subject's doc
+            push_operation = {
+                '$push': {
+                    'attributes.alt_names': subject.name
                 }
             }
-        }
-        # Update current map of subject formats and ids to the bookmaker
-        bookmaker_specific_subjects = self.subjects.get(self.bookmaker)
-        if bookmaker_specific_subjects:
-            bookmaker_specific_subjects[subject.name] = similar_subject_info.get('subject_id')
+            # update the nested and flattened data
+            self._update_in_memory_data(subject, similar_subject_data)
+
         # Combine set and push operations in one update query
         combined_update = {**set_operation, **push_operation}
         # Perform the update on the collection
-        self.subject_collection.update_one({'_id': similar_subject_info['subject_id']}, combined_update)
+        self.subject_collection.update_one({'_id': similar_subject_data['id']}, combined_update)
+
+    def _update_in_memory_data(self, subject: Subject, data: dict) -> None:
+        # add a new subject (format) to the end of the df
+        self.flattened_subjects.loc[len(self.flattened_subjects)] = data
+
+        # restructure the already flattened data into a nested form.
+        nested_subject_data = dict(id=data['id'], attributes={field_name: data for field_name, data in data.items()
+                                                              if field_name not in {'id', 'name'}})
+        # add the subject
+        self.nested_subjects[subject.name] = nested_subject_data
 
     def _insert_new_subject(self, subject: Subject):
         result = self.subject_collection.insert_one({
             'batch_id': self.batch_id,
-            'subject_info': {
-                'name': subject.name,
+            'name': subject.name,
+            'attributes': {
                 'league': subject.league,
                 'team': subject.team,
                 'position': subject.position,
                 'jersey_number': subject.jersey_number,
-            },
-            'bookmakers': [
-                {
-                    'batch_id': self.batch_id,
-                    'bookmaker_name': self.bookmaker,
-                    'subject': subject.name
-                }
-            ]
+                'alt_names': []
+            }
         })
         return result.inserted_id
