@@ -1,10 +1,11 @@
 from app.product_data.data_pipelines.utils import get_db
-from app.product_data.data_pipelines.utils.constants import SUBJECT_COLLECTION_NAME
+from app.product_data.data_pipelines.utils.constants import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME
 from pymongo.collection import Collection
 
 db = get_db()
 
 subjects = db[SUBJECT_COLLECTION_NAME]
+markets = db[MARKETS_COLLECTION_NAME]
 
 
 def remove_subjects(batch_id: str = None, bookmaker: str = None):
@@ -50,17 +51,48 @@ def update_collection_field_names(collection: Collection):
 
 
 # update_collection_field_names(db['subjects'])
-remove_subjects(batch_id="a287b91d-fb22-4ceb-a2d6-fac6e59d7c21")
+# remove_subjects(batch_id="e4a8c59e-2a6f-4247-8631-784349ed68a7")
 # remove_subjects(bookmaker='ParlayPlay')
 # update_subjects('UCL', 'SOCCER')
 
-# Iterate over all documents and convert 'jersey_number' to a string
-# for doc in subjects.find({'subject_info.jersey_number': {'$exists': True}}):
-#     jersey_number = doc.get('subject_info').get('jersey_number')
-#     if jersey_number is not None:
-#         # Convert jersey_number to string
-#         new_jersey_number = str(jersey_number)
-#
-#         # Update the document with the converted jersey_number
-#         subjects.update_one({'_id': doc['_id']}, {'$set': {'subject_info.jersey_number': new_jersey_number}})
 
+# USED TO CREATE RESTRUCTURED COLLECTION
+# reformatted_docs = []
+# for doc in markets.find():
+#     markets = {'alt_names': []}
+#     std_name_set = False
+#     for bookmaker in doc:
+#         if bookmaker not in {'SmartBettor', '_id'}:
+#             if doc[bookmaker] and not std_name_set:
+#                 markets['name'] = doc[bookmaker]
+#                 std_name_set = not std_name_set
+#             elif doc[bookmaker] not in markets['alt_names']:
+#                 markets['alt_names'].append(doc[bookmaker])
+#
+#     reformatted_docs.append(markets)
+#
+# db['markets_v2'].insert_many(reformatted_docs)
+
+# USED TO CREATE RESTRUCTURED COLLECTION
+# reformatted_docs = []
+# for doc in subjects.find():
+#     std_subject_name = doc['subject_info']['name']
+#     alt_names = []
+#     for bookmaker in doc['bookmakers']:
+#         if (bookmaker.get('subject') != std_subject_name) and (bookmaker.get('subject') not in alt_names):
+#             alt_names.append(bookmaker.get('subject'))
+#
+#     reformatted_docs.append({
+#         'batch_id': doc.get('batch_id'),
+#         'name': std_subject_name,
+#         'attributes': {
+#             'league': doc['subject_info']['league'],
+#             'team': doc['subject_info']['team'],
+#             'position': doc['subject_info']['position'],
+#             'jersey_number': doc['subject_info']['jersey_number'],
+#             'alt_names': alt_names
+#         }
+#     })
+#
+# subjects_beta_v2 = db['subjects_beta_v2']
+# subjects_beta_v2.insert_many(reformatted_docs)

@@ -1,64 +1,10 @@
-from typing import Optional, Any, Union, Dict
+from typing import Optional, Any
 
-from pandas import DataFrame
 from pymongo.database import Database
-from pymongo.collection import Collection
-import pandas as pd
 import Levenshtein as lev
 
-from app.product_data.data_pipelines.utils import Subject
-from app.product_data.data_pipelines.utils.constants import IN_SEASON_LEAGUES, SUBJECT_COLLECTION_NAME as SCN, \
-    MARKETS_COLLECTION_NAME as MCN
-
-
-def get_subjects(collection: Collection, has_leagues: bool = True) -> Union[
-    dict[str, Union[dict[Any, dict[str, Optional[Any]]], DataFrame]], dict[
-        Any, dict[str, Union[dict[Any, dict[str, Optional[Any]]], DataFrame]]]]:
-    def get_queries() -> dict[Any, dict[str, Any]]:
-        queries = {}
-        # Drafters doesn't include leagues
-        if has_leagues:
-            for league in IN_SEASON_LEAGUES:
-                queries[league] = {'data.league': league}
-
-        return queries
-
-    def query_subjects(q: dict = None) -> dict[
-        str, Union[dict[Any, Union[dict[str, Optional[Any]], dict[str, Optional[Any]]]], DataFrame]]:
-
-        # TODO: Add more hashing mechanisms to improve search performance (by first letter of a subject's name)
-
-        nested_subjects, flattened_subjects = {}, []
-        # query by league otherwise just grab all subjects
-        docs = collection.find(q) if q else collection.find()
-        for doc in docs:
-            subject_id, attributes = doc.get('_id'), doc.get('subject_info')
-            if attributes:
-                # get the standardized name and add to subjects map
-                std_name = attributes.pop('name')
-                # bookmakers sometimes have different formats for subject names
-                alt_names = attributes.pop('alt_names')
-                # add the data for the standard subject name
-                nested_subjects[std_name] = {'id': subject_id, 'attributes': attributes}
-                flattened_subjects.append({'id': subject_id, 'name': std_name, **attributes})
-                if alt_names:
-                    # add the data for each of the alternate subject names
-                    for alt_name in alt_names:
-                        nested_subjects[alt_name] = {'id': subject_id, 'attributes': attributes}
-                        flattened_subjects.append({'id': subject_id, 'name': alt_name, **attributes})
-
-        return {'n': nested_subjects, 'f': pd.DataFrame(flattened_subjects)}
-
-    # Drafters will have a different initialization to handle all subjects from all leagues.
-    subjects = {}
-    if not has_leagues:
-        return query_subjects()
-
-    # otherwise get every subject from every league but separate them.
-    for league_name, query in get_queries().items():
-        subjects[league_name] = query_subjects(query)
-
-    return subjects
+from app.product_data.data_pipelines.utils import Subject, Market, SUBJECT_COLLECTION_NAME as SCN, \
+    MARKETS_COLLECTION_NAME as MCN, get_subjects
 
 
 class DataStandardizer:
@@ -69,7 +15,7 @@ class DataStandardizer:
         self.subjects = get_subjects(self.subject_collection, has_leagues=has_leagues)
         self.nested_subjects, self.flattened_subjects = None, None
 
-    def get_market_id(self, market: str) -> Optional[str]:
+    def get_market_id(self, market: Market) -> Optional[str]:
         try:
             # TODO: Implement a standardizing procedure similar to the subject id process.
             # TODO: i.e. you shouldn't have to rely on a bookmaker name to standardize market names.
@@ -90,14 +36,14 @@ class DataStandardizer:
         # 1st Search - existing subject (format)
         subject_match = self.nested_subjects.get(subject.name)
         if subject_match:
-            print(f'FOUND SUBJECT: SUCCESS -> {subject}')
+            print(f'FOUND {subject.name}: SUCCESS -> {subject}')
             self._update_subject_document(subject, subject_match)
             return subject_match['id']
 
         # make reference to it because it will be used in updates to it later.
-        flattened_filtered_subjects = filtered_subjects['f']
+        self.flattened_subjects = filtered_subjects['f']
         # 2nd Search - most similar
-        most_similar_subject_data = DataStandardizer._get_most_similar_subject(flattened_filtered_subjects, subject)
+        most_similar_subject_data = self._get_most_similar_subject(subject)
         most_similar_subject = Subject(most_similar_subject_data['name'], most_similar_subject_data['league'],
                                        most_similar_subject_data['team'], most_similar_subject_data['position'],
                                        most_similar_subject_data['jersey_number'])
@@ -111,23 +57,13 @@ class DataStandardizer:
             print(f'---------------------- {most_similar_subject} ----------------------')
             return most_similar_subject_data['id']
 
-        # 3rd Search - most similar subject alt name
-        # Def. Search Mechanism: the subjects db will now only have subject info, and any different
-        # variation of subject's name, position, team, will be stored in a 'alt' key-value pair list
-        # ** Consider baking the alternate name distances into the 2nd Search Mechanism instead of having
-        # a completely new search.
-        # TODO: Implement 3rd Searching Mechanism and get rid of individual bookmaker formatting
-        # TODO: Modify the 'update_subject_document' method so that it updates 'alt' info in 'subject_info'
-        # TODO: Modify the 'insert_subject_document' method so that it only inserts 'subject_info' with some alt info
-
         # If no good match, insert a new subject
         print(f'INSERTING {subject.name}: FAILED MATCH -> {most_similar_subject_data["distance"]}')
         print(f'********************** {subject} **********************')
         print(f'---------------------- {most_similar_subject} ----------------------')
         return self._insert_new_subject(subject)
 
-    @staticmethod
-    def _get_most_similar_subject(subjects, subject: Subject):
+    def _get_most_similar_subject(self, subject: Subject):
         def get_distances(r):
             # so weights can be adjusted to be more strict if there is fewer data points on a subject
             num_data_points = 0
@@ -152,15 +88,15 @@ class DataStandardizer:
             distance += lev.distance(r['name'], subject.name) * (1 - num_data_points * 0.0625)
             return distance
 
-        subjects['distance'] = subjects.apply(get_distances, axis=1)
-        return subjects.sort_values(by='distance').iloc[0]
+        self.flattened_subjects['distance'] = self.flattened_subjects.apply(get_distances, axis=1)
+        return self.flattened_subjects.sort_values(by='distance').iloc[0]
 
     def _update_subject_document(self, subject: Subject, similar_subject_data: dict[Any], add_alt: bool = False):
         # Prepare the update document for conditional field updates
         update_fields = {}
         # Check and update fields only if they are not set
         for field, value in subject.__dict__.items():
-            if not similar_subject_data.get(field):
+            if not similar_subject_data['attributes'].get(field) and field != 'name':
                 # Set the field in the document to the value of the corresponding argument
                 update_fields[f'attributes.{field}'] = value
 
@@ -180,17 +116,18 @@ class DataStandardizer:
         # Combine set and push operations in one update query
         combined_update = {**set_operation, **push_operation}
         # Perform the update on the collection
-        self.subject_collection.update_one({'_id': similar_subject_data['id']}, combined_update)
+        if combined_update:
+            self.subject_collection.update_one({'_id': similar_subject_data['id']}, combined_update)
 
     def _update_in_memory_data(self, subject: Subject, data: dict) -> None:
         # add a new subject (format) to the end of the df
         self.flattened_subjects.loc[len(self.flattened_subjects)] = data
 
         # restructure the already flattened data into a nested form.
-        nested_subject_data = dict(id=data['id'], attributes={field_name: data for field_name, data in data.items()
-                                                              if field_name not in {'id', 'name'}})
         # add the subject
-        self.nested_subjects[subject.name] = nested_subject_data
+        self.nested_subjects[subject.name] = dict(id=data['id'],
+                                                  attributes={field_name: data for field_name, data in
+                                                              data.items() if field_name not in {'id', 'name'}})
 
     def _insert_new_subject(self, subject: Subject):
         result = self.subject_collection.insert_one({
@@ -204,4 +141,7 @@ class DataStandardizer:
                 'alt_names': []
             }
         })
+        subject_data = subject.__dict__
+        subject_data['id'] = result.inserted_id
+        self._update_in_memory_data(subject, subject_data)
         return result.inserted_id

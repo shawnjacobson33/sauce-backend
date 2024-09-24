@@ -85,8 +85,8 @@ class BoomFantasySpider:
                                             stat_text_components = stat_text[0].split('.')
                                             if len(stat_text_components) == 4:
                                                 market = stat_text_components[-2].lower().title()
-                                                if market:
-                                                    market_id = self.ds.get_market_id(market)
+                                                # if market:
+                                                #     market_id = self.ds.get_market_id(market)
 
                                 for choice in question.get('choices', []):
                                     label = choice.get('type')
@@ -119,7 +119,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = BoomFantasySpider(batch_id, RequestManager(), DataStandardizer(batch_id, 'BoomFantasy', db))
+    spider = BoomFantasySpider(batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
