@@ -1,6 +1,7 @@
-from app.product_data.data_pipelines.utils import get_db
-from app.product_data.data_pipelines.utils.constants import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME
 from pymongo.collection import Collection
+
+from constants import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME
+from database import get_db
 
 db = get_db()
 
@@ -54,6 +55,25 @@ def update_collection_field_names(collection: Collection):
 # remove_subjects(batch_id="e4a8c59e-2a6f-4247-8631-784349ed68a7")
 # remove_subjects(bookmaker='ParlayPlay')
 # update_subjects('UCL', 'SOCCER')
+
+
+# markets_v3 = db['markets_v3']
+# batch_id = 'd550f72d-49a3-4e30-b692-727060207291'
+# markets_v3.insert_one({
+#     'batch_id': batch_id,
+#     'name': 'Total Passing Yards',
+#     'attributes': {
+#         'league': 'NFL',
+#         'alt_names': []
+#     }})
+
+# CHANGE FORMATTING ON MARKETS V2
+# for doc in markets.find():
+#     alt_names = doc.get('alt_names')
+#     unset_operation = {'$unset': {'alt_names': ''}}
+#     set_operation = {'$set': {'attributes': {'alt_names': alt_names}}}
+#     combined_operation = {**unset_operation, **set_operation}
+#     markets.update_one({'_id': doc['_id']}, combined_operation)
 
 
 # USED TO CREATE RESTRUCTURED COLLECTION

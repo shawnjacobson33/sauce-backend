@@ -4,7 +4,8 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import RequestManager, DataStandardizer, Helper, DataCleaner, get_db, Subject
+from app.product_data.data_pipelines.utils import RequestManager, DataStandardizer, Helper, DataCleaner, get_db, \
+    Subject, Market
 
 
 def read_tokens():
@@ -85,8 +86,8 @@ class BoomFantasySpider:
                                             stat_text_components = stat_text[0].split('.')
                                             if len(stat_text_components) == 4:
                                                 market = stat_text_components[-2].lower().title()
-                                                # if market:
-                                                #     market_id = self.ds.get_market_id(market)
+                                                if market:
+                                                    market_id = self.ds.get_market_id(Market(market, league_name))
 
                                 for choice in question.get('choices', []):
                                     label = choice.get('type')

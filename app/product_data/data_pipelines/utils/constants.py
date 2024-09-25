@@ -5,4 +5,4 @@ BOOKMAKERS = [
     'OwnersBox', 'ParlayPlay', 'Rebet', 'Sleeper', 'SuperDraft', 'ThriveFantasy', 'Underdog Fantasy', 'VividPicks'
 ]
 SUBJECT_COLLECTION_NAME = 'subjects_v3'
-MARKETS_COLLECTION_NAME = 'markets_v2'
+MARKETS_COLLECTION_NAME = 'markets_v3'
