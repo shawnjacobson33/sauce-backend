@@ -1,7 +1,7 @@
 import json
 import os
 
-from app.product_data.data_pipelines.utils.constants import LEAGUES
+from app.product_data.data_pipelines.utils.constants import IN_SEASON_LEAGUES
 
 
 class Helper:
@@ -857,7 +857,7 @@ class Helper:
 
     @staticmethod
     def is_league_good(league) -> bool:
-        return league in LEAGUES
+        return league in IN_SEASON_LEAGUES
 
     def store(self, data) -> None:
         absolute_path = os.path.abspath(f'../data_samples/{self.bookmaker.lower()}_data.json')

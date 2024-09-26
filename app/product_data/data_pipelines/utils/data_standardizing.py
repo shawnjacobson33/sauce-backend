@@ -31,16 +31,18 @@ class DataStandardizer:
 
         self.flattened_markets = filtered_markets['f']
         sm_data = self._get_most_similar_entity(market)
-        most_similar_market = Market(sm_data['name'], sm_data['league'])
-        if not sm_data.empty and sm_data['distance'] < 4:
+        most_similar_market = Market(sm_data['name'], sm_data['sport'])
+        market_distance = sm_data['distance']
+        if not sm_data.empty and market_distance < 3:
+            del sm_data['distance']
             update_operations = self._get_update_operations(market, sm_data, add_alt=True)
             if update_operations:
                 self.market_collection.update_one({'_id': sm_data['id']}, update_operations)
 
-            DataStandardizer._output_msg(market, most_similar_market, sm_data['distance'], msg_type='similar')
+            DataStandardizer._output_msg(market, most_similar_market, market_distance, msg_type='similar')
             return sm_data['id']
 
-        DataStandardizer._output_msg(market, most_similar_market, sm_data['distance'], msg_type='insert')
+        DataStandardizer._output_msg(market, most_similar_market, market_distance, msg_type='insert')
         return self._insert_new_entity(market)
 
     def get_subject_id(self, subject: Subject):
@@ -65,18 +67,21 @@ class DataStandardizer:
         ss_data = self._get_most_similar_entity(subject)
         most_similar_subject = Subject(ss_data['name'], ss_data['league'], ss_data['team'], ss_data['position'], ss_data['jersey_number'])
         # Threshold is flexible to change
-        if not ss_data.empty and ss_data['distance'] < 4:
+        subject_distance = ss_data['distance']
+        if not ss_data.empty and subject_distance < 4:
             # over time this will improve query speeds because it will find the subject in the first search.
             # it can be predicted with certain that this subject name will be inserted into 'alt_names'
+            # don't want the distance to be updated into a subject's doc
+            del ss_data['distance']
             update_operations = self._get_update_operations(subject, ss_data, add_alt=True)
             if update_operations:
                 self.subject_collection.update_one({'_id': ss_data['id']}, update_operations)
 
-            DataStandardizer._output_msg(subject, most_similar_subject, ss_data['distance'], msg_type='similar')
+            DataStandardizer._output_msg(subject, most_similar_subject, subject_distance, msg_type='similar')
             return ss_data['id']
 
         # If no good match, insert a new subject
-        DataStandardizer._output_msg(subject, most_similar_subject, ss_data['distance'], msg_type='insert')
+        DataStandardizer._output_msg(subject, most_similar_subject, subject_distance, msg_type='insert')
         return self._insert_new_entity(subject)
 
     def _get_filtered_data(self, entity: Union[Market, Subject]):
@@ -91,7 +96,7 @@ class DataStandardizer:
             return filtered_subjects
 
         # filter by league and cover the case where, for example Drafters, a bookmaker doesn't provide a league
-        filtered_markets = self.markets.get(entity.league, {}) if entity.league else self.markets
+        filtered_markets = self.markets.get(entity.sport, {}) if entity.sport else self.markets
         # case where there are no markets for an inputted league -- flattened the data
         if not filtered_markets:
             for sub_markets in self.markets.values():
@@ -137,9 +142,15 @@ class DataStandardizer:
         update_fields = {}
         # Check and update fields only if they are not set
         for field, value in entity.__dict__.items():
-            if not match_data['attributes'].get(field) and field != 'name':
-                # Set the field in the document to the value of the corresponding argument
-                update_fields[f'attributes.{field}'] = value
+            # because nested keeps it in a dict 'attributes' and flattened doesn't
+            if 'attributes' in match_data:
+                if not match_data['attributes'].get(field) and field != 'name':
+                    # Set the field in the document to the value of the corresponding argument
+                    update_fields[f'attributes.{field}'] = value
+            else:
+                if not match_data.get(field) and field != 'name':
+                    # Set the field in the document to the value of the corresponding argument
+                    update_fields[f'attributes.{field}'] = value
 
         # If there are fields to update, prepare the $set operation
         push_operation, set_operation = {}, {'$set': update_fields} if update_fields else {}
@@ -166,7 +177,7 @@ class DataStandardizer:
                 'id': data['id'],
                 'attributes': {
                     field_name: data for field_name, data in
-                    data.items() if field_name not in {'id', 'name'}
+                    data.items() if field_name not in {'id', 'name', 'distance'}
                 }
             }
         else:
@@ -177,7 +188,7 @@ class DataStandardizer:
                 'id': data['id'],
                 'attributes': {
                     field_name: data for field_name, data in
-                    data.items() if field_name not in {'id', 'name'}
+                    data.items() if field_name not in {'id', 'name', 'distance'}
                 }
             }
 
@@ -207,14 +218,14 @@ class DataStandardizer:
         return result.inserted_id
 
     @staticmethod
-    def _output_msg(entity: Union[Market, Subject], similar_entity: Optional[Union[Market, Subject]] = None, distance: Optional[float] = None, msg_type: str = None):
+    def _output_msg(entity: Union[Market, Subject], similar_entity: Optional[Union[Market, Subject]] = None, total_distance: Optional[float] = None, msg_type: str = None):
         if msg_type == 'match':
             print(f'FOUND {entity.name}: SUCCESS -> {entity}')
         elif msg_type == 'similar':
-            print(f'FOUND SIMILAR {"SUBJECT" if isinstance(entity, Subject) else "MARKET"}: SUCCESSFUL MATCH -> {distance}')
+            print(f'FOUND SIMILAR {"SUBJECT" if isinstance(entity, Subject) else "MARKET"}: SUCCESSFUL MATCH -> {total_distance}')
             print(f'********************** {entity} **********************')
             print(f'---------------------- {similar_entity} ----------------------')
         elif msg_type == 'insert':
-            print(f'INSERTING {entity.name}: FAILED MATCH -> {distance}')
+            print(f'INSERTING {entity.name}: FAILED MATCH -> {total_distance}')
             print(f'********************** {entity} **********************')
             print(f'---------------------- {similar_entity} ----------------------')

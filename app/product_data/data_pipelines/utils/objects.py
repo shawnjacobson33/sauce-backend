@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from app.product_data.data_pipelines.utils import LEAGUE_SPORT_MAP
+
 
 @dataclass
 class Subject:
@@ -11,7 +13,7 @@ class Subject:
     jersey_number: Optional[str] = None
 
 
-@dataclass
 class Market:
-    name: str
-    league: Optional[str] = None
+    def __init__(self, name: str, league: Optional[str] = None):
+        self.name = name
+        self.sport = LEAGUE_SPORT_MAP.get(league)

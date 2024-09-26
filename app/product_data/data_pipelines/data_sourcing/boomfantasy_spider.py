@@ -4,8 +4,8 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import RequestManager, DataStandardizer, Helper, DataCleaner, get_db, \
-    Subject, Market
+from app.product_data.data_pipelines.utils import RequestManager, DataStandardizer, Helper, clean_subject, clean_league,\
+    get_db, Subject, Market
 
 
 def read_tokens():
@@ -42,7 +42,7 @@ class BoomFantasySpider:
                     for league in section.get('leagues', []):
                         league_name = league.get('league')
                         if league_name:
-                            league_name = DataCleaner.clean_league(league_name.upper())
+                            league_name = clean_league(league_name.upper())
                             if not Helper.is_league_good(league_name):
                                 continue
 
@@ -68,7 +68,7 @@ class BoomFantasySpider:
                                         # subjects show up more than once so don't need to get subject id every time.
                                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                                         if not subject_id:
-                                            cleaned_subj = DataCleaner.clean_subject(subject)
+                                            cleaned_subj = clean_subject(subject)
                                             subject_obj = Subject(cleaned_subj, league_name, subject_team)
                                             subject_id = self.ds.get_subject_id(subject_obj)
                                             subject_ids[f'{subject}{subject_team}'] = subject_id
