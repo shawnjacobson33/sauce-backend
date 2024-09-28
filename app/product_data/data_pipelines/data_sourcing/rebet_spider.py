@@ -3,15 +3,16 @@ import uuid
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
+from app.product_data.data_pipelines.utils import clean_subject, clean_market, clean_league, DataStandardizer, \
+    RequestManager, Helper, get_db, Market, Subject
 
 
 class RebetSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='Rebet')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
 
     async def start(self):
@@ -41,10 +42,13 @@ class RebetSpider:
 
     async def _parse_lines(self, response):
         data = response.json()
+        subject_ids = dict()
         for event in data.get('data', {}).get('events', []):
             last_updated, league, game_time = event.get('updated_at'), event.get('league_name'), event.get('start_time')
             if league:
-                league = DataCleaner.clean_league(league)
+                league = clean_league(league)
+                if not Helper.is_league_good(league):
+                    continue
 
             if last_updated:
                 # convert from unix to a datetime
@@ -63,16 +67,19 @@ class RebetSpider:
                             market_name = ' '.join(new_market_name_components[1:]).title()
 
                         if market_name:
-                            market_id = self.dn.get_market_id(market)
+                            market_name = clean_market(market_name)
+                            market_id = self.ds.get_market_id(Market(market_name, league))
 
                         # get subject
                         subject_id, subject, player_name = None, None, market.get('player_name')
                         if player_name:
                             player_name_components = player_name.split(', ')
                             if len(player_name_components) == 2:
-                                subject = f'{player_name_components[1]} {player_name_components[0]}'
-                                if subject:
-                                    subject_id = self.dn.get_subject_id(subject, league)
+                                subject = clean_subject(f'{player_name_components[1]} {player_name_components[0]}')
+                                subject_id = subject_ids.get(f'{subject}{league}')
+                                if not subject_id:
+                                    subject_id = self.ds.get_subject_id(Subject(subject, league))
+                                    subject_ids[f'{subject}{league}'] = subject_id
 
                         # get line
                         label, line, outcomes = None, None, market.get('outcome', [])
@@ -137,7 +144,12 @@ class RebetSpider:
 
 async def main():
     db = get_db()
-    spider = RebetSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Rebet', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = RebetSpider(uuid.uuid4(), RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

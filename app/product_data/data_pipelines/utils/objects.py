@@ -14,6 +14,9 @@ class Subject:
 
 
 class Market:
-    def __init__(self, name: str, league: Optional[str] = None):
+    def __init__(self, name: str, league: Optional[str] = None, sport: Optional[str] = None):
         self.name = name
-        self.sport = LEAGUE_SPORT_MAP.get(league)
+        self.sport = LEAGUE_SPORT_MAP.get(league) if not sport else sport
+
+    def __str__(self):
+        return f"Market(name: {self.name}, sport: {self.sport})"

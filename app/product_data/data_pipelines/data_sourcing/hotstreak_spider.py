@@ -4,7 +4,8 @@ import random
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataStandardizer, RequestManager, Helper, get_db, Subject
+from app.product_data.data_pipelines.utils import clean_subject, clean_league, DataStandardizer, RequestManager, \
+    Helper, get_db, Subject, Market
 
 
 class HotStreakSpider:
@@ -100,28 +101,27 @@ class HotStreakSpider:
                     if opponent:
                         league, game_time = opponent.get('league'), opponent.get('game_time')
                         if league:
-                            league = DataCleaner.clean_league(league)
+                            league = clean_league(league)
                             if not Helper.is_league_good(league):
                                 continue
 
                             self.uniq_leagues.add(league)
 
                 if subject:
-                    subject = subject.strip()
                     subject_id = subject_ids.get(f'{subject}{position}')
                     if not subject_id:
-                        subject_obj = Subject(subject, league, position=position, jersey_number=jersey_number)
-                        subject_id = self.ds.get_subject_id(subject_obj)
+                        cleaned_subject = clean_subject(subject)
+                        subject_id = self.ds.get_subject_id(Subject(cleaned_subject, league, position=position, jersey_number=jersey_number))
                         subject_ids[f'{subject}{position}'] = subject_id
 
             if the_market:
                 if the_market == 'fantasy_points':
                     if league in {'NBA', 'WNBA'}:
-                        the_market = 'basketball_fantasy_points'
+                        the_market = 'Basketball Fantasy Points'
                     elif league in {'NFL', 'NCAAF'}:
-                        the_market = 'football_fantasy_points'
+                        the_market = 'Football Fantasy Points'
 
-                market_id = self.ds.get_market_id(the_market)
+                market_id = self.ds.get_market_id(Market(the_market, league))
 
             lines, probabilities = market.get('lines', []), market.get('probabilities', [])
             labels, n = ['Under', 'Over'], len(lines)
@@ -158,7 +158,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = HotStreakSpider(batch_id, RequestManager(), DataStandardizer(batch_id, 'HotStreak', db))
+    spider = HotStreakSpider(batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

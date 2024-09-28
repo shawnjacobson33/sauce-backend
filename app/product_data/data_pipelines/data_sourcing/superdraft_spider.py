@@ -3,15 +3,16 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, DataNormalizer, Helper, get_db
+from app.product_data.data_pipelines.utils import clean_market, clean_league, clean_subject, RequestManager, \
+    DataStandardizer, Helper, get_db, Subject, Market
 
 
 class SuperDraftSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='SuperDraft')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
 
     async def start(self):
@@ -38,7 +39,10 @@ class SuperDraftSpider:
                 last_updated, game_time = prop.get('updatedAt'), prop.get('startTimeUTC')
                 league = sports.get(int(prop.get('sportId')))
                 if league:
-                    league = DataCleaner.clean_league(league)
+                    if not Helper.is_league_good(league):
+                        continue
+
+                    league = clean_league(league)
 
                 # get market
                 market_id, market, choices = None, None, prop.get('choices')
@@ -49,9 +53,10 @@ class SuperDraftSpider:
                         if requirements:
                             market = requirements[0].get('name')
                             if market in {'Fantasy Hitting', 'Fantasy Pitching'}:
-                                market = 'Baseball Fantasy Score'
+                                market = 'Baseball Fantasy Points'
                             if market:
-                                market_id = self.dn.get_market_id(market)
+                                market = clean_market(market)
+                                market_id = self.ds.get_market_id(Market(market, league))
 
                 # get player data
                 subject_id, player = None, prop.get('player')
@@ -70,10 +75,10 @@ class SuperDraftSpider:
                 else:
                     subject_team, position = player.get('teamAbbr'), player.get('posAbbr')
                     if subject:
+                        subject = clean_subject(subject)
                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                         if not subject_id:
-                            cleaned_subject = DataCleaner.clean_subject(subject)
-                            subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team, position)
+                            subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team, position))
                             subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 game_info, line = player.get('eventName'), prop.get('line')
@@ -102,7 +107,12 @@ class SuperDraftSpider:
 
 async def main():
     db = get_db()
-    spider = SuperDraftSpider(uuid.uuid4(), RequestManager(), DataNormalizer('SuperDraft', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = SuperDraftSpider(uuid.uuid4(), RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

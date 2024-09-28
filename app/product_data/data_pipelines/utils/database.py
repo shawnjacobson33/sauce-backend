@@ -1,10 +1,10 @@
-from typing import Tuple, Optional, Union, Any
+from typing import Tuple, Any
 from pandas import DataFrame
 from pymongo import MongoClient
 from pymongo.collection import Collection
 import os
 
-from app.product_data.data_pipelines.utils import IN_SEASON_LEAGUES
+from app.product_data.data_pipelines.utils import IN_SEASON_LEAGUES, SUBJECT_COLLECTION_NAME, IN_SEASON_SPORTS
 
 DATABASE_URL = 'mongodb+srv://username:password@sauce.hvhxg.mongodb.net/?retryWrites=true&w=majority&appName=Sauce'
 
@@ -25,17 +25,24 @@ def get_db():
     return get_client()['sauce']
 
 
-def get_queries(has_leagues: bool) -> dict[Any, dict[str, Any]]:
+def get_queries(collection_name: str, has_grouping: bool) -> dict[Any, dict[str, Any]]:
     queries = {}
-    # Drafters doesn't include leagues
-    if has_leagues:
-        for league in IN_SEASON_LEAGUES:
-            queries[league] = {'attributes.league': league}
+    # Groupings by league is more relevant to subjects not markets.
+    if collection_name == SUBJECT_COLLECTION_NAME:
+        # Drafters doesn't include leagues
+        if has_grouping:
+            for league in IN_SEASON_LEAGUES:
+                queries[league] = {'attributes.league': league}
+    else:
+        # Drafters doesn't include leagues
+        if has_grouping:
+            for sport in IN_SEASON_SPORTS:
+                queries[sport] = {'attributes.sport': sport}
 
     return queries
 
 
-def get_entities(collection: Collection, has_leagues: bool = True):
+def get_entities(collection: Collection, has_grouping: bool = True):
     def query_entities(q: dict = None):
         # TODO: Add more hashing mechanisms to improve search performance (by first letter of a subject's name)
         nested_entities, flattened_entities = {}, []
@@ -59,13 +66,15 @@ def get_entities(collection: Collection, has_leagues: bool = True):
 
         return {'n': nested_entities, 'f': DataFrame(flattened_entities)}
 
-    # Drafters will have a different initialization to handle all subjects from all leagues.
+    # Drafters will have a different initialization to handle all entities from all groupings.
     entities = {}
-    if not has_leagues:
+    if not has_grouping:
         return query_entities()
 
-    # otherwise get every subject from every league but separate them.
-    for league_name, query in get_queries(has_leagues).items():
-        entities[league_name] = query_entities(query)
+    # otherwise get every entity from every grouping but separate them.
+    for grouper_name, query in get_queries(collection.name, has_grouping).items():
+        entities[grouper_name] = query_entities(query)
 
     return entities
+
+

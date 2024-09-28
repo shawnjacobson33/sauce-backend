@@ -1,3 +1,4 @@
+import pandas as pd
 from pymongo.collection import Collection
 
 from constants import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME
@@ -51,6 +52,37 @@ def update_collection_field_names(collection: Collection):
         db['new_subjects'].insert_one(new_doc)
 
 
+def check_alt_names(collection: Collection):
+    data = []
+    for doc in collection.find():
+        if doc['attributes']['alt_names']:
+            row = {'name': doc['name']}
+            for i, alt_name in enumerate(doc['attributes']['alt_names']):
+                row.update({f'alt_name_{i}': alt_name})
+
+            data.append(row)
+
+    return pd.DataFrame(data)
+
+
+def check_for_duplicates(collection: Collection):
+    subject_docs = collection.find()
+    unique_subjects = dict()
+    duplicates = []
+    for doc in subject_docs:
+        league = unique_subjects.get(doc['name'])
+        if league != doc['attributes']['league']:
+            unique_subjects[doc['name']] = doc['attributes']['league']
+        else:
+            duplicates.append(doc['name'])
+
+    print(len(duplicates) == 0)
+    return duplicates
+
+
+df = check_alt_names(subjects)
+docs = check_for_duplicates(subjects)
+asd = 123
 # update_collection_field_names(db['subjects'])
 # remove_subjects(batch_id="e4a8c59e-2a6f-4247-8631-784349ed68a7")
 # remove_subjects(bookmaker='ParlayPlay')

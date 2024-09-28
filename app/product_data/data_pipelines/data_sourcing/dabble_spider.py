@@ -3,7 +3,8 @@ import uuid
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataStandardizer, RequestManager, Helper, get_db, Subject
+from app.product_data.data_pipelines.utils import clean_subject, clean_league, DataStandardizer, RequestManager, \
+    Helper, get_db, Subject, Market, clean_market
 
 
 class DabbleSpider:
@@ -26,7 +27,7 @@ class DabbleSpider:
         for competition in data.get('activeCompetitions', []):
             competition_id, league = competition.get('id'), competition.get('displayName')
             if league:
-                league = DataCleaner.clean_league(league)
+                league = clean_league(league)
                 if not Helper.is_league_good(league):
                     continue
 
@@ -63,22 +64,25 @@ class DabbleSpider:
         subject_ids = dict()
         for player_prop in data.get('playerProps', []):
             market = markets.get(player_prop.get('marketId'))
+            if market:
+                market = clean_market(market)
+
             # don't want futures
             if 'Regular Season' in market:
                 continue
 
-            subject_id, market_id, position = None, self.ds.get_market_id(market), player_prop.get('position')
-            subject, subject_team = player_prop.get('playerName'), player_prop.get('teamAbbreviation')
+            market_id, position = self.ds.get_market_id(Market(market, league)), player_prop.get('position')
+            subject_id, subject, subject_team = None, player_prop.get('playerName'), player_prop.get('teamAbbreviation')
             if subject_team and league in {'NCAAF', 'NFL'}:
                 subject_team = subject_team.upper()
 
             if subject:
                 # Since the same subject has many prop lines it is much faster to keep a dictionary of subject ids
                 # to avoid redundant queries.
+                subject = clean_subject(subject)
                 subject_id = subject_ids.get(f'{subject}{subject_team}')
                 if not subject_id:
-                    cleaned_subj = DataCleaner.clean_subject(subject)
-                    subject_obj = Subject(cleaned_subj, league, subject_team, position)
+                    subject_obj = Subject(subject, league, subject_team, position)
                     subject_id = self.ds.get_subject_id(subject_obj)
                     subject_ids[f'{subject}{subject_team}'] = subject_id
 
@@ -92,7 +96,6 @@ class DabbleSpider:
                 'market_category': 'player_props',
                 'market_id': market_id,
                 'market': market,
-                'subject_team': subject_team,
                 'subject_id': subject_id,
                 'subject': subject,
                 'position': position,
@@ -109,7 +112,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = DabbleSpider(batch_id, RequestManager(), DataStandardizer(batch_id, 'Dabble', db))
+    spider = DabbleSpider(batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

@@ -26,6 +26,7 @@ class RequestManager:
             await func(response, *args)
         else:
             print(f"Failed to retrieve {url} with status code {response.status_code}")
+            print(response.content)
             return response
 
     async def post_bf(self, url, func, file_path: str, refresh_token: str, access_token: str, json_data):

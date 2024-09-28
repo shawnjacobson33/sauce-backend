@@ -3,15 +3,16 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, Helper, RequestManager, get_db
+from app.product_data.data_pipelines.utils import clean_subject, clean_league, clean_market, DataStandardizer, Helper, \
+    RequestManager, get_db, Subject, Market
 
 
 class UnderdogSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='UnderdogFantasy')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
 
     async def start(self):
@@ -101,22 +102,26 @@ class UnderdogSpider:
 
                                 league, game_time = match.get('sport_id'), match.get('scheduled_at')
                                 # don't want futures and don't want combos because they are niche and hard to normalize
-                                if ('SZN' in league) or ('COMBOS' in league):
+                                if ('SZN' in league) or ('COMBOS' in league) or not Helper.is_league_good(clean_league(league)):
                                     continue
+
+                                if league:
+                                    league = clean_league(league)
+                                    leagues.add(league)
 
                         # get market and market id
                         if market:
-                            market = market.strip()
                             # create more distinct markets
                             if market == 'Fantasy Points':
                                 if league in {'NBA', 'WNBA'}:
                                     market = 'Basketball Fantasy Points'
                                 elif league == 'MLB':
                                     market = 'Baseball Fantasy Points'
-                                elif league in {'NFL', 'CFB'}:
+                                elif league in {'NFL', 'NCAAF'}:
                                     market = 'Football Fantasy Points'
 
-                            market_id = self.dn.get_market_id(market)
+                            market = clean_market(market)
+                            market_id = self.ds.get_market_id(Market(market, league))
 
                         # get subject
                         player_id = player_ids.get(appearance_id)
@@ -133,15 +138,11 @@ class UnderdogSpider:
                                     # assign the league to the more specific game in the ESPORTS realm
                                     league, subject = subject_components[0], subject_components[1]
 
-                            if league:
-                                league = DataCleaner.clean_league(league)
-                                leagues.add(league)
-
                             # subjects show up more than once so don't need to get subject id every time.
+                            subject = clean_subject(subject)
                             subject_id = subject_ids.get(f'{subject}{subject_team}')
                             if subject:
-                                cleaned_subject = DataCleaner.clean_subject(subject)
-                                subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team)
+                                subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team))
                                 subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 label = 'Over' if option.get('choice') == 'higher' else 'Under'
@@ -169,7 +170,12 @@ class UnderdogSpider:
 
 async def main():
     db = get_db()
-    spider = UnderdogSpider(uuid.uuid4(), RequestManager(), DataNormalizer('Underdog Fantasy', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = UnderdogSpider(uuid.uuid4(), RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

@@ -64,12 +64,45 @@ def clean_league(league: str):
     return leagues_mapping.get(cleaned_league, cleaned_league)
 
 
+def clean_market(market: str):
+    # Initialize some values to reduce redundancy
+    n, is_uppercase = len(market), market.isupper()
+    # 'Total' is unnecessary to include in a market name -- located here so the next line will strip any extra space
+    cleaned_market = market.replace('Total', '')
+    # BoomFantasy annoyingly uses underscore as spaces
+    cleaned_market = cleaned_market.replace('_', ' ')
+    # For example 'RBI' is fine to be uppercase but BATTER WALKS and BASES isn't
+    if ((' ' in cleaned_market) or n > 4) or cleaned_market.islower():
+        # Payday capitalizes every letter in the market name
+        cleaned_market = cleaned_market.title()
+
+    # remove any words in parentheses
+    if cleaned_market[-1] == ')':
+        # include all but up to the space and open parenthesis
+        cleaned_market = cleaned_market[:cleaned_market.index(' (')]
+
+    if n < 4 and not is_uppercase:
+        cleaned_market = cleaned_market.upper()
+
+    # Don't move because the .title() needs to go first
+    cleaned_market = cleaned_market.replace(' And ', ' + ').replace('Player ', '')
+    # Use regex to find '+' that doesn't already have spaces around it
+    cleaned_market = re.sub(r'(?<!\s)\+(?!\s)', ' + ', cleaned_market)
+    # Use regex to add a space before uppercase letters that are immediately after lowercase letters
+    cleaned_market = re.sub(r'([a-z])([A-Z])', r'\1 \2', cleaned_market)
+
+    return cleaned_market.strip()
+
+
 def clean_subject(subject: str):
     # Define suffixes in a list with regex patterns to ensure they are standalone with spaces
     suffixes = [
-        'Jr.', 'jr.', 'jr', 'Jr', 'Sr.', 'sr.', 'sr', 'Sr', 'III', 'II', 'IV'
+        'Jr.', 'jr.', 'jr', 'Jr', 'Sr.', 'sr.', 'sr', 'Sr', 'III', 'II', 'IV', 'V'
     ]
     for suffix in suffixes:
         subject = re.sub(fr' {suffix}$', '', subject)
 
     return subject.strip()
+
+
+print("AST Tackles".isupper())

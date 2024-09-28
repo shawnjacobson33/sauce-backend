@@ -3,15 +3,16 @@ import uuid
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
+from app.product_data.data_pipelines.utils import clean_subject, clean_league, DataStandardizer, RequestManager, \
+    Helper, get_db, Subject, Market
 
 
 class PaydaySpider:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='Payday')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
         self.headers = self.helper.get_headers()
 
@@ -27,11 +28,11 @@ class PaydaySpider:
         for league_data in data.get('data', []):
             league = league_data.get('slug')
             if league:
-                if not Helper.is_league_good(DataCleaner.clean_league(league)):
+                if not Helper.is_league_good(clean_league(league)):
                     continue
 
                 params = self.helper.get_params(name='contests', var_1=league)
-                league = DataCleaner.clean_league(league)
+                league = clean_league(league)
                 tasks.append(self.rm.get(url, self._parse_contests, league, headers=self.headers, params=params))
 
         await asyncio.gather(*tasks)
@@ -65,14 +66,12 @@ class PaydaySpider:
                 market_id = None
                 market, line, player = player_prop.get('name'), player_prop.get('value'), player_prop.get('player')
                 if market:
-                    market_id = self.dn.get_market_id(market)
+                    market_id = self.ds.get_market_id(Market(market, league))
 
                 if player:
-                    subject_jersey_number = player.get('number')
+                    jersey_number = player.get('number')
                     # for tennis players that don't actually have jersey numbers
-                    if subject_jersey_number == 'N/A':
-                        subject_jersey_number = None
-
+                    jersey_number = None if jersey_number == 'N/A' else jersey_number
                     subject, position = player.get('name'), player.get('position')
                     subject_id, subject_team, team_id = None, None, player.get('team_id')
                     if team_id:
@@ -85,8 +84,8 @@ class PaydaySpider:
 
                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                         if not subject_id:
-                            cleaned_subject = DataCleaner.clean_subject(subject)
-                            subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team, position, subject_jersey_number)
+                            cleaned_subject = clean_subject(subject)
+                            subject_id = self.ds.get_subject_id(Subject(cleaned_subject, league, subject_team, position, jersey_number))
                             subject_ids[f'{subject}{subject_team}'] = subject_id
 
                     for label in ['Over', 'Under']:
@@ -102,7 +101,7 @@ class PaydaySpider:
                             'position': position,
                             'subject_id': subject_id,
                             'subject': subject,
-                            'jersey_number': subject_jersey_number,
+                            'jersey_number': jersey_number,
                             'bookmaker': 'Payday',
                             'label': label,
                             'line': line
@@ -116,7 +115,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = PaydaySpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'Payday', db))
+    spider = PaydaySpider(batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

@@ -3,7 +3,8 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, DataStandardizer, Helper, get_db, Subject
+from app.product_data.data_pipelines.utils import clean_subject, clean_league, RequestManager, DataStandardizer, \
+    Helper, get_db, Subject, Market
 
 
 class MoneyLineSpider:
@@ -27,7 +28,7 @@ class MoneyLineSpider:
         for bet in data.get('bets', []):
             is_boosted, league, market = False, bet.get('league'), bet.get('bet_text')
             if league:
-                league = DataCleaner.clean_league(league)
+                league = clean_league(league)
                 if not Helper.is_league_good(league):
                     continue
 
@@ -47,8 +48,10 @@ class MoneyLineSpider:
             elif market == 'Fantasy Points':
                 if league in {'WNBA', 'NBA'}:
                     market = 'Basketball Fantasy Points'
+                elif league in {'NFL', 'NCAAF'}:
+                    market = 'Football Fantasy Points'
 
-            market_id = self.ds.get_market_id(market)
+            market_id = self.ds.get_market_id(Market(market, league))
             subject_id, subject, subject_team, subject_components = None, None, None, bet.get('title')
             if subject_components:
                 subject_components = subject_components.split()
@@ -57,7 +60,7 @@ class MoneyLineSpider:
                 if subject:
                     subject_id = subject_ids.get(f'{subject}{subject_team}')
                     if not subject_id:
-                        cleaned_subj = DataCleaner.clean_subject(subject)
+                        cleaned_subj = clean_subject(subject)
                         subject_obj = Subject(cleaned_subj, league, subject_team)
                         subject_id = self.ds.get_subject_id(subject_obj)
                         subject_ids[f'{subject}{subject_team}'] = subject_id
@@ -95,7 +98,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = MoneyLineSpider(batch_id, RequestManager(), DataStandardizer(batch_id, 'MoneyLine', db))
+    spider = MoneyLineSpider(batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

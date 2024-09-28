@@ -3,7 +3,8 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import RequestManager, DataStandardizer, Helper, DataCleaner, get_db, Subject
+from app.product_data.data_pipelines.utils import RequestManager, DataStandardizer, Helper, clean_subject, \
+    get_db, Subject, Market
 
 
 class DraftersSpider:
@@ -28,24 +29,25 @@ class DraftersSpider:
             if 'Season' in event.get('_id'):
                 continue
 
+            if event:
+                home_team, away_team = event.get('home'), event.get('away')
+                subject_team, game_info = event.get('own'), ' @ '.join([away_team, home_team])
+                if subject_team == 'MMA':
+                    continue
+
             for player in event.get('players', []):
                 subject_id, position, subject = None, None, player.get('player_name')
                 # get game info
                 subject_team, game_info, event = None, None, player.get('event')
-                if event:
-                    home_team, away_team = event.get('home'), event.get('away')
-                    subject_team, game_info = event.get('own'), ' @ '.join([away_team, home_team])
-                    if subject_team != 'MMA':
-                        position = player.get('player_position')
-                        if position:
-                            position = position.strip()
+                position = player.get('player_position')
+                if position:
+                    position = position.strip()
 
                 if subject:
+                    subject = clean_subject(subject)
                     subject_id = subject_ids.get(f'{subject}{subject_team}')
                     if not subject_id:
-                        cleaned_subj = DataCleaner.clean_subject(subject)
-                        subject_obj = Subject(cleaned_subj, team=subject_team, position=position)
-                        subject_id = self.ds.get_subject_id(subject_obj)
+                        subject_id = self.ds.get_subject_id(Subject(subject, team=subject_team, position=position))
                         subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 market_id, market, line = None, player.get('bid_stats_name'), player.get('bid_stats_value')
@@ -56,7 +58,7 @@ class DraftersSpider:
                     market = 'Pass + Rush Yards'
 
                 if market:
-                    market_id = self.ds.get_market_id(market)
+                    market_id = self.ds.get_market_id(Market(market))
 
                 for label in ['Over', 'Under']:
                     self.prop_lines.append({
@@ -85,11 +87,12 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = DraftersSpider(batch_id, RequestManager(), DataStandardizer(batch_id, 'Drafters', db))
+    spider = DraftersSpider(batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
     print(f'[Drafters]: {round(end_time - start_time, 2)}s')
+
 
 if __name__ == "__main__":
     asyncio.run(main())

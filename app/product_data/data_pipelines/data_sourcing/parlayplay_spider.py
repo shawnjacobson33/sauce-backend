@@ -3,15 +3,16 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
+from app.product_data.data_pipelines.utils import clean_league, clean_subject, clean_market, DataStandardizer, \
+    RequestManager, Helper, get_db, Market, Subject
 
 
 class ParlayPlaySpider:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='ParlayPlay')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
 
     async def start(self):
@@ -33,7 +34,9 @@ class ParlayPlaySpider:
                 if player_league:
                     league = player_league.get('leagueNameShort')
                     if league:
-                        league = DataCleaner.clean_league(league)
+                        league = clean_league(league)
+                        if not Helper.is_league_good(league):
+                            continue
 
             # get subject data
             subject_id, subject, position, subject_team, player_data = None, None, None, None, player.get('player')
@@ -43,26 +46,27 @@ class ParlayPlaySpider:
                 if team_data:
                     subject_team = team_data.get('teamAbbreviation')
 
+                subject = clean_subject(subject)
                 subject_id = subject_ids.get(f'{subject}{subject_team}')
                 if not subject_id:
-                    cleaned_subject = DataCleaner.clean_subject(subject)
-                    subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team, position)
+                    subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team, position))
                     subject_ids[f'{subject}{subject_team}'] = subject_id
 
             for stat in player.get('stats', []):
                 is_boosted_payout, alt_lines = stat.get('isBoostedPayout'), stat.get('altLines')
                 if alt_lines:
                     market, market_id = alt_lines.get('market'), None
-                    if market == 'Player Fantasy Score':
+                    if market in {'Player Fantasy Score', 'Fantasy Points'}:
                         if league == 'MLB':
-                            market = 'Player Baseball Fantasy Score'
+                            market = 'Baseball Fantasy Points'
                         elif league in {'WNBA', 'NBA'}:
-                            market = 'Player Basketball Fantasy Score'
-                        elif league in {'NFL'}:
-                            market = 'Player Football Fantasy Score'
+                            market = 'Basketball Fantasy Points'
+                        elif league in {'NFL', 'NCAAF'}:
+                            market = 'Football Fantasy Points'
 
                     if market:
-                        market_id = self.dn.get_market_id(market)
+                        market = clean_market(market)
+                        market_id = self.ds.get_market_id(Market(market, league))
 
                     for line in alt_lines.get('values', []):
                         stat_line = line.get('selectionPoints')
@@ -101,7 +105,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = ParlayPlaySpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'ParlayPlay', db))
+    spider = ParlayPlaySpider(batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

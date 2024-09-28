@@ -3,15 +3,16 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, DataNormalizer, Helper, get_db
+from app.product_data.data_pipelines.utils import clean_subject, clean_market, clean_league, RequestManager, \
+    DataStandardizer, Helper, get_db, Subject, Market
 
 
 class SleeperSpider:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='Sleeper')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
         self.headers = self.helper.get_headers()
 
@@ -43,17 +44,14 @@ class SleeperSpider:
     async def _parse_lines(self, response, players):
         data = response.json()
         subject_ids = dict()
-        leagues = set()
         for line in data:
             subject_team, subject, position, player_id, league = None, None, None, line.get('subject_id'), line.get(
                 'sport')
             cleaned_league = None
             if league:
-                cleaned_league = DataCleaner.clean_league(league)
+                cleaned_league = clean_league(league)
                 if not Helper.is_league_good(cleaned_league):
                     continue
-
-                leagues.add(cleaned_league)
 
             subject_id = None
             if player_id:
@@ -62,23 +60,24 @@ class SleeperSpider:
                     subject_team, subject, position = player.get('subject_team'), player.get('player_name'), player.get(
                         'position')
                     if subject:
+                        subject = clean_subject(subject)
                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                         if not subject_id:
-                            cleaned_subject = DataCleaner.clean_subject(subject)
-                            subject_id = self.dn.get_subject_id(cleaned_subject, cleaned_league, subject_team, position)
+                            subject_id = self.ds.get_subject_id(Subject(subject, cleaned_league, subject_team, position))
                             subject_ids[f'{subject}{subject_team}'] = subject_id
 
             market_id, last_updated, market = None, line.get('updated_at'), line.get('wager_type')
             if market:
                 if market == 'fantasy_points':
-                    if league == 'MLB':
-                        market = 'baseball_fantasy_points'
-                    elif league in {'NFL', 'NCAAF'}:
-                        market = 'football_fantasy_points'
-                    elif league in {'NBA', 'WNBA'}:
-                        market = 'basketball_fantasy_points'
+                    if cleaned_league == 'MLB':
+                        market = 'Baseball Fantasy Points'
+                    elif cleaned_league in {'NFL', 'NCAAF'}:
+                        market = 'Football Fantasy Points'
+                    elif cleaned_league in {'NBA', 'WNBA'}:
+                        market = 'Basketball Fantasy Points'
 
-                market_id = self.dn.get_market_id(market)
+                market = clean_market(market)
+                market_id = self.ds.get_market_id(Market(market, cleaned_league))
 
             if last_updated:
                 # convert from unix to a datetime
@@ -115,7 +114,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = SleeperSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'Sleeper', db))
+    spider = SleeperSpider(batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

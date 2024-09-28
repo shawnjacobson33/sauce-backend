@@ -8,12 +8,12 @@ from app.product_data.data_pipelines.utils import Subject, Market, SUBJECT_COLLE
 
 
 class DataStandardizer:
-    def __init__(self, batch_id: str, db: Database, has_leagues: bool = True):
+    def __init__(self, batch_id: str, db: Database, has_grouping: bool = True):
         self.batch_id = batch_id
         self.market_collection = db[MCN]
         self.subject_collection = db[SCN]
-        self.subjects = get_entities(self.subject_collection, has_leagues=has_leagues)
-        self.markets = get_entities(self.market_collection, has_leagues=has_leagues)
+        self.subjects = get_entities(self.subject_collection, has_grouping=has_grouping)
+        self.markets = get_entities(self.market_collection, has_grouping=has_grouping)
         self.nested_subjects, self.flattened_subjects = None, None
         self.nested_markets, self.flattened_markets = None, None
 
@@ -31,7 +31,7 @@ class DataStandardizer:
 
         self.flattened_markets = filtered_markets['f']
         sm_data = self._get_most_similar_entity(market)
-        most_similar_market = Market(sm_data['name'], sm_data['sport'])
+        most_similar_market = Market(sm_data['name'], sport=sm_data['sport'])
         market_distance = sm_data['distance']
         if not sm_data.empty and market_distance < 3:
             del sm_data['distance']
@@ -226,6 +226,6 @@ class DataStandardizer:
             print(f'********************** {entity} **********************')
             print(f'---------------------- {similar_entity} ----------------------')
         elif msg_type == 'insert':
-            print(f'INSERTING {entity.name}: FAILED MATCH -> {total_distance}')
+            print(f'INSERTING {"SUBJECT" if isinstance(entity, Subject) else "MARKET"}: FAILED MATCH -> {total_distance}')
             print(f'********************** {entity} **********************')
             print(f'---------------------- {similar_entity} ----------------------')

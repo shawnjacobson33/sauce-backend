@@ -3,15 +3,16 @@ import uuid
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, DataNormalizer, Helper, get_db
+from app.product_data.data_pipelines.utils import clean_subject, clean_league, RequestManager, DataStandardizer, \
+    Helper, get_db, Market, Subject
 
 
 class OwnersBoxSpider:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='OwnersBox')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
         self.headers = self.helper.get_headers()
         self.cookies = self.helper.get_cookies()
@@ -25,7 +26,7 @@ class OwnersBoxSpider:
         url = self.helper.get_url(name='markets')
         tasks = []
         for league in data:
-            if not Helper.is_league_good(DataCleaner.clean_league(league)):
+            if not Helper.is_league_good(clean_league(league)):
                 continue
 
             params = self.helper.get_params(name='markets', var_1=league)
@@ -55,14 +56,14 @@ class OwnersBoxSpider:
         for prop_line in data.get('markets', []):
             league = prop_line.get('sport')
             if league:
-                DataCleaner.clean_league(league)
+                league = clean_league(league)
 
             # get market
             market_id, market, market_type = None, None, prop_line.get('marketType')
             if market_type:
                 market = market_type.get('name')
                 if market:
-                    market_id = self.dn.get_market_id(market)
+                    market_id = self.ds.get_market_id(Market(market, league))
 
             # get game info
             game_info, game = None, prop_line.get('game')
@@ -80,8 +81,8 @@ class OwnersBoxSpider:
                 subject = ' '.join([first_name, last_name])
                 subject_id = subject_ids.get(f'{subject}{subject_team}')
                 if not subject_id:
-                    cleaned_subject = DataCleaner.clean_subject(subject)
-                    subject_id = self.dn.get_subject_id(cleaned_subject, league=league, subject_team=subject_team, position=position)
+                    cleaned_subject = clean_subject(subject)
+                    subject_id = self.ds.get_subject_id(Subject(cleaned_subject, league, subject_team, position))
                     subject_ids[f'{subject}{subject_team}'] = subject_id
 
             # get line
@@ -135,7 +136,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = OwnersBoxSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'OwnersBox', db))
+    spider = OwnersBoxSpider(batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

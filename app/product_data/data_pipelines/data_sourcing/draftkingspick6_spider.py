@@ -5,7 +5,8 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import asyncio
 
-from app.product_data.data_pipelines.utils import RequestManager, DataCleaner, DataStandardizer, Helper, get_db, Subject
+from app.product_data.data_pipelines.utils import RequestManager, clean_subject, clean_league, DataStandardizer, \
+    Helper, get_db, Subject, Market
 
 
 class DraftKingsPick6:
@@ -27,7 +28,7 @@ class DraftKingsPick6:
                        not sport_div.text.isnumeric()]:
             url = response.url + f"?sport={league}&_data=routes%2F_index"
             if league:
-                league = DataCleaner.clean_league(league)
+                league = clean_league(league)
                 if not Helper.is_league_good(league):
                     continue
 
@@ -54,7 +55,7 @@ class DraftKingsPick6:
                 market_category = pickable.get('marketCategory')
                 if market_category:
                     market = market_category.get('marketName')
-                    market_id = self.ds.get_market_id(market)
+                    market_id = self.ds.get_market_id(Market(market, league))
                 for entity in pickable.get('pickableEntities', []):
                     subject, competitions = entity.get('displayName'), entity.get('pickableCompetitions')
                     if competitions:
@@ -69,7 +70,7 @@ class DraftKingsPick6:
 
                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                         if not subject_id:
-                            cleaned_subj = DataCleaner.clean_subject(subject)
+                            cleaned_subj = clean_subject(subject)
                             subject_obj = Subject(cleaned_subj, league, subject_team, position)
                             subject_id = self.ds.get_subject_id(subject_obj)
                             subject_ids[f'{subject}{subject_team}'] = subject_id
@@ -107,7 +108,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = DraftKingsPick6(batch_id, RequestManager(), DataStandardizer(batch_id, 'DraftKings Pick6', db))
+    spider = DraftKingsPick6(batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

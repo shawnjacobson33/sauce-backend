@@ -3,15 +3,16 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import DataCleaner, RequestManager, DataNormalizer, Helper, get_db
+from app.product_data.data_pipelines.utils import clean_league, clean_subject, RequestManager, DataStandardizer, \
+    Helper, get_db, Subject, Market, clean_market
 
 
 class VividPicksSpider:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='VividPicks')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
 
     async def start(self):
@@ -30,7 +31,9 @@ class VividPicksSpider:
                 continue
 
             if league:
-                league = DataCleaner.clean_league(league)
+                league = clean_league(league)
+                if not Helper.is_league_good(league):
+                    continue
 
             for player in event.get('activePlayers', []):
                 subject_id, last_updated = None, player.get('updatedAt')
@@ -39,16 +42,17 @@ class VividPicksSpider:
                     subject_team = player.get('teamName')
 
                 if subject:
+                    subject = clean_subject(subject)
                     subject_id = subject_ids.get(f'{subject}{subject_team}')
                     if not subject_id:
-                        cleaned_subject = DataCleaner.clean_subject(subject)
-                        subject_id = self.dn.get_subject_id(cleaned_subject, league, subject_team)
+                        subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team))
                         subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 for prop in player.get('visiblePlayerProps', []):
                     market_id, market, line, multiplier = None, prop.get('p'), prop.get('val'), 1.0
                     if market:
-                        market_id = self.dn.get_market_id(market)
+                        market = clean_market(market)
+                        market_id = self.ds.get_market_id(Market(market, league))
 
                     mult_player_props = player.get('configPlayerProps')
                     if mult_player_props:
@@ -100,7 +104,12 @@ class VividPicksSpider:
 
 async def main():
     db = get_db()
-    spider = VividPicksSpider(uuid.uuid4(), RequestManager(), DataNormalizer('VividPicks', db))
+    batch_id = str(uuid.uuid4())
+    with open('most_recent_batch_id.txt', 'w') as f:
+        f.write(batch_id)
+
+    print(f'Batch ID: {batch_id}')
+    spider = VividPicksSpider(uuid.uuid4(), RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

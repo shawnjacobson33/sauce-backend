@@ -4,8 +4,8 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import RequestManager, DataStandardizer, Helper, clean_subject, clean_league,\
-    get_db, Subject, Market
+from app.product_data.data_pipelines.utils import RequestManager, DataStandardizer, Helper, clean_market, clean_subject, \
+    clean_league, get_db, Subject, Market
 
 
 def read_tokens():
@@ -66,11 +66,10 @@ class BoomFantasySpider:
                                     subject = ' '.join([first_name, last_name])
                                     if subject:
                                         # subjects show up more than once so don't need to get subject id every time.
+                                        subject = clean_subject(subject)
                                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                                         if not subject_id:
-                                            cleaned_subj = clean_subject(subject)
-                                            subject_obj = Subject(cleaned_subj, league_name, subject_team)
-                                            subject_id = self.ds.get_subject_id(subject_obj)
+                                            subject_id = self.ds.get_subject_id(Subject(subject, league_name, subject_team))
                                             subject_ids[f'{subject}{subject_team}'] = subject_id
 
                             for question in league_section.get('fullQuestions', []):
@@ -87,6 +86,7 @@ class BoomFantasySpider:
                                             if len(stat_text_components) == 4:
                                                 market = stat_text_components[-2].lower().title()
                                                 if market:
+                                                    market = clean_market(market)
                                                     market_id = self.ds.get_market_id(Market(market, league_name))
 
                                 for choice in question.get('choices', []):
@@ -102,7 +102,6 @@ class BoomFantasySpider:
                                         'market_id': market_id,
                                         'market': market,
                                         'game_time': game_time,
-                                        'subject_team': subject_team,
                                         'subject_id': subject_id,
                                         'subject': subject,
                                         'bookmaker': 'BoomFantasy',

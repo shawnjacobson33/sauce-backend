@@ -4,15 +4,16 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_pipelines.utils import DataCleaner, DataNormalizer, RequestManager, Helper, get_db
+from app.product_data.data_pipelines.utils import clean_league, clean_subject, clean_market, DataStandardizer, \
+    RequestManager, Helper, get_db, Market, Subject
 
 
 class PrizePicksSpider:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_normalizer: DataNormalizer):
+    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         self.batch_id = batch_id
         self.helper = Helper(bookmaker='PrizePicks')
         self.rm = request_manager
-        self.dn = data_normalizer
+        self.ds = data_standardizer
         self.prop_lines = []
 
     async def start(self):
@@ -89,17 +90,17 @@ class PrizePicksSpider:
                     # in order to create more distinct markets
                     if 'Fantasy Score' in market:
                         if league in {'NBA', 'WNBA', 'WNBA1H', 'WNBA2H', 'WNBA1Q', 'WNBA2Q', 'WNBA3Q', 'WNBA4Q', 'WNBA1H'}:
-                            market = 'Basketball Fantasy Score'
+                            market = 'Basketball Fantasy Points'
                         elif league == 'TENNIS':
-                            market = 'Tennis Fantasy Score'
+                            market = 'Tennis Fantasy Points'
                         elif league in {'NFL', 'NFL1Q', 'NFL2Q', 'NFL3Q', 'NFL4Q', 'NFL1H', 'NFL2H', 'CFB', 'CFB1Q', 'CFB2Q', 'CFB1H', 'CFB3Q', 'CFB4Q', 'CFB2H'}:
-                            market = 'Football Fantasy Score'
+                            market = 'Football Fantasy Points'
                         elif league in {'INDYCAR', 'NASCAR'}:
-                            market = 'Car Racing Fantasy Score'
+                            market = 'Car Racing Fantasy Points'
                         elif league in {'MMA', 'UFC'}:
-                            market = 'Fighting Fantasy Score'
+                            market = 'Fighting Fantasy Points'
                         elif league == 'MLB':
-                            market = 'Baseball Fantasy Score'
+                            market = 'Baseball Fantasy Points'
 
                     # in order to create comparable market names
                     if re.match(r'^.+[1-4]([QH])$', league):
@@ -108,11 +109,15 @@ class PrizePicksSpider:
 
                     # clean league after extracting quarter or half info from it if it exists.
                     if league:
-                        league = DataCleaner.clean_league(league)
+                        league = clean_league(league)
+                        if not Helper.is_league_good(league):
+                            continue
+
                         uniq_leagues.add(league)
 
                     if market:
-                        market_id = self.dn.get_market_id(market)
+                        market = clean_market(market)
+                        market_id = self.ds.get_market_id(Market(market, league))
 
             subject_id = None
             subject_team, subject, position, relationship_new_player = None, None, None, relationships.get('new_player')
@@ -133,10 +138,10 @@ class PrizePicksSpider:
                             if ' + ' in subject:
                                 continue
 
-                            subject = DataCleaner.clean_subject(subject)
+                            subject = clean_subject(subject)
                             subject_id = subject_ids.get(f'{subject}{subject_team}')
                             if not subject_id:
-                                subject_id = self.dn.get_subject_id(subject, league, subject_team if league not in {'SOCCER', 'CS', 'VAL', 'DOTA', 'R6', 'TENNIS'} else None, position if league != 'SOCCER' else None)
+                                subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team, position))
                                 subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 game_time, stat_line = line_attributes.get('start_time'), line_attributes.get('line_score')
@@ -170,7 +175,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = PrizePicksSpider(batch_id, RequestManager(), DataNormalizer(batch_id, 'PrizePicks', db))
+    spider = PrizePicksSpider(batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
