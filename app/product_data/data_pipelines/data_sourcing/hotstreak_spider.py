@@ -4,8 +4,8 @@ import random
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_pipelines.utils import clean_subject, clean_league, DataStandardizer, RequestManager, \
-    Helper, get_db, Subject, Market
+from app.product_data.data_pipelines.utils import clean_market, clean_subject, clean_league, DataStandardizer, \
+    RequestManager, Helper, get_db, Subject, Market
 
 
 class HotStreakSpider:
@@ -108,10 +108,10 @@ class HotStreakSpider:
                             self.uniq_leagues.add(league)
 
                 if subject:
+                    subject = clean_subject(subject)
                     subject_id = subject_ids.get(f'{subject}{position}')
                     if not subject_id:
-                        cleaned_subject = clean_subject(subject)
-                        subject_id = self.ds.get_subject_id(Subject(cleaned_subject, league, position=position, jersey_number=jersey_number))
+                        subject_id = self.ds.get_subject_id(Subject(subject, league, position=position, jersey_number=jersey_number))
                         subject_ids[f'{subject}{position}'] = subject_id
 
             if the_market:
@@ -121,6 +121,7 @@ class HotStreakSpider:
                     elif league in {'NFL', 'NCAAF'}:
                         the_market = 'Football Fantasy Points'
 
+                the_market = clean_market(the_market)
                 market_id = self.ds.get_market_id(Market(the_market, league))
 
             lines, probabilities = market.get('lines', []), market.get('probabilities', [])

@@ -132,7 +132,7 @@ class Helper:
                     'Host': 'api.hotstreak.gg',
                     'accept': '*/*',
                     'content-type': 'application/json',
-                    'authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJIb3RTdHJlYWsgKHByb2R1Y3Rpb24pIiwic3ViIjoiSHNmOjpVc2VyOnBydEpBNnciLCJleHAiOjE3MjcyMzQ4MjEsImlhdCI6MTcyNDU1NjQyMX0.ZCo5mvLX2DzDYQpBqXW2HG72kwl5EYC9VbXMKB6wRS8',
+                    'authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJIb3RTdHJlYWsgKHByb2R1Y3Rpb24pIiwic3ViIjoiSHNmOjpVc2VyOnBydEpBNnciLCJleHAiOjE3MzAxNzU3MzcsImlhdCI6MTcyNzU4MzczN30.rZDcR_OhHMY9gd6l57xRpSiNk16aYntW4NquRZe_hzM',
                     'x-requested-with': 'ios',
                     'user-agent': 'HotStreak/1717696638 CFNetwork/1496.0.7 Darwin/23.5.0',
                     'accept-language': 'en-US,en;q=0.9',
@@ -817,7 +817,6 @@ class Helper:
                         "sport": var
                     }
                 }
-
             }, 'HotStreak': {
                 'leagues': {
                     'query': 'query system { system {\n        __typename\ngeneratedAt\nmaximumDeposit\nmaximumInPlayWager\nmaximumPregameWager\nmaximumReferrals\nminimumDeposit\nminimumInPlayWager\nminimumPregameWager\nminimumWithdraw\npublicBroadcastChannel\npusherAppKey\npusherCluster\nreferrerBonus\nsports {\n\n__typename\nid\nactive\ncreatedAt\ngeneratedAt\ninPlay\nleagues {\n\n__typename\nid\nalias\ncreatedAt\ngeneratedAt\nname\novertimeClock\novertimePeriods\nregulationClock\nregulationPeriods\nsportId\nupdatedAt\n\n}\nname\nupdatedAt\n\n}\n\n      } }',

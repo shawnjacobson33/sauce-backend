@@ -68,11 +68,11 @@ def clean_market(market: str):
     # Initialize some values to reduce redundancy
     n, is_uppercase = len(market), market.isupper()
     # 'Total' is unnecessary to include in a market name -- located here so the next line will strip any extra space
-    cleaned_market = market.replace('Total', '')
+    cleaned_market = market.replace('Total', '').replace('Plus', '+')
     # BoomFantasy annoyingly uses underscore as spaces
     cleaned_market = cleaned_market.replace('_', ' ')
     # For example 'RBI' is fine to be uppercase but BATTER WALKS and BASES isn't
-    if ((' ' in cleaned_market) or n > 4) or cleaned_market.islower():
+    if ((' ' in cleaned_market) or n >= 4) and (cleaned_market.islower() or is_uppercase):
         # Payday capitalizes every letter in the market name
         cleaned_market = cleaned_market.title()
 
