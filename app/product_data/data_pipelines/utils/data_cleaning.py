@@ -65,6 +65,7 @@ def clean_league(league: str):
 
 
 def clean_market(market: str):
+    market_map = {'Hitter Fantasy Score': 'Baseball Fantasy Points'}
     # Initialize some values to reduce redundancy
     n, is_uppercase = len(market), market.isupper()
     # 'Total' is unnecessary to include in a market name -- located here so the next line will strip any extra space
@@ -91,7 +92,7 @@ def clean_market(market: str):
     # Use regex to add a space before uppercase letters that are immediately after lowercase letters
     cleaned_market = re.sub(r'([a-z])([A-Z])', r'\1 \2', cleaned_market)
 
-    return cleaned_market.strip()
+    return market_map.get(cleaned_market.strip(), cleaned_market.strip())
 
 
 def clean_subject(subject: str):

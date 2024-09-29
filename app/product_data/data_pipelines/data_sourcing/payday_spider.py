@@ -4,7 +4,7 @@ from datetime import datetime
 import asyncio
 
 from app.product_data.data_pipelines.utils import clean_subject, clean_league, DataStandardizer, RequestManager, \
-    Helper, get_db, Subject, Market
+    Helper, get_db, Subject, Market, clean_market
 
 
 class PaydaySpider:
@@ -66,6 +66,7 @@ class PaydaySpider:
                 market_id = None
                 market, line, player = player_prop.get('name'), player_prop.get('value'), player_prop.get('player')
                 if market:
+                    market = clean_market(market)
                     market_id = self.ds.get_market_id(Market(market, league))
 
                 if player:
@@ -82,10 +83,10 @@ class PaydaySpider:
                         if subject_team == subject.upper():
                             subject_team = None
 
+                        subject = clean_subject(subject)
                         subject_id = subject_ids.get(f'{subject}{subject_team}')
                         if not subject_id:
-                            cleaned_subject = clean_subject(subject)
-                            subject_id = self.ds.get_subject_id(Subject(cleaned_subject, league, subject_team, position, jersey_number))
+                            subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team, position, jersey_number))
                             subject_ids[f'{subject}{subject_team}'] = subject_id
 
                     for label in ['Over', 'Under']:

@@ -49,8 +49,8 @@ class DataStandardizer:
         # get filtered subjects based upon league -- the condition is for 'Drafters' who doesn't include a league
         filtered_subjects = self._get_filtered_data(subject)
         # make reference to it because it will be used in updates to it later (self because both nest and flat
-        # structures need to be updated everytime there is a new subject record.)
-        self.nested_subjects = filtered_subjects['n']
+        # structures need to be updated everytime there is a new subject record.) Condition for drafters.
+        self.nested_subjects = filtered_subjects['n'] if 'n' in filtered_subjects else filtered_subjects
         # 1st Search - existing subject (format)
         subject_match = self.nested_subjects.get(subject.name)
         if subject_match:
@@ -61,8 +61,8 @@ class DataStandardizer:
             DataStandardizer._output_msg(subject, msg_type='match')
             return subject_match['id']
 
-        # make reference to it because it will be used in updates to it later.
-        self.flattened_subjects = filtered_subjects['f']
+        # make reference to it because it will be used in updates to it later. Condition for drafters.
+        self.flattened_subjects = filtered_subjects['f'] if 'f' in filtered_subjects else filtered_subjects
         # 2nd Search - most similar
         ss_data = self._get_most_similar_entity(subject)
         most_similar_subject = Subject(ss_data['name'], ss_data['league'], ss_data['team'], ss_data['position'], ss_data['jersey_number'])

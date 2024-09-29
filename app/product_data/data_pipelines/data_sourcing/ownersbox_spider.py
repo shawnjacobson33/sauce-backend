@@ -4,7 +4,7 @@ from datetime import datetime
 import asyncio
 
 from app.product_data.data_pipelines.utils import clean_subject, clean_league, RequestManager, DataStandardizer, \
-    Helper, get_db, Market, Subject
+    Helper, get_db, Market, Subject, clean_market
 
 
 class OwnersBoxSpider:
@@ -63,6 +63,7 @@ class OwnersBoxSpider:
             if market_type:
                 market = market_type.get('name')
                 if market:
+                    market = clean_market(market)
                     market_id = self.ds.get_market_id(Market(market, league))
 
             # get game info
@@ -78,11 +79,10 @@ class OwnersBoxSpider:
             if player:
                 subject_team, position = player.get('teamAlias').upper(), player.get('position')
                 first_name, last_name = player.get('firstName'), player.get('lastName')
-                subject = ' '.join([first_name, last_name])
+                subject = clean_subject(' '.join([first_name, last_name]))
                 subject_id = subject_ids.get(f'{subject}{subject_team}')
                 if not subject_id:
-                    cleaned_subject = clean_subject(subject)
-                    subject_id = self.ds.get_subject_id(Subject(cleaned_subject, league, subject_team, position))
+                    subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team, position))
                     subject_ids[f'{subject}{subject_team}'] = subject_id
 
             # get line
