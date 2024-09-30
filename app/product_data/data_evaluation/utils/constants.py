@@ -1,0 +1,3 @@
+
+PROP_LINES_COLLECTION_NAME = 'prop-lines-v1'
+
