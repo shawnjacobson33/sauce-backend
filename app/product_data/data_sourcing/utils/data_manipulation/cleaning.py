@@ -73,10 +73,14 @@ def clean_league(league: str):
 def clean_market(market: str):
     # Initialize some values to reduce redundancy
     n, is_uppercase = len(market), market.isupper()
-    # 'Total' is unnecessary to include in a market name -- located here so the next line will strip any extra space
-    cleaned_market = market.replace('Total', '')
     # BoomFantasy annoyingly uses underscore as spaces
-    cleaned_market = cleaned_market.replace('_', ' ')
+    cleaned_market = market.replace('_', ' ')
+    # 'Total' is unnecessary to include in a market name -- located here so the next line will strip any extra space
+    cleaned_market = re.sub('total', '', cleaned_market, flags=re.IGNORECASE)
+    cleaned_market = re.sub('player', '', cleaned_market, flags=re.IGNORECASE)
+    cleaned_market = re.sub(' and ', ' + ', cleaned_market, flags=re.IGNORECASE)
+    # hotstreak does this
+    cleaned_market = re.sub(' plus ', ' + ', cleaned_market, flags=re.IGNORECASE)
     # For example 'RBI' is fine to be uppercase but BATTER WALKS and BASES isn't
     if ((' ' in cleaned_market) or n >= 4) and (cleaned_market.islower() or is_uppercase):
         # Payday capitalizes every letter in the market name
@@ -90,14 +94,10 @@ def clean_market(market: str):
     if n < 4 and not is_uppercase:
         cleaned_market = cleaned_market.upper()
 
-    # Don't move because the .title() needs to go first
-    cleaned_market = cleaned_market.replace(' And ', ' + ').replace('Player ', '')
     # Use regex to find '+' that doesn't already have spaces around it
     cleaned_market = re.sub(r'(?<!\s)\+(?!\s)', ' + ', cleaned_market)
     # Use regex to add a space before uppercase letters that are immediately after lowercase letters
     cleaned_market = re.sub(r'([a-z])([A-Z])', r'\1 \2', cleaned_market)
-    # hotstreak does this
-    cleaned_market = cleaned_market.replace(' Plus ', ' + ')
 
     return MARKET_MAP.get(cleaned_market.strip(), cleaned_market.strip())
 

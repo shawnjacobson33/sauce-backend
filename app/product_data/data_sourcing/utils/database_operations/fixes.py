@@ -1,3 +1,5 @@
+import uuid
+
 import pandas as pd
 from pymongo.collection import Collection
 
@@ -80,8 +82,11 @@ def check_for_duplicates(collection: Collection):
     return duplicates
 
 
-df = check_alt_names(subjects)
-docs = check_for_duplicates(subjects)
+# df = check_alt_names(subjects)
+# docs = check_for_duplicates(subjects)
+
+# teams = db['teams-v1']
+# teams.insert_one({'batch_id': uuid.uuid4(), 'name': 'BAMA', 'attributes': {'league': 'NCAAF', 'alt_names': []}})
 
 # update_collection_field_names(db['subjects'])
 # remove_subjects(batch_id="e4a8c59e-2a6f-4247-8631-784349ed68a7")
@@ -148,3 +153,11 @@ docs = check_for_duplicates(subjects)
 #
 # subjects_beta_v2 = db['subjects_beta_v2']
 # subjects_beta_v2.insert_many(reformatted_docs)
+
+
+for doc in subjects.find():
+    name = doc['name']
+    alt_names = doc['attributes']['alt_names']
+    if name in alt_names:
+        update_operation = {'$pull': {'attributes.alt_names': name}}
+        subjects.update_one({'_id': doc['_id']}, update_operation)

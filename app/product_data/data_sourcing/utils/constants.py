@@ -8,7 +8,7 @@ BOOKMAKERS = [
     'BoomFantasy', 'Champ', 'Dabble', 'Drafters', 'DraftKingsPick6', 'HotStreak', 'MoneyLine', 'OddsShopper',
     'OwnersBox', 'ParlayPlay', 'Rebet', 'Sleeper', 'SuperDraft', 'ThriveFantasy', 'Underdog Fantasy', 'VividPicks'
 ]
-VALID_LEAGUES = ['NFL', 'NBA', 'NCAAF', 'WNBA', 'MLB', 'KBO', 'NCAAB', 'NHL', 'NPB']
+VALID_LEAGUES = ['NFL', 'NBA', 'NCAAF', 'WNBA', 'MLB', 'NCAAB', 'NHL']
 LEAGUES_SCHEDULE = {
     'NFL': '9-2',
     'NCAAF': '8-1',
@@ -17,7 +17,6 @@ LEAGUES_SCHEDULE = {
     'MLB': '3-10',
     'NHL': '10-5',
     'NCAAB': '11-3',
-    'KBO': '3-10'
 }
 LEAGUE_SPORT_MAP = {
     'NFL': 'Football',
@@ -26,7 +25,6 @@ LEAGUE_SPORT_MAP = {
     'WNBA': 'Basketball',
     'NCAAB': 'Basketball',
     'MLB': 'Baseball',
-    'KBO': 'Baseball',
     'NHL': 'Ice Hockey',
 }
 
@@ -44,6 +42,3 @@ def get_in_season_leagues() -> list:
 
 IN_SEASON_LEAGUES = get_in_season_leagues()
 IN_SEASON_SPORTS = [LEAGUE_SPORT_MAP[league] for league in IN_SEASON_LEAGUES]
-
-
-names = "Kyle Monangai", "Cam Porter", "Kelley Joiner", "Ta'ron Keith", "Nathan Carter", "Montorie Foster"

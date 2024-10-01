@@ -17,10 +17,7 @@ class DataStandardizer:
         self.team_collection = db[TEAMS_COLLECTION_NAME]
         self.subjects = get_entities(self.subject_collection, has_grouping=has_grouping)
         self.markets = get_entities(self.market_collection, has_grouping=has_grouping)
-        self.teams = get_entities(self.team_collection, has_grouping=has_grouping)
-        self.nested_subjects, self.flattened_subjects = None, None
-        self.nested_markets, self.flattened_markets = None, None
-        self.nested_teams, self.flattened_teams = None, None
+        # self.teams = get_entities(self.team_collection, has_grouping=has_grouping)
 
     def get_team_id(self, team: Team) -> Optional[str]:
         filtered_teams = self._get_filtered_data(team, self.teams)
@@ -60,14 +57,14 @@ class DataStandardizer:
 
     def _first_search(self, entity: Union[Market, Subject, Team], collection: Collection, in_mem_data: Union[dict, pd.DataFrame]) -> Optional[str]:
         if isinstance(entity, Market):
-            self.nested_markets = in_mem_data['n'] if 'n' in in_mem_data else in_mem_data
-            match = self.nested_markets.get(entity.name)
+            nested_markets = in_mem_data['n'] if 'n' in in_mem_data else in_mem_data
+            match = nested_markets.get(entity.name)
         elif isinstance(entity, Subject):
-            self.nested_subjects = in_mem_data['n'] if 'n' in in_mem_data else in_mem_data
-            match = self.nested_subjects.get(entity.name)
+            nested_subjects = in_mem_data['n'] if 'n' in in_mem_data else in_mem_data
+            match = nested_subjects.get(entity.name)
         else:
-            self.nested_teams = in_mem_data['n'] if 'n' in in_mem_data else in_mem_data
-            match = self.nested_teams.get(entity.name)
+            nested_teams = in_mem_data['n'] if 'n' in in_mem_data else in_mem_data
+            match = nested_teams.get(entity.name)
 
         if match:
             update_operation = self._get_update_operations(entity, match)
@@ -78,19 +75,15 @@ class DataStandardizer:
             return match['id']
 
     def _second_search(self, entity: Union[Market, Subject, Team], collection: Collection, in_mem_data: Union[dict, pd.DataFrame]) -> Optional[str]:
+        flattened_entities = in_mem_data['f'] if 'f' in in_mem_data else in_mem_data
+        sm_data = DataStandardizer._get_most_similar_entity(entity, flattened_entities)
         if isinstance(entity, Market):
-            self.flattened_markets = in_mem_data['f'] if 'f' in in_mem_data else in_mem_data
-            sm_data = DataStandardizer._get_most_similar_entity(entity, in_mem_data)
             most_similar_entity = Market(sm_data['name'], sport=sm_data['sport'])
             distance_threshold = 3
         elif isinstance(entity, Subject):
-            self.flattened_subjects = in_mem_data['f'] if 'f' in in_mem_data else in_mem_data
-            sm_data = DataStandardizer._get_most_similar_entity(entity, in_mem_data)
             most_similar_entity = Subject(sm_data['name'], sm_data['league'], sm_data['team'], sm_data['position'], sm_data['jersey_number'])
             distance_threshold = 4
         else:
-            self.flattened_teams = in_mem_data['f'] if 'f' in in_mem_data else in_mem_data
-            sm_data = DataStandardizer._get_most_similar_entity(entity, in_mem_data)
             most_similar_entity = Team(sm_data['name'], league=sm_data['league'])
             distance_threshold = 2
 
@@ -119,7 +112,7 @@ class DataStandardizer:
         return filtered_entities
 
     @staticmethod
-    def _get_most_similar_entity(entity: Union[Market, Subject, Team], in_mem_data: Union[dict, pd.DataFrame]):
+    def _get_most_similar_entity(entity: Union[Market, Subject, Team], in_mem_data: Union[pd.DataFrame]):
         def get_distances(r):
             # so weights can be adjusted to be more strict if there is fewer data points on a subject
             num_data_points = 0
@@ -180,13 +173,13 @@ class DataStandardizer:
         return {**set_operation, **push_operation}
 
     def _update_in_mem_data(self, entity: Union[Market, Subject, Team], data: dict) -> None:
-        # TODO: Slight bug where the in memory data is getting re-assigned every time in a different method
-        # TODO: so this won't work.
         if isinstance(entity, Subject):
             # add a new subject (format) to the end of the df
-            self.flattened_subjects.loc[len(self.flattened_subjects)] = data
-            # restructure the already flattened data into a nested form.
-            self.nested_subjects[entity.name] = {
+            flattened_subjects = self.subjects[entity.league]['f'] if entity.league else self.subjects['f']
+            flattened_subjects.loc[len(flattened_subjects)] = data
+
+            nested_subjects = self.subjects[entity.league]['n'] if entity.league else self.subjects['n']
+            nested_subjects[entity.name] = {
                 'id': data['id'],
                 'attributes': {
                     field_name: data for field_name, data in
@@ -195,9 +188,11 @@ class DataStandardizer:
             }
         else:
             # add a new subject (format) to the end of the df
-            self.flattened_markets.loc[len(self.flattened_markets)] = data
-            # restructure the already flattened data into a nested form.
-            self.nested_markets[entity.name] = {
+            flattened_markets = self.markets[entity.sport]['f'] if entity.sport else self.markets['f']
+            flattened_markets.loc[len(flattened_markets)] = data
+
+            nested_markets = self.markets[entity.sport]['n'] if entity.sport else self.markets['n']
+            nested_markets[entity.name] = {
                 'id': data['id'],
                 'attributes': {
                     field_name: data for field_name, data in

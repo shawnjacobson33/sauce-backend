@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from app.product_data.data_sourcing.utils import clean_subject, clean_league, RequestManager, DataStandardizer, \
-    Packager, get_db, Subject, Market
+    Packager, get_db, Subject, Market, clean_market
 
 
 class MoneyLinePlug:
@@ -51,6 +51,7 @@ class MoneyLinePlug:
                 elif league in {'NFL', 'NCAAF'}:
                     market = 'Football Fantasy Points'
 
+            market = clean_market(market)
             market_id = self.ds.get_market_id(Market(market, league))
             subject_id, subject, subject_team, subject_components = None, None, None, bet.get('title')
             if subject_components:

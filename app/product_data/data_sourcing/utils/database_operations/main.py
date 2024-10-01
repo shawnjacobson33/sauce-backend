@@ -10,7 +10,8 @@ DATABASE_URL = 'mongodb+srv://username:password@sauce.hvhxg.mongodb.net/?retryWr
 
 
 def get_db_creds() -> Tuple[str, str]:
-    with open(os.path.abspath('../utils/database_operations/db_creds.txt'), 'r') as f:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.abspath(os.path.join(current_dir, 'db_creds.txt')), 'r') as f:
         data = f.readlines()
         return data[0].strip(), data[1]
 
