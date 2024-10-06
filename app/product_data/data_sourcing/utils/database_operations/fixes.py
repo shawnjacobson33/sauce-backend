@@ -155,9 +155,12 @@ def check_for_duplicates(collection: Collection):
 # subjects_beta_v2.insert_many(reformatted_docs)
 
 
-for doc in subjects.find():
-    name = doc['name']
-    alt_names = doc['attributes']['alt_names']
-    if name in alt_names:
-        update_operation = {'$pull': {'attributes.alt_names': name}}
-        subjects.update_one({'_id': doc['_id']}, update_operation)
+# for doc in subjects.find():
+#     name = doc['name']
+#     alt_names = doc['attributes']['alt_names']
+#     if name in alt_names:
+#         update_operation = {'$pull': {'attributes.alt_names': name}}
+#         subjects.update_one({'_id': doc['_id']}, update_operation)
+
+
+subjects.delete_many({'batch_id': '45251319-97b6-42b8-b5ca-e201b1a79d35'})

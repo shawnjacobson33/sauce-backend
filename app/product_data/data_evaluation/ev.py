@@ -1,5 +1,5 @@
 from pymongo.database import Database
-
+import pandas as pd
 
 # ****************** GOALS *********************
 
@@ -23,14 +23,20 @@ from utils import PROP_LINES_COLLECTION_NAME
 
 class DataEvaluator:
     def __init__(self, db: Database):
-        self.prop_lines = db[PROP_LINES_COLLECTION_NAME]
+        self.prop_lines = pd.DataFrame(db[PROP_LINES_COLLECTION_NAME])
         pass
 
     def _read_data(self):
         pass
 
     def _devig(self):
-        pass
+        sharp_bookmakers = ['FanDuel', 'Caesars', 'BetOnline']
+        sharp_lines = self.prop_lines[self.prop_lines['bookmaker'].isin(sharp_bookmakers)]
+
+        def custom_func(group):
+            if len(group) == 2:
+                
+        grouped_lines = sharp_lines.groupby(by=['line', 'subject_id', 'market_id', 'league', 'bookmaker'])
 
     def _calculate_ev(self):
         pass

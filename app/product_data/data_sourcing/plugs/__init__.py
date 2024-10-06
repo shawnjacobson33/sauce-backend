@@ -1,3 +1,4 @@
+from .betonline import BetOnlinePlug
 from .boom_fantasy import BoomFantasyPlug
 from .champ import ChampPlug
 from .dabble import DabblePlug
@@ -16,6 +17,6 @@ from .superdraft import SuperDraftPlug
 from .underdog_fantasy import UnderdogFantasyPlug
 from .vividpicks import VividPicksPlug
 
-__all__ = ['BoomFantasyPlug', 'ChampPlug', 'DabblePlug', 'DraftersPlug', 'DraftKingsPick6Plug', 'HotStreakPlug',
-           'MoneyLinePlug', 'OddsShopperPlug', 'OwnersBoxPlug', 'ParlayPlayPlug', 'PaydayPlug',
+__all__ = ['BetOnlinePlug', 'BoomFantasyPlug', 'ChampPlug', 'DabblePlug', 'DraftersPlug', 'DraftKingsPick6Plug',
+           'HotStreakPlug', 'MoneyLinePlug', 'OddsShopperPlug', 'OwnersBoxPlug', 'ParlayPlayPlug', 'PaydayPlug',
            'PrizePicksPlug', 'RebetPlug', 'SleeperPlug', 'SuperDraftPlug', 'UnderdogFantasyPlug', 'VividPicksPlug']

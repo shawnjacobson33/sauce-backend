@@ -42,6 +42,9 @@ class DraftersPlug:
                 subject_team, game_info, event = None, None, player.get('event')
                 position = player.get('player_position')
                 if position:
+                    if position == 'G':
+                        continue
+
                     position = position.strip()
 
                 market_id, market, line = None, player.get('bid_stats_name'), player.get('bid_stats_value')

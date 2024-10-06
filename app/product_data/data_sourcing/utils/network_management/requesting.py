@@ -1,16 +1,20 @@
 import asyncio
 import cloudscraper
+import requests
 
 
 class RequestManager:
-    def __init__(self):
+    def __init__(self, use_requests: bool = False):
+        self.use_requests = use_requests
         self.scraper = cloudscraper.create_scraper()
 
     async def get_thread(self, url, **kwargs):
-        return await asyncio.to_thread(self.scraper.get, url, **kwargs)
+        request_func = self.scraper.get if not self.use_requests else requests.get
+        return await asyncio.to_thread(request_func, url, **kwargs)
 
     async def post_thread(self, url, **kwargs):
-        return await asyncio.to_thread(self.scraper.post, url, **kwargs)
+        request_func = self.scraper.post if not self.use_requests else requests.post
+        return await asyncio.to_thread(request_func, url, **kwargs)
 
     async def get(self, url, func, *args, **kwargs):
         response = await self.get_thread(url, **kwargs)

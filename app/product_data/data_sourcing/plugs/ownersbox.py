@@ -56,6 +56,9 @@ class OwnersBoxPlug:
         for prop_line in data.get('markets', []):
             league = prop_line.get('sport')
             if league:
+                if not Packager.is_league_good(league):
+                    continue
+
                 league = clean_league(league)
 
             # get market

@@ -120,6 +120,7 @@ class OddsShopperPlug:
                         'label': label,
                         'line': outcome.get('line', '0.5'),
                         'odds': round(odds, 3) if odds else None,
+                        'implied_prob': round(1 / odds, 3) if odds else None,
                         'true_win_prob': round(true_win_prob, 3) if true_win_prob else None,
                         'oddsshopper_ev': round(ev, 3) if ev else None
                     })
