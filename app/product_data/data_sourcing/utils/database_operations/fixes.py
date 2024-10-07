@@ -1,9 +1,10 @@
 import uuid
+from typing import Union
 
 import pandas as pd
 from pymongo.collection import Collection
 
-from app.product_data.data_sourcing.utils import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME
+from app.product_data.data_sourcing.utils import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME, Market, Subject
 from main import get_db
 
 db = get_db()
@@ -12,24 +13,71 @@ subjects = db[SUBJECT_COLLECTION_NAME]
 markets = db[MARKETS_COLLECTION_NAME]
 
 
-def remove_subjects(batch_id: str = None, bookmaker: str = None):
-    if bookmaker:
-        # remove newly inserted docs
-        subjects.delete_many({'bookmakers.0.bookmaker_name': bookmaker})
-        # remove newly embedded subjects
-        for doc in subjects.find():
-            for bookmaker_data in doc['bookmakers']:
-                if bookmaker_data['bookmaker_name'] == bookmaker:
-                    subjects.update_one({'_id': doc['_id']}, {'$pull': {'bookmakers': bookmaker_data}})
-                    break
+# ************* REMOVE OPERATIONS ***************
+def remove_last_batch(batch_id: str, collection: Collection):
+    """Only deletes newly inserted documents"""
+    collection.delete_many({'batch_id': batch_id})
 
-    if batch_id:
-        subjects.delete_many({'batch_id': batch_id})
-        for doc in subjects.find():
-            for bookmaker_data in doc['bookmakers']:
-                if ('batch_id' in bookmaker_data) and bookmaker_data['batch_id'] == batch_id:
-                    subjects.update_one({'_id': doc['_id']}, {'$pull': {'bookmakers': bookmaker_data}})
-                    break
+def remove_entity(entity: str, collection: Collection):
+    """Will remove entire doc"""
+    collection.delete_one({'name': entity})
+
+def remove_alt_entity(alt_entity: str, collection: Collection, other_removables: list = None):
+    if other_removables is None:
+        other_removables = []
+
+    for doc in collection.find():
+        for alt_name in doc['attributes']['alt_names']:
+            if alt_name == alt_entity:
+                update_operation = {
+                    '$pull': {'attributes.alt_names': alt_entity},
+                    '$set': {
+                        f'attributes.{removable}': None for removable in other_removables
+                    }
+                }
+                collection.update_one({'_id': doc['_id']}, update_operation)
+                print(f"Successfully removed {alt_entity} from {doc['name']}'s alt_names!")
+                break
+
+    print(f"Failed to remove {alt_entity}!")
+
+# ************** INSERT OPERATIONS ***************
+def insert_entity(entity: Union[Subject, Market], collection: Collection):
+    new_doc = {
+        'name': entity.name,
+        'attributes': {
+            **entity.__dict__
+        }
+    }
+    del new_doc['attributes']['name']
+    collection.insert_one(new_doc)
+
+# ************** UPDATE OPERATIONS ***************
+def add_alt_entity(alt_entity: str, entity: Union[Subject, Market], collection: Collection):
+    desired_doc = collection.find_one({**entity.__dict__})
+    if desired_doc:
+        collection.update_one({'_id': desired_doc['id']}, {'$push': {'attributes.alt_names': alt_entity}})
+        print(f"Successfully added {alt_entity} to {entity.name}'s alt_names!")
+
+    print(f"Failed to add {alt_entity}!")
+
+
+
+# ***********************************************************************************
+
+# remove_alt_entity('Tre Brown', subjects, ['team', 'position'])
+
+# ***********************************************************************************
+
+
+
+
+
+
+
+
+
+
 
 
 def update_subjects(old_league: str, new_league: str):

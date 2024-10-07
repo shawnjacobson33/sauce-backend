@@ -18,28 +18,44 @@ import pandas as pd
 # - BACK IN THE DATABASE?
 # - RETURN IT?
 
-from utils import PROP_LINES_COLLECTION_NAME
+from utils import PROP_LINES_COLLECTION_NAME, SHARP_PROP_BOOKMAKERS
 
 
 class DataEvaluator:
     def __init__(self, db: Database):
         self.prop_lines = pd.DataFrame(db[PROP_LINES_COLLECTION_NAME])
-        pass
+        self.prop_lines.set_index(['line', 'subject_id', 'market_id', 'bookmaker'], inplace=True)
 
     def _read_data(self):
         pass
 
-    def _devig(self):
-        sharp_bookmakers = ['FanDuel', 'Caesars', 'BetOnline']
-        sharp_lines = self.prop_lines[self.prop_lines['bookmaker'].isin(sharp_bookmakers)]
+    def _get_true_probs(self):
+        # filter sharp lines
+        sharp_lines = self.prop_lines[self.prop_lines['bookmaker'].isin(SHARP_PROP_BOOKMAKERS)]
 
-        def custom_func(group):
-            if len(group) == 2:
-                
-        grouped_lines = sharp_lines.groupby(by=['line', 'subject_id', 'market_id', 'league', 'bookmaker'])
+        def devig(row):
+            # get the complementing line
+            corresponding_prop_line = sharp_lines.loc[(row['line'], row['subject_id'], row['market_id'], row['bookmaker'])]
+            # If the row is FanDuel Over then there should only be a FanDuel Under in the frame.
+            if (len(corresponding_prop_line) == 1) and (row['label'] != corresponding_prop_line.at[0, 'label']):
+                # equation to remove the juice from the line
+                row['fair_prob'] = row['implied_prob'] / (row['implied_prob'] + corresponding_prop_line.at[0, 'implied_prob'])
+
+            return row
+
+        return sharp_lines.apply(devig)
 
     def _calculate_ev(self):
-        pass
+        """
+            Equation: EV = (P x W) - (1 - P) x L
+            EV: Expected Value
+            P: Probability of Winning
+            W: Amount Won Per Dollar Bet (Odds - 1 in decimal format)
+            L: Amount Lost Per Dollar Bet (typically 1, your stake)
+        """
+
+        sharp_lines = self._get_true_probs()
+
 
     def evaluate(self):
         pass
