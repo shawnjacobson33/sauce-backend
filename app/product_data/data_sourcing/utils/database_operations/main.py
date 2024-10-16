@@ -4,7 +4,10 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 import os
 
-from app.product_data.data_sourcing.utils import IN_SEASON_LEAGUES, SUBJECT_COLLECTION_NAME, IN_SEASON_SPORTS
+from pymongo.database import Database
+
+from app.product_data.data_sourcing.utils import IN_SEASON_LEAGUES, SUBJECT_COLLECTION_NAME, IN_SEASON_SPORTS, \
+    BOOKMAKERS_COLLECTION_NAME
 
 DATABASE_URL = 'mongodb+srv://username:password@sauce.hvhxg.mongodb.net/?retryWrites=true&w=majority&appName=Sauce'
 
@@ -79,3 +82,5 @@ def get_entities(collection: Collection, has_grouping: bool = True):
     return entities
 
 
+def get_bookmaker(db: Database, bookmaker: str) -> dict:
+    return db[BOOKMAKERS_COLLECTION_NAME].find_one({'name': bookmaker})

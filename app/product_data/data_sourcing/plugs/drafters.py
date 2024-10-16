@@ -4,15 +4,12 @@ import uuid
 from datetime import datetime
 
 from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, Packager, clean_subject, \
-    get_db, Subject, Market, clean_market
+    get_db, Subject, Market, clean_market, Plug, Bookmaker, get_bookmaker
 
 
-class DraftersPlug:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        self.batch_id = batch_id
-        self.packager = Packager(bookmaker='Drafters')
-        self.rm = request_manager
-        self.ds = data_standardizer
+class Drafters(Plug):
+    def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__(info, batch_id, request_manager, data_standardizer)
         self.prop_lines = []
 
     async def start(self):
@@ -70,13 +67,12 @@ class DraftersPlug:
                         'market_id': market_id,
                         'market': market,
                         'game_info': game_info,
-                        'subject_team': subject_team,
                         'subject_id': subject_id,
                         'subject': subject,
-                        'position': position,
-                        'bookmaker': 'Drafters',
+                        'bookmaker': self.info.name,
                         'label': label,
-                        'line': line
+                        'line': line,
+                        'odds': self.info.default_payout.odds
                     })
 
         self.packager.store(self.prop_lines)
@@ -89,7 +85,8 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = DraftersPlug(batch_id, RequestManager(), DataStandardizer(batch_id, db, has_grouping=False))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "Drafters"))
+    spider = Drafters(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db, has_grouping=False))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

@@ -4,15 +4,12 @@ import uuid
 from datetime import datetime
 
 from app.product_data.data_sourcing.utils import clean_subject, clean_league, clean_market, DataStandardizer, Packager, \
-    RequestManager, get_db, Subject, Market
+    RequestManager, get_db, Subject, Market, Plug, Bookmaker, get_bookmaker
 
 
-class UnderdogFantasyPlug:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        self.batch_id = batch_id
-        self.packager = Packager(bookmaker='UnderdogFantasy')
-        self.rm = request_manager
-        self.ds = data_standardizer
+class UnderdogFantasy(Plug):
+    def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__(info, batch_id, request_manager, data_standardizer)
         self.prop_lines = []
 
     async def start(self):
@@ -151,17 +148,16 @@ class UnderdogFantasyPlug:
                     'batch_id': self.batch_id,
                     'time_processed': datetime.now(),
                     'league': league,
-                    'game_time': game_time,
                     'market_category': 'player_props',
                     'market_id': market_id,
                     'market': market,
-                    'subject_team': subject_team,
                     'subject_id': subject_id,
                     'subject': subject,
-                    'bookmaker': 'Underdog Fantasy',
+                    'bookmaker': self.info.name,
                     'label': label,
                     'line': line,
-                    'multiplier': multiplier
+                    'multiplier': multiplier,
+                    'odds': round(self.info.default_payout.odds * multiplier, 3) if multiplier else self.info.default_payout.odds
                 })
 
         self.packager.store(self.prop_lines)
@@ -175,7 +171,8 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = UnderdogFantasyPlug(uuid.uuid4(), RequestManager(), DataStandardizer(batch_id, db))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "Underdog Fantasy"))
+    spider = UnderdogFantasy(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

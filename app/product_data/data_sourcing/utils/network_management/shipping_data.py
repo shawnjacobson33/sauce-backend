@@ -391,17 +391,17 @@ cookies_mapping = {
 
 
 class Packager:
-    def __init__(self, bookmaker: str):
-        self.bookmaker = bookmaker
+    def __init__(self, name: str):
+        self.name = name
 
     def get_url(self, name: str = 'prop_lines'):
-        return url_mapping.get(self.bookmaker).get(name)
+        return url_mapping.get(self.name).get(name)
 
     def get_headers(self, name: str = 'prop_lines'):
-        return headers_mapping.get(self.bookmaker).get(name)
+        return headers_mapping.get(self.name).get(name)
 
     def get_cookies(self):
-        return cookies_mapping.get(self.bookmaker)
+        return cookies_mapping.get(self.name)
 
     def get_params(self, name: str = 'prop_lines', var_1=None, var_2=None):
         params_mapping = {
@@ -456,7 +456,7 @@ class Packager:
                 }
             }
         }
-        return params_mapping.get(self.bookmaker).get(name)
+        return params_mapping.get(self.name).get(name)
 
     def get_json_data(self, name: str = 'prop_lines', var=None):
         mapping = {
@@ -893,17 +893,17 @@ class Packager:
             }
         }
 
-        return mapping.get(self.bookmaker).get(name)
+        return mapping.get(self.name).get(name)
 
     @staticmethod
     def is_league_good(league) -> bool:
         return league in IN_SEASON_LEAGUES
 
     def store(self, data) -> None:
-        absolute_path = os.path.abspath(f'../samples/{self.bookmaker.lower()}_data.json')
+        absolute_path = os.path.abspath(f'../samples/{self.name.lower()}_data.json')
         with open(absolute_path, 'w') as f:
             json.dump(data, f, default=str)
 
-        print(f'[{self.bookmaker}]: {len(data)} lines')
+        print(f'[{self.name}]: {len(data)} lines')
 
         # self.plc.insert_many(self.prop_lines)

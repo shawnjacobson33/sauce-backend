@@ -5,15 +5,12 @@ import uuid
 from datetime import datetime
 
 from app.product_data.data_sourcing.utils import clean_league, clean_subject, clean_market, DataStandardizer, \
-    RequestManager, Packager, get_db, Market, Subject
+    RequestManager, Packager, get_db, Market, Subject, Plug, Bookmaker, get_bookmaker
 
 
-class PrizePicksPlug:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        self.batch_id = batch_id
-        self.packager = Packager(bookmaker='PrizePicks')
-        self.rm = request_manager
-        self.ds = data_standardizer
+class PrizePicks(Plug):
+    def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__(info, batch_id, request_manager, data_standardizer)
         self.prop_lines = []
 
     async def start(self):
@@ -75,7 +72,7 @@ class PrizePicksPlug:
                         league = leagues.get(league_id)
 
             market_id = None
-            last_updated, market, game_time, stat_line, line_attributes = None, None, None, None, line.get('attributes')
+            last_updated, market, stat_line, line_attributes = None, None, None, line.get('attributes')
             if line_attributes:
                 # for lines with multipliers ("demon" or "goblin") need to make a separate request to get the payout
                 if line_attributes.get('odds_type') != 'standard':
@@ -144,24 +141,22 @@ class PrizePicksPlug:
                                 subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team, position))
                                 subject_ids[f'{subject}{subject_team}'] = subject_id
 
-                game_time, stat_line = line_attributes.get('start_time'), line_attributes.get('line_score')
+                stat_line = line_attributes.get('line_score')
                 for label in ['Over', 'Under']:
                     self.prop_lines.append({
                         'batch_id': self.batch_id,
                         'time_processed': datetime.now(),
-                        'last_updated': last_updated,
+                        # 'last_updated': last_updated,
                         'league': league,
                         'market_category': 'player_props',
                         'market_id': market_id,
                         'market': market,
-                        'game_time': game_time,
-                        'subject_team': subject_team,
-                        'position': position,
                         'subject_id': subject_id,
                         'subject': subject,
-                        'bookmaker': "PrizePicks",
+                        'bookmaker': self.info.name,
                         'label': label,
-                        'line': stat_line
+                        'line': stat_line,
+                        'odds': self.info.default_payout.odds
                     })
 
         self.packager.store(self.prop_lines)
@@ -175,7 +170,8 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = PrizePicksPlug(batch_id, RequestManager(), DataStandardizer(batch_id, db))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "PrizePicks"))
+    spider = PrizePicks(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

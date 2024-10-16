@@ -3,8 +3,12 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, Packager, clean_market, clean_subject, \
-    clean_league, get_db, Subject, Market, LEAGUE_SPORT_MAP, IN_SEASON_LEAGUES
+from pymongo.database import Database
+
+from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, Packager, clean_market, \
+    clean_subject, \
+    clean_league, get_db, Subject, Market, LEAGUE_SPORT_MAP, IN_SEASON_LEAGUES, Plug
+from app.product_data.data_sourcing.utils.objects import Bookmaker
 
 statistics = {
     'Football': [
@@ -36,6 +40,10 @@ statistics = {
         'Runs%2520%252B%2520RBIs',
         'Total%2520Bases',
         'Stolen%2520Bases'
+    ],
+    'Ice Hockey': [
+        'Points',
+        'Shots%2520On%2520Goal'
     ]
 }
 
@@ -45,12 +53,9 @@ league_map = {
 leagues = [league_map.get(league, league).lower() for league in IN_SEASON_LEAGUES]
 
 
-class BetOnlinePlug:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        self.batch_id = batch_id
-        self.packager = Packager(bookmaker='BetOnline')
-        self.rm = request_manager
-        self.ds = data_standardizer
+class BetOnline(Plug):
+    def __init__(self, db: Database, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__("BetOnline", batch_id, request_manager, data_standardizer)
         self.prop_lines = []
 
     async def start(self):
@@ -139,7 +144,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = BetOnlinePlug(batch_id, RequestManager(use_requests=True), DataStandardizer(batch_id, db))
+    spider = BetOnline(db, batch_id, RequestManager(use_requests=True), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

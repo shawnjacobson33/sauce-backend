@@ -2,7 +2,8 @@ from datetime import datetime
 
 SUBJECT_COLLECTION_NAME = 'subjects-v3'
 MARKETS_COLLECTION_NAME = 'markets-v3'
-TEAMS_COLLECTION_NAME = 'teams-v3'
+TEAMS_COLLECTION_NAME = 'teams-v1'
+BOOKMAKERS_COLLECTION_NAME = 'bookmakers-v1'
 
 BOOKMAKERS = [
     'BoomFantasy', 'Champ', 'Dabble', 'Drafters', 'DraftKingsPick6', 'HotStreak', 'MoneyLine', 'OddsShopper',

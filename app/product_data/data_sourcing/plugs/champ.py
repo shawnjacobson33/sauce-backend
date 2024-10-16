@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, clean_market, clean_subject, \
-    clean_league, Packager, get_db, Subject, Market, IN_SEASON_LEAGUES
+    clean_league, Packager, get_db, Subject, Market, IN_SEASON_LEAGUES, Plug, Bookmaker, get_bookmaker
 
 
 # Champ formats leagues slightly differently...used for making requests
@@ -14,12 +14,9 @@ def get_in_season_leagues():
     return [league_name_map.get(league, league) for league in IN_SEASON_LEAGUES if league_name_map.get(league, league) in valid_champ_leagues]
 
 
-class ChampPlug:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        self.batch_id = batch_id
-        self.packager = Packager(bookmaker='Champ')
-        self.rm = request_manager
-        self.ds = data_standardizer
+class Champ(Plug):
+    def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__(info, batch_id, request_manager, data_standardizer)
         self.prop_lines = []
 
     async def start(self):
@@ -82,14 +79,13 @@ class ChampPlug:
                             'market_category': 'player_props',
                             'market_id': market_id,
                             'market': market,
-                            'subject_team': subject_team,
                             'subject_id': subject_id,
                             'subject': subject,
-                            'position': position,
-                            'bookmaker': 'Champ',
+                            'bookmaker': self.info.name,
                             'label': label,
                             'line': line,
-                            'multiplier': multiplier
+                            'multiplier': multiplier,
+                            'odds': round(self.info.default_payout.odds * multiplier, 3)
                         })
 
 
@@ -100,7 +96,8 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = ChampPlug(batch_id, RequestManager(), DataStandardizer(batch_id, db))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "Champ"))
+    spider = Champ(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

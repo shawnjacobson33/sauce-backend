@@ -6,17 +6,14 @@ from bs4 import BeautifulSoup
 import asyncio
 
 from app.product_data.data_sourcing.utils import RequestManager, clean_subject, clean_league, DataStandardizer, \
-    Packager, get_db, Subject, Market, clean_market
+    Packager, get_db, Subject, Market, clean_market, Plug, Bookmaker, get_bookmaker
 
 
-class DraftKingsPick6Plug:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        self.batch_id = batch_id
-        self.packager = Packager(bookmaker='DraftKingsPick6')
-        self.rm = request_manager
-        self.headers = self.packager.get_headers()
-        self.ds = data_standardizer
+class DraftKingsPick6(Plug):
+    def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__(info, batch_id, request_manager, data_standardizer)
         self.prop_lines = []
+        self.headers = self.packager.get_headers()
 
     async def start(self):
         url = self.packager.get_url()
@@ -78,10 +75,6 @@ class DraftKingsPick6Plug:
                                 subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team, position))
                                 subject_ids[f'{subject}{subject_team}'] = subject_id
 
-                        summary = first_competition.get('competitionSummary')
-                        if summary:
-                            game_time = summary.get('startTime')
-
             if active_market:
                 line = active_market.get('targetValue')
 
@@ -90,17 +83,15 @@ class DraftKingsPick6Plug:
                     'batch_id': self.batch_id,
                     'time_processed': datetime.now(),
                     'league': league,
-                    'game_time': game_time,
                     'market_category': 'player_props',
                     'market_id': market_id,
                     'market': market,
-                    'subject_team': subject_team,
                     'subject_id': subject_id,
                     'subject': subject,
-                    'position': position,
-                    'bookmaker': "DraftKingsPick6",
+                    'bookmaker': self.info.name,
                     'label': label,
-                    'line': line
+                    'line': line,
+                    'odds': self.info.default_payout.odds
                 })
 
 
@@ -111,7 +102,8 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = DraftKingsPick6Plug(batch_id, RequestManager(), DataStandardizer(batch_id, db))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "DraftKings Pick6"))
+    spider = DraftKingsPick6(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

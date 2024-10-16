@@ -4,8 +4,8 @@ import time
 import uuid
 from datetime import datetime
 
-from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, Packager, clean_market, clean_subject, \
-    clean_league, get_db, Subject, Market
+from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, Packager, clean_market, \
+    clean_subject, clean_league, get_db, Subject, Market, Plug, Bookmaker, get_bookmaker
 
 
 def read_tokens():
@@ -15,12 +15,9 @@ def read_tokens():
     return {'path': absolute_path, 'access_token': access_token, 'refresh_token': refresh_token}
 
 
-class BoomFantasyPlug:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        self.batch_id = batch_id
-        self.packager = Packager(bookmaker='BoomFantasy')
-        self.rm = request_manager
-        self.ds = data_standardizer
+class BoomFantasy(Plug):
+    def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__(info, batch_id, request_manager, data_standardizer)
         self.prop_lines = []
 
     async def start(self):
@@ -101,12 +98,13 @@ class BoomFantasyPlug:
                                         'market_category': 'player_props',
                                         'market_id': market_id,
                                         'market': market,
-                                        'game_time': game_time,
+                                        # 'game_time': game_time,
                                         'subject_id': subject_id,
                                         'subject': subject,
-                                        'bookmaker': 'BoomFantasy',
+                                        'bookmaker': self.info.name,
                                         'label': label,
-                                        'line': line
+                                        'line': line,
+                                        'odds': self.info.default_payout.odds
                                     })
 
             self.packager.store(self.prop_lines)
@@ -119,7 +117,8 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = BoomFantasyPlug(batch_id, RequestManager(), DataStandardizer(batch_id, db))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "Boom Fantasy"))
+    spider = BoomFantasy(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

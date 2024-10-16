@@ -4,15 +4,12 @@ import uuid
 from datetime import datetime
 
 from app.product_data.data_sourcing.utils import clean_league, clean_subject, clean_market, DataStandardizer, \
-    RequestManager, Packager, get_db, Market, Subject
+    RequestManager, Packager, get_db, Market, Subject, Plug, Bookmaker, get_bookmaker
 
 
-class ParlayPlayPlug:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        self.batch_id = batch_id
-        self.packager = Packager(bookmaker='ParlayPlay')
-        self.rm = request_manager
-        self.ds = data_standardizer
+class ParlayPlay(Plug):
+    def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__(info, batch_id, request_manager, data_standardizer)
         self.prop_lines = []
 
     async def start(self):
@@ -28,9 +25,9 @@ class ParlayPlayPlug:
 
         subject_ids = dict()
         for player in data.get('players', []):
-            league, game_time, match = None, None, player.get('match')
+            league, match = None, player.get('match')
             if match:
-                player_league, game_time = match.get('league'), match.get('matchDate')
+                player_league = match.get('league')
                 if player_league:
                     league = player_league.get('leagueNameShort')
                     if league:
@@ -78,17 +75,14 @@ class ParlayPlayPlug:
                             self.prop_lines.append({
                                 'batch_id': self.batch_id,
                                 'time_processed': datetime.now(),
-                                'last_updated': last_updated,
+                                # 'last_updated': last_updated,
                                 'league': league,
-                                'game_time': game_time,
                                 'market_category': 'player_props',
                                 'market_id': market_id,
                                 'market': market,
-                                'subject_team': subject_team,
-                                'position': position,
                                 'subject_id': subject_id,
                                 'subject': subject,
-                                'bookmaker': 'ParlayPlay',
+                                'bookmaker': self.info.name,
                                 'label': label,
                                 'line': stat_line,
                                 'odds': odds,
@@ -105,7 +99,8 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = ParlayPlayPlug(batch_id, RequestManager(), DataStandardizer(batch_id, db))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "ParlayPlay"))
+    spider = ParlayPlay(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

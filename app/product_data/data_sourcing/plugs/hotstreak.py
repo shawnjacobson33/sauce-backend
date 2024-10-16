@@ -5,18 +5,15 @@ from datetime import datetime
 import asyncio
 
 from app.product_data.data_sourcing.utils import clean_market, clean_subject, clean_league, DataStandardizer, \
-    RequestManager, Packager, get_db, Subject, Market
+    RequestManager, Packager, get_db, Subject, Market, Plug, Bookmaker, get_bookmaker
 
 
-class HotStreakPlug:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        self.batch_id = batch_id
-        self.packager = Packager(bookmaker='HotStreak')
+class HotStreak(Plug):
+    def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__(info, batch_id, request_manager, data_standardizer)
+        self.prop_lines = []
         self.url = self.packager.get_url()
         self.headers = self.packager.get_headers()
-        self.rm = request_manager
-        self.ds = data_standardizer
-        self.prop_lines = []
         self.uniq_leagues = set()
 
     async def start(self):
@@ -99,7 +96,7 @@ class HotStreakPlug:
                 if opponent_id:
                     opponent = opponent_ids.get(opponent_id)
                     if opponent:
-                        league, game_time = opponent.get('league'), opponent.get('game_time')
+                        league = opponent.get('league')
                         if league:
                             league = clean_league(league)
                             if not Packager.is_league_good(league):
@@ -140,12 +137,9 @@ class HotStreakPlug:
                             'market_category': 'player_props',
                             'market_id': market_id,
                             'market': the_market,
-                            'game_time': game_time,
-                            'position': position,
                             'subject_id': subject_id,
                             'subject': subject,
-                            'jersey_number': jersey_number,
-                            'bookmaker': 'HotStreak',
+                            'bookmaker': self.info.name,
                             'label': labels[j],
                             'line': line,
                             'odds': odds
@@ -159,7 +153,8 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = HotStreakPlug(batch_id, RequestManager(), DataStandardizer(batch_id, db))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "HotStreak"))
+    spider = HotStreak(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

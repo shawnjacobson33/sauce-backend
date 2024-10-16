@@ -4,15 +4,12 @@ from datetime import datetime, timedelta
 import asyncio
 
 from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, clean_market, clean_subject, \
-    clean_league, Packager, get_db, Market, Subject
+    clean_league, Packager, get_db, Market, Subject, Plug, Bookmaker, get_bookmaker
 
 
-class OddsShopperPlug:
-    def __init__(self, batch_id: uuid.UUID, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        self.batch_id = batch_id
-        self.packager = Packager(bookmaker='OddsShopper')
-        self.rm = request_manager
-        self.ds = data_standardizer
+class OddsShopper(Plug):
+    def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__(info, batch_id, request_manager, data_standardizer)
         self.prop_lines = []
 
     async def start(self):
@@ -110,7 +107,6 @@ class OddsShopperPlug:
                         'time_processed': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         'last_updated': last_processed,
                         'league': league,
-                        'game_time': game_time,
                         'market_category': 'player_props',
                         'market_id': market_id,
                         'market': market,
@@ -133,7 +129,8 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = OddsShopperPlug(uuid.uuid4(), RequestManager(), DataStandardizer(batch_id, db))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "OddsShopper"))
+    spider = OddsShopper(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

@@ -4,15 +4,12 @@ import uuid
 from datetime import datetime
 
 from app.product_data.data_sourcing.utils import clean_subject, clean_market, clean_league, RequestManager, \
-    DataStandardizer, Packager, get_db, Subject, Market
+    DataStandardizer, Packager, get_db, Subject, Market, Plug, Bookmaker, get_bookmaker
 
 
-class SleeperPlug:
-    def __init__(self, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        self.batch_id = batch_id
-        self.packager = Packager(bookmaker='Sleeper')
-        self.rm = request_manager
-        self.ds = data_standardizer
+class Sleeper(Plug):
+    def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__(info, batch_id, request_manager, data_standardizer)
         self.prop_lines = []
         self.headers = self.packager.get_headers()
 
@@ -85,23 +82,21 @@ class SleeperPlug:
 
             for option in line.get('options', []):
                 label, line = option.get('outcome').title(), option.get('outcome_value')
-                multiplier = option.get('payout_multiplier')
+                odds = option.get('payout_multiplier')
                 self.prop_lines.append({
                     'batch_id': self.batch_id,
                     'time_processed': datetime.now(),
-                    'last_updated': last_updated,
+                    # 'last_updated': last_updated,
                     'league': cleaned_league,
                     'market_category': 'player_props',
                     'market_id': market_id,
                     'market': market,
-                    'subject_team': subject_team,
-                    'position': position,
                     'subject_id': subject_id,
                     'subject': subject,
-                    'bookmaker': 'Sleeper',
+                    'bookmaker': self.info.name,
                     'label': label,
                     'line': line,
-                    'multiplier': multiplier
+                    'odds': odds
                 })
 
         self.packager.store(self.prop_lines)
@@ -114,7 +109,8 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = SleeperPlug(batch_id, RequestManager(), DataStandardizer(batch_id, db))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "Sleeper"))
+    spider = Sleeper(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()

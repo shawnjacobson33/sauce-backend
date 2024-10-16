@@ -1,16 +1,17 @@
-import uuid
 from typing import Union
 
 import pandas as pd
 from pymongo.collection import Collection
 
-from app.product_data.data_sourcing.utils import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME, Market, Subject
+from app.product_data.data_sourcing.utils import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME, Market, Subject, \
+    BOOKMAKERS_COLLECTION_NAME
 from main import get_db
 
 db = get_db()
 
 subjects = db[SUBJECT_COLLECTION_NAME]
 markets = db[MARKETS_COLLECTION_NAME]
+bookmakers = db[BOOKMAKERS_COLLECTION_NAME]
 
 
 # ************* REMOVE OPERATIONS ***************
@@ -69,12 +70,54 @@ def add_alt_entity(alt_entity: str, entity: Union[Subject, Market], collection: 
 
 # ***********************************************************************************
 
+# ODDS CONVERSION FORMULA:
+# ----- Positive: (American odds / 100) + 1 = decimal odds
+# ----- Negative: (100 / American odds) + 1 = decimal odds
+
+# BOOKMAKER PAYOUTS DOC STRUCTURE
+# fields:
+# ------- bookmaker: str ('PrizePicks')
+# ------- default_odds: dict
+# ------------ legs: int (3)
+# ------------ is_insured: bool (False)
+# ------------ odds: float (2.00)
+# ------- payouts: list
+# ------------ {
+# ----------------- legs: int (3)
+# ----------------- is_insured: bool (False)
+# ----------------- odds: float (2.00)
+# ------------ }
+# --------------------------------------------
+
+# bookmaker_payouts.delete_one({'bookmaker': 'Drafters'})
 
 
-
-
-
-
+bookmakers.insert_one({
+    'name': 'OddsShopper',
+    'is_dfs': False
+})
+# bookmakers.insert_one({
+#     'name': 'Drafters',
+#     'is_dfs': True,
+#     'default_odds': {
+#         'legs': 3,
+#         'is_insured': False,
+#         'odds': 1.817
+#     }, 'payouts': [
+#         {'legs': 2, 'is_insured': False, 'odds': 1.732},
+#         # {'legs': 3, 'is_insured': False, 'odds': 1.817},
+#         {'legs': 4, 'is_insured': False, 'odds': 1.778},
+#         {'legs': 5, 'is_insured': False, 'odds': 1.821},
+#         {'legs': 6, 'is_insured': False, 'odds': 1.808},
+#         {'legs': 7, 'is_insured': False, 'odds': 1.815},
+#         {'legs': 8, 'is_insured': False, 'odds': 1.778},
+#         # {'legs': 9, 'is_insured': False, 'odds': 1.745},
+#         # {'legs': 10, 'is_insured': False, 'odds': 1.737},
+#         # {'legs': 7, 'is_insured': False, 'odds': 1.746},
+#         # {'legs': 8, 'is_insured': True, 'odds': 1.781},
+#         # {'legs': 8, 'is_insured': False, 'odds': 1.775},
+#     ]
+# })
 
 
 
@@ -211,4 +254,4 @@ def check_for_duplicates(collection: Collection):
 #         subjects.update_one({'_id': doc['_id']}, update_operation)
 
 
-subjects.delete_many({'batch_id': '45251319-97b6-42b8-b5ca-e201b1a79d35'})
+# subjects.delete_many({'batch_id': '45251319-97b6-42b8-b5ca-e201b1a79d35'})
