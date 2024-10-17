@@ -1,3 +1,4 @@
+import sys
 import time
 import uuid
 from datetime import datetime
@@ -152,4 +153,6 @@ async def main():
     print(f'[Rebet]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    with open('log.txt', 'w') as f:
+        sys.stdout = f
+        asyncio.run(main())

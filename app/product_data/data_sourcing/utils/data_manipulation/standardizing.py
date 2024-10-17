@@ -9,6 +9,7 @@ from app.product_data.data_sourcing.utils import Subject, Market, SUBJECT_COLLEC
     get_entities, Team, TEAMS_COLLECTION_NAME
 
 
+
 class DataStandardizer:
     def __init__(self, batch_id: str, db: Database, has_grouping: bool = True):
         self.batch_id = batch_id
@@ -31,29 +32,39 @@ class DataStandardizer:
 
         return self._insert_new_entity(team, self.team_collection)
 
-    def get_market_id(self, market: Market) -> Optional[str]:
+    def get_market_id(self, market: Market, user: str = None) -> Optional[str]:
         filtered_markets = self._get_filtered_data(market, self.markets)
         market_id = self._first_search(market, self.market_collection, filtered_markets)
-        if market_id:
-            return market_id
+        if user not in {'OddsShopper'}:
+            if market_id:
+                return market_id
 
-        market_id = self._second_search(market, self.market_collection, filtered_markets)
-        if market_id:
-            return market_id
+            market_id = self._second_search(market, self.market_collection, filtered_markets)
+            if market_id:
+                return market_id
 
-        return self._insert_new_entity(market, self.market_collection)
+            return self._insert_new_entity(market, self.market_collection)
 
-    def get_subject_id(self, subject: Subject):
+        elif not market_id:
+            # only applicable for PROHIBITED_BOOKMAKERS
+            DataStandardizer._output_msg(market, msg_type='not_found')
+
+    def get_subject_id(self, subject: Subject, user: str = None):
         filtered_subjects = self._get_filtered_data(subject, self.subjects)
         subject_id = self._first_search(subject, self.subject_collection, filtered_subjects)
-        if subject_id:
-            return subject_id
+        if user not in {'OddsShopper'}:
+            if subject_id:
+                return subject_id
 
-        subject_id = self._second_search(subject, self.subject_collection, filtered_subjects)
-        if subject_id:
-            return subject_id
+            subject_id = self._second_search(subject, self.subject_collection, filtered_subjects)
+            if subject_id:
+                return subject_id
 
-        return self._insert_new_entity(subject, self.subject_collection)
+            return self._insert_new_entity(subject, self.subject_collection)
+
+        elif not subject_id:
+            # only applicable for PROHIBITED_BOOKMAKERS
+            DataStandardizer._output_msg(subject, msg_type='not_found')
 
     def _first_search(self, entity: Union[Market, Subject, Team], collection: Collection, in_mem_data: Union[dict, pd.DataFrame]) -> Optional[str]:
         if isinstance(entity, Market):
@@ -231,3 +242,5 @@ class DataStandardizer:
             print(f'INSERTING {"SUBJECT" if isinstance(entity, Subject) else "MARKET"}: FAILED MATCH -> {total_distance}')
             print(f'********************** {entity} **********************')
             print(f'---------------------- {similar_entity} ----------------------')
+        elif msg_type == 'not_found':
+            print(f'NOT FOUND {entity.name}: FAIL -> {entity}')

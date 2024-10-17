@@ -1,4 +1,5 @@
 import json
+import sys
 import time
 import uuid
 from datetime import datetime
@@ -102,7 +103,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    bookmaker_info = Bookmaker(get_bookmaker(db, "DraftKings Pick6"))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "DraftKingsPick6"))
     spider = DraftKingsPick6(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
@@ -111,4 +112,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    with open('log.txt', 'w') as f:
+        sys.stdout = f
+        asyncio.run(main())

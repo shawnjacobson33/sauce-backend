@@ -1,14 +1,11 @@
 import asyncio
+import sys
 import time
 import uuid
 from datetime import datetime
 
-from pymongo.database import Database
-
-from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, Packager, clean_market, \
-    clean_subject, \
-    clean_league, get_db, Subject, Market, LEAGUE_SPORT_MAP, IN_SEASON_LEAGUES, Plug
-from app.product_data.data_sourcing.utils.objects import Bookmaker
+from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, clean_market, clean_subject, \
+    clean_league, get_db, Subject, Market, LEAGUE_SPORT_MAP, IN_SEASON_LEAGUES, Plug, get_bookmaker, Bookmaker
 
 statistics = {
     'Football': [
@@ -54,8 +51,8 @@ leagues = [league_map.get(league, league).lower() for league in IN_SEASON_LEAGUE
 
 
 class BetOnline(Plug):
-    def __init__(self, db: Database, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
-        super().__init__("BetOnline", batch_id, request_manager, data_standardizer)
+    def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
+        super().__init__(info, batch_id, request_manager, data_standardizer)
         self.prop_lines = []
 
     async def start(self):
@@ -144,7 +141,8 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    spider = BetOnline(db, batch_id, RequestManager(use_requests=True), DataStandardizer(batch_id, db))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "BetOnline"))
+    spider = BetOnline(bookmaker_info, batch_id, RequestManager(use_requests=True), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
     end_time = time.time()
@@ -152,4 +150,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    with open('log.txt', 'w') as f:
+        sys.stdout = f
+        asyncio.run(main())

@@ -2,6 +2,7 @@ import asyncio
 import os
 import time
 import uuid
+import sys
 from datetime import datetime
 
 from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, Packager, clean_market, \
@@ -9,7 +10,7 @@ from app.product_data.data_sourcing.utils import RequestManager, DataStandardize
 
 
 def read_tokens():
-    absolute_path = os.path.abspath('boomfantasy_tokens.txt')
+    absolute_path = os.path.abspath('tokens/boomfantasy_tokens.txt')
     with open(absolute_path, 'r') as file:
         access_token, refresh_token = [line.strip() for line in file.readlines()[:2]]
     return {'path': absolute_path, 'access_token': access_token, 'refresh_token': refresh_token}
@@ -117,7 +118,7 @@ async def main():
         f.write(batch_id)
 
     print(f'Batch ID: {batch_id}')
-    bookmaker_info = Bookmaker(get_bookmaker(db, "Boom Fantasy"))
+    bookmaker_info = Bookmaker(get_bookmaker(db, "BoomFantasy"))
     spider = BoomFantasy(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
     start_time = time.time()
     await spider.start()
@@ -126,4 +127,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    with open('log.txt', 'w') as f:
+        sys.stdout = f
+        asyncio.run(main())

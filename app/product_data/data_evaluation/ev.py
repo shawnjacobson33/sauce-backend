@@ -68,7 +68,7 @@ class DataEvaluator:
                 # -- result in incredible storage costs), if a user wants to know how the 'ev' would be affected if they
                 # -- wanted to make an n-leg parlay, those calculations can be made via an API call or in the frontend
                 # -- based upon the 'ev' for the one payout multiplier. Make sure to store a field storing what the
-                # -- value of 'n' is 
+                # -- value of 'n' is.
                 row['ev'] = avg_true_prob * row['odds'] - (1 - avg_true_prob)
 
             return row

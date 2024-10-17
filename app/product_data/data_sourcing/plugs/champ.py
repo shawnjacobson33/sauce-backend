@@ -1,4 +1,5 @@
 import asyncio
+import sys
 import time
 import uuid
 from datetime import datetime
@@ -85,7 +86,7 @@ class Champ(Plug):
                             'label': label,
                             'line': line,
                             'multiplier': multiplier,
-                            'odds': round(self.info.default_payout.odds * multiplier, 3)
+                            'odds': round(self.info.default_payout.odds * multiplier, 3) if multiplier else self.info.default_payout.odds
                         })
 
 
@@ -104,4 +105,6 @@ async def main():
     print(f'[Champ]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    with open('log.txt', 'w') as f:
+        sys.stdout = f
+        asyncio.run(main())

@@ -1,3 +1,4 @@
+import sys
 import time
 import uuid
 import random
@@ -49,101 +50,102 @@ class HotStreak(Plug):
     async def _parse_lines(self, response, league_aliases):
         # get body content in json format
         data = response.json().get('data')
-        search = data.get('search')
-        # to get league ids
-        leagues = dict()
-        for league in search.get('leagueFilters', []):
-            league_id, league_name = league.get('key'), league.get('name')
-            if league_id and league_name:
-                league_alias = league_aliases.get(league_name)
-                if league_alias:
-                    leagues[league_id] = league_alias
-                else:
-                    leagues[league_id] = league_name
+        if data:
+            search = data.get('search')
+            # to get league ids
+            leagues = dict()
+            for league in search.get('leagueFilters', []):
+                league_id, league_name = league.get('key'), league.get('name')
+                if league_id and league_name:
+                    league_alias = league_aliases.get(league_name)
+                    if league_alias:
+                        leagues[league_id] = league_alias
+                    else:
+                        leagues[league_id] = league_name
 
-        # to get opponent ids
-        opponent_ids = dict()
-        for game in search.get('games', []):
-            league_id, game_time = game.get('leagueId'), game.get('scheduledAt')
-            for opponent in game.get('opponents', []):
-                opponent_id = opponent.get('id')
-                if opponent_id:
-                    opponent_ids[opponent_id] = {'league': leagues.get(league_id), 'game_time': game_time}
+            # to get opponent ids
+            opponent_ids = dict()
+            for game in search.get('games', []):
+                league_id, game_time = game.get('leagueId'), game.get('scheduledAt')
+                for opponent in game.get('opponents', []):
+                    opponent_id = opponent.get('id')
+                    if opponent_id:
+                        opponent_ids[opponent_id] = {'league': leagues.get(league_id), 'game_time': game_time}
 
-        # to get participant ids
-        participants = dict()
-        for player in search.get('participants', []):
-            participant_id, opponent_id = player.get('id').split(':')[1], player.get('opponentId')
-            player_data = player.get('player')
-            if player_data:
-                subject, position, number = player_data.get('displayName'), player_data.get('position'), player_data.get('number')
-                participants[participant_id] = {'subject': subject, 'position': position, 'opponent_id': opponent_id, 'subject_number': number}
+            # to get participant ids
+            participants = dict()
+            for player in search.get('participants', []):
+                participant_id, opponent_id = player.get('id').split(':')[1], player.get('opponentId')
+                player_data = player.get('player')
+                if player_data:
+                    subject, position, number = player_data.get('displayName'), player_data.get('position'), player_data.get('number')
+                    participants[participant_id] = {'subject': subject, 'position': position, 'opponent_id': opponent_id, 'subject_number': number}
 
-        # go through prop lines
-        subject_ids = dict()
-        for market in search.get('markets', []):
-            market_id_components = market.get('id').split(':')[1:]
-            more_components = ''.join(market_id_components).split(',')
-            market_id, participant_id, the_market = None, more_components[0], more_components[1]
+            # go through prop lines
+            subject_ids = dict()
+            for market in search.get('markets', []):
+                market_id_components = market.get('id').split(':')[1:]
+                more_components = ''.join(market_id_components).split(',')
+                market_id, participant_id, the_market = None, more_components[0], more_components[1]
 
-            # get player info and league
-            jersey_number, subject_id = None, None
-            game_time, subject, position, league, participant = None, None, None, None, participants.get(participant_id)
-            if participant:
-                subject, position = participant.get('subject'), participant.get('position')
-                opponent_id, jersey_number = participant.get('opponent_id'), participant.get('subject_number')
-                jersey_number = str(jersey_number) if jersey_number is not None else jersey_number
-                if opponent_id:
-                    opponent = opponent_ids.get(opponent_id)
-                    if opponent:
-                        league = opponent.get('league')
-                        if league:
-                            league = clean_league(league)
-                            if not Packager.is_league_good(league):
-                                continue
+                # get player info and league
+                jersey_number, subject_id = None, None
+                game_time, subject, position, league, participant = None, None, None, None, participants.get(participant_id)
+                if participant:
+                    subject, position = participant.get('subject'), participant.get('position')
+                    opponent_id, jersey_number = participant.get('opponent_id'), participant.get('subject_number')
+                    jersey_number = str(jersey_number) if jersey_number is not None else jersey_number
+                    if opponent_id:
+                        opponent = opponent_ids.get(opponent_id)
+                        if opponent:
+                            league = opponent.get('league')
+                            if league:
+                                league = clean_league(league)
+                                if not Packager.is_league_good(league):
+                                    continue
 
-                            self.uniq_leagues.add(league)
+                                self.uniq_leagues.add(league)
 
-                if subject:
-                    subject = clean_subject(subject)
-                    subject_id = subject_ids.get(f'{subject}{position}')
-                    if not subject_id:
-                        subject_id = self.ds.get_subject_id(Subject(subject, league, position=position, jersey_number=jersey_number))
-                        subject_ids[f'{subject}{position}'] = subject_id
+                    if subject:
+                        subject = clean_subject(subject)
+                        subject_id = subject_ids.get(f'{subject}{position}')
+                        if not subject_id:
+                            subject_id = self.ds.get_subject_id(Subject(subject, league, position=position, jersey_number=jersey_number))
+                            subject_ids[f'{subject}{position}'] = subject_id
 
-            if the_market:
-                if the_market == 'fantasy_points':
-                    if league in {'NBA', 'WNBA'}:
-                        the_market = 'Basketball Fantasy Points'
-                    elif league in {'NFL', 'NCAAF'}:
-                        the_market = 'Football Fantasy Points'
+                if the_market:
+                    if the_market == 'fantasy_points':
+                        if league in {'NBA', 'WNBA'}:
+                            the_market = 'Basketball Fantasy Points'
+                        elif league in {'NFL', 'NCAAF'}:
+                            the_market = 'Football Fantasy Points'
 
-                the_market = clean_market(the_market)
-                market_id = self.ds.get_market_id(Market(the_market, league))
+                    the_market = clean_market(the_market)
+                    market_id = self.ds.get_market_id(Market(the_market, league))
 
-            lines, probabilities = market.get('lines', []), market.get('probabilities', [])
-            labels, n = ['Under', 'Over'], len(lines)
-            if (lines and probabilities) and (n == len(probabilities)):
-                for i in range(n):
-                    line = lines[i]
-                    for j in range(len(labels)):
-                        probability = probabilities[i][j]
-                        # convert probability to decimal odds
-                        odds = round(1 / probability, 3)
-                        self.prop_lines.append({
-                            'batch_id': self.batch_id,
-                            'time_processed': datetime.now(),
-                            'league': league,
-                            'market_category': 'player_props',
-                            'market_id': market_id,
-                            'market': the_market,
-                            'subject_id': subject_id,
-                            'subject': subject,
-                            'bookmaker': self.info.name,
-                            'label': labels[j],
-                            'line': line,
-                            'odds': odds
-                        })
+                lines, probabilities = market.get('lines', []), market.get('probabilities', [])
+                labels, n = ['Under', 'Over'], len(lines)
+                if (lines and probabilities) and (n == len(probabilities)):
+                    for i in range(n):
+                        line = lines[i]
+                        for j in range(len(labels)):
+                            probability = probabilities[i][j]
+                            # convert probability to decimal odds
+                            odds = round(1 / probability, 3)
+                            self.prop_lines.append({
+                                'batch_id': self.batch_id,
+                                'time_processed': datetime.now(),
+                                'league': league,
+                                'market_category': 'player_props',
+                                'market_id': market_id,
+                                'market': the_market,
+                                'subject_id': subject_id,
+                                'subject': subject,
+                                'bookmaker': self.info.name,
+                                'label': labels[j],
+                                'line': line,
+                                'odds': odds
+                            })
 
 
 async def main():
@@ -162,4 +164,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    with open('log.txt', 'w') as f:
+        sys.stdout = f
+        asyncio.run(main())
