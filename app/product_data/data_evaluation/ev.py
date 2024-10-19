@@ -18,12 +18,12 @@ import pandas as pd
 # - BACK IN THE DATABASE?
 # - RETURN IT?
 
-from utils import PROP_LINES_COLLECTION_NAME, SHARP_PROP_BOOKMAKERS
+from utils import SHARP_PROP_BOOKMAKERS
 
 
 class DataEvaluator:
-    def __init__(self, db: Database):
-        self.prop_lines = pd.DataFrame(db[PROP_LINES_COLLECTION_NAME])
+    def __init__(self, prop_lines: list[dict]):
+        self.prop_lines = pd.DataFrame(prop_lines)
         self.prop_lines.set_index(['line', 'subject_id', 'market_id', 'bookmaker'], inplace=True)
 
     def _read_data(self):

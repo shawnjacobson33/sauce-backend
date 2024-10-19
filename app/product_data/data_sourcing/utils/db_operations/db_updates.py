@@ -21,8 +21,9 @@ def remove_last_batch(batch_id: str, collection: Collection):
 def remove_entity(entity: str, collection: Collection):
     """Will remove entire doc"""
     collection.delete_one({'name': entity})
+    print(f"Successfully removed {entity}!")
 
-def remove_alt_entity(alt_entity: str, collection: Collection, other_removables: list = None):
+def remove_alt_entity(alt_entity: str, collection: Collection, other_removables: list = None, insert: bool = False):
     if other_removables is None:
         other_removables = []
 
@@ -37,6 +38,12 @@ def remove_alt_entity(alt_entity: str, collection: Collection, other_removables:
                 }
                 collection.update_one({'_id': doc['_id']}, update_operation)
                 print(f"Successfully removed {alt_entity} from {doc['name']}'s alt_names!")
+                if insert:
+                    new_doc = {'name': alt_entity, 'attributes': {**doc['attributes']}}
+                    new_doc['attributes']['alt_names'] = []
+                    collection.insert_one(new_doc)
+                    print(f"Successfully inserted {alt_entity}!")
+
                 return
 
     print(f"Failed to remove {alt_entity}!")
@@ -52,6 +59,7 @@ def insert_entity(entity: Union[Subject, Market]):
     }
     del new_doc['attributes']['name']
     subjects.insert_one(new_doc) if isinstance(entity, Subject) else markets.insert_one(new_doc)
+    print(f"Successfully inserted {entity}!")
 
 # ************** UPDATE OPERATIONS ***************
 def add_alt_entity(alt_entity: str, entity: Union[Subject, Market], delete_old: bool = False):
@@ -81,12 +89,15 @@ def update_subject_position(old_position: str, new_position: str):
 
 # ***********************************************************************************
 
-remove_alt_entity('Keenan Jackson', subjects, other_removables=[])
-# remove_last_batch('8b597445-39cc-4892-8a70-b044c49e646a', subjects)
-# update_subject_position('Forward', 'F')
-# add_alt_entity('Jevyon Ducker', Subject('Jay Ducker', 'NCAAF', 'SAMHOU'), delete_old=True)
-# add_alt_entity('Pp Pts', Market('Powerplay Points', sport='Ice Hockey'), delete_old=True)
+# remove_alt_entity('Jeremiah Noga', subjects, other_removables=['team'], insert=True)
+# remove_alt_entity('2PT Made', markets, insert=True)
+# add_alt_entity('Patrick Garwo', Subject('Pat Garwo', 'NCAAF'), delete_old=True)
+# add_alt_entity('First Qtr Points', Market('1Q Points', sport='Basketball'), delete_old=True)
+
+
+update_subject_position('', 'D')
 # insert_entity(Subject('Josh Hart', 'NBA', 'NYK'))
+# insert_entity(Market('2PT Attempted', sport='Basketball'))
 
 # ***********************************************************************************
 

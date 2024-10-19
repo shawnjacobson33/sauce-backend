@@ -58,6 +58,11 @@ LEAGUE_MAP = {
 MARKET_MAP = {
     'Hitter Fantasy Score': 'Baseball Fantasy Points'
 }
+POSITION_MAP = {
+    'Forward': 'F',
+    'Pitcher': 'P',
+    'Defender': 'D',
+}
 SUBJECT_SUFFIXES = [
     'Jr.', 'jr.', 'jr', 'Jr', 'Sr.', 'sr.', 'sr', 'Sr', 'III', 'II', 'IV', 'V'
 ]
@@ -109,5 +114,9 @@ def clean_subject(subject: str):
 
     return subject.strip()
 
+
+def clean_position(position: str):
+    """Small formatting fixes for positions"""
+    return POSITION_MAP.get(position, position)
 
 print("AST Tackles".isupper())

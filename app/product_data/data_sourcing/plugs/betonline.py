@@ -1,11 +1,9 @@
 import asyncio
-import sys
-import time
-import uuid
+import main
 from datetime import datetime
 
 from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, clean_market, clean_subject, \
-    clean_league, get_db, Subject, Market, LEAGUE_SPORT_MAP, IN_SEASON_LEAGUES, Plug, get_bookmaker, Bookmaker
+    clean_league, Subject, Market, LEAGUE_SPORT_MAP, IN_SEASON_LEAGUES, Plug, Bookmaker
 
 statistics = {
     'Football': [
@@ -134,22 +132,7 @@ class BetOnline(Plug):
                             'implied_prob': round(1 / float(decimal_odds), 3)
                         })
 
-async def main():
-    db = get_db()
-    batch_id = str(uuid.uuid4())
-    with open('most_recent_batch_id.txt', 'w') as f:
-        f.write(batch_id)
-
-    print(f'Batch ID: {batch_id}')
-    bookmaker_info = Bookmaker(get_bookmaker(db, "BetOnline"))
-    spider = BetOnline(bookmaker_info, batch_id, RequestManager(use_requests=True), DataStandardizer(batch_id, db))
-    start_time = time.time()
-    await spider.start()
-    end_time = time.time()
-    print(f'[BetOnline]: {round(end_time - start_time, 2)}s')
-
 
 if __name__ == "__main__":
-    with open('log.txt', 'w') as f:
-        sys.stdout = f
-        asyncio.run(main())
+    asyncio.run(main.run(BetOnline))
+

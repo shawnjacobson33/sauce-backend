@@ -1,11 +1,9 @@
-import sys
-import time
-import uuid
+import main
 from datetime import datetime
 import asyncio
 
 from app.product_data.data_sourcing.utils import clean_subject, clean_market, clean_league, DataStandardizer, \
-    RequestManager, Packager, get_db, Market, Subject, Plug, Bookmaker, get_bookmaker
+    RequestManager, Packager, Market, Subject, Plug, Bookmaker
 
 
 class Rebet(Plug):
@@ -138,21 +136,5 @@ class Rebet(Plug):
                             })
 
 
-async def main():
-    db = get_db()
-    batch_id = str(uuid.uuid4())
-    with open('most_recent_batch_id.txt', 'w') as f:
-        f.write(batch_id)
-
-    print(f'Batch ID: {batch_id}')
-    bookmaker_info = Bookmaker(get_bookmaker(db, "Rebet"))
-    spider = Rebet(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
-    start_time = time.time()
-    await spider.start()
-    end_time = time.time()
-    print(f'[Rebet]: {round(end_time - start_time, 2)}s')
-
 if __name__ == "__main__":
-    with open('log.txt', 'w') as f:
-        sys.stdout = f
-        asyncio.run(main())
+    asyncio.run(main.run(Rebet))

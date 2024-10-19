@@ -1,11 +1,9 @@
 import asyncio
-import sys
-import time
-import uuid
+import main
 from datetime import datetime
 
-from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, Packager, clean_subject, \
-    get_db, Subject, Market, clean_market, Plug, Bookmaker, get_bookmaker
+from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, clean_subject, Subject, Market, \
+    clean_market, Plug, Bookmaker
 
 
 class Drafters(Plug):
@@ -79,22 +77,5 @@ class Drafters(Plug):
         self.packager.store(self.prop_lines)
 
 
-async def main():
-    db = get_db()
-    batch_id = str(uuid.uuid4())
-    with open('most_recent_batch_id.txt', 'w') as f:
-        f.write(batch_id)
-
-    print(f'Batch ID: {batch_id}')
-    bookmaker_info = Bookmaker(get_bookmaker(db, "Drafters"))
-    spider = Drafters(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db, has_grouping=False))
-    start_time = time.time()
-    await spider.start()
-    end_time = time.time()
-    print(f'[Drafters]: {round(end_time - start_time, 2)}s')
-
-
 if __name__ == "__main__":
-    with open('log.txt', 'w') as f:
-        sys.stdout = f
-        asyncio.run(main())
+    asyncio.run(main.run(Drafters))

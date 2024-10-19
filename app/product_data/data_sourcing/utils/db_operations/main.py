@@ -1,15 +1,18 @@
+import os
+import threading
 from typing import Tuple, Any
 from pandas import DataFrame
 from pymongo import MongoClient
 from pymongo.collection import Collection
-import os
-
 from pymongo.database import Database
 
+# from watchers import watch_subjects, watch_markets
 from app.product_data.data_sourcing.utils import IN_SEASON_LEAGUES, SUBJECT_COLLECTION_NAME, IN_SEASON_SPORTS, \
-    BOOKMAKERS_COLLECTION_NAME
+    BOOKMAKERS_COLLECTION_NAME, MARKETS_COLLECTION_NAME
+
 
 DATABASE_URL = 'mongodb+srv://username:password@sauce.hvhxg.mongodb.net/?retryWrites=true&w=majority&appName=Sauce'
+# WATCHERS = [watch_subjects, watch_markets]
 
 
 def get_db_creds() -> Tuple[str, str]:
@@ -27,6 +30,13 @@ def get_client():
 
 def get_db():
     return get_client()['sauce']
+
+
+# def start_watching(db: Database):
+#     """Starts up watchers on different threads. Respond to changes within their given collection and respond accordingly."""
+#     for watcher in WATCHERS:
+#         watcher_thread = threading.Thread(target=watcher, args=(db,))
+#         watcher_thread.start()
 
 
 def get_queries(collection_name: str, has_grouping: bool) -> dict[Any, dict[str, Any]]:

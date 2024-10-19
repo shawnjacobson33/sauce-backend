@@ -1,11 +1,10 @@
 import asyncio
 import sys
-import time
-import uuid
+import main
 from datetime import datetime
 
 from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, clean_market, clean_subject, \
-    clean_league, Packager, get_db, Subject, Market, IN_SEASON_LEAGUES, Plug, Bookmaker, get_bookmaker
+    clean_league, Packager, Subject, Market, IN_SEASON_LEAGUES, Plug, Bookmaker
 
 
 # Champ formats leagues slightly differently...used for making requests
@@ -90,21 +89,5 @@ class Champ(Plug):
                         })
 
 
-async def main():
-    db = get_db()
-    batch_id = str(uuid.uuid4())
-    with open('most_recent_batch_id.txt', 'w') as f:
-        f.write(batch_id)
-
-    print(f'Batch ID: {batch_id}')
-    bookmaker_info = Bookmaker(get_bookmaker(db, "Champ"))
-    spider = Champ(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
-    start_time = time.time()
-    await spider.start()
-    end_time = time.time()
-    print(f'[Champ]: {round(end_time - start_time, 2)}s')
-
 if __name__ == "__main__":
-    with open('log.txt', 'w') as f:
-        sys.stdout = f
-        asyncio.run(main())
+    asyncio.run(main.run(Champ))

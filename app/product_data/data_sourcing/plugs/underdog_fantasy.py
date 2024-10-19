@@ -1,11 +1,9 @@
 import asyncio
-import sys
-import time
-import uuid
+import main
 from datetime import datetime
 
 from app.product_data.data_sourcing.utils import clean_subject, clean_league, clean_market, DataStandardizer, Packager, \
-    RequestManager, get_db, Subject, Market, Plug, Bookmaker, get_bookmaker
+    RequestManager, Subject, Market, Plug, Bookmaker
 
 
 class UnderdogFantasy(Plug):
@@ -78,7 +76,6 @@ class UnderdogFantasy(Plug):
                 player_data[player_id] = {'subject': subject, 'subject_team': subject_team}
 
         subject_ids = dict()
-        leagues = set()
         for game in data.get('over_under_lines', []):
             line = game.get('stat_value')
             for option in game.get('options', []):
@@ -105,7 +102,6 @@ class UnderdogFantasy(Plug):
 
                                 if league:
                                     league = clean_league(league)
-                                    leagues.add(league)
 
                         # get market and market id
                         if market:
@@ -145,6 +141,9 @@ class UnderdogFantasy(Plug):
 
                 label = 'Over' if option.get('choice') == 'higher' else 'Under'
                 multiplier = option.get('payout_multiplier')
+                if multiplier:
+                    multiplier = float(multiplier)
+
                 self.prop_lines.append({
                     'batch_id': self.batch_id,
                     'time_processed': datetime.now(),
@@ -158,28 +157,11 @@ class UnderdogFantasy(Plug):
                     'label': label,
                     'line': line,
                     'multiplier': multiplier,
-                    'odds': round(self.info.default_payout.odds * multiplier, 3) if multiplier else self.info.default_payout.odds
+                    'odds': round(self.info.default_payout.odds * multiplier, 3) if multiplier != 1 else self.info.default_payout.odds
                 })
 
         self.packager.store(self.prop_lines)
-        print(leagues)
 
-
-async def main():
-    db = get_db()
-    batch_id = str(uuid.uuid4())
-    with open('most_recent_batch_id.txt', 'w') as f:
-        f.write(batch_id)
-
-    print(f'Batch ID: {batch_id}')
-    bookmaker_info = Bookmaker(get_bookmaker(db, "Underdog Fantasy"))
-    spider = UnderdogFantasy(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
-    start_time = time.time()
-    await spider.start()
-    end_time = time.time()
-    print(f'[Underdog Fantasy]: {round(end_time - start_time, 2)}s')
 
 if __name__ == "__main__":
-    with open('log.txt', 'w') as f:
-        sys.stdout = f
-        asyncio.run(main())
+    asyncio.run(main.run(UnderdogFantasy))

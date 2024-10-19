@@ -1,4 +1,3 @@
-from threading import Lock
 from dataclasses import dataclass
 from typing import Optional
 
@@ -33,8 +32,11 @@ class Plug:
         self.ds = data_standardizer
         self.packager = Packager(info.name)
 
-    def start(self):
+    async def start(self):
         pass
+
+    def __str__(self):
+        return str(len(self.prop_lines))
 
 @dataclass
 class Team:

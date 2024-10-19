@@ -1,7 +1,6 @@
 import asyncio
 import time
 import uuid
-import threading
 
 from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, Bookmaker, get_bookmaker, get_db
 
@@ -10,11 +9,13 @@ from app.product_data.data_sourcing.plugs import BetOnline, BoomFantasy, Champ, 
     OddsShopper
 
 
+PROP_LINES = []
+
+
 class DataCollector:
     def __init__(self):
         self.batch_id = str(uuid.uuid4())
         self.db = get_db()
-        self.lock = threading.Lock()
 
     async def collect(self):
         plugs = [BetOnline, BoomFantasy, Champ, Dabble, Drafters, DraftKingsPick6, HotStreak, MoneyLine, OwnersBox, ParlayPlay,

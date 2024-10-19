@@ -1,11 +1,9 @@
-import sys
-import time
-import uuid
+import main
 from datetime import datetime
 import asyncio
 
 from app.product_data.data_sourcing.utils import clean_subject, clean_league, DataStandardizer, RequestManager, \
-    Packager, get_db, Subject, Market, clean_market, Plug, Bookmaker, get_bookmaker
+    Packager, Subject, Market, clean_market, Plug, Bookmaker
 
 
 class Dabble(Plug):
@@ -71,7 +69,7 @@ class Dabble(Plug):
 
             market_id, position = self.ds.get_market_id(Market(market, league)), player_prop.get('position')
             subject_id, subject, subject_team = None, player_prop.get('playerName'), player_prop.get('teamAbbreviation')
-            if subject_team and league in {'NCAAF', 'NFL'}:
+            if subject_team:
                 subject_team = subject_team.upper()
 
             if subject:
@@ -102,21 +100,5 @@ class Dabble(Plug):
             })
 
 
-async def main():
-    db = get_db()
-    batch_id = str(uuid.uuid4())
-    with open('most_recent_batch_id.txt', 'w') as f:
-        f.write(batch_id)
-
-    print(f'Batch ID: {batch_id}')
-    bookmaker_info = Bookmaker(get_bookmaker(db, "Dabble"))
-    spider = Dabble(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
-    start_time = time.time()
-    await spider.start()
-    end_time = time.time()
-    print(f'[Dabble]: {round(end_time - start_time, 2)}s')
-
 if __name__ == "__main__":
-    with open('log.txt', 'w') as f:
-        sys.stdout = f
-        asyncio.run(main())
+    asyncio.run(main.run(Dabble))

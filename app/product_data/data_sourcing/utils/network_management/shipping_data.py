@@ -904,6 +904,4 @@ class Packager:
         with open(absolute_path, 'w') as f:
             json.dump(data, f, default=str)
 
-        print(f'[{self.name}]: {len(data)} lines')
-
         # self.plc.insert_many(self.prop_lines)

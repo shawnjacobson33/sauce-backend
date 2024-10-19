@@ -1,14 +1,13 @@
 import json
-import sys
-import time
-import uuid
+import main
 from datetime import datetime
 from bs4 import BeautifulSoup
 import asyncio
 
 from app.product_data.data_sourcing.utils import RequestManager, clean_subject, clean_league, DataStandardizer, \
-    Packager, get_db, Subject, Market, clean_market, Plug, Bookmaker, get_bookmaker
+    Packager, Subject, Market, clean_market, Plug, Bookmaker
 
+from app.product_data.data_sourcing.main import PROP_LINES
 
 class DraftKingsPick6(Plug):
     def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
@@ -44,7 +43,8 @@ class DraftKingsPick6(Plug):
             return text[:first_index]
 
         subject_ids = dict()
-        data = json.loads(clean_json()).get('pickableIdToPickableMap')
+        clean_json = clean_json()
+        data = json.loads(clean_json).get('pickableIdToPickableMap')
         for pick in data.values():
             subject_id, line = None, None
             market_id, market, subject, subject_team, game_time, position = None, None, None, None, None, None
@@ -80,7 +80,7 @@ class DraftKingsPick6(Plug):
                 line = active_market.get('targetValue')
 
             for label in ['Over', 'Under']:
-                self.prop_lines.append({
+                PROP_LINES.append({
                     'batch_id': self.batch_id,
                     'time_processed': datetime.now(),
                     'league': league,
@@ -96,22 +96,5 @@ class DraftKingsPick6(Plug):
                 })
 
 
-async def main():
-    db = get_db()
-    batch_id = str(uuid.uuid4())
-    with open('most_recent_batch_id.txt', 'w') as f:
-        f.write(batch_id)
-
-    print(f'Batch ID: {batch_id}')
-    bookmaker_info = Bookmaker(get_bookmaker(db, "DraftKingsPick6"))
-    spider = DraftKingsPick6(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
-    start_time = time.time()
-    await spider.start()
-    end_time = time.time()
-    print(f'[DraftKingsPick6]: {round(end_time - start_time, 2)}s')
-
-
 if __name__ == "__main__":
-    with open('log.txt', 'w') as f:
-        sys.stdout = f
-        asyncio.run(main())
+    asyncio.run(main.run(DraftKingsPick6))

@@ -1,12 +1,10 @@
-import sys
-import time
-import uuid
+import main
 import random
 from datetime import datetime
 import asyncio
 
 from app.product_data.data_sourcing.utils import clean_market, clean_subject, clean_league, DataStandardizer, \
-    RequestManager, Packager, get_db, Subject, Market, Plug, Bookmaker, get_bookmaker
+    RequestManager, Packager, Subject, Market, Plug, Bookmaker
 
 
 class HotStreak(Plug):
@@ -15,7 +13,6 @@ class HotStreak(Plug):
         self.prop_lines = []
         self.url = self.packager.get_url()
         self.headers = self.packager.get_headers()
-        self.uniq_leagues = set()
 
     async def start(self):
         json_data = self.packager.get_json_data(name='leagues')
@@ -45,7 +42,6 @@ class HotStreak(Plug):
 
         await asyncio.gather(*tasks)
         self.packager.store(self.prop_lines)
-        print(self.uniq_leagues)
 
     async def _parse_lines(self, response, league_aliases):
         # get body content in json format
@@ -104,8 +100,6 @@ class HotStreak(Plug):
                                 if not Packager.is_league_good(league):
                                     continue
 
-                                self.uniq_leagues.add(league)
-
                     if subject:
                         subject = clean_subject(subject)
                         subject_id = subject_ids.get(f'{subject}{position}')
@@ -148,22 +142,5 @@ class HotStreak(Plug):
                             })
 
 
-async def main():
-    db = get_db()
-    batch_id = str(uuid.uuid4())
-    with open('most_recent_batch_id.txt', 'w') as f:
-        f.write(batch_id)
-
-    print(f'Batch ID: {batch_id}')
-    bookmaker_info = Bookmaker(get_bookmaker(db, "HotStreak"))
-    spider = HotStreak(bookmaker_info, batch_id, RequestManager(), DataStandardizer(batch_id, db))
-    start_time = time.time()
-    await spider.start()
-    end_time = time.time()
-    print(f'[HotStreak]: {round(end_time - start_time, 2)}s')
-
-
 if __name__ == "__main__":
-    with open('log.txt', 'w') as f:
-        sys.stdout = f
-        asyncio.run(main())
+    asyncio.run(main.run(HotStreak))
