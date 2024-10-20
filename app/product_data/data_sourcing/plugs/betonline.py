@@ -2,8 +2,12 @@ import asyncio
 import main
 from datetime import datetime
 
-from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, clean_market, clean_subject, \
-    clean_league, Subject, Market, LEAGUE_SPORT_MAP, IN_SEASON_LEAGUES, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager
+from app.product_data.data_sourcing.utils.constants import LEAGUE_SPORT_MAP, IN_SEASON_LEAGUES
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league, clean_position
+
 
 statistics = {
     'Football': [
@@ -41,7 +45,6 @@ statistics = {
         'Shots%2520On%2520Goal'
     ]
 }
-
 league_map = {
     'NCAAF': 'NCAAFB'
 }
@@ -98,6 +101,8 @@ class BetOnline(Plug):
                 position, position_data = None, player.get('position')
                 if position_data:
                     position = position_data.get('title')
+                    if position:
+                        position = clean_position(position)
 
                 subject_team = player.get('team')
                 subject_id, subject = None, player.get('name')

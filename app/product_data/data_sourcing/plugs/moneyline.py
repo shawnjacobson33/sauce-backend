@@ -2,8 +2,10 @@ import asyncio
 from datetime import datetime
 import main
 
-from app.product_data.data_sourcing.utils import clean_subject, clean_league, RequestManager, DataStandardizer, \
-    Packager, Subject, Market, clean_market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league
 
 
 class MoneyLine(Plug):
@@ -55,11 +57,10 @@ class MoneyLine(Plug):
                 team_components = subject_components[-1]
                 subject, subject_team = ' '.join(subject_components[:-1]), team_components[1:-1].replace('r.(', '')
                 if subject:
+                    subject = clean_subject(subject)
                     subject_id = subject_ids.get(f'{subject}{subject_team}')
                     if not subject_id:
-                        cleaned_subj = clean_subject(subject)
-                        subject_obj = Subject(cleaned_subj, league, subject_team)
-                        subject_id = self.ds.get_subject_id(subject_obj)
+                        subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team))
                         subject_ids[f'{subject}{subject_team}'] = subject_id
 
             for i in range(1, 3):

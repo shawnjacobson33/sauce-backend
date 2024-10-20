@@ -2,8 +2,10 @@ import main
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_sourcing.utils import clean_subject, clean_league, DataStandardizer, RequestManager, \
-    Packager, Subject, Market, clean_market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league, clean_position
 
 
 class Dabble(Plug):
@@ -68,6 +70,9 @@ class Dabble(Plug):
                 continue
 
             market_id, position = self.ds.get_market_id(Market(market, league)), player_prop.get('position')
+            if position:
+                position = clean_position(position)
+
             subject_id, subject, subject_team = None, player_prop.get('playerName'), player_prop.get('teamAbbreviation')
             if subject_team:
                 subject_team = subject_team.upper()

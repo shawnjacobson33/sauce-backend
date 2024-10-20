@@ -2,8 +2,10 @@ import asyncio
 import main
 from datetime import datetime
 
-from app.product_data.data_sourcing.utils import clean_league, clean_subject, clean_market, DataStandardizer, \
-    RequestManager, Packager, Market, Subject, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league, clean_position
 
 
 class ParlayPlay(Plug):
@@ -38,6 +40,9 @@ class ParlayPlay(Plug):
             subject_id, subject, position, subject_team, player_data = None, None, None, None, player.get('player')
             if player_data:
                 subject, position = player_data.get('fullName'), player_data.get('position')
+                if position:
+                    position = clean_position(position)
+                    
                 team_data = player_data.get('team')
                 if team_data:
                     subject_team = team_data.get('teamAbbreviation')

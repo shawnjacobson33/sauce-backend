@@ -2,8 +2,10 @@ import asyncio
 import main
 from datetime import datetime
 
-from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, clean_subject, Subject, Market, \
-    clean_market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_position
 
 
 class Drafters(Plug):
@@ -41,7 +43,7 @@ class Drafters(Plug):
                     if position == 'G':
                         continue
 
-                    position = position.strip()
+                    position = clean_position(position.strip())
 
                 market_id, market, line = None, player.get('bid_stats_name'), player.get('bid_stats_value')
                 if market:
@@ -55,7 +57,7 @@ class Drafters(Plug):
                     subject = clean_subject(subject)
                     subject_id = subject_ids.get(f'{subject}{subject_team}')
                     if not subject_id:
-                        subject_id = self.ds.get_subject_id(Subject(subject, team=subject_team, position=position))
+                        subject_id = self.ds.get_subject_id(Subject(subject, team=subject_team, position=position), user='Drafters')
                         subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 for label in ['Over', 'Under']:

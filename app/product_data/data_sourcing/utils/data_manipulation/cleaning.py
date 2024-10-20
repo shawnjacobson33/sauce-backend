@@ -118,5 +118,3 @@ def clean_subject(subject: str):
 def clean_position(position: str):
     """Small formatting fixes for positions"""
     return POSITION_MAP.get(position, position)
-
-print("AST Tackles".isupper())

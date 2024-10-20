@@ -6,7 +6,7 @@ from app.product_data.data_sourcing.utils import get_db, Bookmaker, get_bookmake
 
 
 async def run(plug):
-    with open('log.txt', 'w') as f:
+    with open('logs/standardizing_log.txt', 'w') as f:
         sys.stdout = f
         db = get_db()
         batch_id = str(uuid.uuid4())

@@ -4,10 +4,11 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import asyncio
 
-from app.product_data.data_sourcing.utils import RequestManager, clean_subject, clean_league, DataStandardizer, \
-    Packager, Subject, Market, clean_market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league, clean_position
 
-from app.product_data.data_sourcing.main import PROP_LINES
 
 class DraftKingsPick6(Plug):
     def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
@@ -64,7 +65,7 @@ class DraftKingsPick6(Plug):
                         position, team_data = first_competition.get('positionName'), first_competition.get('team')
                         # When secondary positions are also given
                         if position and '/' in position:
-                            position = position.split('/')[0]
+                            position = clean_position(position.split('/')[0])
 
                         if team_data:
                             subject_team = team_data.get('abbreviation')
@@ -80,7 +81,7 @@ class DraftKingsPick6(Plug):
                 line = active_market.get('targetValue')
 
             for label in ['Over', 'Under']:
-                PROP_LINES.append({
+                self.prop_lines.append({
                     'batch_id': self.batch_id,
                     'time_processed': datetime.now(),
                     'league': league,

@@ -3,8 +3,10 @@ import re
 import main
 from datetime import datetime
 
-from app.product_data.data_sourcing.utils import clean_league, clean_subject, clean_market, DataStandardizer, \
-    RequestManager, Packager, Market, Subject, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league, clean_position
 
 
 class PrizePicks(Plug):
@@ -127,7 +129,7 @@ class PrizePicks(Plug):
                         position = player_data.get('position')
                         # for players with secondary positions
                         if position and '-' in position:
-                            position = position.split('-')[0]
+                            position = clean_position(position.split('-')[0])
 
                         if subject:
                             # don't want combo props

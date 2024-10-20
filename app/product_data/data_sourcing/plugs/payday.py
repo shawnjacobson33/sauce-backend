@@ -2,8 +2,10 @@ import main
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_sourcing.utils import clean_subject, clean_league, DataStandardizer, RequestManager, \
-    Packager, Subject, Market, clean_market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league, clean_position
 
 
 class Payday(Plug):
@@ -70,6 +72,9 @@ class Payday(Plug):
                     # for tennis players that don't actually have jersey numbers
                     jersey_number = None if jersey_number == 'N/A' else jersey_number
                     subject, position = player.get('name'), player.get('position')
+                    if position:
+                        position = clean_position(position)
+
                     subject_id, subject_team, team_id = None, None, player.get('team_id')
                     if team_id:
                         subject_team = teams_dict.get(team_id)

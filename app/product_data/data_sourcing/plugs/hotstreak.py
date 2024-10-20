@@ -3,8 +3,10 @@ import random
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_sourcing.utils import clean_market, clean_subject, clean_league, DataStandardizer, \
-    RequestManager, Packager, Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league, clean_position
 
 
 class HotStreak(Plug):
@@ -89,6 +91,9 @@ class HotStreak(Plug):
                 game_time, subject, position, league, participant = None, None, None, None, participants.get(participant_id)
                 if participant:
                     subject, position = participant.get('subject'), participant.get('position')
+                    if position:
+                        position = clean_position(position)
+
                     opponent_id, jersey_number = participant.get('opponent_id'), participant.get('subject_number')
                     jersey_number = str(jersey_number) if jersey_number is not None else jersey_number
                     if opponent_id:

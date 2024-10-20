@@ -3,8 +3,10 @@ import os
 import main
 from datetime import datetime
 
-from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, Packager, clean_market, \
-    clean_subject, clean_league, Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league
 
 
 def read_tokens():
@@ -43,11 +45,6 @@ class BoomFantasy(Plug):
                                 continue
 
                         for league_section in league.get('sections', []):
-                            game_time = league_section.get('lockTime')
-                            if game_time:
-                                # convert from unix to a datetime
-                                game_time = datetime.fromtimestamp(game_time / 1000)
-
                             # get team
                             subject_team, player_image = None, league_section.get('playerImage')
                             if player_image:

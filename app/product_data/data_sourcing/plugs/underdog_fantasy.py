@@ -2,8 +2,10 @@ import asyncio
 import main
 from datetime import datetime
 
-from app.product_data.data_sourcing.utils import clean_subject, clean_league, clean_market, DataStandardizer, Packager, \
-    RequestManager, Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league
 
 
 class UnderdogFantasy(Plug):

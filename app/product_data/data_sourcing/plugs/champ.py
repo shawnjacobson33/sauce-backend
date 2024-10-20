@@ -1,10 +1,12 @@
 import asyncio
-import sys
 import main
 from datetime import datetime
 
-from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, clean_market, clean_subject, \
-    clean_league, Packager, Subject, Market, IN_SEASON_LEAGUES, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.constants import IN_SEASON_LEAGUES
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league
 
 
 # Champ formats leagues slightly differently...used for making requests
@@ -46,8 +48,7 @@ class Champ(Plug):
             for player in event.get('competitors', []):
                 subject_id, subject, position, subject_team, competitor = None, None, None, None, player.get('competitor')
                 if competitor:
-                    subject, position = competitor.get('longName'), competitor.get('position')
-                    team = competitor.get('team')
+                    subject, team = competitor.get('longName'), competitor.get('team')
                     if team:
                         subject_team = team.get('shortName')
                         if subject:

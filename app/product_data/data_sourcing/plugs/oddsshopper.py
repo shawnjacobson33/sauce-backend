@@ -2,8 +2,10 @@ import main
 from datetime import datetime, timedelta
 import asyncio
 
-from app.product_data.data_sourcing.utils import RequestManager, DataStandardizer, clean_market, clean_subject, \
-    clean_league, Packager, Market, Subject, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league
 
 
 class OddsShopper(Plug):
@@ -96,7 +98,7 @@ class OddsShopper(Plug):
                         subject = clean_subject(subject)
                         subject_id = subject_ids.get(f'{subject}{league}')
                         if not subject_id:
-                            subject_id = self.ds.get_subject_id(Subject(subject, league))
+                            subject_id = self.ds.get_subject_id(Subject(subject, league), user='OddsShopper')
                             subject_ids[f'{subject}{league}'] = subject_id
 
                     true_win_prob = outcome.get('trueWinProbability')

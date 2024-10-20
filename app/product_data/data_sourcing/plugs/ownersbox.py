@@ -2,8 +2,10 @@ import main
 from datetime import datetime
 import asyncio
 
-from app.product_data.data_sourcing.utils import clean_subject, clean_league, RequestManager, DataStandardizer, \
-    Packager, Market, Subject, clean_market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+    clean_league, clean_position
 
 
 class OwnersBox(Plug):
@@ -77,6 +79,9 @@ class OwnersBox(Plug):
             subject_id, subject_team, position, subject, player = None, None, None, None, prop_line.get('player')
             if player:
                 subject_team, position = player.get('teamAlias').upper(), player.get('position')
+                if position:
+                    position = clean_position(position)
+
                 first_name, last_name = player.get('firstName'), player.get('lastName')
                 subject = clean_subject(' '.join([first_name, last_name]))
                 subject_id = subject_ids.get(f'{subject}{subject_team}')
