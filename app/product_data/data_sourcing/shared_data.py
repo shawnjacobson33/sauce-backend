@@ -7,10 +7,10 @@ coroutines.
 
 _prop_lines: dict[set]
     - Group by Bookmaker to Reduce Filtering Operations Later
-    - Store in Sets because duplicates are unwanted.
+    - Store in Lists and handle duplicates later on.
 """
 class PropLines:
-    _prop_lines = defaultdict(set)
+    _prop_lines = defaultdict(list)
     _lock = threading.Lock()
 
     @classmethod
@@ -21,4 +21,4 @@ class PropLines:
     def update(cls, key, value):
         # Acquire the lock to ensure thread safety
         with cls._lock:
-            cls._prop_lines[key].add(value)
+            cls._prop_lines[key].append(value)

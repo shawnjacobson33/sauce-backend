@@ -2,7 +2,8 @@ from datetime import datetime
 import asyncio
 
 from app.product_data.data_sourcing.shared_data import PropLines
-from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.network_management import RequestManager
+from app.product_data.data_sourcing.plugs.helpers.helpers import run, is_league_good
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
 from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league, clean_position
@@ -25,7 +26,7 @@ class Payday(Plug):
         for league_data in data.get('data', []):
             league = league_data.get('slug')
             if league:
-                if not Packager.is_league_good(clean_league(league)):
+                if not is_league_good(clean_league(league)):
                     continue
 
                 params = self.packager.get_params(name='contests', var_1=league)
@@ -108,5 +109,4 @@ class Payday(Plug):
 
 
 if __name__ == "__main__":
-    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
-    asyncio.run(helper.run(Payday))
+    asyncio.run(run(Payday))

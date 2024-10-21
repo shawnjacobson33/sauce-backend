@@ -2,8 +2,9 @@ import asyncio
 from datetime import datetime
 
 from app.product_data.data_sourcing.shared_data import PropLines
-from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
 from app.product_data.data_sourcing.utils.constants import IN_SEASON_LEAGUES
+from app.product_data.data_sourcing.utils.network_management import RequestManager
+from app.product_data.data_sourcing.plugs.helpers.helpers import run, is_league_good
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
 from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league
@@ -25,7 +26,7 @@ class Champ(Plug):
         headers = self.packager.get_headers()
         tasks = []
         for league in get_in_season_leagues():
-            if not Packager.is_league_good(clean_league(league)):
+            if not is_league_good(clean_league(league)):
                 continue
 
             json_data = self.packager.get_json_data(var=league)
@@ -91,5 +92,4 @@ class Champ(Plug):
 
 
 if __name__ == "__main__":
-    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
-    asyncio.run(helper.run(Champ))
+    asyncio.run(run(Champ))

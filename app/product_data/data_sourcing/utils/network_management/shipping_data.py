@@ -3,7 +3,8 @@ import os
 
 from app.product_data.data_sourcing.utils import IN_SEASON_LEAGUES
 
-url_mapping = {
+
+URL_MAP = {
     'BetOnline': {
         'games': 'https://bv2-us.digitalsportstech.com/api/sgmGames',
         'prop_lines': 'https://bv2-us.digitalsportstech.com/api/dfm/marketsByOu'
@@ -60,7 +61,7 @@ url_mapping = {
         'prop_lines': 'https://api.betcha.one/v1/game/activePlayersForLeagueBoard'
     }
 }
-headers_mapping = {
+HEADERS_MAP = {
     'BetOnline': {
         'games': {
             'Accept': 'application/json, text/plain, */*',
@@ -358,7 +359,7 @@ headers_mapping = {
 
     }
 }
-cookies_mapping = {
+COOKIES_MAP = {
     'Dabble': {
         '__cf_bm': 'GqRmT59qXP4bcrTakr0U9arqC5aL_cYDP4z6c6pqJsU-1724117586-1.0.1.1-zVMLtycAgbyLZUP5nD_iyf4qGnB4Z0d4_XP4ChE1aGIy09l1G4qGnksw7POFGsTpeR_n9QcKjd_wOk7_Ae_Uww',
     }, 'MoneyLine': {
@@ -395,16 +396,16 @@ class Packager:
         self.name = name
 
     def get_url(self, name: str = 'prop_lines'):
-        return url_mapping.get(self.name).get(name)
+        return URL_MAP.get(self.name).get(name)
 
     def get_headers(self, name: str = 'prop_lines'):
-        return headers_mapping.get(self.name).get(name)
+        return HEADERS_MAP.get(self.name).get(name)
 
     def get_cookies(self):
-        return cookies_mapping.get(self.name)
+        return COOKIES_MAP.get(self.name)
 
     def get_params(self, name: str = 'prop_lines', var_1=None, var_2=None):
-        params_mapping = {
+        params_map = {
             'BetOnline': {
                 'games': {
                     'sb': 'betonline',
@@ -456,10 +457,10 @@ class Packager:
                 }
             }
         }
-        return params_mapping.get(self.name).get(name)
+        return params_map.get(self.name).get(name)
 
     def get_json_data(self, name: str = 'prop_lines', var=None):
-        mapping = {
+        json_map = {
             'BoomFantasy': {
                 'prop_lines': {
                     "query": """query EvergreenContest(
@@ -892,9 +893,4 @@ class Packager:
                 }
             }
         }
-
-        return mapping.get(self.name).get(name)
-
-    @staticmethod
-    def is_league_good(league) -> bool:
-        return league in IN_SEASON_LEAGUES
+        return json_map.get(self.name).get(name)

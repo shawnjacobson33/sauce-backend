@@ -129,21 +129,20 @@ def update_field_names(old_field_names: list, new_field_names: list, collection:
 
 # ***********************************************************************************
 # remove_last_batch('43f9bbc5-0853-4ec2-b1a8-3bee4b2073a3', subjects)
+# update_attribute_value(field='attributes.position', old_attribute='Forward-Center', new_attribute='F-C', collection=subjects)
+# update_field_names(old_field_names=['attributes.position'], new_field_names=['attributes.jersey_number'], collection=subjects)
 
 # Subjects:
-# remove_entity(entity=Subject('Pat Jones', 'NFL', team='MIN', position=None, jersey_number=None), insert_new=True)
-# add_entity(alt_entity=Subject('Nicolas Claxton', 'NBA', team=None, position=None, jersey_number=None), new_entity=Subject('Nic Claxton', 'NBA', team='BKN', position='C', jersey_number='33'), delete_old=True)
+remove_entity(entity=Subject('Tayven Jackson', 'NCAAF', team='IU', position=None, jersey_number=None), insert_new=True)
+# TODO: Add in functionality to switch alt_name and 'name'
+# add_entity(alt_entity=Subject('Cameron Atkinson', 'NHL', team='TB', position=None, jersey_number=None), new_entity=Subject('Cam Atkinson', 'NHL', team='TBL', position='F', jersey_number=None), delete_old=True)
 
 # update_attribute(name='position', old_attribute='', new_attribute='D', collection=subjects)
 # insert_entity(Subject('Josh Hart', 'NBA', 'NYK'))
 
 # Markets:
-# remove_entity(entity=Market('SOG', sport='Ice Hockey'), insert_new=False, add_to=Market('Turnovers', sport='Basketball'))
-# add_entity(alt_entity=Market('First Inning Runs', sport='Baseball'), new_entity=Market('1st Inn. Runs', sport='Baseball'), delete_old=True)
-
-# update_attribute_value(field='name', old_attribute='Fantasy Points', new_attribute='Ice Hockey Fantasy Points', collection=markets)
-# insert_entity(Market('2PT Attempted', sport='Basketball'))
-# update_field_names(old_field_names=['attributes.attributes.jersey_number'], new_field_names=['attributes.jersey_number'], collection=subjects)
+# remove_entity(entity=Market('Fantasy Points', sport='Football'), insert_new=False, add_to=None)
+# add_entity(alt_entity=Market('Goaltending Saves', sport='Ice Hockey'), new_entity=Market('Goalie Saves', sport='Ice Hockey'), delete_old=True)
 
 # ***********************************************************************************
 

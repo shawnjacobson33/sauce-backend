@@ -62,7 +62,9 @@ POSITION_MAP = {
     'Forward': 'F',
     'Pitcher': 'P',
     'Defender': 'D',
-    'Hitter': 'H'
+    'Hitter': 'H',
+    'Guard': 'G',
+    'Forward-Center': 'F-C',
 }
 SUBJECT_SUFFIXES = [
     'Jr.', 'jr.', 'jr', 'Jr', 'Sr.', 'sr.', 'sr', 'Sr', 'III', 'II', 'IV', 'V'

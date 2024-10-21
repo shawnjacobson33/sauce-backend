@@ -2,7 +2,8 @@ from datetime import datetime
 import asyncio
 
 from app.product_data.data_sourcing.shared_data import PropLines
-from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.network_management import RequestManager
+from app.product_data.data_sourcing.plugs.helpers.helpers import run, is_league_good
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
 from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league
@@ -43,7 +44,7 @@ class Rebet(Plug):
             league, game_time = event.get('league_name'), event.get('start_time')
             if league:
                 league = clean_league(league)
-                if not Packager.is_league_good(league):
+                if not is_league_good(league):
                     continue
 
             odds = event.get('odds')
@@ -115,6 +116,7 @@ class Rebet(Plug):
                                 elif '+' in outcome_name:
                                     label, line = 'Over', outcome_name_components[-1][:-1]
 
+                            # update shared data
                             PropLines.update(''.join(self.info.name.split()).lower(), {
                                 'batch_id': self.batch_id,
                                 'time_processed': datetime.now(),
@@ -133,5 +135,4 @@ class Rebet(Plug):
 
 
 if __name__ == "__main__":
-    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
-    asyncio.run(helper.run(Rebet))
+    asyncio.run(run(Rebet))

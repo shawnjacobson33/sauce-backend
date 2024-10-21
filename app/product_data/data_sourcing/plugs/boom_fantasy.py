@@ -3,14 +3,16 @@ import os
 from datetime import datetime
 
 from app.product_data.data_sourcing.shared_data import PropLines
-from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.network_management import RequestManager
+from app.product_data.data_sourcing.plugs.helpers.helpers import run, is_league_good
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
 from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league
 
 
 def read_tokens():
-    absolute_path = os.path.abspath('plugs/tokens/boomfantasy_tokens.txt')
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    absolute_path = os.path.join(script_dir, 'tokens', 'boomfantasy_tokens.txt')
     with open(absolute_path, 'r') as file:
         access_token, refresh_token = [line.strip() for line in file.readlines()[:2]]
     return {'path': absolute_path, 'access_token': access_token, 'refresh_token': refresh_token}
@@ -40,7 +42,7 @@ class BoomFantasy(Plug):
                         league_name = league.get('league')
                         if league_name:
                             league_name = clean_league(league_name.upper())
-                            if not Packager.is_league_good(league_name):
+                            if not is_league_good(league_name):
                                 continue
 
                         for league_section in league.get('sections', []):
@@ -105,5 +107,4 @@ class BoomFantasy(Plug):
 
 
 if __name__ == "__main__":
-    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
-    asyncio.run(helper.run(BoomFantasy))
+    asyncio.run(run(BoomFantasy))

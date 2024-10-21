@@ -2,7 +2,8 @@ import sys
 import time
 import uuid
 
-from app.product_data.data_sourcing.utils import get_db, Bookmaker, get_bookmaker, RequestManager, DataStandardizer
+from app.product_data.data_sourcing.utils import get_db, Bookmaker, get_bookmaker, RequestManager, DataStandardizer, \
+    IN_SEASON_LEAGUES
 
 
 async def run(plug):
@@ -19,3 +20,7 @@ async def run(plug):
 
     sys.stdout = sys.__stdout__
     print(f'[{plug.__name__}]: {plug_obj} lines, {round(end_time - start_time, 2)}s')
+
+
+def is_league_good(league) -> bool:
+    return league in IN_SEASON_LEAGUES

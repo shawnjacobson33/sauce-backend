@@ -2,7 +2,8 @@ from datetime import datetime
 import asyncio
 
 from app.product_data.data_sourcing.shared_data import PropLines
-from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.network_management import RequestManager
+from app.product_data.data_sourcing.plugs.helpers.helpers import run, is_league_good
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
 from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league, clean_position
@@ -23,7 +24,7 @@ class OwnersBox(Plug):
         url = self.packager.get_url(name='markets')
         tasks = []
         for league in data:
-            if not Packager.is_league_good(clean_league(league)):
+            if not is_league_good(clean_league(league)):
                 continue
 
             params = self.packager.get_params(name='markets', var_1=league)
@@ -52,9 +53,6 @@ class OwnersBox(Plug):
         for prop_line in data.get('markets', []):
             league = prop_line.get('sport')
             if league:
-                if not Packager.is_league_good(league):
-                    continue
-
                 league = clean_league(league)
 
             # get market
@@ -132,5 +130,4 @@ class OwnersBox(Plug):
 
 
 if __name__ == "__main__":
-    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
-    asyncio.run(helper.run(OwnersBox))
+    asyncio.run(run(OwnersBox))

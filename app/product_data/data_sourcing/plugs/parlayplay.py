@@ -3,7 +3,8 @@ from datetime import datetime
 
 from app.product_data.data_sourcing.shared_data import PropLines
 from app.product_data.data_sourcing.utils.constants import FANTASY_SCORE_MAP
-from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.network_management import RequestManager
+from app.product_data.data_sourcing.plugs.helpers.helpers import run, is_league_good
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
 from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league, clean_position
@@ -29,7 +30,7 @@ class ParlayPlay(Plug):
                     league = player_league.get('leagueNameShort')
                     if league:
                         league = clean_league(league)
-                        if not Packager.is_league_good(league):
+                        if not is_league_good(league):
                             continue
 
             # get subject data
@@ -87,5 +88,4 @@ class ParlayPlay(Plug):
 
 
 if __name__ == "__main__":
-    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
-    asyncio.run(helper.run(ParlayPlay))
+    asyncio.run(run(ParlayPlay))

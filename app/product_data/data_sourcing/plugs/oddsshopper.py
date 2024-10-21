@@ -3,7 +3,8 @@ import asyncio
 
 from app.product_data.data_sourcing.shared_data import PropLines
 from app.product_data.data_sourcing.utils.constants import FANTASY_SCORE_MAP
-from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.network_management import RequestManager
+from app.product_data.data_sourcing.plugs.helpers.helpers import run, is_league_good
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
 from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league
@@ -14,6 +15,10 @@ MARKET_MAP = {
     'Total Rushing + Receiving Yards': 'Total Rush + Rec Yards',
     'Total Passing + Rushing Yards': 'Total Pass + Rush Yards',
     'Total Passing + Rushing + Receiving TDs': 'Total Pass + Rush + Rec TDs',
+}
+BOOKMAKER_MAP = {
+    'Underdog': 'Underdog Fantasy',
+    'Pick6': 'DraftKingsPick6',
 }
 
 
@@ -37,7 +42,7 @@ class OddsShopper(Plug):
                     league = offer.get('leagueCode')
                     if league:
                         league = clean_league(league)
-                        if not Packager.is_league_good(league):
+                        if not is_league_good(league):
                             continue
 
                     offer_id, now = offer.get('id'), datetime.now()
@@ -79,6 +84,10 @@ class OddsShopper(Plug):
                             subject_ids[f'{subject}{league}'] = subject_id
 
                     bookmaker = outcome.get('sportsbookCode')
+                    if bookmaker:
+                        # To standardize across other plugs
+                        bookmaker = BOOKMAKER_MAP.get(bookmaker, bookmaker)
+
                     true_win_prob = outcome.get('trueWinProbability')
                     odds, ev = outcome.get('odds'), outcome.get('ev')
                     # update shared data
@@ -103,5 +112,4 @@ class OddsShopper(Plug):
 
 
 if __name__ == "__main__":
-    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
-    asyncio.run(helper.run(OddsShopper))
+    asyncio.run(run(OddsShopper))

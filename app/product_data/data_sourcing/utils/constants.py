@@ -56,6 +56,7 @@ FANTASY_SCORE_MAP = {
     'CFB1H': 'Football Fantasy Points',
     'CFB2H': 'Football Fantasy Points',
     'NCAAF': 'Football Fantasy Points',
+    'NCAAFB': 'Football Fantasy Points',
     'MLB': 'Baseball Fantasy Points',
     'NHL': 'Ice Hockey Fantasy Points',
 }

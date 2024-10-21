@@ -3,7 +3,9 @@ from datetime import datetime
 import asyncio
 
 from app.product_data.data_sourcing.shared_data import PropLines
-from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.constants import FANTASY_SCORE_MAP
+from app.product_data.data_sourcing.utils.network_management import RequestManager
+from app.product_data.data_sourcing.plugs.helpers.helpers import run, is_league_good
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
 from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league, clean_position
@@ -100,7 +102,7 @@ class HotStreak(Plug):
                             league = opponent.get('league')
                             if league:
                                 league = clean_league(league)
-                                if not Packager.is_league_good(league):
+                                if not is_league_good(league):
                                     continue
 
                     if subject:
@@ -112,10 +114,7 @@ class HotStreak(Plug):
 
                 if the_market:
                     if the_market == 'fantasy_points':
-                        if league in {'NBA', 'WNBA'}:
-                            the_market = 'Basketball Fantasy Points'
-                        elif league in {'NFL', 'NCAAF'}:
-                            the_market = 'Football Fantasy Points'
+                        market = FANTASY_SCORE_MAP.get(league, market)
 
                     the_market = clean_market(the_market)
                     market_id = self.ds.get_market_id(Market(the_market, league))
@@ -148,5 +147,4 @@ class HotStreak(Plug):
 
 
 if __name__ == "__main__":
-    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
-    asyncio.run(helper.run(HotStreak))
+    asyncio.run(run(HotStreak))

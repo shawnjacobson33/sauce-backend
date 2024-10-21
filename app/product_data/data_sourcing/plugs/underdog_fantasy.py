@@ -3,7 +3,8 @@ from datetime import datetime
 
 from app.product_data.data_sourcing.shared_data import PropLines
 from app.product_data.data_sourcing.utils.constants import FANTASY_SCORE_MAP
-from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
+from app.product_data.data_sourcing.utils.network_management import RequestManager
+from app.product_data.data_sourcing.plugs.helpers.helpers import run, is_league_good
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
 from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league
@@ -99,7 +100,7 @@ class UnderdogFantasy(Plug):
 
                                 league, game_time = match.get('sport_id'), match.get('scheduled_at')
                                 # don't want futures and don't want combos because they are niche and hard to normalize
-                                if ('SZN' in league) or ('COMBOS' in league) or not Packager.is_league_good(clean_league(league)):
+                                if ('SZN' in league) or ('COMBOS' in league) or not is_league_good(clean_league(league)):
                                     continue
 
                                 if league:
@@ -120,27 +121,19 @@ class UnderdogFantasy(Plug):
                             player = player_data.get(player_id)
                             if player:
                                 subject, subject_team = player.get('subject'), player.get('subject_team')
-
-                            # fixes a formatting issues for ESPORTS subjects where Underdog formats like this:
-                            # CS: [subject_name] and I only want the subject
-                            if league == 'ESPORTS':
-                                subject_components = subject.split(': ')
-                                if subject_components and len(subject_components) == 2:
-                                    # assign the league to the more specific game in the ESPORTS realm
-                                    league, subject = subject_components[0], subject_components[1]
-
-                            # subjects show up more than once so don't need to get subject id every time.
-                            subject = clean_subject(subject)
-                            subject_id = subject_ids.get(f'{subject}{subject_team}')
-                            if subject:
-                                subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team))
-                                subject_ids[f'{subject}{subject_team}'] = subject_id
+                                # subjects show up more than once so don't need to get subject id every time.
+                                subject = clean_subject(subject)
+                                subject_id = subject_ids.get(f'{subject}{subject_team}')
+                                if subject:
+                                    subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team))
+                                    subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 label = 'Over' if option.get('choice') == 'higher' else 'Under'
                 multiplier = option.get('payout_multiplier')
                 if multiplier:
                     multiplier = float(multiplier)
 
+                # update shared data
                 PropLines.update(''.join(self.info.name.split()).lower(), {
                     'batch_id': self.batch_id,
                     'time_processed': datetime.now(),
@@ -160,5 +153,4 @@ class UnderdogFantasy(Plug):
 
 
 if __name__ == "__main__":
-    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
-    asyncio.run(helper.run(UnderdogFantasy))
+    asyncio.run(run(UnderdogFantasy))
