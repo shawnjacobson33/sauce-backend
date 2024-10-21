@@ -1,17 +1,17 @@
 import asyncio
-import main
 from datetime import datetime
 
+from app.product_data.data_sourcing.shared_data import PropLines
+from app.product_data.data_sourcing.utils.constants import FANTASY_SCORE_MAP
 from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league, clean_position
 
 
 class ParlayPlay(Plug):
     def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         super().__init__(info, batch_id, request_manager, data_standardizer)
-        self.prop_lines = []
 
     async def start(self):
         url = self.packager.get_url()
@@ -20,10 +20,6 @@ class ParlayPlay(Plug):
 
     async def _parse_lines(self, response):
         data = response.json()
-        last_updated = data.get('lastUpdated')
-        if last_updated:
-            last_updated = datetime.fromtimestamp(last_updated)
-
         subject_ids = dict()
         for player in data.get('players', []):
             league, match = None, player.get('match')
@@ -58,12 +54,7 @@ class ParlayPlay(Plug):
                 if alt_lines:
                     market, market_id = alt_lines.get('market'), None
                     if market in {'Player Fantasy Score', 'Fantasy Points'}:
-                        if league == 'MLB':
-                            market = 'Baseball Fantasy Points'
-                        elif league in {'WNBA', 'NBA'}:
-                            market = 'Basketball Fantasy Points'
-                        elif league in {'NFL', 'NCAAF'}:
-                            market = 'Football Fantasy Points'
+                        market = FANTASY_SCORE_MAP.get(league, market)
 
                     if market:
                         market = clean_market(market)
@@ -76,10 +67,10 @@ class ParlayPlay(Plug):
                             if not odds:
                                 continue
 
-                            self.prop_lines.append({
+                            # update shared data
+                            PropLines.update(''.join(self.info.name.split()).lower(), {
                                 'batch_id': self.batch_id,
                                 'time_processed': datetime.now(),
-                                # 'last_updated': last_updated,
                                 'league': league,
                                 'market_category': 'player_props',
                                 'market_id': market_id,
@@ -92,9 +83,9 @@ class ParlayPlay(Plug):
                                 'odds': odds,
                                 'is_boosted': is_boosted_payout
                             })
-
-        self.packager.store(self.prop_lines)
+                            self.data_size += 1
 
 
 if __name__ == "__main__":
-    asyncio.run(main.run(ParlayPlay))
+    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
+    asyncio.run(helper.run(ParlayPlay))

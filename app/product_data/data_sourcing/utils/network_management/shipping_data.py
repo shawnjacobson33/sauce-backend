@@ -898,10 +898,3 @@ class Packager:
     @staticmethod
     def is_league_good(league) -> bool:
         return league in IN_SEASON_LEAGUES
-
-    def store(self, data) -> None:
-        absolute_path = os.path.abspath(f'../samples/{self.name.lower()}_data.json')
-        with open(absolute_path, 'w') as f:
-            json.dump(data, f, default=str)
-
-        # self.plc.insert_many(self.prop_lines)

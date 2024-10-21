@@ -1,17 +1,16 @@
 import asyncio
-import main
 from datetime import datetime
 
+from app.product_data.data_sourcing.shared_data import PropLines
 from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league, clean_position
 
 
 class SuperDraft(Plug):
     def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         super().__init__(info, batch_id, request_manager, data_standardizer)
-        self.prop_lines = []
 
     async def start(self):
         url = self.packager.get_url()
@@ -84,10 +83,9 @@ class SuperDraft(Plug):
 
                 game_info, line = player.get('eventName'), prop.get('line')
                 for label in ['Over', 'Under']:
-                    self.prop_lines.append({
+                    PropLines.update(''.join(self.info.name.split()).lower(), {
                         'batch_id': self.batch_id,
                         'time_processed': datetime.now(),
-                        # 'last_updated': last_updated,
                         'league': league,
                         'market_category': 'player_props',
                         'market_id': market_id,
@@ -100,9 +98,9 @@ class SuperDraft(Plug):
                         'line': line,
                         'odds': self.info.default_payout.odds
                     })
-
-        self.packager.store(self.prop_lines)
+                    self.data_size += 1
 
 
 if __name__ == "__main__":
-    asyncio.run(main.run(SuperDraft))
+    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
+    asyncio.run(helper.run(SuperDraft))

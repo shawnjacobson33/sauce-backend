@@ -19,4 +19,3 @@ async def run(plug):
 
     sys.stdout = sys.__stdout__
     print(f'[{plug.__name__}]: {plug_obj} lines, {round(end_time - start_time, 2)}s')
-

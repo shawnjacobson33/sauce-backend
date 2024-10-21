@@ -1,15 +1,15 @@
 import asyncio
-import main
 from datetime import datetime
 
+from app.product_data.data_sourcing.shared_data import PropLines
 from app.product_data.data_sourcing.utils.network_management import RequestManager
 from app.product_data.data_sourcing.utils.constants import LEAGUE_SPORT_MAP, IN_SEASON_LEAGUES
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league, clean_position
 
 
-statistics = {
+STATISTICS = {
     'Football': [
         'Passing%2520Yards',
         'Pass%2520Completions',
@@ -45,27 +45,25 @@ statistics = {
         'Shots%2520On%2520Goal'
     ]
 }
-league_map = {
+LEAGUE_MAP = {
     'NCAAF': 'NCAAFB'
 }
-leagues = [league_map.get(league, league).lower() for league in IN_SEASON_LEAGUES]
+LEAGUES = [LEAGUE_MAP.get(league, league).lower() for league in IN_SEASON_LEAGUES]
 
 
 class BetOnline(Plug):
     def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         super().__init__(info, batch_id, request_manager, data_standardizer)
-        self.prop_lines = []
 
     async def start(self):
         tasks = []
-        for league in leagues:
+        for league in LEAGUES:
             url = self.packager.get_url(name='games')
             headers = self.packager.get_headers(name='games')
             params = self.packager.get_params(name='games', var_1=league)
             tasks.append(self.rm.get(url, self._parse_games, league, headers=headers, params=params))
 
         await asyncio.gather(*tasks)
-        self.packager.store(self.prop_lines)
 
     async def _parse_games(self, response, league):
         data = response.json()
@@ -81,7 +79,7 @@ class BetOnline(Plug):
                 league = clean_league(league)
                 url = self.packager.get_url()
                 headers = self.packager.get_headers()
-                league_statistics = statistics.get(LEAGUE_SPORT_MAP.get(league))
+                league_statistics = STATISTICS.get(LEAGUE_SPORT_MAP.get(league))
                 for statistic in league_statistics:
                     params = self.packager.get_params(var_1=game_id, var_2=statistic)
                     tasks.append(self.rm.get(url, self._parse_lines, league, headers=headers, params=params))
@@ -121,7 +119,8 @@ class BetOnline(Plug):
                         if condition:
                             label = 'Over' if condition == 1 else 'Under'
 
-                        self.prop_lines.append({
+                        # update shared data
+                        PropLines.update(''.join(self.info.name.split()).lower(), {
                             'batch_id': self.batch_id,
                             'time_processed': datetime.now(),
                             'league': league,
@@ -130,14 +129,16 @@ class BetOnline(Plug):
                             'market': market,
                             'subject_id': subject_id,
                             'subject': subject,
-                            'bookmaker': 'BetOnline',
+                            'bookmaker': self.info.name,
                             'label': label,
                             'line': line,
                             'odds': decimal_odds,
                             'implied_prob': round(1 / float(decimal_odds), 3)
                         })
+                        self.data_size += 1
 
 
 if __name__ == "__main__":
-    asyncio.run(main.run(BetOnline))
+    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
+    asyncio.run(helper.run(BetOnline))
 

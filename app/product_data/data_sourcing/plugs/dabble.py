@@ -1,17 +1,16 @@
-import main
 from datetime import datetime
 import asyncio
 
+from app.product_data.data_sourcing.shared_data import PropLines
 from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league, clean_position
 
 
 class Dabble(Plug):
     def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         super().__init__(info, batch_id, request_manager, data_standardizer)
-        self.prop_lines = []
         self.headers = self.packager.get_headers()
         self.cookies = self.packager.get_cookies()
 
@@ -34,21 +33,20 @@ class Dabble(Plug):
             tasks.append(self.rm.get(url, self._parse_events, league, params=params))
 
         await asyncio.gather(*tasks)
-        self.packager.store(self.prop_lines)
 
     async def _parse_events(self, response, league):
         data = response.json()
         tasks = []
         for event in data.get('data', []):
-            event_id, game_info, last_updated = event.get('id'), event.get('name'), event.get('updated')
+            event_id, game_info = event.get('id'), event.get('name')
 
             if event.get('isDisplayed'):
                 url = self.packager.get_url().format(event_id)
-                tasks.append(self.rm.get(url, self._parse_lines, league, game_info, last_updated))
+                tasks.append(self.rm.get(url, self._parse_lines, league, game_info))
 
         await asyncio.gather(*tasks)
 
-    async def _parse_lines(self, response, league, game_info, last_updated):
+    async def _parse_lines(self, response, league, game_info):
         data = response.json().get('data')
         # get market groups
         markets = {
@@ -87,10 +85,10 @@ class Dabble(Plug):
                     subject_ids[f'{subject}{subject_team}'] = subject_id
 
             label, line = player_prop.get('lineType').title(), player_prop.get('value')
-            self.prop_lines.append({
+            # update shared data
+            PropLines.update(''.join(self.info.name.split()).lower(), {
                 'batch_id': self.batch_id,
                 'time_processed': datetime.now(),
-                # 'last_updated': last_updated,
                 'league': league,
                 'game_info': game_info,
                 'market_category': 'player_props',
@@ -103,7 +101,9 @@ class Dabble(Plug):
                 'line': line,
                 'odds': self.info.default_payout.odds
             })
+            self.data_size += 1
 
 
 if __name__ == "__main__":
-    asyncio.run(main.run(Dabble))
+    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
+    asyncio.run(helper.run(Dabble))

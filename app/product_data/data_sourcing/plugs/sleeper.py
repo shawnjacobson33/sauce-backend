@@ -1,17 +1,17 @@
 import asyncio
-import main
 from datetime import datetime
 
+from app.product_data.data_sourcing.shared_data import PropLines
+from app.product_data.data_sourcing.utils.constants import FANTASY_SCORE_MAP
 from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league, clean_position
 
 
 class Sleeper(Plug):
     def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         super().__init__(info, batch_id, request_manager, data_standardizer)
-        self.prop_lines = []
         self.headers = self.packager.get_headers()
 
     async def start(self):
@@ -43,15 +43,13 @@ class Sleeper(Plug):
         data = response.json()
         subject_ids = dict()
         for line in data:
-            subject_team, subject, position, player_id, league = None, None, None, line.get('subject_id'), line.get(
-                'sport')
-            cleaned_league = None
+            subject_id, subject_team, subject, position, cleaned_league = None, None, None, None, None
+            player_id, league = line.get('subject_id'), line.get('sport')
             if league:
                 cleaned_league = clean_league(league)
                 if not Packager.is_league_good(cleaned_league):
                     continue
 
-            subject_id = None
             if player_id:
                 player = players.get(league).get(player_id)
                 if player:
@@ -70,27 +68,17 @@ class Sleeper(Plug):
             market_id, last_updated, market = None, line.get('updated_at'), line.get('wager_type')
             if market:
                 if market == 'fantasy_points':
-                    if cleaned_league == 'MLB':
-                        market = 'Baseball Fantasy Points'
-                    elif cleaned_league in {'NFL', 'NCAAF'}:
-                        market = 'Football Fantasy Points'
-                    elif cleaned_league in {'NBA', 'WNBA'}:
-                        market = 'Basketball Fantasy Points'
+                    market = FANTASY_SCORE_MAP.get(league, market)
 
                 market = clean_market(market)
                 market_id = self.ds.get_market_id(Market(market, cleaned_league))
 
-            if last_updated:
-                # convert from unix to a datetime
-                last_updated = datetime.fromtimestamp(last_updated / 1000)
-
             for option in line.get('options', []):
                 label, line = option.get('outcome').title(), option.get('outcome_value')
                 odds = option.get('payout_multiplier')
-                self.prop_lines.append({
+                PropLines.update(''.join(self.info.name.split()).lower(), {
                     'batch_id': self.batch_id,
                     'time_processed': datetime.now(),
-                    # 'last_updated': last_updated,
                     'league': cleaned_league,
                     'market_category': 'player_props',
                     'market_id': market_id,
@@ -102,9 +90,9 @@ class Sleeper(Plug):
                     'line': line,
                     'odds': odds
                 })
-
-        self.packager.store(self.prop_lines)
+                self.data_size += 1
 
 
 if __name__ == "__main__":
-    asyncio.run(main.run(Sleeper))
+    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
+    asyncio.run(helper.run(Sleeper))

@@ -1,17 +1,16 @@
-import main
 from datetime import datetime
 import asyncio
 
+from app.product_data.data_sourcing.shared_data import PropLines
 from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
-    clean_league, clean_position
+from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
+    clean_league
 
 
 class Rebet(Plug):
     def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         super().__init__(info, batch_id, request_manager, data_standardizer)
-        self.prop_lines = []
 
     async def start(self):
         url = self.packager.get_url(name='tourney_ids')
@@ -36,21 +35,16 @@ class Rebet(Plug):
             tasks.append(self.rm.post(url, self._parse_lines, headers=headers, json=json_data))
 
         await asyncio.gather(*tasks)
-        self.packager.store(self.prop_lines)
 
     async def _parse_lines(self, response):
         data = response.json()
         subject_ids = dict()
         for event in data.get('data', {}).get('events', []):
-            last_updated, league, game_time = event.get('updated_at'), event.get('league_name'), event.get('start_time')
+            league, game_time = event.get('league_name'), event.get('start_time')
             if league:
                 league = clean_league(league)
                 if not Packager.is_league_good(league):
                     continue
-
-            if last_updated:
-                # convert from unix to a datetime
-                last_updated = datetime.fromtimestamp(int(last_updated) / 1000)
 
             odds = event.get('odds')
             if odds:
@@ -94,10 +88,9 @@ class Rebet(Plug):
                                     elif '+' in outcome_name:
                                         label, line = 'Over', outcome_name_components[-1][:-1]
 
-                                self.prop_lines.append({
+                                PropLines.update(''.join(self.info.name.split()).lower(), {
                                     'batch_id': self.batch_id,
                                     'time_processed': datetime.now(),
-                                    # 'last_updated': last_updated,
                                     'league': league,
                                     'market_category': 'player_props',
                                     'market_id': market_id,
@@ -109,6 +102,7 @@ class Rebet(Plug):
                                     'line': line,
                                     'odds': the_odds,
                                 })
+                                self.data_size += 1
                         else:
                             outcome_name, the_odds = outcomes.get('name'), outcomes.get('odds')
                             if (the_odds == '1.001') or (not the_odds):
@@ -121,10 +115,9 @@ class Rebet(Plug):
                                 elif '+' in outcome_name:
                                     label, line = 'Over', outcome_name_components[-1][:-1]
 
-                            self.prop_lines.append({
+                            PropLines.update(''.join(self.info.name.split()).lower(), {
                                 'batch_id': self.batch_id,
                                 'time_processed': datetime.now(),
-                                # 'last_updated': last_updated,
                                 'league': league,
                                 'market_category': 'player_props',
                                 'market_id': market_id,
@@ -136,7 +129,9 @@ class Rebet(Plug):
                                 'line': line,
                                 'odds': the_odds,
                             })
+                            self.data_size += 1
 
 
 if __name__ == "__main__":
-    asyncio.run(main.run(Rebet))
+    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
+    asyncio.run(helper.run(Rebet))

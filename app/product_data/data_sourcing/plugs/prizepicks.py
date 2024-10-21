@@ -1,22 +1,21 @@
 import asyncio
 import re
-import main
 from datetime import datetime
 
+from app.product_data.data_sourcing.shared_data import PropLines
+from app.product_data.data_sourcing.utils.constants import FANTASY_SCORE_MAP
 from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league, clean_position
 
 
 class PrizePicks(Plug):
     def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         super().__init__(info, batch_id, request_manager, data_standardizer)
-        self.prop_lines = []
 
     async def start(self):
         url = self.packager.get_url(name='leagues')
-        # Get response.
         await self.rm.get(url, self._parse_leagues)
 
     async def _parse_leagues(self, response):
@@ -43,7 +42,6 @@ class PrizePicks(Plug):
         data = response.json()
         # collect all the player ids
         players = dict()
-        uniq_leagues = set()
         for player in data.get('included', []):
             if player.get('type') == 'new_player':
                 player_id, player_attributes = player.get('id'), player.get('attributes')
@@ -81,26 +79,15 @@ class PrizePicks(Plug):
 
                 last_updated, market = line_attributes.get('updated_at'), line_attributes.get('stat_type')
                 if market:
-                    # don't want combos...hard to index
+                    # don't want combos...hard to index for now
                     if '(Combo)' in market:
                         continue
 
                     # in order to create more distinct markets
                     if 'Fantasy Score' in market:
-                        if league in {'NBA', 'WNBA', 'WNBA1H', 'WNBA2H', 'WNBA1Q', 'WNBA2Q', 'WNBA3Q', 'WNBA4Q', 'WNBA1H'}:
-                            market = 'Basketball Fantasy Points'
-                        elif league == 'TENNIS':
-                            market = 'Tennis Fantasy Points'
-                        elif league in {'NFL', 'NFL1Q', 'NFL2Q', 'NFL3Q', 'NFL4Q', 'NFL1H', 'NFL2H', 'CFB', 'CFB1Q', 'CFB2Q', 'CFB1H', 'CFB3Q', 'CFB4Q', 'CFB2H'}:
-                            market = 'Football Fantasy Points'
-                        elif league in {'INDYCAR', 'NASCAR'}:
-                            market = 'Car Racing Fantasy Points'
-                        elif league in {'MMA', 'UFC'}:
-                            market = 'Fighting Fantasy Points'
-                        elif league == 'MLB':
-                            market = 'Baseball Fantasy Points'
+                        market = FANTASY_SCORE_MAP.get(league, market)
 
-                    # in order to create comparable market names
+                    # in order to create comparable market names -- for Quarter and Half Markets
                     if re.match(r'^.+[1-4]([QH])$', league):
                         market = f'{league[-2:]} {market}'
                         league = league[:-2]
@@ -110,8 +97,6 @@ class PrizePicks(Plug):
                         league = clean_league(league)
                         if not Packager.is_league_good(league):
                             continue
-
-                        uniq_leagues.add(league)
 
                     if market:
                         market = clean_market(market)
@@ -144,10 +129,9 @@ class PrizePicks(Plug):
 
                 stat_line = line_attributes.get('line_score')
                 for label in ['Over', 'Under']:
-                    self.prop_lines.append({
+                    PropLines.update(''.join(self.info.name.split()).lower(), {
                         'batch_id': self.batch_id,
                         'time_processed': datetime.now(),
-                        # 'last_updated': last_updated,
                         'league': league,
                         'market_category': 'player_props',
                         'market_id': market_id,
@@ -159,10 +143,9 @@ class PrizePicks(Plug):
                         'line': stat_line,
                         'odds': self.info.default_payout.odds
                     })
-
-        self.packager.store(self.prop_lines)
-        print(uniq_leagues)
+                    self.data_size += 1
 
 
 if __name__ == "__main__":
-    asyncio.run(main.run(PrizePicks))
+    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
+    asyncio.run(helper.run(PrizePicks))

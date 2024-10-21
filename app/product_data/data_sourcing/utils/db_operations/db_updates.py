@@ -54,7 +54,7 @@ def remove_entity(entity: Union[Subject, Market], removable_attrs: list = None, 
     if insert_new:
         # insert a new doc for the entity with all attributes and an empty 'alt_names' list
         collection.insert_one({'name': entity.name, 'attributes': {**{
-            f'attributes.{attribute}': value for attribute, value in entity.__dict__.items() if attribute != 'name'
+            attribute: value for attribute, value in entity.__dict__.items() if attribute != 'name'
         }, 'alt_names': list()}})
         print(f"Successfully Inserted {entity.name}!")
 
@@ -118,26 +118,32 @@ def add_entity(alt_entity: Union[Subject, Market], new_entity: Union[Subject, Ma
     print(f"Successfully added '{alt_entity.name}' to '{result['name']}'s alt_names!")
 
 
-def update_attribute(name: str, old_attribute: str, new_attribute: str, collection: Collection):
-    collection.update_many({f'attributes.{name}': old_attribute}, {'$set': {f'attributes.{name}': new_attribute}})
+def update_attribute_value(field: str, old_attribute: str, new_attribute: str, collection: Collection):
+    collection.update_many({field: old_attribute}, {'$set': {field: new_attribute}})
+
+
+def update_field_names(old_field_names: list, new_field_names: list, collection: Collection):
+    assert len(old_field_names) == len(new_field_names), "Both Field Names Lists Must Be Same Length!"
+    for i, field_name in enumerate(old_field_names):
+        collection.update_many({}, {'$rename': {field_name: new_field_names[i]}})
 
 # ***********************************************************************************
 # remove_last_batch('43f9bbc5-0853-4ec2-b1a8-3bee4b2073a3', subjects)
 
 # Subjects:
-remove_entity(entity=Subject('Dane Jackson', 'NFL', team='CAR', position='CB', jersey_number=None), insert_new=True)
+# remove_entity(entity=Subject('Pat Jones', 'NFL', team='MIN', position=None, jersey_number=None), insert_new=True)
 # add_entity(alt_entity=Subject('Nicolas Claxton', 'NBA', team=None, position=None, jersey_number=None), new_entity=Subject('Nic Claxton', 'NBA', team='BKN', position='C', jersey_number='33'), delete_old=True)
 
 # update_attribute(name='position', old_attribute='', new_attribute='D', collection=subjects)
 # insert_entity(Subject('Josh Hart', 'NBA', 'NYK'))
 
 # Markets:
-# remove_entity(entity=Market('TO', sport='Basketball'), insert_new=False, add_to=Market('Turnovers', sport='Basketball'))
-# add_entity(alt_entity=Market('First Qtr Assists', sport='Basketball'), new_entity=Market('1Q Assists', sport='Basketball'), delete_old=True)
+# remove_entity(entity=Market('SOG', sport='Ice Hockey'), insert_new=False, add_to=Market('Turnovers', sport='Basketball'))
+# add_entity(alt_entity=Market('First Inning Runs', sport='Baseball'), new_entity=Market('1st Inn. Runs', sport='Baseball'), delete_old=True)
 
-# update_attribute(name='sport', old_attribute='Basketball', new_attribute='BBall', collection=markets)
+# update_attribute_value(field='name', old_attribute='Fantasy Points', new_attribute='Ice Hockey Fantasy Points', collection=markets)
 # insert_entity(Market('2PT Attempted', sport='Basketball'))
-
+# update_field_names(old_field_names=['attributes.attributes.jersey_number'], new_field_names=['attributes.jersey_number'], collection=subjects)
 
 # ***********************************************************************************
 

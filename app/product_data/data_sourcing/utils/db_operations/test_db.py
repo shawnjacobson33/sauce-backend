@@ -18,11 +18,56 @@ from app.product_data.data_sourcing.utils.constants import SUBJECT_COLLECTION_NA
 db = get_db()
 subjects = [doc for doc in db[SUBJECT_COLLECTION_NAME].find()]
 markets = [doc for doc in db[MARKETS_COLLECTION_NAME].find()]
+market_fields = ['name', 'batch_id', 'sport', 'alt_names']
 bookmakers = [doc for doc in db[BOOKMAKERS_COLLECTION_NAME].find()]
 
 
-num_tests = 5
+num_tests = 6
 tests_passed = 0
+
+
+def test_for_presence_of_fields():
+    """The same fields have to exist in all subjects...and the same goes for markets"""
+    global tests_passed
+    invalid_subjects = []
+    for doc in subjects:
+        for field in ['name']:
+            if field not in doc:
+                invalid_subjects.append(doc)
+                break
+
+        for attribute in ['league', 'team', 'position', 'jersey_number', 'alt_names']:
+            if attribute not in doc['attributes']:
+                invalid_subjects.append(doc)
+                break
+
+    invalid_markets = []
+    for doc in markets:
+        for field in ['name']:
+            if field not in doc:
+                invalid_markets.append(doc)
+                break
+
+        for attribute in ['sport', 'alt_names']:
+            if attribute not in doc['attributes']:
+                invalid_markets.append(doc)
+                break
+
+    try:
+        assert not invalid_subjects
+    except AssertionError:
+        print(f'Tests Passed {tests_passed}/{num_tests}')
+        print("Invalid Subjects (Missing Fields):")
+        pprint.pprint(invalid_subjects)
+
+    try:
+        assert not invalid_markets
+    except AssertionError:
+        print(f'Tests Passed {tests_passed}/{num_tests}')
+        print("Invalid Markets (Missing Fields):")
+        pprint.pprint(invalid_markets)
+
+    tests_passed += 1
 
 
 def test_for_duplicates():
@@ -207,6 +252,7 @@ def test_for_empty_league_or_sport_field():
 
 
 if __name__ == '__main__':
+    test_for_presence_of_fields()
     test_for_duplicates()
     test_for_empty_strings()
     test_for_duplicate_names_within_docs()

@@ -1,18 +1,17 @@
-import main
 import random
 from datetime import datetime
 import asyncio
 
+from app.product_data.data_sourcing.shared_data import PropLines
 from app.product_data.data_sourcing.utils.network_management import RequestManager, Packager
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_league, clean_position
 
 
 class HotStreak(Plug):
     def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         super().__init__(info, batch_id, request_manager, data_standardizer)
-        self.prop_lines = []
         self.url = self.packager.get_url()
         self.headers = self.packager.get_headers()
 
@@ -43,7 +42,6 @@ class HotStreak(Plug):
             tasks.append(fetch_page(i))
 
         await asyncio.gather(*tasks)
-        self.packager.store(self.prop_lines)
 
     async def _parse_lines(self, response, league_aliases):
         # get body content in json format
@@ -131,7 +129,8 @@ class HotStreak(Plug):
                             probability = probabilities[i][j]
                             # convert probability to decimal odds
                             odds = round(1 / probability, 3)
-                            self.prop_lines.append({
+                            # update shared data
+                            PropLines.update(''.join(self.info.name.split()).lower(), {
                                 'batch_id': self.batch_id,
                                 'time_processed': datetime.now(),
                                 'league': league,
@@ -145,7 +144,9 @@ class HotStreak(Plug):
                                 'line': line,
                                 'odds': odds
                             })
+                            self.data_size += 1
 
 
 if __name__ == "__main__":
-    asyncio.run(main.run(HotStreak))
+    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
+    asyncio.run(helper.run(HotStreak))

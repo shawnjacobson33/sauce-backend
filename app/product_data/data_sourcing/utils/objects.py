@@ -31,12 +31,14 @@ class Plug:
         self.rm = request_manager
         self.ds = data_standardizer
         self.packager = Packager(info.name)
+        self.data_size = 0
 
     async def start(self):
         pass
 
     def __str__(self):
-        return str(len(self.prop_lines))
+        return str(self.data_size)
+
 
 @dataclass
 class Team:

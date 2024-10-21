@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 SUBJECT_COLLECTION_NAME = 'subjects-v3'
 MARKETS_COLLECTION_NAME = 'markets-v3'
 TEAMS_COLLECTION_NAME = 'teams-v1'
@@ -29,6 +30,34 @@ LEAGUE_SPORT_MAP = {
     'NCAAB': 'Basketball',
     'MLB': 'Baseball',
     'NHL': 'Ice Hockey',
+}
+FANTASY_SCORE_MAP = {
+    'NBA': 'Basketball Fantasy Points',
+    'WNBA': 'Basketball Fantasy Points',
+    'WNBA1Q': 'Basketball Fantasy Points',
+    'WNBA2Q': 'Basketball Fantasy Points',
+    'WNBA3Q': 'Basketball Fantasy Points',
+    'WNBA4Q': 'Basketball Fantasy Points',
+    'WNBA1H': 'Basketball Fantasy Points',
+    'WNBA2H': 'Basketball Fantasy Points',
+    'NCAAB': 'Basketball Fantasy Points',
+    'NFL': 'Football Fantasy Points',
+    'NFL1Q': 'Football Fantasy Points',
+    'NFL2Q': 'Football Fantasy Points',
+    'NFL3Q': 'Football Fantasy Points',
+    'NFL4Q': 'Football Fantasy Points',
+    'NFL1H': 'Football Fantasy Points',
+    'NFL2H': 'Football Fantasy Points',
+    'CFB': 'Football Fantasy Points',
+    'CFB1Q': 'Football Fantasy Points',
+    'CFB2Q': 'Football Fantasy Points',
+    'CFB3Q': 'Football Fantasy Points',
+    'CFB4Q': 'Football Fantasy Points',
+    'CFB1H': 'Football Fantasy Points',
+    'CFB2H': 'Football Fantasy Points',
+    'NCAAF': 'Football Fantasy Points',
+    'MLB': 'Baseball Fantasy Points',
+    'NHL': 'Ice Hockey Fantasy Points',
 }
 
 

@@ -82,7 +82,6 @@ class DataStandardizer:
             if update_operation:
                 collection.update_one({'_id': match['id']}, update_operation)
 
-            DataStandardizer._output_msg(entity, msg_type='match')
             return match['id']
 
     def _second_search(self, entity: Union[Market, Subject, Team], collection: Collection, in_mem_data: Union[dict, pd.DataFrame]) -> Optional[str]:

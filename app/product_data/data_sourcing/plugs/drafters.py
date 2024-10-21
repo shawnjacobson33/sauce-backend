@@ -1,17 +1,16 @@
 import asyncio
-import main
 from datetime import datetime
 
+from app.product_data.data_sourcing.shared_data import PropLines
 from app.product_data.data_sourcing.utils.network_management import RequestManager
 from app.product_data.data_sourcing.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_sourcing.utils.data_manipulation import DataStandardizer, clean_market, clean_subject, \
+from app.product_data.data_sourcing.utils.data_wrangling import DataStandardizer, clean_market, clean_subject, \
     clean_position
 
 
 class Drafters(Plug):
     def __init__(self, info: Bookmaker, batch_id: str, request_manager: RequestManager, data_standardizer: DataStandardizer):
         super().__init__(info, batch_id, request_manager, data_standardizer)
-        self.prop_lines = []
 
     async def start(self):
         url = self.packager.get_url()
@@ -61,7 +60,8 @@ class Drafters(Plug):
                         subject_ids[f'{subject}{subject_team}'] = subject_id
 
                 for label in ['Over', 'Under']:
-                    self.prop_lines.append({
+                    # update shared data
+                    PropLines.update(''.join(self.info.name.split()).lower(), {
                         'batch_id': self.batch_id,
                         'time_processed': datetime.now(),
                         'market_category': 'player_props',
@@ -75,9 +75,9 @@ class Drafters(Plug):
                         'line': line,
                         'odds': self.info.default_payout.odds
                     })
-
-        self.packager.store(self.prop_lines)
+                    self.data_size += 1
 
 
 if __name__ == "__main__":
-    asyncio.run(main.run(Drafters))
+    import app.product_data.data_sourcing.plugs.helpers.helpers as helper
+    asyncio.run(helper.run(Drafters))
