@@ -5,8 +5,9 @@ from pymongo.collection import Collection
 from pymongo.database import Database
 from Levenshtein import distance
 
-from app.product_data.data_sourcing.utils import Subject, Market, SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME, \
-    get_entities, Team, TEAMS_COLLECTION_NAME
+from app.db.utils.constants import SUBJECTS_COLLECTION_NAME, MARKETS_COLLECTION_NAME, TEAMS_COLLECTION_NAME
+from app.db.queries import get_entities
+from app.product_data.data_sourcing.utils import Subject, Market, Team
 
 
 
@@ -14,7 +15,7 @@ class DataStandardizer:
     def __init__(self, batch_id: str, db: Database, has_grouping: bool = True):
         self.batch_id = batch_id
         self.market_collection = db[MARKETS_COLLECTION_NAME]
-        self.subject_collection = db[SUBJECT_COLLECTION_NAME]
+        self.subject_collection = db[SUBJECTS_COLLECTION_NAME]
         self.team_collection = db[TEAMS_COLLECTION_NAME]
         self.subjects = get_entities(self.subject_collection, has_grouping=has_grouping)
         self.markets = get_entities(self.market_collection, has_grouping=has_grouping)

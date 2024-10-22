@@ -1,39 +1,15 @@
-import os
-from typing import Tuple, Any
+from typing import Any
 from pandas import DataFrame
-from pymongo import MongoClient
 from pymongo.collection import Collection
-from pymongo.database import Database
 
-# from watchers import watch_subjects, watch_markets
-from app.product_data.data_sourcing.utils import IN_SEASON_LEAGUES, SUBJECT_COLLECTION_NAME, IN_SEASON_SPORTS, \
-    BOOKMAKERS_COLLECTION_NAME, MARKETS_COLLECTION_NAME
-
-
-DATABASE_URL = 'mongodb+srv://username:password@sauce.hvhxg.mongodb.net/?retryWrites=true&w=majority&appName=Sauce'
-
-
-def get_db_creds() -> Tuple[str, str]:
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.abspath(os.path.join(current_dir, 'db_creds.txt')), 'r') as f:
-        data = f.readlines()
-        return data[0].strip(), data[1]
-
-
-def get_client():
-    username, password = get_db_creds()
-    return MongoClient(DATABASE_URL.replace('username', username).replace('password', password),
-                       uuidRepresentation='standard')
-
-
-def get_db():
-    return get_client()['sauce']
+from app.db.utils.constants import SUBJECTS_COLLECTION_NAME, BOOKMAKERS_COLLECTION_NAME
+from app.product_data.data_sourcing.utils.constants import IN_SEASON_LEAGUES, IN_SEASON_SPORTS
 
 
 def get_queries(collection_name: str, has_grouping: bool) -> dict[Any, dict[str, Any]]:
     queries = {}
     # Groupings by league is more relevant to subjects not markets.
-    if collection_name == SUBJECT_COLLECTION_NAME:
+    if collection_name == SUBJECTS_COLLECTION_NAME:
         # Drafters doesn't include leagues
         if has_grouping:
             for league in IN_SEASON_LEAGUES:
@@ -83,5 +59,5 @@ def get_entities(collection: Collection, has_grouping: bool = True):
     return entities
 
 
-def get_bookmaker(db: Database, bookmaker: str) -> dict:
+def get_bookmaker(db, bookmaker: str) -> dict:
     return db[BOOKMAKERS_COLLECTION_NAME].find_one({'name': bookmaker})

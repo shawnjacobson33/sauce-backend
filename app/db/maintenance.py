@@ -1,8 +1,10 @@
 import pprint
 from typing import Union
+
+import pymongo
 from pymongo.collection import Collection
 
-from main import get_db
+from database import get_db
 from app.product_data.data_sourcing.utils.objects import Market, Subject
 from app.product_data.data_sourcing.utils.constants import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME, \
     BOOKMAKERS_COLLECTION_NAME
@@ -133,7 +135,7 @@ def update_field_names(old_field_names: list, new_field_names: list, collection:
 # update_field_names(old_field_names=['attributes.position'], new_field_names=['attributes.jersey_number'], collection=subjects)
 
 # Subjects:
-remove_entity(entity=Subject('Tayven Jackson', 'NCAAF', team='IU', position=None, jersey_number=None), insert_new=True)
+# remove_entity(entity=Subject('Tayven Jackson', 'NCAAF', team='IU', position=None, jersey_number=None), insert_new=True)
 # TODO: Add in functionality to switch alt_name and 'name'
 # add_entity(alt_entity=Subject('Cameron Atkinson', 'NHL', team='TB', position=None, jersey_number=None), new_entity=Subject('Cam Atkinson', 'NHL', team='TBL', position='F', jersey_number=None), delete_old=True)
 

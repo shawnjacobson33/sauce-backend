@@ -1,7 +1,7 @@
 # TESTING MODULE TO ENSURE SOME VALIDITY OF THE COLLECTIONS STORED IN THE DATABASE
 import pprint
 from collections import defaultdict
-from main import get_db
+from database import get_db
 from app.product_data.data_sourcing.utils.constants import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME, \
     BOOKMAKERS_COLLECTION_NAME, VALID_LEAGUES
 

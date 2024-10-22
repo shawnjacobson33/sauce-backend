@@ -1,13 +1,6 @@
 from datetime import datetime
 
 
-SUBJECT_COLLECTION_NAME = 'subjects-v3'
-MARKETS_COLLECTION_NAME = 'markets-v3'
-TEAMS_COLLECTION_NAME = 'teams-v1'
-BOOKMAKERS_COLLECTION_NAME = 'bookmakers-v1'
-
-ALL_COLLECTION_NAMES = [SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME]
-
 BOOKMAKERS = [
     'BoomFantasy', 'Champ', 'Dabble', 'Drafters', 'DraftKingsPick6', 'HotStreak', 'MoneyLine', 'OddsShopper',
     'OwnersBox', 'ParlayPlay', 'Rebet', 'Sleeper', 'SuperDraft', 'ThriveFantasy', 'Underdog Fantasy', 'VividPicks'
