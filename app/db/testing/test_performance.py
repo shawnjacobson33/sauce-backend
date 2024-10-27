@@ -4,7 +4,7 @@ import pandas as pd
 import polars as pl
 from Levenshtein import distance
 
-from app.db.tables import SUBJECTS_CURSOR
+from app.db.tables import Subjects
 
 
 # TESTING PERFORMANCE OF DIFFERENT LIBRARIES/DATA STRUCTURES FOR SUBJECT ID LOOKUPS
@@ -103,4 +103,4 @@ def test_applying_similarity_scores():
 
 
 test_subject_id_lookup()
-test_applying_similarity_scores()
+# test_applying_similarity_scores()
