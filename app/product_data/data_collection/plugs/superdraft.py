@@ -1,108 +1,118 @@
 import asyncio
 from datetime import datetime
+from typing import Optional
 
-from app.product_data.data_collection.shared_data import PropLines
-from app.product_data.data_collection.utils.constants import FANTASY_SCORE_MAP
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.plugs.helpers.misc import run, is_league_good
 from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import DataStandardizer, clean_market, clean_subject, \
+from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
+from app.product_data.data_collection.plugs.helpers import run, is_league_valid, clean_market, clean_subject, \
     clean_league, clean_position
 
 
-class SuperDraft(Plug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager, data_standardizer: DataStandardizer):
-        super().__init__(info, batch_id, req_mngr, data_standardizer)
+def extract_sports_dict(data: dict) -> dict:
+    # initialize a dictionary to hold the sports id and name data
+    sports_dict = dict()
+    # for each sport dictionary in data's sports if they exist
+    for sport_data in data.get('sports', []):
+        # get the sport id and sport name from the dictionary, if both exist keep going
+        if (sport_id := sport_data.get('sportId')) and (sport_name := sport_data.get('sName')):
+            # store the sport id with its corresponding name
+            sports_dict[sport_id] = sport_name
 
-    async def start(self):
+    # return the dictionary of data
+    return sports_dict
+
+
+def extract_league(data: dict, sports_dict: dict) -> Optional[str]:
+    # only wanting individual subject prop lines
+    if data.get('type') != 'matchup-prop':
+        # get the sport id and league from dictionaries, if both exist then keep going
+        if (sport_id := data.get('sportId')) and (league := sports_dict.get(int(sport_id))):
+            # check if league name is valid
+            if is_league_valid(league):
+                # return the cleaned league name
+                return clean_league(league)
+
+
+def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
+    # get 3 different dictionaries holding market data, if all exist keep going
+    if (choices := data.get('choices')) and (actor := choices[0].get('actor')) and (requirements := actor.get('winningRequirement')):
+        # get the market name from the dictionary, if exists keep going
+        if market := requirements[0].get('name'):
+            # clean the market name
+            cleaned_market = clean_market(market, league)
+            # return the market id and cleaned market name
+            return get_market_id(Market(cleaned_market, league)), cleaned_market
+
+
+def extract_position(data: dict) -> Optional[str]:
+    # get the abbreviated player's position, if exists keep going
+    if position := data.get('posAbbr'):
+        # return the cleaned player's position
+        return clean_position(position)
+
+
+def extract_subject(data: dict, league: str) -> Optional[tuple[str, str, str]]:
+    # get player data dictionary, if exists keep going
+    if player_data := data.get('player'):
+        # get the first and last name of the player, if both exist keep going
+        if (first_name := player_data.get('fName')) and (first_name != 'combined') and (last_name := player_data.get('lName')):
+            # get the player's full name and clean it
+            cleaned_subject = clean_subject(' '.join([first_name, last_name]))
+            # return the subject's id from the db and the cleaned subject name and some game info
+            return get_subject_id(Subject(cleaned_subject, league, player_data.get('teamAbbr'), extract_position(player_data))), cleaned_subject, player_data.get('eventName')
+
+
+class SuperDraft(Plug):
+    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+        # call parent class Plug
+        super().__init__(info, batch_id, req_mngr)
+
+    async def start(self) -> None:
+        # get the url required to request prop lines data
         url = self.req_packager.get_url()
+        # get the headers required to request prop lines data
         headers = self.req_packager.get_headers()
+        # make the request for the prop lines
         await self.req_mngr.get(url, self._parse_lines, headers=headers)
 
-    async def _parse_lines(self, response):
-        # get body content in json format
-        data = response.json()
-        # get sports ids
-        sports = dict()
-        for sport in data.get('sports', []):
-            sport_id, sport_name = sport.get('sportId'), sport.get('sName')
-            if sport_id and sport_name:
-                sports[sport_id] = sport_name
-
-        # get props
-        subject_ids = dict()
-        for prop in data.get('props', []):
-            # not doing matchup props
-            prop_type = prop.get('type')
-            if prop_type != 'matchup-prop':
-                league = sports.get(int(prop.get('sportId')))
-                if league:
-                    if not is_league_good(league):
-                        continue
-
-                    league = clean_league(league)
-
-                # get market
-                market_id, market, choices = None, None, prop.get('choices')
-                if choices:
-                    actor = choices[0].get('actor')
-                    if actor:
-                        requirements = actor.get('winningRequirement')
-                        if requirements:
-                            market = requirements[0].get('name')
-                            if market:
-                                if 'Fantasy' in market:
-                                    market = FANTASY_SCORE_MAP.get(league, market)
-
-                                market = clean_market(market)
-                                market_id = self.ds.get_market_id(Market(market, league))
-
-                # get player data
-                subject_id, player = None, prop.get('player')
-                player_first_name, player_last_name = player.get('fName'), player.get('lName')
-                position, subject_team, subject = None, None, ' '.join([player_first_name, player_last_name])
-                if player_first_name == 'combined':
-                    players, teams, positions = [], [], []
-                    for player in prop.get('players', []):
-                        player_first_name = player.get('fName')
-                        player_last_name = player.get('lName')
-                        positions.append(player.get('posAbbr'))
-                        teams.append(player.get('teamAbbr'))
-                        players.append(' '.join([player_first_name, player_last_name]))
-
-                    subject = ' + '.join(players)
-
-                else:
-                    subject_team, position = player.get('teamAbbr'), player.get('posAbbr')
-                    if position:
-                        position = clean_position(position)
-
-                    if subject:
-                        subject = clean_subject(subject)
-                        subject_id = subject_ids.get(f'{subject}{subject_team}')
-                        if not subject_id:
-                            subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team, position))
-                            subject_ids[f'{subject}{subject_team}'] = subject_id
-
-                game_info, line = player.get('eventName'), prop.get('line')
-                for label in ['Over', 'Under']:
-                    # update shared data
-                    PropLines.update(''.join(self.info.name.split()).lower(), {
-                        'batch_id': self.batch_id,
-                        'time_processed': datetime.now(),
-                        'league': league,
-                        'market_category': 'player_props',
-                        'market_id': market_id,
-                        'market': market,
-                        'game_info': game_info,
-                        'subject_id': subject_id,
-                        'subject': subject,
-                        'bookmaker': self.info.name,
-                        'label': label,
-                        'line': line,
-                        'odds': self.info.default_payout.odds
-                    })
-                    self.data_size += 1
+    async def _parse_lines(self, response) -> None:
+        # get response data in json, if exists then keep going
+        if json_data := response.json():
+            # get sports ids
+            sports_dict = extract_sports_dict(json_data)
+            # for each dictionary of prop line data in json_data's props if they exist
+            for prop_line_data in json_data.get('props', []):
+                # extract the league name from the dictionary, if exists keep going
+                if league := extract_league(prop_line_data, sports_dict):
+                    # get the market id and extract the market name from the dictionary
+                    market_id, market = extract_market(prop_line_data, league)
+                    # if both exist then keep going
+                    if market_id and market:
+                        # get the subject id from the db and extract the subject name from the dictionary
+                        subject_id, subject, game_info = extract_subject(prop_line_data, league)
+                        # if both exist then keep going
+                        if subject_id and subject:
+                            # get the numeric over/under line from the dictionary
+                            if line := prop_line_data.get('line'):
+                                # for each generic over/under label for prop lines
+                                for label in ['Over', 'Under']:
+                                    # update shared data
+                                    self.add_and_update({
+                                        'batch_id': self.batch_id,
+                                        'time_processed': datetime.now(),
+                                        'league': league,
+                                        'market_category': 'player_props',
+                                        'market_id': market_id,
+                                        'market': market,
+                                        'game_info': game_info,
+                                        'subject_id': subject_id,
+                                        'subject': subject,
+                                        'bookmaker': self.info.name,
+                                        'label': label,
+                                        'line': line,
+                                        'odds': self.info.default_payout.odds
+                                    })
 
 
 if __name__ == "__main__":

@@ -58,7 +58,7 @@ LEAGUE_MAP = {
 MARKET_MAP = {
     'Hitter Fantasy Score': 'Baseball Fantasy Points'
 }
-FANTASY_KEY_WORDS = {'fantasy_points', 'Fantasy Points', 'Fantasy Score', 'Player Fantasy Score'}
+FANTASY_KEY_WORDS = {'fantasy_points', 'Fantasy Points', 'Fantasy Score', 'Player Fantasy Score', 'Fantasy'}
 FANTASY_SCORE_MAP = {
     'NBA': 'Basketball Fantasy Points',
     'WNBA': 'Basketball Fantasy Points',
