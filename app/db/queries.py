@@ -3,7 +3,7 @@ from pandas import DataFrame
 from pymongo.collection import Collection
 
 from app.db.utils.constants import SUBJECTS_COLLECTION_NAME, BOOKMAKERS_COLLECTION_NAME
-from app.product_data.data_sourcing.utils.constants import IN_SEASON_LEAGUES, IN_SEASON_SPORTS
+from app.product_data.data_collection.utils.constants import IN_SEASON_LEAGUES, IN_SEASON_SPORTS
 
 
 def get_queries(collection_name: str, has_grouping: bool) -> dict[Any, dict[str, Any]]:

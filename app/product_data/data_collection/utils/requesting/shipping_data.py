@@ -3,7 +3,8 @@ URL_MAP = {
         'games': 'https://bv2-us.digitalsportstech.com/api/sgmGames',
         'prop_lines': 'https://bv2-us.digitalsportstech.com/api/dfm/marketsByOu'
     }, 'BoomFantasy': {
-        'prop_lines': 'https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/graphql'
+        'prop_lines': 'https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/contests/multiLine/99708fb7-167a-4314-b69d-e38dc782a63a',
+        'tokens': 'https://production-api.boomfantasy.com/api/v1/sessions'
     }, 'Champ': {
         'prop_lines': 'https://core-api.champfantasysports.com/'
     }, 'Dabble': {
@@ -89,6 +90,33 @@ HEADERS_MAP = {
             'traceparent': '00-63892dc39724dd424505e425bcbe5610-231683df07acf1d3-01',
             'tracestate': '1896044@nr=0-1-1896044-1238146383-231683df07acf1d3----1727992810688',
         }
+    }, 'BoomFantasy': {
+        'prop_lines': {
+            'Host': 'production-boom-dfs-backend-api.boomfantasy.com',
+            'access-control-allow-origin': '*',
+            'accept': 'application/json, text/plain, */*',
+            'x-product-id': 'boom_dfs',
+            'authorization': 'Bearer {}',
+            'x-app-name': 'Boom',
+            'accept-language': 'en-US,en;q=0.9',
+            'user-agent': 'BoomDFS/3 CFNetwork/1568.100.1.2.1 Darwin/24.0.0',
+            'x-device-id': 'D03577BA-B845-4E42-ADE3-59BB344E4AA9',
+            'x-app-build': '3',
+            'x-platform': 'ios',
+        }, 'tokens': {
+                'Host': 'production-api.boomfantasy.com',
+                'content-type': 'application/json',
+                'accept': 'application/json',
+                'x-product-id': 'sports_predictor',
+                'authorization': 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXIiOjIsInR5cCI6ImFub24iLCJ0aWQiOiJwcmVkaWN0b3IiLCJwaWQiOiJzcG9ydHNfcHJlZGljdG9yIiwiaWF0IjoxNjg3OTY1MjQwfQ.sKySbA5uKlb3TO1i9k1wlQSdhJeQfpB0H1G3VkqRRIA1IrJyxcwwB74PmP1r16_Zs00tP1QXYV2toBFLZDadaxxiI3XI9_n0r6K8DW4O71iEUz3lNZtYx3b890nNQySYG7RLLAQ4vpGEyktjxE9xSD4TE0jvTJa-nibp6s1d8Ncm7RNNb5Xkz0ugvp06wWcBAa9rZPuaMTlP4DtKdKewjFC6B4AlESdLRaEBYg8tNviyGJS4mcV8iEt3Zbd5B7XRMwUU90IvxbQKF1HSUGQW0qHIZEXgiw_HUxHs-9V4jM77r2hj0nwAIr6YlMweiNhZ09vMtTUcT6dWDEKDWyXGkMpZrzGlTuT9y5jCNNoNxmzrFwu4sFjKc4MXXu4A5vqWwe4KjbAZ7U9_f6m1DhdvsdPhgUaoqA19CUd0sVRcJCpccvdlA3qPcuP332tiVkZ8Pi2h4PyF2gS1WIwqfYAGb4VYmxgMqxFhmCKpk2oWDAB0908KkfvqAvtYxbH1s3uZORy0duZyWkQ7I7EnqsHnBayX6-SdhUocYrQJsUAWnQYcoJ9vOKwcV6je8lnQcMFaBOfHcbTmd9Vp92wEwPVsn1UtKlkhJHAy_bzMEzPPBH2e8fGNpkiSbF7Rkz5r5X5imV1PMI8ZuXmfQT_WJjmxp4RtaB2JEOXM8xSPSM4IDYg',
+                'x-app-name': 'Predictor',
+                'accept-language': 'en-US,en;q=0.9',
+                'user-agent': 'Predictor/1 CFNetwork/1496.0.7 Darwin/23.5.0',
+                'x-device-id': '9498D138-1139-42BA-81A1-2E25990EA696',
+                'x-app-build': '1',
+                'x-app-version': '785',
+                'x-platform': 'ios',
+            }
     }, 'Champ': {
         'prop_lines': {
             "Host": "core-api.champfantasysports.com",
@@ -105,7 +133,6 @@ HEADERS_MAP = {
             "timeDiff": "-18000",
             "X-APOLLO-OPERATION-NAME": "ReadPicks"
         }
-
     }, 'Dabble': {
         'prop_lines': {
             'Host': 'api.dabble.com',
@@ -129,7 +156,8 @@ HEADERS_MAP = {
             'user_agent': 'iPhone 14 Pro',
             'access_token': 'draft_user',
         }
-    }, 'DraftKingsPick6': {
+    },
+    'DraftKingsPick6': {
         'prop_lines': {
             'accept': '*/*',
             'accept-language': 'en-US,en;q=0.9',
@@ -158,8 +186,7 @@ HEADERS_MAP = {
             'accept-language': 'en-US,en;q=0.9',
         }
 
-    },
-    'MoneyLine': {
+    }, 'MoneyLine': {
         'prop_lines': {
             'Host': 'moneylineapp.com',
             'Accept': 'application/json, text/plain, */*',
@@ -194,7 +221,8 @@ HEADERS_MAP = {
             'ownersbox_device': 'ios',
         }
 
-    }, 'ParlayPlay': {
+    },
+    'ParlayPlay': {
         'prop_lines': {
             'sec-ch-ua': '"Not)A;Brand";v="99", "Google Chrome";v="127", "Chromium";v="127"',
             'X-ParlayPlay-Platform': 'web',
@@ -217,8 +245,7 @@ HEADERS_MAP = {
             'authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI5NDJmYWIwZi0zMTQzLTQ2NmQtOTQ3MS1jODBmYmM3ZGYzMGUiLCJqdGkiOiI1OTZiMjMwOTczMGJiYjEyNjliNWU2MGM5MmJjMWFmMmFmYTY5MWFmYmFiZWQ5ZWI0OTIwN2JkYjQ3Yjg5Nzg0M2U4ZjQyZTg1MzUyNmFhNCIsImlhdCI6MTcyNDA5NzY0MC44ODQ5MTgsIm5iZiI6MTcyNDA5NzY0MC44ODQ5MjcsImV4cCI6MTc1NTYzMzY0MC44NzU1MjUsInN1YiI6IjBiODI2Mzc3LTRkMTUtNDBlMC1iNjZiLTU4ZGI3YTQzOWU1MCIsInNjb3BlcyI6WyIqIl19.qvwpWkgMa25A1R35YdAwiH00hkKur8xyo70JJYALVWMb2ig-BUDRfXXWrOC-CW7t3Pgf1hx9uZQNrq0P5MtI6FgLyUBoEf-RprxvXNV3SPukk8W42M8DSJAmsmRMnc99nsDLJyGv85v1VdTXe_eF5B9lqCZIwyCiVhS3Sc-_lkTP7Hm0yAXFIMqrt6nmjhcloRwV-S0tdyr6V9DQhnxGPU-9NasolMNf41FeYLcxVaynID67XJFs3rqFBQUR6PLzQLAgV_3vmwVXLJWvIgdrASomYcOUvBuKu4eiAPnd6SL5KTVPfwtY8yk2TmafTZUw0YTDU6EBYNlloBqpV6UJ0Kw4MZTwyP0lOyfQznOQu8jSUGrXujtfHMOHDT9lpFNe4Xdl91aNz-JJ-K-tSZEQlcNxRNfDC3wuhYzW6Mg1oBj10pIl3rHF9HYjVccdxuHBE9hkgSk3VpqEfxV9px0sGY3M0-8kfoWuCHSk5VVI4hlpdganx1vFJgkuFRpGC5yQAFle8siVaAQ9k9I-C84tLewCSGDkNHyO1PU_yJ_ivBs6Zdj1ZasSw5pLT6PQmROWaq28Xx_iKxS_mTmQxSlVjEM4mxuWV-xfuvUX2tSf8GJw_91QoGpN-7hTckwXygnxaVwQ96lIu4LbXnwveWKbZZDINYv8d_uk5SAzzFX1pwU',
             'accept-language': 'en-US,en;q=0.9',
         }
-    },
-    'Rebet': {
+    }, 'Rebet': {
         'tourney_ids': {
             'Host': 'api.rebet.app',
             'content-type': 'application/json',
@@ -289,7 +316,8 @@ HEADERS_MAP = {
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
             'x-tf-version': '1.1.39',
         }
-    }, 'UnderdogFantasy': {
+    },
+    'UnderdogFantasy': {
         'teams': {
             'Host': 'stats.underdogfantasy.com',
             'user-longitude': '-89.40836412683456',
@@ -326,8 +354,7 @@ HEADERS_MAP = {
             'user-location-token': '',
             'user-longitude': '-156.441985',
         }
-    },
-    'VividPicks': {
+    }, 'VividPicks': {
         'prop_lines': {
             'Host': 'api.betcha.one',
             'x-px-authorization': '3:813cbf65244904a5212f61f40a60ed86a6f2f1a951def7deb5a99ddcf2f01b67:y1vgcvZN6Ft0n1AuKpbq7ky2Y9uxN6fMF22sGO7mbzy3FM5SW0tUsdOsM2OCTSZuIvuhdxVkcANEEmFBzkwPZw==:1000:lfXRuGZ3/0l/vJ0slGB0923Os2OyFyKuXFu9awQ/FN6W9iJkNUDGuMwzq+J2glanORDV6OA1InID5OG1mIdPnvXomHwAi07a05zRAlDRrfsZGlfodXmmbDFXp+Arm+DCi8mz+iQGJPldNrx9fEtSFSyWOFFdBLkgjzhQDj0raeFi/bfwdV9F9CIegRaRNtNlWftBmdYZWUiwK9OyrrTngFqeVm+LkbLn+olbEAZspnk=',
@@ -410,6 +437,10 @@ class Packager:
                     'gameId': var_1,
                     'statistic': var_2,
                 }
+            }, 'BoomFantasy': {
+                'prop_lines': {
+                    'questionStatus': 'available',
+                }
             }, 'Dabble': {
                 'prop_lines': {
                     'exclude[]': [
@@ -430,15 +461,15 @@ class Packager:
                     'endDate': var_2,
                     'edgeSportsbooks': 'Circa,FanDuel,Pinnacle',
                 }
-            }, 'OwnersBox': {
+            },
+            'OwnersBox': {
                 'markets': {
                     'sport': var_1,
                 }, 'prop_lines': {
                     'sport': var_1,
                     'marketTypeId': var_2
                 }
-            },
-            'Payday': {
+            }, 'Payday': {
                 'leagues': {
                     'include_solo_contests': '1',
                 }, 'contests': {
@@ -456,292 +487,15 @@ class Packager:
     def get_json_data(self, name: str = 'prop_lines', var=None):
         json_map = {
             'BoomFantasy': {
-                'prop_lines': {
-                    "query": """query EvergreenContest(
-            $id: ID!
-            $questionStatuses: [QuestionStatus!]!
-            $overUnderSectionType: OverUnderSectionTypes
-            $renderType: EvergreenContestRenderTypes
-        ) {
-            contest(
-                id: $id
-                questionStatuses: $questionStatuses
-                overUnderSectionType: $overUnderSectionType
-                renderType: $renderType
-            ) {
-                _id
-                title
-                renderType
-                minLegs
-                maxLegs
-                minEntryFee
-                payoutPerLegPerPrizeType
-                minLegsPerPrizeType
-                maxLegsPerPrizeType
-                promotionalMaxEntryFee
-                entryFeePerLegPerPrizeType
-                restrictions {
-                    _id
-                }
-                returnToLobbyOnSubmit
-                sections {
-                    type
-                    leagues {
-                        league
-                        periodClassifier
-                        gameFilters {
-                            gameId
-                            title {
-                                i18nKey
-                                additionalOptions
-                            }
-                            fullTitle {
-                                i18nKey
-                                additionalOptions
-                            }
-                            numQuestions
-                        }
-                        tabTitle {
-                            i18nKey
-                            additionalOptions
-                        }
-                        icon {
-                            type
-                            source
-                            path
-                        }
-                        type
-                        status
-                        sections {
-                            ... on SingleSectionType {
-                                type
-                                fullQuestions {
-                                    __typename
-                                    _id
-                                    contestId
-                                    renderType
-                                    league
-                                    statistic
-                                    type
-                                    periodClassifier
-                                    title
-                                    status
-                                    sportsbookData
-                                    searchTerms
-                                    productIds
-                                    pickSelectionTitle {
-                                        i18nKey
-                                        additionalOptions
-                                    }
-                                    statPopup {
-                                        title {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        subTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        table {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        body {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                    }
-                                    lockBehavior {
-                                        type
-                                        details {
-                                            lockTime
-                                        }
-                                    }
-                                    questionGrouping {
-                                        identifier
-                                        type
-                                    }
-                                    choices {
-                                        _id
-                                        valueAdjustment
-                                        valueAdjustmentText {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        disabled
-                                        pickSelectionTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        questionTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        gameInfo {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        game {
-                                            _id
-                                        }
-                                        player {
-                                            _id
-                                            team {
-                                                _id
-                                            }
-                                        }
-                                        playerImage {
-                                            abbreviation
-                                            accentColor
-                                            color
-                                            image {
-                                                type
-                                                source
-                                                path
-                                            }
-                                            jerseyNumber
-                                            league
-                                            secondaryColor
-                                        }
-                                        team {
-                                            _id
-                                        }
-                                    }
-                                }
-                            }
-                            ... on PlayerGroupingSectionType {
-                                __typename
-                                type
-                                playerImage {
-                                    abbreviation
-                                    accentColor
-                                    color
-                                    image {
-                                        type
-                                        source
-                                        path
-                                    }
-                                    jerseyNumber
-                                    league
-                                    secondaryColor
-                                }
-                                title {
-                                    i18nKey
-                                    additionalOptions
-                                }
-                                gameInfo {
-                                    i18nKey
-                                    additionalOptions
-                                }
-                                timeInfo {
-                                    i18nKey
-                                    additionalOptions
-                                }
-                                promoData {
-                                    isPromo
-                                    lockTime
-                                }
-                                playerId
-                                teamId
-                                gameId
-                                periodClassifier
-                                lockTime
-                                fullQuestions {
-                                    _id
-                                    searchTerms
-                                    pickSelectionTitle {
-                                        i18nKey
-                                        additionalOptions
-                                    }
-                                    isPromo
-                                    statPopup {
-                                        title {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        subTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        table {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        body {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                    }
-                                    choices {
-                                        _id
-                                        type
-                                        pickSelectionTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                        questionTitle {
-                                            i18nKey
-                                            additionalOptions
-                                        }
-                                    }
-                                }
-                            }
-                            ... on GameGroupingSectionType {
-                                type
-                                collapsible
-                                game {
-                                    _id
-                                    scheduled
-                                    league
-                                    homeTeam {
-                                        _id
-                                        league
-                                        abbreviation
-                                        color
-                                    }
-                                    awayTeam {
-                                        _id
-                                        league
-                                        abbreviation
-                                        color
-                                    }
-                                }
-                                questions {
-                                    _id
-                                }
-                            }
-                        }
-                    }
-                }
-                wheelsData {
-                    layout {
-                        value
-                        start
-                        end
-                        weight
-                        color
-                    }
-                    payoutTable {
-                        header {
-                            i18nKey
-                            additionalOptions
-                        }
-                        rows {
-                            i18nKey
-                            additionalOptions
-                        }
-                    }
-                }
-            }
-        }
-    """,
-                    "variables": {
-                        "id": "8ae8cea1-1e61-4524-a269-c053a1f938f9",
-                        "questionStatuses": ["available"],
-                        "overUnderSectionType": "playerGrouping",
-                        "renderType": "evergreen"
+                'tokens': {
+                    'authentication': {
+                        'type': 'refresh',
+                        'credentials': {
+                            'refreshToken': '{}',
+                            'accessToken': '{}',
+                        },
                     },
-                    "operationName": "EvergreenContest"
+                    'eventInfo': {},
                 }
             }, 'Champ': {
                 'prop_lines': {

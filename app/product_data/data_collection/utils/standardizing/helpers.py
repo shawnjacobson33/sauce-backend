@@ -14,25 +14,21 @@ ENTITY_MAP = {
     Market: {
         'cursor': MARKETS_CURSOR,
         'data_store': Markets,
-        'partition_name': 'sport',
         'get_partition': (lambda e: e.sport),
-        'get_obj': (lambda e: Market(e['name'], sport=e['sport'])),
+        'get_obj': (lambda e: Market(e.name, sport=e.sport)),
         'dist_threshold': 3
     },
     Subject: {
         'cursor': SUBJECTS_CURSOR,
         'data_store': Subjects,
-        'partition_name': 'league',
         'get_partition': (lambda e: e.league),
-        'get_obj': (lambda e: Subject(e['name'], e['league'], e['team'], e['position'], e['jersey_number'])),
+        'get_obj': (lambda e: Subject(e.name, e.league, e.team, e.position, e.jersey_number)),
         'dist_threshold': 4,
     },
 }
 
 
 def get_filtered_data(entity: Union[Market, Subject, Team], dtype: str) -> Union[dict, pd.DataFrame]:
-    # get partition to filter data
-    partition_name = ENTITY_MAP[type(entity)]['partition_name']
     # get partition lambda function
     get_partition = ENTITY_MAP[type(entity)]['get_partition']
     try:
@@ -44,17 +40,12 @@ def get_filtered_data(entity: Union[Market, Subject, Team], dtype: str) -> Union
         # unbelievable
         raise AttributeError("FUCK DRAFTERS!!!")
 
-    # because data is stored in two forms for certain tasks
-    if dtype == 'df':
-        # get the dataframe
-        df = ENTITY_MAP[type(entity)]['data_store'].get_df()
-        # filter by the partition and corresponding value
-        return df[df[partition_name] == partition]
-
-    # get shared data dictionary
-    shared_data_dict = ENTITY_MAP[type(entity)]['data_store'].get_dict()
+    # get the dataframe
+    data_store = ENTITY_MAP[type(entity)]['data_store']
+    # get the data structured as dictionary or a dataframe based upon the input
+    structured_data_store = data_store.get_dict() if dtype == 'dict' else data_store.get_df()
     # filter it by partition
-    return shared_data_dict[partition]
+    return structured_data_store[partition]
 
 
 def first_search(entity: Union[Market, Subject, Team], user: Optional[str]) -> Optional[str]:
@@ -62,13 +53,16 @@ def first_search(entity: Union[Market, Subject, Team], user: Optional[str]) -> O
     filtered_data = get_filtered_data(entity, dtype='dict')
     # get match if it exists
     if match := filtered_data.get(entity.name):
-        # in a production environment probably don't want to risk database invalidity. Also, some bookmakers have too
+        # in a production environment don't want to risk database invalidity. Also, some bookmakers have too
         # high of variance in the data they transmit compared to the average bookmaker.
         if UPDATE_DATABASE_IS_ALLOWED and user not in PROHIBITED_STANDARDIZATION_USERS:
             if update_operation := get_update_operations(entity, match):
                 # update database
                 ENTITY_MAP[type(entity)]['cursor'].update_one({'_id': match['id']}, update_operation)
 
+        # output message for match
+        output_msg(entity, msg_type='match')
+        # return the similar entity's matching id
         return match['id']
 
 
@@ -80,9 +74,11 @@ def second_search(entity: Union[Market, Subject, Team], n_entities: int = 1) -> 
     # Get the constructor and distance_threshold based on the entity type
     constructor, distance_threshold = ENTITY_MAP[type(entity)]['get_obj'], ENTITY_MAP[type(entity)]['dist_threshold']
     # unpack rows into flatter structure and bring together data into abstracted objects
-    most_similar_entity_objs = [constructor(**unpack_row(sim_entity)) for sim_entity in top_n_similar_entities]
+    most_similar_entity_objs = [constructor(sim_entity) for sim_entity in top_n_similar_entities.itertuples(index=False)]
     # get the most similar, similar entity has to exist
-    if most_similar_entity := unpack_row(top_n_similar_entities.iloc[0]):
+    most_similar_entity = top_n_similar_entities.iloc[0]
+    # must exist
+    if not most_similar_entity.empty:
         # Levenshtein distance between entity and most similar entity
         distance_between_entities = most_similar_entity['distance']
         # has to meet threshold
@@ -213,7 +209,7 @@ def get_subject_distances(subject, r):
     return total_distance
 
 
-def get_most_similar_entities(entity: Union[Market, Subject, Team], df_store: pd.DataFrame, n_entities: int):
+def get_most_similar_entities(entity: Union[Market, Subject, Team], df_store: pd.DataFrame, n_entities: int) -> pd.DataFrame:
     # get Levenshtein distances between each stored entity in the filtered data and the current entity
     if isinstance(entity, Subject):
         # use a custom, more intricate method for finding distances...incorporating other attributes
@@ -241,9 +237,3 @@ def update_data_store(entity: Union[Market, Subject, Team]) -> None:
     })
     # add a new entity to the end of the shared df
     data_store.update_df(entity)
-
-
-def unpack_row(row) -> Optional[dict]:
-    if not row.empty:
-        # useful for object creation
-        return {'name': row['name'], **row['attributes']}

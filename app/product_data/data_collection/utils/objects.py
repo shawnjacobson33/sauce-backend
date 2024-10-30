@@ -1,3 +1,5 @@
+import json
+import os
 from dataclasses import dataclass
 from typing import Optional
 
@@ -41,6 +43,12 @@ class Plug:
         PropLines.update(''.join(self.info.name.split() if not bookmaker else bookmaker.split()).lower(), prop_line)
         # add one to the prop line count
         self.data_size += 1
+
+    @staticmethod
+    def save_to_file():
+        file_path = os.path.join(os.path.dirname(__file__), 'logs/prop_lines.json')
+        with open(file_path, 'w') as f:
+            json.dump(PropLines.get(), f, indent=4)
 
     def __str__(self):
         return str(self.data_size)
