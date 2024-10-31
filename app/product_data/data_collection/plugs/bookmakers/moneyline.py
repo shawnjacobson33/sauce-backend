@@ -24,9 +24,14 @@ def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the market from data, if exists keep going
     if market_data := data.get('bet_text'):
         # fishes out the market name from the messy string and cleans the market name
-        market = clean_market(market_data.split(' (')[0])
+        cleaned_market = clean_market(market_data.split(' (')[0], 'money_line')
+        # get the market id from the db if it exists
+        if market_id := get_market_id(Market(cleaned_market, league)):
+            # cast the market id to a string
+            market_id = str(market_id)
+
         # returns the market id from the db and the cleaned market name
-        return get_market_id(Market(market, league)), market
+        return market_id, cleaned_market
 
 
 def extract_subject(data: dict, league: str) -> Optional[tuple[str, str]]:
@@ -35,9 +40,16 @@ def extract_subject(data: dict, league: str) -> Optional[tuple[str, str]]:
         # splits the data into sub components containing individual attributes
         subject_components = subject_data.split()
         # get the player's name from the subject components, clean the subject
-        subject = clean_subject(' '.join(subject_components[:-1]))
+        cleaned_subject = clean_subject(' '.join(subject_components[:-1]))
+        # extract the subject team
+        subject_team = subject_components[-1][1:-1].replace('r.(', '')
+        # get the subject id from the db
+        if subject_id := get_subject_id(Subject(cleaned_subject, league, team=subject_team)):
+            # cast the subject id to a string
+            subject_id = str(subject_id)
+
         # return the subject id from the database and the cleaned subject name
-        return get_subject_id(Subject(subject, league, team=subject_components[-1][1:-1].replace('r.(', ''))), subject
+        return subject_id, cleaned_subject
 
 
 def extract_line_and_label(data: dict) -> Optional[tuple[str, str]]:
@@ -90,7 +102,7 @@ class MoneyLine(Plug):
                                 # update shared data
                                 self.add_and_update({
                                     'batch_id': self.batch_id,
-                                    'time_processed': datetime.now(),
+                                    'time_processed': str(datetime.now()),
                                     'league': league,
                                     'market_category': 'player_props',
                                     'market_id': market_id,
@@ -107,3 +119,4 @@ class MoneyLine(Plug):
 
 if __name__ == "__main__":
     asyncio.run(run(MoneyLine))
+    Plug.save_to_file()

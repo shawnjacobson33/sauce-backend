@@ -20,9 +20,14 @@ def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
     # get some market dictionary and then the market name from it, if both exist keep going
     if (market_type := data.get('marketType')) and (market := market_type.get('name')):
         # get a cleaned market name
-        cleaned_market = clean_market(market)
+        cleaned_market = clean_market(market, 'owners_box')
+        # get the market id from the db
+        if market_id := get_market_id(Market(cleaned_market, league)):
+            # cast market id to a string
+            market_id = str(market_id)
+
         # return the market id and the cleaned market name
-        return get_market_id(Market(market, league)), cleaned_market
+        return market_id, cleaned_market
 
 
 def extract_position(data: dict) -> Optional[str]:
@@ -46,8 +51,15 @@ def extract_subject(data: dict, league: str) -> Optional[tuple[str, str]]:
         if (first_name := player_data.get('firstName')) and (last_name := player_data.get('lastName')):
             # get full name of player and clean it
             cleaned_subject = clean_subject(' '.join([first_name, last_name]))
+            # get some player attributes
+            subject_team, position = extract_subject_team(player_data), extract_position(player_data)
+            # get the subject id from the db
+            if subject_id := get_subject_id(Subject(cleaned_subject, league, team=subject_team, position=position)):
+                # cast the subject id to a string
+                subject_id = str(subject_id)
+
             # return the subject id from db and the cleaned subject name
-            return get_subject_id(Subject(cleaned_subject, league, extract_subject_team(player_data), extract_position(player_data))), cleaned_subject
+            return subject_id, cleaned_subject
 
 
 def extract_line(data: dict) -> Optional[str]:
@@ -70,13 +82,31 @@ def extract_game_info(data: dict) -> Optional[str]:
                 return ' @ '.join([away_team_alias, home_team_alias])
 
 
+def extract_labels(label: str) -> Optional[list[str]]:
+    # split up the different components of the label string by underscore
+    label_comps =  label.split('_')
+    # make sure there are enough elements to index
+    if len(label_comps) > 1:
+        # get the labels based on other keyword in the label components (MORE, OR, LESS....MORE, ONLY)
+        connecting_word = label_comps[1]
+        # if the word is 'or'
+        if connecting_word == 'OR':
+            # return both labels in a list
+            return ['Over', 'Under']
+
+        # if the word is 'only'
+        elif connecting_word == 'ONLY':
+            # get the label as 'Over' keyword is 'MORE' else 'Under'
+            formatted_label = 'Over' if label_comps[0] == 'MORE' else 'Under'
+            # return the singular label in a list
+            return [formatted_label]
+
+
 def get_label(data: dict) -> Optional[str]:
-    # TODO: Problem is that some lines are over and under, but some are just for over or just for under
-    # TODO: Need to debug and see how pick_options is formatted to do an iterator over a split of pick_options or something along those lines.
     # get some dictionary holding data about whether the prop line is over/under type of pick, if exists then execute
-    if (pick_options := data.get('pickOptions')) and ('MORE' in pick_options) and ('LESS' in pick_options):
+    if pick_options := data.get('pickOptions'):
         # iterate over each general label for a prop line
-        for label in ['Over', 'Under']:
+        for label in extract_labels(pick_options):
             # yield the label
             yield label
 
@@ -138,26 +168,27 @@ class OwnersBox(Plug):
         # gets the json data from the response, if exists then execute
         if json_data := response.json():
             # for each prop line in response data's markets if they exist
-            for prop_line in json_data.get('markets', []):
+            for prop_line_data in json_data.get('markets', []):
                 # get the league name, if exists then keep executing
-                if league := extract_league(prop_line):
+                if league := extract_league(prop_line_data):
                     # get the market id from db and extract the market name
-                    market_id, market = extract_market(prop_line, league)
+                    market_id, market = extract_market(prop_line_data, league)
                     # if both exist continue executing
                     if market_id and market:
                         # get the subject id from db and extract the subject name from the dictionary
-                        subject_id, subject = extract_subject(prop_line, league)
+                        subject_id, subject = extract_subject(prop_line_data, league)
                         # if both exist then continue executing
                         if subject_id and subject:
                             # get the numeric over/under line, execute if exists
-                            if line := extract_line(prop_line):
+                            if line := extract_line(prop_line_data):
                                 # get game info
-                                game_info = extract_game_info(prop_line)
-
-                                for label in get_label(prop_line):
-                                    PropLines.update(''.join(self.info.name.split()).lower(), {
+                                game_info = extract_game_info(prop_line_data)
+                                # for each label that the prop line has
+                                for label in get_label(prop_line_data):
+                                    # update the shared data
+                                    self.add_and_update({
                                         'batch_id': self.batch_id,
-                                        'time_processed': datetime.now(),
+                                        'time_processed': str(datetime.now()),
                                         'league': league,
                                         'game_info': game_info,
                                         'market_category': 'player_props',
@@ -170,25 +201,8 @@ class OwnersBox(Plug):
                                         'line': line,
                                         'odds': self.info.default_payout.odds
                                     })
-                                    self.data_size += 1
-                                else:
-                                    PropLines.update(''.join(self.info.name.split()).lower(), {
-                                        'batch_id': self.batch_id,
-                                        'time_processed': datetime.now(),
-                                        'league': league,
-                                        'game_info': game_info,
-                                        'market_category': 'player_props',
-                                        'market_id': market_id,
-                                        'market': market,
-                                        'subject_id': subject_id,
-                                        'subject': subject,
-                                        'bookmaker': self.info.name,
-                                        'label': 'Over' if 'MORE' in pick_options else 'Under',
-                                        'line': line,
-                                        'odds': self.info.default_payout.odds
-                                    })
-                                    self.data_size += 1
 
 
 if __name__ == "__main__":
     asyncio.run(run(OwnersBox))
+    Plug.save_to_file()

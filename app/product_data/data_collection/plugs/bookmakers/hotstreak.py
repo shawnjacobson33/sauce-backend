@@ -1,3 +1,4 @@
+import json
 import random
 from datetime import datetime
 import asyncio
@@ -18,7 +19,6 @@ def extract_league_aliases(data: dict) -> Optional[dict]:
             for league in sport.get('leagues', [])
             if league.get('name') and league.get('alias')
         }
-
 
 
 def extract_leagues(data: dict, league_aliases: dict) -> dict:
@@ -182,21 +182,15 @@ class HotStreak(Plug):
         # make the request for leagues data
         await self.req_mngr.post(self.url, self._parse_league_aliases, headers=self.headers, json=json_data)
 
-    async def fetch_page(self, leagues: dict, page: int):
+    async def fetch_page(self, leagues: dict, page: int) -> None:
         # get the json_data (for post request) to get the data of a page of prop lines
         json_data = self.req_packager.get_json_data(var=page)
         # make the post request for the particular (page) page of prop lines
-        page_response = await self.req_mngr.post(self.url, self._parse_lines, leagues, headers=self.headers,
+        return await self.req_mngr.post(self.url, self._parse_lines, leagues, page, headers=self.headers,
                                                  json=json_data)
-        # checks for unsuccessful response and will throw an error
-        if page_response and ((page_response.status_code == 500) or (page_response.status_code == 429)):
-            # throw the error with message
-            raise Exception(f"[HotStreak]: Received status code 500 on page {page}. Breaking out of the loop.")
 
-        # return the successful response
-        return page_response
 
-    async def _parse_league_aliases(self, response):
+    async def _parse_league_aliases(self, response) -> None:
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('data')):
             # extracts the league aliases from the response data, execute if it exists
@@ -211,7 +205,8 @@ class HotStreak(Plug):
                 # make all the requests asynchronously
                 await asyncio.gather(*tasks)
 
-    async def _parse_lines(self, response, league_aliases: dict) -> None:
+    # TODO: GETTING UNAUTHORIZED RESPONSES FOR PAGES > 1
+    async def _parse_lines(self, response, league_aliases: dict, page) -> None:
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('data')):
             # get the search dict from data, execute if exists
@@ -227,7 +222,7 @@ class HotStreak(Plug):
                         # extract the league using an extracted dict of conn. opp. ids to league names, if exists then execute
                         if league := extract_league(participant_data, extract_opponent_ids(search, league_aliases)):
                             # extract the market id and market name from data
-                            market_id, market = extract_market(market_dict, league)
+                            market_id, market = extract_market(market_components, league)
                             # if they both exist then execute
                             if market_id and market:
                                 # get the subject id from db and extract subject from data

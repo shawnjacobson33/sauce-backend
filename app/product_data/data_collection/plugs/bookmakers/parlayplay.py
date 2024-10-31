@@ -41,22 +41,39 @@ def extract_subject(data: dict, league: str) -> Optional[tuple[str, str]]:
     if (player_data := data.get('player')) and (subject := player_data.get('fullName')):
         # clean the subject's name
         cleaned_subject = clean_subject(subject)
+        # get some player attributes
+        subject_team, position = extract_subject_team(player_data), extract_position(player_data)
+        # get the subject id from the db
+        if subject_id := get_subject_id(Subject(cleaned_subject, league, team=subject_team, position=position)):
+            # cast the subject id to a string
+            subject_id = str(subject_id)
+
         # return the subject id from db and the cleaned subject name
-        return get_subject_id(Subject(cleaned_subject, league, extract_subject_team(player_data), extract_position(player_data))), cleaned_subject
+        return subject_id, cleaned_subject
 
 
 def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the dictionary that holds market data and get market name, if both exist then execute
-    if market := data.get('market'):
+    if market := data.get('challengeName'):
         # get the cleaned market name
-        cleaned_market = clean_market(market)
+        cleaned_market = clean_market(market, 'parlay_play', league=league)
+        # get the market id from the db
+        if market_id := get_market_id(Market(cleaned_market, league)):
+            # cast the market id to a string
+            market_id = str(market_id)
+
         # return the market id from the db and the cleaned market name
-        return get_market_id(Market(market, league)), cleaned_market
+        return market_id, cleaned_market
 
 
 def extract_odds_and_label(data: dict) -> Optional[tuple[str, str]]:
-    # yield for each over and under label and over odds or under odds corresponding, if the odds for a label exist
-    yield from ((odds, label) for odds, label in zip([data.get('decimalPriceOver'), data.get('decimalPriceUnder')], ['Over', 'Under']) if odds)
+    # get odds and labels
+    odds_and_labels = zip([data.get('decimalPriceOver'), data.get('decimalPriceUnder')], ['Over', 'Under'])
+    for odds, label in odds_and_labels:
+        if odds:
+            yield odds, label
+    # # yield for each over and under label and over odds or under odds corresponding, if the odds for a label exist
+    # yield from ((odds, label) for odds, label in odds_and_labels if odds)
 
 
 class ParlayPlay(Plug):
@@ -85,12 +102,12 @@ class ParlayPlay(Plug):
                     if subject_id and subject:
                         # for each stat dictionary in the player data dictionary if they exist
                         for stat_data in player_data.get('stats', []):
-                            # get a dictionary of data around market, lines, and odds
-                            if alt_lines_data := stat_data.get('altLines'):
-                                # get the market id from the db and extract the market
-                                market_id, market = extract_market(alt_lines_data, league)
-                                # if both exist then keep executing
-                                if market_id and market:
+                            # get the market id from the db and extract the market
+                            market_id, market = extract_market(stat_data, league)
+                            # if both exist then keep executing
+                            if market_id and market:
+                                # get a dictionary of data around market, lines, and odds
+                                if alt_lines_data := stat_data.get('altLines'):
                                     # for each dictionary holding line, odds data if values exist
                                     for line_data in alt_lines_data.get('values', []):
                                         # if the numeric over/under line exists get it and execute
@@ -100,7 +117,7 @@ class ParlayPlay(Plug):
                                                 # update shared data
                                                 self.add_and_update({
                                                     'batch_id': self.batch_id,
-                                                    'time_processed': datetime.now(),
+                                                    'time_processed': str(datetime.now()),
                                                     'league': league,
                                                     'market_category': 'player_props',
                                                     'market_id': market_id,
@@ -117,3 +134,4 @@ class ParlayPlay(Plug):
 
 if __name__ == "__main__":
     asyncio.run(run(ParlayPlay))
+    Plug.save_to_file()

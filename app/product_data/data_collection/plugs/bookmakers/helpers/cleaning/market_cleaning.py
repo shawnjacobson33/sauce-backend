@@ -1,10 +1,28 @@
-import re
-from distutils.command.clean import clean
 from typing import Optional
 
 
 MARKET_MAP = {
-    'Hitter Fantasy Score': 'Baseball Fantasy Points'
+    'Basketball': {
+      # Points
+      # Rebounds
+      # Assists
+      # Points + Rebounds
+      # Points + Assists
+      # Points + Rebounds + Assists
+      # 3-Pointers Made
+      #
+    },
+    'hot_streak': {
+        'pa': 'Points + Assists',
+        'pr': 'Points + Rebounds',
+        'ra': 'Rebounds + Assists',
+        'pra': 'Points + Rebounds + Assists',
+        'stocks': 'Steals + Blocks'
+    }, 'odds_shopper': {
+        'Total Rushing + Receiving Yards': 'Total Rush + Rec Yards',
+        'Total Passing + Rushing Yards': 'Total Pass + Rush Yards',
+        'Total Passing + Rushing + Receiving TDs': 'Total Pass + Rush + Rec TDs',
+    }
 }
 FANTASY_KEY_WORDS = {'fantasy_points', 'Fantasy Points', 'Fantasy Score', 'Player Fantasy Score', 'Fantasy'}
 FANTASY_SCORE_MAP = {
@@ -61,6 +79,10 @@ def remove_parentheses_words(market: str) -> str:
     return market.split(' (')[0] if '(' in market else market
 
 
+def remove_underscores(market: str) -> str:
+    return market.replace('_', ' ')
+
+
 def remove_the_word_total(market: str) -> str:
     # get rid of any unnecessary words like 'Total' (Total Bases -> Bases)
     return market.replace('Total ', '')
@@ -80,7 +102,7 @@ def clean_boom_fantasy(market: str, period_classifier: Optional[str]) -> str:
     """Cleans market name specifically for the way Boom Fantasy formats their market names"""
 
     # replace underscores with spaces (POINTS_REBOUNDS)
-    cleaned_market = market.replace('_', ' ')
+    cleaned_market = remove_underscores(market)
     # capitalize first letters of each word
     cleaned_market = capitalize_first_letters(cleaned_market)
     # replace 'And' with '+' for better looking format
@@ -121,16 +143,69 @@ def clean_draft_kings_pick_6(market: str, league: str) -> str:
     return cleaned_market
 
 
-def clean_market(market: str, bookmaker: str, **kwargs) -> str:
-    # a map for all specialized cleaner functions for each bookmaker
-    bookmaker_cleaner_map = {
-        'boom_fantasy': clean_boom_fantasy,
-        'dabble': clean_dabble,
-        'draft_kings_pick_6': clean_draft_kings_pick_6,
-    }
+def clean_hot_streak(market: str, league: str) -> str:
+    """Cleans market name specifically for the way Hot Streak formats their market names"""
 
+    # replace underscores with spaces (fantasy_points -> fantasy points)
+    cleaned_market = remove_underscores(market)
+    # get a more comparable fantasy points market name
+    cleaned_market = map_fantasy_points_market(cleaned_market, league)
+    # map some poorly formatted markets (pa -> Points + Assists)
+    cleaned_market = MARKET_MAP['hot_streak'].get(cleaned_market, market)
+    # capitalize first letter of each word (points -> Points)
+    cleaned_market = capitalize_first_letters(cleaned_market)
+    # return the cleaned market name
+    return cleaned_market
+
+
+def clean_money_line(market: str, league: str) -> str:
+    """Cleans market name specifically for the way MoneyLine formats their market names"""
+
+    # get a more comparable fantasy points market name
+    cleaned_market = map_fantasy_points_market(market, league)
+    # return the cleaned market name
+    return cleaned_market
+
+
+def clean_odds_shopper(market: str, league: str) -> str:
+    """Cleans market name specifically for the way OddsShopper formats their market names"""
+
+    # different market names for the same market for NFL and NCAAF -- need to map
+    cleaned_market = MARKET_MAP['odds_shopper'].get(market, market)
+    # remove the word 'Total'
+    cleaned_market = remove_the_word_total(cleaned_market)
+    # get a more comparable fantasy points market name
+    cleaned_market = map_fantasy_points_market(cleaned_market, league)
+    # return the cleaned market name
+    return cleaned_market
+
+
+def clean_parlay_play(market: str, league: str) -> str:
+    """Cleans market name specifically for the way ParlayPlay formats their market names"""
+
+    # capitalize first letter of each word (Shots on Goal -> Shots On Goal)
+    cleaned_market = capitalize_first_letters(market)
+    # get a more comparable fantasy points market name
+    cleaned_market = map_fantasy_points_market(cleaned_market, league)
+    # return the cleaned market name
+    return cleaned_market
+
+
+# a map for all specialized cleaner functions for each bookmaker
+BOOKMAKER_CLEANER_MAP = {
+    'boom_fantasy': clean_boom_fantasy,
+    'dabble': clean_dabble,
+    'draft_kings_pick_6': clean_draft_kings_pick_6,
+    'hot_streak': clean_hot_streak,
+    'money_line': clean_money_line,
+    'odds_shopper': clean_odds_shopper,
+    'parlay_play': clean_parlay_play,
+}
+
+
+def clean_market(market: str, bookmaker: str, **kwargs) -> str:
     # get the specialized cleaner
-    if special_cleaner := bookmaker_cleaner_map.get(bookmaker):
+    if special_cleaner := BOOKMAKER_CLEANER_MAP.get(bookmaker):
         # return the cleaned market
         return special_cleaner(market, **kwargs)
 

@@ -9,12 +9,6 @@ from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_le
     clean_league
 
 
-# Different market names for the same market for NFL and NCAAF -- need to normalize
-MARKET_MAP = {
-    'Total Rushing + Receiving Yards': 'Total Rush + Rec Yards',
-    'Total Passing + Rushing Yards': 'Total Pass + Rush Yards',
-    'Total Passing + Rushing + Receiving TDs': 'Total Pass + Rush + Rec TDs',
-}
 BOOKMAKER_MAP = {
     'Underdog': 'Underdog Fantasy',
     'Pick6': 'DraftKingsPick6',
@@ -42,21 +36,31 @@ def get_dates() -> tuple[str, str]:
 def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the market name, if it exists keep executing
     if market := data.get('offerName'):
-        # Check if the market exists in the map to format differently
-        market = MARKET_MAP.get(market, market)
         # clean the market name
-        market = clean_market(market, league)
+        cleaned_market = clean_market(market, 'odds_shopper', league=league)
+        # get the market id from the db, if exists keep going
+        if market_id := get_market_id(Market(cleaned_market, league)):
+            # cast to a string
+            market_id = str(market_id)
+
         # return market id from the database and the clean market name
-        return get_market_id(Market(market, league)), market
+        return market_id, cleaned_market
 
 
 def extract_subject(data: dict, league: str) -> Optional[tuple[str, str]]:
-    # get the subject name from data, only keep going if it exists
-    if subject := data.get('label'):
-        # clean the subject name
-        cleaned_subject = clean_subject(subject)
-        # return the subject id from the db and the cleaned subject name
-        return get_subject_id(Subject(cleaned_subject, league), user='OddsShopper'), cleaned_subject
+    # get a list of dictionaries and the first dictionary in the list, if exists keep going
+    if (participants_data := data.get('participants')) and (first_participants_data := participants_data[0]):
+        # get the subject's name from the dictionary, if exists keep going
+        if subject := first_participants_data.get('name'):
+            # clean the subject name
+            cleaned_subject = clean_subject(subject)
+            # get the subject id from the db
+            if subject_id := get_subject_id(Subject(cleaned_subject, league), user='OddsShopper'):
+                # cast the subject id to a string
+                subject_id = str(subject_id)
+
+            # return the subject id from the db and the cleaned subject name
+            return subject_id, cleaned_subject
 
 
 def extract_bookmaker(data: dict) -> Optional[str]:
@@ -134,20 +138,22 @@ class OddsShopper(Plug):
         if json_data := response.json():
             # for each event/game in the response data
             for event in json_data:
+                # gets the game info from the dictionary
+                game_info = event.get('eventName')
                 # get the market id from db and extract market from the data
                 market_id, market = extract_market(event, league)
                 # only keep executing if market id and market exist
                 if market_id and market:
-                    # iterate through each side or bookmaker for the prop line
-                    for side in event.get('sides', []):
-                        # get the label from the side dictionary, only keep going if it exists
-                        if label := side.get('label'):
-                            # iterate through each outcome for each side
-                            for outcome in side.get('outcomes', []):
-                                # get the subject id from the db and extract the subject from outcome
-                                subject_id, subject = extract_subject(outcome, league)
-                                # only if both exist should execution keep going
-                                if subject_id and subject:
+                    # get the subject id from the db and extract the subject from outcome
+                    subject_id, subject = extract_subject(event, league)
+                    # only if both exist should execution keep going
+                    if subject_id and subject:
+                        # iterate through each side or bookmaker for the prop line
+                        for side in event.get('sides', []):
+                            # get the label from the side dictionary, only keep going if it exists
+                            if label := side.get('label'):
+                                # iterate through each outcome for each side
+                                for outcome in side.get('outcomes', []):
                                     # get the bookmaker from outcome dictionary, if exists keep executing
                                     if bookmaker := extract_bookmaker(outcome):
                                         # extract odds, implied probability, true win probability, and expected value if they exist
@@ -155,8 +161,9 @@ class OddsShopper(Plug):
                                         # update shared data
                                         self.add_and_update({
                                             'batch_id': self.batch_id,
-                                            'time_processed': datetime.now(),
+                                            'time_processed': str(datetime.now()),
                                             'league': league,
+                                            'game_info': game_info,
                                             'market_category': 'player_props',
                                             'market_id': market_id,
                                             'market': market,
@@ -176,3 +183,4 @@ class OddsShopper(Plug):
 
 if __name__ == "__main__":
     asyncio.run(run(OddsShopper))
+    Plug.save_to_file()
