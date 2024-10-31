@@ -91,30 +91,30 @@ class MoneyLine(Plug):
                 if league := extract_league(prop_line):
                     # extract the market id from database and market name from dictionary
                     market_id, market = extract_market(prop_line, league)
-                    # if both exist continue executing
-                    if market_id and market:
-                        # extract the subject id and subject name from the database and dictionary respectively
-                        subject_id, subject = extract_subject(prop_line, league)
-                        # if they both exist, continue executing
-                        if subject_id and subject:
-                            # get line and label for every one that exists
-                            for line, label in extract_line_and_label(prop_line):
-                                # update shared data
-                                self.add_and_update({
-                                    'batch_id': self.batch_id,
-                                    'time_processed': str(datetime.now()),
-                                    'league': league,
-                                    'market_category': 'player_props',
-                                    'market_id': market_id,
-                                    'market': market,
-                                    'subject_id': subject_id,
-                                    'subject': subject,
-                                    'bookmaker': self.info.name,
-                                    'label': label,
-                                    'line': line,
-                                    'odds': self.info.default_payout.odds,
-                                    'is_boosted': 'Discount' in market # TODO: COULD BE A BUG HERE
-                                })
+                    # # if both exist continue executing
+                    # if market_id and market:
+                    # extract the subject id and subject name from the database and dictionary respectively
+                    subject_id, subject = extract_subject(prop_line, league)
+                    # if they both exist, continue executing
+                    if subject_id and subject:
+                        # get line and label for every one that exists
+                        for line, label in extract_line_and_label(prop_line):
+                            # update shared data
+                            self.add_and_update({
+                                'batch_id': self.batch_id,
+                                'time_processed': str(datetime.now()),
+                                'league': league,
+                                'market_category': 'player_props',
+                                'market_id': market_id,
+                                'market': market,
+                                'subject_id': subject_id,
+                                'subject': subject,
+                                'bookmaker': self.info.name,
+                                'label': label,
+                                'line': line,
+                                'odds': self.info.default_payout.odds,
+                                'is_boosted': 'Discount' in market # TODO: COULD BE A BUG HERE
+                            })
 
 
 if __name__ == "__main__":

@@ -104,32 +104,32 @@ class ParlayPlay(Plug):
                         for stat_data in player_data.get('stats', []):
                             # get the market id from the db and extract the market
                             market_id, market = extract_market(stat_data, league)
-                            # if both exist then keep executing
-                            if market_id and market:
-                                # get a dictionary of data around market, lines, and odds
-                                if alt_lines_data := stat_data.get('altLines'):
-                                    # for each dictionary holding line, odds data if values exist
-                                    for line_data in alt_lines_data.get('values', []):
-                                        # if the numeric over/under line exists get it and execute
-                                        if line := line_data.get('selectionPoints'):
-                                            # for each over and under label
-                                            for odds, label in extract_odds_and_label(line_data):
-                                                # update shared data
-                                                self.add_and_update({
-                                                    'batch_id': self.batch_id,
-                                                    'time_processed': str(datetime.now()),
-                                                    'league': league,
-                                                    'market_category': 'player_props',
-                                                    'market_id': market_id,
-                                                    'market': market,
-                                                    'subject_id': subject_id,
-                                                    'subject': subject,
-                                                    'bookmaker': self.info.name,
-                                                    'label': label,
-                                                    'line': line,
-                                                    'odds': odds,
-                                                    'is_boosted': stat_data.get('isBoostedPayout')
-                                                })
+                            # # if both exist then keep executing
+                            # if market_id and market:
+                            # get a dictionary of data around market, lines, and odds
+                            if alt_lines_data := stat_data.get('altLines'):
+                                # for each dictionary holding line, odds data if values exist
+                                for line_data in alt_lines_data.get('values', []):
+                                    # if the numeric over/under line exists get it and execute
+                                    if line := line_data.get('selectionPoints'):
+                                        # for each over and under label
+                                        for odds, label in extract_odds_and_label(line_data):
+                                            # update shared data
+                                            self.add_and_update({
+                                                'batch_id': self.batch_id,
+                                                'time_processed': str(datetime.now()),
+                                                'league': league,
+                                                'market_category': 'player_props',
+                                                'market_id': market_id,
+                                                'market': market,
+                                                'subject_id': subject_id,
+                                                'subject': subject,
+                                                'bookmaker': self.info.name,
+                                                'label': label,
+                                                'line': line,
+                                                'odds': odds,
+                                                'is_boosted': stat_data.get('isBoostedPayout')
+                                            })
 
 
 if __name__ == "__main__":

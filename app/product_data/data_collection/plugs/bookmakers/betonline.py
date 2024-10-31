@@ -183,40 +183,40 @@ class BetOnline(Plug):
             for prop_line_data in json_data:
                 # get the market id from the db and extract the market name from the dictionary
                 market_id, market = extract_market(prop_line_data, league)
-                # if both exist then keep going
-                if market_id and market:
-                    # for every player in the prop line
-                    for player_data in prop_line_data.get('players', []):
-                        # get the subject id from the db and extract the subject name from dictionary
-                        subject_id, subject = extract_subject(player_data, league)
-                        # if both exist then keep going
-                        if subject_id and subject:
-                            # for all markets that the player has
-                            for market_data in player_data.get('markets', []):
-                                # market must exist and active on BetOnline
-                                if market_data.get('isActive') and market_data.get('isActual'):
-                                    # get numeric over/under line and odds (decimal) from dictionary, if both exist keep going
-                                    if (line := market_data.get('value')) and (odds := market_data.get('odds')):
-                                        # extract the over/under label from the dictionary
-                                        if label := extract_label(market_data):
-                                            # calculate the implied probability for the prop line using the odds
-                                            implied_prob = 1 / float(odds)
-                                            # update shared data
-                                            self.add_and_update({
-                                                'batch_id': self.batch_id,
-                                                'time_processed': str(datetime.now()),
-                                                'league': league,
-                                                'market_category': 'player_props',
-                                                'market_id': market_id,
-                                                'market': market,
-                                                'subject_id': subject_id,
-                                                'subject': subject,
-                                                'bookmaker': self.info.name,
-                                                'label': label,
-                                                'line': line,
-                                                'odds': odds,
-                                                'implied_prob': implied_prob
-                                            })
+                # # if both exist then keep going
+                # if market_id and market:
+                # for every player in the prop line
+                for player_data in prop_line_data.get('players', []):
+                    # get the subject id from the db and extract the subject name from dictionary
+                    subject_id, subject = extract_subject(player_data, league)
+                    # if both exist then keep going
+                    if subject_id and subject:
+                        # for all markets that the player has
+                        for market_data in player_data.get('markets', []):
+                            # market must exist and active on BetOnline
+                            if market_data.get('isActive') and market_data.get('isActual'):
+                                # get numeric over/under line and odds (decimal) from dictionary, if both exist keep going
+                                if (line := market_data.get('value')) and (odds := market_data.get('odds')):
+                                    # extract the over/under label from the dictionary
+                                    if label := extract_label(market_data):
+                                        # calculate the implied probability for the prop line using the odds
+                                        implied_prob = 1 / float(odds)
+                                        # update shared data
+                                        self.add_and_update({
+                                            'batch_id': self.batch_id,
+                                            'time_processed': str(datetime.now()),
+                                            'league': league,
+                                            'market_category': 'player_props',
+                                            'market_id': market_id,
+                                            'market': market,
+                                            'subject_id': subject_id,
+                                            'subject': subject,
+                                            'bookmaker': self.info.name,
+                                            'label': label,
+                                            'line': line,
+                                            'odds': odds,
+                                            'implied_prob': implied_prob
+                                        })
 
 
 if __name__ == "__main__":

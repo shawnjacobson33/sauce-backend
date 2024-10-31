@@ -162,37 +162,37 @@ class BoomFantasy(Plug):
                                     for q_data in qg_data.get('q', []):
                                         # extract the market and market id from the response data and database
                                         market_id, market = extract_market(q_data, league, period)
-                                        # if they both exist then execute
-                                        if market_id and market:
-                                            # for each dictionary in q_data's c field
-                                            for c_data in q_data.get('c', []):
-                                                # extract the numeric line for the prop line, if exists keep going
-                                                if line := c_data.get('l'):
-                                                    # for each over or under side to the prop line if they exist.
-                                                    for more_c_data in c_data.get('c', []):
-                                                        # extract the label and multiplier from the list
-                                                        label, odds = extract_label_and_odds(more_c_data)
-                                                        # calculate the implied probability
-                                                        implied_prob = 1 / odds
-                                                        # if both exist the keep going
-                                                        if label and odds:
-                                                            # update shared data
-                                                            self.add_and_update({
-                                                                'batch_id': self.batch_id,
-                                                                'time_processed': str(datetime.now()),
-                                                                'league': league,
-                                                                'game_info': game_info,
-                                                                'market_category': 'player_props',
-                                                                'market_id': market_id,
-                                                                'market': market,
-                                                                'subject_id': subject_id,
-                                                                'subject': subject,
-                                                                'bookmaker': self.info.name,
-                                                                'label': label,
-                                                                'line': line,
-                                                                'odds': odds,
-                                                                'implied_prob': implied_prob
-                                                            })
+                                        # # if they both exist then execute
+                                        # if market_id and market:
+                                        # for each dictionary in q_data's c field
+                                        for c_data in q_data.get('c', []):
+                                            # extract the numeric line for the prop line, if exists keep going
+                                            if line := c_data.get('l'):
+                                                # for each over or under side to the prop line if they exist.
+                                                for more_c_data in c_data.get('c', []):
+                                                    # extract the label and multiplier from the list
+                                                    label, odds = extract_label_and_odds(more_c_data)
+                                                    # calculate the implied probability
+                                                    implied_prob = 1 / odds
+                                                    # if both exist the keep going
+                                                    if label and odds:
+                                                        # update shared data
+                                                        self.add_and_update({
+                                                            'batch_id': self.batch_id,
+                                                            'time_processed': str(datetime.now()),
+                                                            'league': league,
+                                                            'game_info': game_info,
+                                                            'market_category': 'player_props',
+                                                            'market_id': market_id,
+                                                            'market': market,
+                                                            'subject_id': subject_id,
+                                                            'subject': subject,
+                                                            'bookmaker': self.info.name,
+                                                            'label': label,
+                                                            'line': line,
+                                                            'odds': odds,
+                                                            'implied_prob': implied_prob
+                                                        })
 
 
 

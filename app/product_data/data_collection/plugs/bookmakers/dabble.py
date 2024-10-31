@@ -141,30 +141,30 @@ class Dabble(Plug):
             for player_prop_data in data.get('playerProps', []):
                 # extract the market name from player_prop and look up in markets_map and get market id from db
                 market_id, market = extract_market(player_prop_data, markets_map, league)
+                # # only execute if both exist
+                # if market_id and market:
+                # extract subject name from player prop and get subject id from db
+                subject_id, subject = extract_subject(player_prop_data, league)
                 # only execute if both exist
-                if market_id and market:
-                    # extract subject name from player prop and get subject id from db
-                    subject_id, subject = extract_subject(player_prop_data, league)
-                    # only execute if both exist
-                    if subject_id and subject:
-                        # get over/under label for player prop and get numeric line, only execute if both exist
-                        if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
-                            # update shared data
-                            self.add_and_update({
-                            'batch_id': self.batch_id,
-                            'time_processed': str(datetime.now()),
-                            'league': league,
-                            'game_info': game_info,
-                            'market_category': 'player_props',
-                            'market_id': market_id,
-                            'market': market,
-                            'subject_id': subject_id,
-                            'subject': subject,
-                            'bookmaker': self.info.name,
-                            'label': label,
-                            'line': line,
-                            'odds': self.info.default_payout.odds
-                        })
+                if subject_id and subject:
+                    # get over/under label for player prop and get numeric line, only execute if both exist
+                    if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
+                        # update shared data
+                        self.add_and_update({
+                        'batch_id': self.batch_id,
+                        'time_processed': str(datetime.now()),
+                        'league': league,
+                        'game_info': game_info,
+                        'market_category': 'player_props',
+                        'market_id': market_id,
+                        'market': market,
+                        'subject_id': subject_id,
+                        'subject': subject,
+                        'bookmaker': self.info.name,
+                        'label': label,
+                        'line': line,
+                        'odds': self.info.default_payout.odds
+                    })
 
 
 

@@ -142,43 +142,43 @@ class OddsShopper(Plug):
                 game_info = event.get('eventName')
                 # get the market id from db and extract market from the data
                 market_id, market = extract_market(event, league)
-                # only keep executing if market id and market exist
-                if market_id and market:
-                    # get the subject id from the db and extract the subject from outcome
-                    subject_id, subject = extract_subject(event, league)
-                    # only if both exist should execution keep going
-                    if subject_id and subject:
-                        # iterate through each side or bookmaker for the prop line
-                        for side in event.get('sides', []):
-                            # get the label from the side dictionary, only keep going if it exists
-                            if label := side.get('label'):
-                                # iterate through each outcome for each side
-                                for outcome in side.get('outcomes', []):
-                                    # get the bookmaker from outcome dictionary, if exists keep executing
-                                    if bookmaker := extract_bookmaker(outcome):
-                                        # extract odds, implied probability, true win probability, and expected value if they exist
-                                        odds, impl_prob, tw_prob, ev = extract_odds_and_other_stats(outcome)
-                                        # update shared data
-                                        self.add_and_update({
-                                            'batch_id': self.batch_id,
-                                            'time_processed': str(datetime.now()),
-                                            'league': league,
-                                            'game_info': game_info,
-                                            'market_category': 'player_props',
-                                            'market_id': market_id,
-                                            'market': market,
-                                            'subject_id': subject_id,
-                                            'subject': subject,
-                                            'bookmaker': bookmaker,
-                                            'label': label,
-                                            'line': outcome.get('line', '0.5'),
-                                            'odds': odds,
-                                            'implied_prob': impl_prob,
-                                            'other_stats': {
-                                                'true_win_prob': tw_prob,
-                                                'ev': ev
-                                            }
-                                        }, bookmaker=bookmaker)
+                # # only keep executing if market id and market exist
+                # if market_id and market:
+                # get the subject id from the db and extract the subject from outcome
+                subject_id, subject = extract_subject(event, league)
+                # only if both exist should execution keep going
+                if subject_id and subject:
+                    # iterate through each side or bookmaker for the prop line
+                    for side in event.get('sides', []):
+                        # get the label from the side dictionary, only keep going if it exists
+                        if label := side.get('label'):
+                            # iterate through each outcome for each side
+                            for outcome in side.get('outcomes', []):
+                                # get the bookmaker from outcome dictionary, if exists keep executing
+                                if bookmaker := extract_bookmaker(outcome):
+                                    # extract odds, implied probability, true win probability, and expected value if they exist
+                                    odds, impl_prob, tw_prob, ev = extract_odds_and_other_stats(outcome)
+                                    # update shared data
+                                    self.add_and_update({
+                                        'batch_id': self.batch_id,
+                                        'time_processed': str(datetime.now()),
+                                        'league': league,
+                                        'game_info': game_info,
+                                        'market_category': 'player_props',
+                                        'market_id': market_id,
+                                        'market': market,
+                                        'subject_id': subject_id,
+                                        'subject': subject,
+                                        'bookmaker': bookmaker,
+                                        'label': label,
+                                        'line': outcome.get('line', '0.5'),
+                                        'odds': odds,
+                                        'implied_prob': impl_prob,
+                                        'other_stats': {
+                                            'true_win_prob': tw_prob,
+                                            'ev': ev
+                                        }
+                                    }, bookmaker=bookmaker)
 
 
 if __name__ == "__main__":

@@ -103,33 +103,33 @@ class DraftKingsPick6(Plug):
                 if (pick_data := prop_line_data.get('pickable')) and (m_category_data := pick_data.get('marketCategory')):
                     # get the market id from the db and extract the market from the data dict
                     market_id, market = extract_market(m_category_data, league)
-                    # only execute if market id and market exist
-                    if market_id and market:
-                        # get the over/under numeric line for the prop line, execute if exists
-                        if line := extract_line(prop_line_data):
-                            # for each subject in the pickableEntities if they exist
-                            for entity in pick_data.get('pickableEntities', []):
-                                # get the subject id from the db and extract the subject from data
-                                subject_id, subject = extract_subject(entity, league)
-                                # execute if both subject id and subject exist
-                                if subject_id and subject:
-                                    # for each label Over and Under update shared data prop lines
-                                    for label in ['Over', 'Under']:
-                                        # update shared data
-                                        self.add_and_update({
-                                            'batch_id': self.batch_id,
-                                            'time_processed': str(datetime.now()),
-                                            'league': league,
-                                            'market_category': 'player_props',
-                                            'market_id': market_id,
-                                            'market': market,
-                                            'subject_id': subject_id,
-                                            'subject': subject,
-                                            'bookmaker': self.info.name,
-                                            'label': label,
-                                            'line': line,
-                                            'odds': self.info.default_payout.odds
-                                        })
+                    # # only execute if market id and market exist
+                    # if market_id and market:
+                    # get the over/under numeric line for the prop line, execute if exists
+                    if line := extract_line(prop_line_data):
+                        # for each subject in the pickableEntities if they exist
+                        for entity in pick_data.get('pickableEntities', []):
+                            # get the subject id from the db and extract the subject from data
+                            subject_id, subject = extract_subject(entity, league)
+                            # execute if both subject id and subject exist
+                            if subject_id and subject:
+                                # for each label Over and Under update shared data prop lines
+                                for label in ['Over', 'Under']:
+                                    # update shared data
+                                    self.add_and_update({
+                                        'batch_id': self.batch_id,
+                                        'time_processed': str(datetime.now()),
+                                        'league': league,
+                                        'market_category': 'player_props',
+                                        'market_id': market_id,
+                                        'market': market,
+                                        'subject_id': subject_id,
+                                        'subject': subject,
+                                        'bookmaker': self.info.name,
+                                        'label': label,
+                                        'line': line,
+                                        'odds': self.info.default_payout.odds
+                                    })
 
 
 if __name__ == "__main__":

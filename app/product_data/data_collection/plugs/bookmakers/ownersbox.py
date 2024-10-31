@@ -173,34 +173,34 @@ class OwnersBox(Plug):
                 if league := extract_league(prop_line_data):
                     # get the market id from db and extract the market name
                     market_id, market = extract_market(prop_line_data, league)
-                    # if both exist continue executing
-                    if market_id and market:
-                        # get the subject id from db and extract the subject name from the dictionary
-                        subject_id, subject = extract_subject(prop_line_data, league)
-                        # if both exist then continue executing
-                        if subject_id and subject:
-                            # get the numeric over/under line, execute if exists
-                            if line := extract_line(prop_line_data):
-                                # get game info
-                                game_info = extract_game_info(prop_line_data)
-                                # for each label that the prop line has
-                                for label in get_label(prop_line_data):
-                                    # update the shared data
-                                    self.add_and_update({
-                                        'batch_id': self.batch_id,
-                                        'time_processed': str(datetime.now()),
-                                        'league': league,
-                                        'game_info': game_info,
-                                        'market_category': 'player_props',
-                                        'market_id': market_id,
-                                        'market': market,
-                                        'subject_id': subject_id,
-                                        'subject': subject,
-                                        'bookmaker': self.info.name,
-                                        'label': label,
-                                        'line': line,
-                                        'odds': self.info.default_payout.odds
-                                    })
+                    # # if both exist continue executing
+                    # if market_id and market:
+                    # get the subject id from db and extract the subject name from the dictionary
+                    subject_id, subject = extract_subject(prop_line_data, league)
+                    # if both exist then continue executing
+                    if subject_id and subject:
+                        # get the numeric over/under line, execute if exists
+                        if line := extract_line(prop_line_data):
+                            # get game info
+                            game_info = extract_game_info(prop_line_data)
+                            # for each label that the prop line has
+                            for label in get_label(prop_line_data):
+                                # update the shared data
+                                self.add_and_update({
+                                    'batch_id': self.batch_id,
+                                    'time_processed': str(datetime.now()),
+                                    'league': league,
+                                    'game_info': game_info,
+                                    'market_category': 'player_props',
+                                    'market_id': market_id,
+                                    'market': market,
+                                    'subject_id': subject_id,
+                                    'subject': subject,
+                                    'bookmaker': self.info.name,
+                                    'label': label,
+                                    'line': line,
+                                    'odds': self.info.default_payout.odds
+                                })
 
 
 if __name__ == "__main__":
