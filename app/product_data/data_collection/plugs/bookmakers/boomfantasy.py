@@ -1,21 +1,21 @@
-import asyncio
 from datetime import datetime
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import helpers
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.reports import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
-    clean_league
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league(data: dict) -> Optional[str]:
     # get name of league, executes if exists
     if league := data.get('league'):
         # clean the league name
-        cleaned_league = clean_league(league.upper())
+        cleaned_league = helpers.clean_league(league.upper())
         # checks if the league is valid
-        if is_league_valid(cleaned_league):
+        if helpers.is_league_valid(cleaned_league):
             # cleans the league name
             return cleaned_league
 
@@ -46,11 +46,11 @@ def extract_subject(data: dict, league: str) -> Optional[tuple[Optional[str], st
         # gets the first and last name of the player, executes if both exist
         if (first_name := options.get('firstName')) and (last_name := options.get('lastName')):
             # gets the full name of subject and cleans it
-            cleaned_subject = clean_subject(' '.join([first_name, last_name]))
+            cleaned_subject = helpers.clean_subject(' '.join([first_name, last_name]))
             # get some player attributes
             subject_team, jersey_number = extract_player_info(data)
             # gets the subject id of this player
-            if subject_id := get_subject_id(Subject(cleaned_subject, league, team=subject_team, jersey_number=jersey_number)):
+            if subject_id := std.get_subject_id(Subject(cleaned_subject, league, team=subject_team, jersey_number=jersey_number)):
                 # cast the subject id to a string
                 subject_id = str(subject_id)
 
@@ -80,9 +80,9 @@ def extract_market(data: dict, league: str, period: Optional[str] = None) -> Opt
     # get the market name, if exists keep going
     if market := data.get("statistic"):
         # cleans the market
-        cleaned_market = clean_market(market, 'boom_fantasy', period_classifier=period)
+        cleaned_market = helpers.clean_market(market, 'boom_fantasy', period_classifier=period)
         # gets the market id
-        if market_id := get_market_id(Market(cleaned_market, league)):
+        if market_id := std.get_market_id(Market(cleaned_market, league)):
             # cast the market id to a string
             market_id = str(market_id)
 
@@ -97,14 +97,14 @@ def extract_label_and_odds(data: list) -> Optional[tuple[str, float]]:
         return data[1].title(), float(data[2])
 
 
-class BoomFantasy(Plug):
+class BoomFantasy(BookmakerPlug):
     """
     BoomFantasy is a class that represents the process of collecting and parsing player prop lines from
     the BoomFantasy API. It inherits from the `Plug` class and utilizes asynchronous requests to gather
     data related to prop betting markets.
 
     Attributes:
-        info (Bookmaker): An object containing information about the bookmaker.
+        bookmaker_info (Bookmaker): An object containing information about the bookmaker.
         batch_id (str): A unique identifier for the batch of data being processed.
         req_mngr (RequestManager): Manages network requests, including handling authentication tokens.
 
@@ -117,9 +117,9 @@ class BoomFantasy(Plug):
             data storage for further use.
     """
 
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+    def __init__(self, bookmaker_info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id, req_mngr)
 
     async def start(self) -> None:
         # gets the url to get prop lines
@@ -177,7 +177,7 @@ class BoomFantasy(Plug):
                                                     # if both exist the keep going
                                                     if label and odds:
                                                         # update shared data
-                                                        self.add_and_update({
+                                                        self.update_betting_lines({
                                                             'batch_id': self.batch_id,
                                                             'time_processed': str(datetime.now()),
                                                             'league': league,
@@ -187,7 +187,7 @@ class BoomFantasy(Plug):
                                                             'market': market,
                                                             'subject_id': subject_id,
                                                             'subject': subject,
-                                                            'bookmaker': self.info.name,
+                                                            'bookmaker': self.bookmaker_info.name,
                                                             'label': label,
                                                             'line': line,
                                                             'odds': odds,
@@ -197,5 +197,4 @@ class BoomFantasy(Plug):
 
 
 if __name__ == "__main__":
-    asyncio.run(run(BoomFantasy))
-    Plug.save_to_file()
+    setup.run(BoomFantasy)

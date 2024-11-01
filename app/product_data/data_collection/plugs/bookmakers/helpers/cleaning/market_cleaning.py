@@ -185,16 +185,23 @@ MARKET_MAP = {
         # Last Touchdown Scorer
           'Last Touchdown Scorer': 'Last Touchdown Scorer',  # OddsShopper
     },
-    'hot_streak': {
-        'pa': 'Points + Assists',
-        'pr': 'Points + Rebounds',
-        'ra': 'Rebounds + Assists',
-        'pra': 'Points + Rebounds + Assists',
-        'stocks': 'Steals + Blocks'
-    }, 'odds_shopper': {
-        'Total Rushing + Receiving Yards': 'Total Rush + Rec Yards',
-        'Total Passing + Rushing Yards': 'Total Pass + Rush Yards',
-        'Total Passing + Rushing + Receiving TDs': 'Total Pass + Rush + Rec TDs',
+    'Ice Hockey': {
+        # Points
+        'Points': 'Points',  # BetOnline, Dabble
+        'POINTS': 'Points',  # BoomFantasy
+        # Shots On Goal
+        'Shots On Goal': 'Shots On Goal',
+        'SHOTS_ON_GOAL': 'Shots On Goal',  # BoomFantasy
+        # Blocked Shots
+        'Blocked Shots': 'Blocked Shots',
+        # Goalie Saves
+        'Goalie Saves': 'Goalie Saves',
+        # Goals Against
+        'Goals Against': 'Goals Against',
+        # Assists
+        'Assists': 'Assists',
+
+
     }
 }
 FANTASY_KEY_WORDS = {'fantasy_points', 'Fantasy Points', 'Fantasy Score', 'Player Fantasy Score', 'Fantasy'}

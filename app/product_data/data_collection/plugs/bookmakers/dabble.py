@@ -2,20 +2,21 @@ from datetime import datetime
 import asyncio
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import helpers
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.reports import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, is_market_valid, clean_market, \
-    clean_subject, clean_league, clean_position
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league(data: dict) -> Optional[str]:
     # get league name and the competition id, if both exist then execute
     if league := data.get('displayName'):
         # clean the league name
-        cleaned_league = clean_league(league)
+        cleaned_league = helpers.clean_league(league)
         # if league is not valid then skip
-        if is_league_valid(cleaned_league):
+        if helpers.is_league_valid(cleaned_league):
             # return league name
             return cleaned_league
 
@@ -34,11 +35,11 @@ def extract_market(data: dict, data_map: dict, league: str) -> Optional[tuple[Op
     # get the market id from the response data, if that exists get the market name, if they both exist execute
     if (data_map_market_id := data.get('marketId')) and (market := data_map.get(data_map_market_id)):
         # check if the market is valid
-        if is_market_valid(market):
+        if helpers.is_market_valid(market):
             # clean the market name
-            cleaned_market = clean_market(market, 'dabble')
+            cleaned_market = helpers.clean_market(market, 'dabble')
             # get the market id from the db
-            if market_id := get_market_id(Market(cleaned_market, league)):
+            if market_id := std.get_market_id(Market(cleaned_market, league)):
                 # cast the market id to a string
                 market_id = str(market_id)
 
@@ -50,7 +51,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get the player's position, if exists keep going
     if position := data.get('position'):
         # return the cleaned position
-        return clean_position(position)
+        return helpers.clean_position(position)
 
 
 def extract_team(data: dict) -> Optional[str]:
@@ -64,9 +65,11 @@ def extract_subject(data: dict, league: str) -> Optional[tuple[Optional[str], st
     # get subject name from the data, if exists then execute
     if subject := data.get('playerName'):
         # clean the subject
-        cleaned_subject = clean_subject(subject)
+        cleaned_subject = helpers.clean_subject(subject)
+        # extract player attributes
+        subject_team, position = extract_team(data), extract_position(data)
         # get the subject id from the database, if exists then execute
-        if subject_id := get_subject_id(Subject(cleaned_subject, league, extract_team(data), extract_position(data))):
+        if subject_id := std.get_subject_id(Subject(cleaned_subject, league, team=subject_team, position=position)):
              # cast to a string
              subject_id = str(subject_id)
 
@@ -81,10 +84,10 @@ def extract_label(data: dict) -> Optional[str]:
         return label.title()
 
 
-class Dabble(Plug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+class Dabble(BookmakerPlug):
+    def __init__(self, bookmaker_info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id, req_mngr)
         # gets universally used request headers
         self.headers = self.req_packager.get_headers()
         # gets universally used request cookies
@@ -150,24 +153,23 @@ class Dabble(Plug):
                     # get over/under label for player prop and get numeric line, only execute if both exist
                     if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
                         # update shared data
-                        self.add_and_update({
-                        'batch_id': self.batch_id,
-                        'time_processed': str(datetime.now()),
-                        'league': league,
-                        'game_info': game_info,
-                        'market_category': 'player_props',
-                        'market_id': market_id,
-                        'market': market,
-                        'subject_id': subject_id,
-                        'subject': subject,
-                        'bookmaker': self.info.name,
-                        'label': label,
-                        'line': line,
-                        'odds': self.info.default_payout.odds
-                    })
+                        self.update_betting_lines({
+                            'batch_id': self.batch_id,
+                            'time_processed': str(datetime.now()),
+                            'league': league,
+                            'game_info': game_info,
+                            'market_category': 'player_props',
+                            'market_id': market_id,
+                            'market': market,
+                            'subject_id': subject_id,
+                            'subject': subject,
+                            'bookmaker': self.bookmaker_info.name,
+                            'label': label,
+                            'line': line,
+                            'odds': self.bookmaker_info.default_payout.odds
+                        })
 
 
 
 if __name__ == "__main__":
-    asyncio.run(run(Dabble))
-    Plug.save_to_file()
+    setup.run(Dabble)

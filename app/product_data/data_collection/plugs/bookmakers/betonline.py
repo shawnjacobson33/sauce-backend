@@ -2,12 +2,13 @@ import asyncio
 from datetime import datetime
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import helpers
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.reports import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 from app.product_data.data_collection.utils.constants import IN_SEASON_LEAGUES, LEAGUE_SPORT_MAP
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, clean_market, clean_subject, clean_position, \
-    clean_league
 
 # pre-defined markets that will be used for url params
 MARKETS = {
@@ -67,9 +68,9 @@ def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
     # gets and cleans the market if it exists
     if market := data.get('statistic'):
         # clean the market name
-        cleaned_market = clean_market(market, 'bet_online')
+        cleaned_market = helpers.clean_market(market, 'bet_online')
         # gets the market id if market exists
-        if market_id := get_market_id(Market(cleaned_market, league)):
+        if market_id := std.get_market_id(Market(cleaned_market, league)):
             # cast the market id to a string
             market_id = str(market_id)
 
@@ -81,16 +82,18 @@ def extract_position(data: dict) -> Optional[str]:
     # gets the position of a player if it exists and the cleans it.
     if (position_data := data.get('position')) and (position := position_data.get('title')):
         # return the cleaned player's position
-        return clean_position(position)
+        return helpers.clean_position(position)
 
 
 def extract_subject(data: dict, league: str) -> Optional[tuple[str, str]]:
     # gets the player name, if it exists then keep going
     if subject := data.get('name'):
         # clean the subject name
-        cleaned_subject = clean_subject(subject)
+        cleaned_subject = helpers.clean_subject(subject)
+        # extract some player attributes
+        subject_team, position = data.get('team'), extract_position(data)
         # get the subject id from the db
-        if subject_id := get_subject_id(Subject(cleaned_subject, league, team=data.get('team'), position=extract_position(data))):
+        if subject_id := std.get_subject_id(Subject(cleaned_subject, league, team=subject_team, position=position)):
             # cast the subject id to a string
             subject_id = str(subject_id)
 
@@ -105,7 +108,7 @@ def extract_label(data: dict) -> Optional[str]:
         return 'Over' if condition == 1 else 'Under'
 
 
-class BetOnline(Plug):
+class BetOnline(BookmakerPlug):
     """
     A class to collect and process player prop lines from BetOnline.
 
@@ -114,10 +117,9 @@ class BetOnline(Plug):
     a shared data structure for further processing.
 
     Attributes:
-        info (Bookmaker): The bookmaker object containing BetOnline details.
+        bookmaker_info (Bookmaker): The bookmaker object containing BetOnline details.
         batch_id (str): Identifier for the current data collection batch.
         req_mngr (RequestManager): Manages API requests and responses.
-        data_size (int): Counter for the number of prop lines processed.
 
     Methods:
         start() -> None:
@@ -130,23 +132,27 @@ class BetOnline(Plug):
             Processes and cleans player prop line data, updating shared prop line structures.
     """
 
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+    def __init__(self, bookmaker_info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id, req_mngr)
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # tracks requests to complete
         tasks = []
         # these are valid in-season leagues
         for league in LEAGUES:
+            # to track the leagues being collected
+            self.leagues_tracker.add(league)
             # get url for request to get games
             url = self.req_packager.get_url(name='games')
             # get headers for request to get games
             headers = self.req_packager.get_headers(name='games')
             # get params for request to get games
             params = self.req_packager.get_params(name='games', var_1=league)
+            # clean the league name after setting params
+            cleaned_league = helpers.clean_league(league)
             # add the request task for this market to tasks
-            tasks.append(self.req_mngr.get(url, self._parse_games, clean_league(league), headers=headers, params=params))
+            tasks.append(self.req_mngr.get(url, self._parse_games, cleaned_league, headers=headers, params=params))
 
         # asynchronously collect games
         await asyncio.gather(*tasks)
@@ -185,12 +191,16 @@ class BetOnline(Plug):
                 market_id, market = extract_market(prop_line_data, league)
                 # # if both exist then keep going
                 # if market_id and market:
+                # to track the markets being collected
+                self.markets_tracker[market] += 1
                 # for every player in the prop line
                 for player_data in prop_line_data.get('players', []):
                     # get the subject id from the db and extract the subject name from dictionary
                     subject_id, subject = extract_subject(player_data, league)
                     # if both exist then keep going
                     if subject_id and subject:
+                        # to track the subjects being collected
+                        self.subjects_tracker[subject] += 1
                         # for all markets that the player has
                         for market_data in player_data.get('markets', []):
                             # market must exist and active on BetOnline
@@ -202,7 +212,7 @@ class BetOnline(Plug):
                                         # calculate the implied probability for the prop line using the odds
                                         implied_prob = 1 / float(odds)
                                         # update shared data
-                                        self.add_and_update({
+                                        self.update_betting_lines({
                                             'batch_id': self.batch_id,
                                             'time_processed': str(datetime.now()),
                                             'league': league,
@@ -211,7 +221,7 @@ class BetOnline(Plug):
                                             'market': market,
                                             'subject_id': subject_id,
                                             'subject': subject,
-                                            'bookmaker': self.info.name,
+                                            'bookmaker': self.bookmaker_info.name,
                                             'label': label,
                                             'line': line,
                                             'odds': odds,
@@ -220,6 +230,5 @@ class BetOnline(Plug):
 
 
 if __name__ == "__main__":
-    asyncio.run(run(BetOnline))
-    Plug.save_to_file()
+    setup.run(BetOnline)
 
