@@ -30,12 +30,12 @@ def extract_league(data: dict, sports_dict: dict) -> Optional[str]:
         # get the sport id and league from dictionaries, if both exist then keep going
         if (sport_id := data.get('sportId')) and (league := sports_dict.get(int(sport_id))):
             # check if league name is valid
-            if is_league_valid(league):
+            if utils.is_league_valid(league):
                 # return the cleaned league name
-                return clean_league(league)
+                return utils.clean_league(league)
 
 
-def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get 3 different dictionaries holding market data, if all exist keep going
     if (choices := data.get('choices')) and (actor := choices[0].get('actor')) and (requirements := actor.get('winningRequirement')):
         # get the market name from the dictionary, if exists keep going
@@ -50,10 +50,10 @@ def extract_position(data: dict) -> Optional[str]:
     # get the abbreviated player's position, if exists keep going
     if position := data.get('posAbbr'):
         # return the cleaned player's position
-        return clean_position(position)
+        return utils.clean_position(position)
 
 
-def extract_subject(data: dict, league: str) -> Optional[tuple[Union[ObjectId, str], str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[Union[ObjectId, str], str]]:
     # get player data dictionary, if exists keep going
     if player_data := data.get('player'):
         # get the first and last name of the player, if both exist keep going
@@ -64,16 +64,16 @@ def extract_subject(data: dict, league: str) -> Optional[tuple[Union[ObjectId, s
             return get_subject_id(Subject(cleaned_subject, league, player_data.get('teamAbbr'), extract_position(player_data))), cleaned_subject, player_data.get('eventName')
 
 
-class SuperDraft(BookmakerPlug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+class SuperDraft(utils.BookmakerPlug):
+    def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id)
 
     async def collect(self) -> None:
         # get the url required to request prop lines data
-        url = utils.get_url()
+        url = utils.get_url(self.bookmaker_info.name)
         # get the headers required to request prop lines data
-        headers = utils.get_headers()
+        headers = utils.get_headers(self.bookmaker_info.name)
         # make the request for the prop lines
         await self.req_mngr.get(url, self._parse_lines, headers=headers)
 
@@ -87,7 +87,7 @@ class SuperDraft(BookmakerPlug):
                 # extract the league name from the dictionary, if exists keep going
                 if league := extract_league(prop_line_data, sports_dict):
                     # get the market id and extract the market name from the dictionary
-                    market_id, market, message = extract_market(prop_line_data, league)
+                    market_id, market= extract_market(self.bookmaker_info.nameprop_line_data, league)
                     # if both exist then keep going
                     if market_id and market:
                         # get the subject id from the db and extract the subject name from the dictionary
@@ -99,22 +99,22 @@ class SuperDraft(BookmakerPlug):
                                 # for each generic over/under label for prop lines
                                 for label in ['Over', 'Under']:
                                     # update shared data
-                                    self.add_and_update({
+                                    self.update_betting_lines({
                                         'batch_id': self.batch_id,
                                         'time_processed': datetime.now(),
                                         'league': league,
                                         'market_category': 'player_props',
-                                        'market_id': market_id,
-                                        'market': market,
+                                        'market_id': str(market_id),
+                                        'market': market_name,
                                         'game_info': game_info,
-                                        'subject_id': subject_id,
-                                        'subject': subject,
-                                        'bookmaker': self.info.name,
+                                        'subject_id': str(subject_id),
+                                        'subject': subject_name,
+                                        'bookmaker': self.bookmaker_info.name,
                                         'label': label,
                                         'line': line,
-                                        'odds': self.info.default_payout.odds
+                                        'odds': self.bookmaker_info.default_payout.odds
                                     })
 
 
 if __name__ == "__main__":
-    asyncio.run(run(SuperDraft))
+    utils.run(SuperDraft))

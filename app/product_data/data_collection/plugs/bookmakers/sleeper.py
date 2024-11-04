@@ -15,9 +15,9 @@ def extract_league(data: dict) -> Optional[str]:
     # get the league from the data, if exists keep executing
     if league := data.get('sport'):
         # clean the league name
-        cleaned_league = clean_league(league)
+        cleaned_league = utils.clean_league(league)
         # check if the league name is valid
-        if is_league_valid(cleaned_league):
+        if utils.is_league_valid(cleaned_league):
             # return the clean league name
             return cleaned_league
 
@@ -26,10 +26,10 @@ def extract_position(data: dict) -> Optional[str]:
     # get the player's position from the dictionary, if exists keep going
     if position := data.get('position'):
         # return the clean player position
-        return clean_position(position)
+        return utils.clean_position(position)
 
 
-def extract_subject(data: dict, players_dict: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, players_dict: dict, league: str) -> Optional[tuple[str, str]]:
     # get the player's id and their data from dictionaries, if both exist keep executing
     if (player_id := data.get('subject_id')) and (player_data := players_dict.get(league).get(player_id)):
         # get the subject's name from the dictionary
@@ -40,7 +40,7 @@ def extract_subject(data: dict, players_dict: dict, league: str) -> Optional[tup
             return get_subject_id(Subject(cleaned_subject, league, player_data.get('subject_team'), extract_position(player_data))), cleaned_subject
 
 
-def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the market name from the dictionary, if exists keep going
     if market := data.get('wager_type'):
         # get the cleaned market name
@@ -56,18 +56,18 @@ def extract_label(data: dict) -> Optional[str]:
         return label.title()
 
 # TODO: Sleeper recently added alt_lines
-class Sleeper(BookmakerPlug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+class Sleeper(utils.BookmakerPlug):
+    def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id)
         # get universally used headers to make requests
-        self.headers = utils.get_headers()
+        self.headers = utils.get_headers(self.bookmaker_info.name)
 
     async def collect(self) -> None:
         # get the url required to request player data
         url = utils.get_url(name='players')
         # get params required to request player data
-        params = utils.get_params()
+        params = utils.get_params(self.bookmaker_info.name)
         # make the request for player data
         await self.req_mngr.get(url, self._parse_players, headers=self.headers, params=params)
 
@@ -92,7 +92,7 @@ class Sleeper(BookmakerPlug):
                             }
 
             # get the url required to make request for prop lines
-            url = utils.get_url()
+            url = utils.get_url(self.bookmaker_info.name)
             # make the request for prop lines data
             await self.req_mngr.get(url, self._parse_lines, players_dict, headers=self.headers)
 
@@ -104,11 +104,11 @@ class Sleeper(BookmakerPlug):
                 # extract the league name from dictionary
                 if league := extract_league(prop_line_data):
                     # get the subject id from db and extract player name from dictionary
-                    subject_id, subject, message = extract_subject(prop_line_data, players, league)
+                    subject_id, subject= extract_subject(self.bookmaker_info.nameprop_line_data, players, league)
                     # if both exist then keep going
                     if subject_id and subject:
                         # get the market id from db and extract the market name from dictionary
-                        market_id, market, message = extract_market(prop_line_data, league)
+                        market_id, market= extract_market(self.bookmaker_info.nameprop_line_data, league)
                         # if both exist then keep executing
                         if market_id and market:
                             # for each dictionary containing label, line, odds in prop_line_data's options if exists
@@ -118,16 +118,16 @@ class Sleeper(BookmakerPlug):
                                     # get the over or under label from the dictionary, if exists keep going
                                     if label := extract_label(outcome_data):
                                         # update shared data
-                                        self.add_and_update({
+                                        self.update_betting_lines({
                                             'batch_id': self.batch_id,
                                             'time_processed': datetime.now(),
                                             'league': league,
                                             'market_category': 'player_props',
-                                            'market_id': market_id,
-                                            'market': market,
-                                            'subject_id': subject_id,
-                                            'subject': subject,
-                                            'bookmaker': self.info.name,
+                                            'market_id': str(market_id),
+                                            'market': market_name,
+                                            'subject_id': str(subject_id),
+                                            'subject': subject_name,
+                                            'bookmaker': self.bookmaker_info.name,
                                             'label': label,
                                             'line': line,
                                             'odds': odds
@@ -135,4 +135,4 @@ class Sleeper(BookmakerPlug):
 
 
 if __name__ == "__main__":
-    asyncio.run(run(Sleeper))
+    utils.run(Sleeper))

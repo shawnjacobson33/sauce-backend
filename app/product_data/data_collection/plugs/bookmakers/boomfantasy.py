@@ -123,7 +123,7 @@ class BoomFantasy(utils.BookmakerPlug):
         tokens_data = {
             'url': utils.get_url(self.bookmaker_info.name, name='tokens'),
             'headers': utils.get_headers(self.bookmaker_info.name, name='tokens'),
-            'json_data': utils.get_json_data(self.bookmaker_info.name ,name='tokens')
+            'json_data': utils.get_json_data(self.bookmaker_info.name, self.bookmaker_info.name ,name='tokens')
         }
         # because of tokens, use a special get method to request data
         await self.req_mngr.get_bf(url, tokens_data, self._parse_lines, headers=headers, params=params)
@@ -181,9 +181,9 @@ class BoomFantasy(utils.BookmakerPlug):
                                                                 'game_info': game_info,
                                                                 'market_category': 'player_props',
                                                                 'market_id': str(market_id),
-                                                                'market': market,
+                                                                'market': market_name,
                                                                 'subject_id': str(subject_id),
-                                                                'subject': subject,
+                                                                'subject': subject_name,
                                                                 'bookmaker': self.bookmaker_info.name,
                                                                 'label': label,
                                                                 'line': line,

@@ -3,39 +3,31 @@ import asyncio
 from typing import Optional
 
 from app.product_data.data_collection.plugs.bookmakers import utils
-from app.product_data.data_collection.utils import standardizing as std
-from app.product_data.data_collection.plugs.bookmakers.utils import setup
-from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
-from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league(data: dict) -> Optional[str]:
     # get the league, if exists then execute
     if league := data.get('sport'):
         # return the cleaned league name
-        return clean_league(league)
+        return utils.clean_league(league)
 
 
-def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get some market dictionary and then the market name from it, if both exist keep going
-    if (market_type := data.get('marketType')) and (market := market_type.get('name')):
-        # get a cleaned market name
-        cleaned_market = clean_market(market, 'owners_box')
-        # get the market id from the db
-        if market_id := get_market_id(Market(cleaned_market, league)):
-            # cast market id to a string
-            market_id = str(market_id)
-
-        # return the market id and the cleaned market name
-        return market_id, cleaned_market
+    if (market_type := data.get('marketType')) and (market_name := market_type.get('name')):
+        # create a market object
+        market_obj = utils.Market(market_name, league=league)
+        # gets the market id or log message
+        market_id, market_name = utils.get_market_id(bookmaker_name, market_obj)
+        # return both market id search result and cleaned market
+        return market_id, market_name
 
 
 def extract_position(data: dict) -> Optional[str]:
     # get the player's position, if exists keep executing
     if position := data.get('position'):
         # return the cleaned position string
-        return clean_position(position)
+        return utils.clean_position(position)
 
 
 def extract_subject_team(data: dict) -> Optional[str]:
@@ -45,22 +37,19 @@ def extract_subject_team(data: dict) -> Optional[str]:
         return subject_team.upper()
 
 
-def extract_subject(data: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the player data, if it exists then keep executing
     if player_data := data.get('player'):
         # get the first nam and last name of the player, if both exist then keep executing
         if (first_name := player_data.get('firstName')) and (last_name := player_data.get('lastName')):
-            # get full name of player and clean it
-            cleaned_subject = clean_subject(' '.join([first_name, last_name]))
             # get some player attributes
             subject_team, position = extract_subject_team(player_data), extract_position(player_data)
-            # get the subject id from the db
-            if subject_id := get_subject_id(Subject(cleaned_subject, league, team=subject_team, position=position)):
-                # cast the subject id to a string
-                subject_id = str(subject_id)
-
-            # return the subject id from db and the cleaned subject name
-            return subject_id, cleaned_subject
+            # create subject object
+            subject_obj = utils.Subject(' '.join([first_name, last_name]), league, team=subject_team, position=position)
+            # gets the subject id or log message
+            subject_id, subject_name = utils.get_subject_id(bookmaker_name, subject_obj)
+            # return both subject id search result and cleaned subject
+            return subject_id, subject_name
 
 
 def extract_line(data: dict) -> Optional[str]:
@@ -112,18 +101,18 @@ def get_label(data: dict) -> Optional[str]:
             yield label
 
 
-class OwnersBox(BookmakerPlug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+class OwnersBox(utils.BookmakerPlug):
+    def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id)
         # get the universal headers required to make requests
-        self.headers = utils.get_headers()
+        self.headers = utils.get_headers(self.bookmaker_info.name)
         # get the universal cookies required to make requests
-        self.cookies = utils.get_cookies()
+        self.cookies = utils.get_cookies(self.bookmaker_info.name)
 
     async def collect(self) -> None:
         # get the url required to make request for leagues data
-        url = utils.get_url(name='leagues')
+        url = utils.get_url(self.bookmaker_info.name, name='leagues')
         # make the request for the leagues data
         await self.req_mngr.get(url, self._parse_leagues, headers=self.headers, cookies=self.cookies)
 
@@ -133,13 +122,13 @@ class OwnersBox(BookmakerPlug):
             # initialize structure to hold all requests to make
             tasks = []
             # get the url required to make requests for markets data
-            url = utils.get_url(name='markets')
+            url = utils.get_url(self.bookmaker_info.name, name='markets')
             # for each league in the response data dictionary
             for league in json_data:
                 # only execute if the league is valid...also clean the league before checking
-                if is_league_valid(clean_league(league)):
+                if utils.is_league_valid(utils.clean_league(league)):
                     # if valid get the params to make the request required to get markets data for this league
-                    params = utils.get_params(name='markets', var_1=league)
+                    params = utils.get_params(self.bookmaker_info.name, name='markets', var_1=league)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_markets, league, headers=self.headers, cookies=self.cookies, params=params))
 
@@ -152,13 +141,13 @@ class OwnersBox(BookmakerPlug):
             # initialize structure to hold all requests to make
             tasks = []
             # get the url required to make the request for prop lines
-            url = utils.get_url()
+            url = utils.get_url(self.bookmaker_info.name)
             # for each market in the response data
             for market in json_data:
                 # get market id (not from db), if exists add request
                 if market_id := market.get('id'):
                     # get the params required to make request for prop lines
-                    params = utils.get_params(var_1=league, var_2=market_id)
+                    params = utils.get_params(self.bookmaker_info.name, var_1=league, var_2=market_id)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_lines, headers=self.headers, cookies=self.cookies, params=params))
 
@@ -172,38 +161,43 @@ class OwnersBox(BookmakerPlug):
             for prop_line_data in json_data.get('markets', []):
                 # get the league name, if exists then keep executing
                 if league := extract_league(prop_line_data):
+                    # to track the leagues being collected
+                    self.metrics.add_league(league)
                     # get the market id from db and extract the market name
-                    market_id, market, message = extract_market(prop_line_data, league)
+                    market_id, market_name = extract_market(self.bookmaker_info.name, prop_line_data, league)
                     # # if both exist continue executing
-                    # if market_id and market:
-                    # get the subject id from db and extract the subject name from the dictionary
-                    subject_id, subject, message = extract_subject(prop_line_data, league)
-                    # if both exist then continue executing
-                    if subject_id and subject:
-                        # get the numeric over/under line, execute if exists
-                        if line := extract_line(prop_line_data):
-                            # get game info
-                            game_info = extract_game_info(prop_line_data)
-                            # for each label that the prop line has
-                            for label in get_label(prop_line_data):
-                                # update the shared data
-                                self.add_and_update({
-                                    'batch_id': self.batch_id,
-                                    'time_processed': str(datetime.now()),
-                                    'league': league,
-                                    'game_info': game_info,
-                                    'market_category': 'player_props',
-                                    'market_id': market_id,
-                                    'market': market,
-                                    'subject_id': subject_id,
-                                    'subject': subject,
-                                    'bookmaker': self.info.name,
-                                    'label': label,
-                                    'line': line,
-                                    'odds': self.info.default_payout.odds
-                                })
+                    if market_id and market_name:
+                        # to track the markets being collected
+                        self.metrics.add_market((league, market_name))
+                        # get the subject id from db and extract the subject name from the dictionary
+                        subject_id, subject_name = extract_subject(self.bookmaker_info.name, prop_line_data, league)
+                        # if both exist then continue executing
+                        if subject_id and subject_name:
+                            # to track the subjects being collected
+                            self.metrics.add_subject((league, subject_name))
+                            # get the numeric over/under line, execute if exists
+                            if line := extract_line(prop_line_data):
+                                # get game info
+                                game_info = extract_game_info(prop_line_data)
+                                # for each label that the prop line has
+                                for label in get_label(prop_line_data):
+                                    # update the shared data
+                                    self.update_betting_lines({
+                                        'batch_id': self.batch_id,
+                                        'time_processed': str(datetime.now()),
+                                        'league': league,
+                                        'game_info': game_info,
+                                        'market_category': 'player_props',
+                                        'market_id': str(market_id),
+                                        'market': market_name,
+                                        'subject_id': str(subject_id),
+                                        'subject': subject_name,
+                                        'bookmaker': self.bookmaker_info.name,
+                                        'label': label,
+                                        'line': line,
+                                        'odds': self.bookmaker_info.default_payout.odds
+                                    })
 
 
 if __name__ == "__main__":
-    asyncio.run(run(OwnersBox))
-    Plug.save_to_file()
+    utils.run(OwnersBox)

@@ -15,14 +15,14 @@ class Payout:
 # ***************************** DATABASE MODELS *********************************
 
 class Bookmaker:
-    def __init__(self, info: dict):
-        self.name: str = info['name']
-        self.is_dfs: bool = info['is_dfs']
+    def __init__(self, bookmaker_info: dict):
+        self.name: str = bookmaker_info['name']
+        self.is_dfs: bool = bookmaker_info['is_dfs']
 
         self.default_payout, self.payouts = None, None
         # don't have to check for 'payouts' because these two will always be together.
-        if 'default_odds' in info:
-            d_data, p_data = info['default_odds'], info['payouts']
+        if 'default_odds' in bookmaker_info:
+            d_data, p_data = bookmaker_info['default_odds'], bookmaker_info['payouts']
             self.default_payout: Payout = Payout(d_data['legs'], d_data['is_insured'], d_data['odds'])
             self.payouts: list[Payout] = [Payout(data['legs'], data['is_insured'], data['odds']) for data in p_data]
 

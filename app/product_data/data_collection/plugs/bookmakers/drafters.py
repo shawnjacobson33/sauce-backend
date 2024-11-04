@@ -29,7 +29,7 @@ def extract_subject_team(data: dict) -> Optional[str]:
         return subject_team
 
 
-def extract_subject(data: dict, subject_team: str) -> Optional[tuple[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, subject_team: str) -> Optional[tuple[str, str]]:
     # get the player's name, if exists then execute
     if subject := data.get('player_name'):
         # clean the player's name
@@ -38,7 +38,7 @@ def extract_subject(data: dict, subject_team: str) -> Optional[tuple[str, str]]:
         return get_subject_id(Subject(cleaned_subject, team=subject_team, position=extract_position(data)), user='Drafters'), cleaned_subject
 
 
-def extract_market(data: dict) -> Optional[tuple[str, str]]:
+def extract_market(bookmaker_name: str, data: dict) -> Optional[tuple[str, str]]:
     # get market name, execute if it exists
     if market := data.get('bid_stats_name'):
         # check if the market is valid...watching out for MMA markets
@@ -53,19 +53,19 @@ def extract_position(data: dict) -> Optional[str]:
     # get position from data if it exists and doesn't equal 'G'
     if (position := data.get('player_position')) and (position != 'G'):
         # return the position cleaned
-        return clean_position(position.strip())
+        return utils.clean_position(position.strip())
 
 
-class Drafters(BookmakerPlug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+class Drafters(utils.BookmakerPlug):
+    def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id)
 
     async def collect(self) -> None:
         # get url to make a request for prop lines
-        url = utils.get_url()
+        url = utils.get_url(self.bookmaker_info.name)
         # get headers to make a request for prop lines
-        headers = utils.get_headers()
+        headers = utils.get_headers(self.bookmaker_info.name)
         # make asynchronous request for prop lines
         await self.req_mngr.get(url, self._parse_lines, headers=headers)
 
@@ -83,11 +83,11 @@ class Drafters(BookmakerPlug):
                     # for each player in event's players if they exist
                     for player in event.get('players', []):
                         # extract the subject id from db and get subject from player dict
-                        subject_id, subject, message = extract_subject(player, subject_team)
+                        subject_id, subject= extract_subject(self.bookmaker_info.nameplayer, subject_team)
                         # only execute if both exist
                         if subject_id and subject:
                             # get market id from db and extract market from player dict
-                            market_id, market, message = extract_market(player)
+                            market_id, market= extract_market(self.bookmaker_info.nameplayer)
                             # only execute if both exist
                             if market_id and market:
                                 # get numeric over/under line and execute if exists
@@ -95,21 +95,21 @@ class Drafters(BookmakerPlug):
                                     # for each label Over and Under update shared data
                                     for label in ['Over', 'Under']:
                                         # update shared data
-                                        self.add_and_update({
+                                        self.update_betting_lines({
                                             'batch_id': self.batch_id,
                                             'time_processed': datetime.now(),
                                             'market_category': 'player_props',
-                                            'market_id': market_id,
-                                            'market': market,
+                                            'market_id': str(market_id),
+                                            'market': market_name,
                                             'game_info': game_info,
-                                            'subject_id': subject_id,
-                                            'subject': subject,
-                                            'bookmaker': self.info.name,
+                                            'subject_id': str(subject_id),
+                                            'subject': subject_name,
+                                            'bookmaker': self.bookmaker_info.name,
                                             'label': label,
                                             'line': line,
-                                            'odds': self.info.default_payout.odds
+                                            'odds': self.bookmaker_info.default_payout.odds
                                         })
 
 
 if __name__ == "__main__":
-    asyncio.run(run(Drafters))
+    utils.run(Drafters))

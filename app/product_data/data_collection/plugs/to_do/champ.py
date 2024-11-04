@@ -16,19 +16,19 @@ def get_in_season_leagues():
     return [league_name_map.get(league, league) for league in IN_SEASON_LEAGUES if league_name_map.get(league, league) in valid_champ_leagues]
 
 
-class Champ(BookmakerPlug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
-        super().__init__(info, batch_id, req_mngr)
+class Champ(utils.BookmakerPlug):
+    def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
+        super().__init__(bookmaker_info, batch_id)
 
     async def collect(self):
-        url = utils.get_url()
-        headers = utils.get_headers()
+        url = utils.get_url(self.bookmaker_info.name)
+        headers = utils.get_headers(self.bookmaker_info.name)
         tasks = []
         for league in get_in_season_leagues():
             if not is_league_good(clean_league(league)):
                 continue
 
-            json_data = utils.get_json_data(var=league)
+            json_data = utils.get_json_data(self.bookmaker_info.name, var=league)
             tasks.append(self.req_mngr.post(url, self._parse_lines, league, headers=headers, json=json_data))
 
         await asyncio.gather(*tasks)
@@ -39,7 +39,7 @@ class Champ(BookmakerPlug):
         if data:
             data = data.get('data', {}).get('readPicks', {})
 
-        league = clean_league(league)
+        league = utils.clean_league(league)
         subject_ids = dict()
         for event in data.get('items', []):
             game_info = event.get('title')
@@ -71,24 +71,24 @@ class Champ(BookmakerPlug):
 
                     for label in labels:
                         # update shared data
-                        PropLines.update(''.join(self.info.name.split()).lower(), {
+                        PropLines.update(''.join(self.bookmaker_info.name.split()).lower(), {
                             'batch_id': self.batch_id,
                             'time_processed': datetime.now(),
                             'league': league,
                             'game_info': game_info,
                             'market_category': 'player_props',
-                            'market_id': market_id,
-                            'market': market,
-                            'subject_id': subject_id,
-                            'subject': subject,
-                            'bookmaker': self.info.name,
+                            'market_id': str(market_id),
+                            'market': market_name,
+                            'subject_id': str(subject_id),
+                            'subject': subject_name,
+                            'bookmaker': self.bookmaker_info.name,
                             'label': label,
                             'line': line,
                             'multiplier': multiplier,
-                            'odds': round(self.info.default_payout.odds * multiplier, 3) if multiplier else self.info.default_payout.odds
+                            'odds': round(self.bookmaker_info.default_payout.odds * multiplier, 3) if multiplier else self.bookmaker_info.default_payout.odds
                         })
                         self.data_size += 1
 
 
 if __name__ == "__main__":
-    asyncio.run(run(Champ))
+    utils.run(Champ))

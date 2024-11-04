@@ -14,7 +14,7 @@ def extract_league(data: dict) -> Optional[str]:
     # get the league name, if it exists keep going
     if league := data.get('slug'):
         # check if the cleaned league is valid...still need originally formatted league for params
-        if is_league_valid(clean_league(league)):
+        if utils.is_league_valid(clean_league(league)):
             # return the valid league name
             return league
 
@@ -41,7 +41,7 @@ def extract_teams_dict(data: dict) -> dict:
         return teams_dict
 
 
-def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the market name, if exists keep going
     if market := data.get('name'):
         # clean the market name
@@ -54,7 +54,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get the player's position, if exists keep executing
     if position := data.get('position'):
         # return the cleaned position
-        return clean_position(position)
+        return utils.clean_position(position)
 
 
 def extract_subject_team(data: dict, teams_dict: dict) -> Optional[str]:
@@ -64,7 +64,7 @@ def extract_subject_team(data: dict, teams_dict: dict) -> Optional[str]:
         return teams_dict.get(team_id)
 
 
-def extract_subject(data: dict, teams_dict: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, teams_dict: dict, league: str) -> Optional[tuple[str, str]]:
     # get the subject's name, if it exists keep executing
     if subject := data.get('name'):
         # clean the subject's name
@@ -75,18 +75,18 @@ def extract_subject(data: dict, teams_dict: dict, league: str) -> Optional[tuple
         return subject_id, cleaned_subject
 
 
-class Payday(BookmakerPlug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+class Payday(utils.BookmakerPlug):
+    def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id)
         # get the universal headers used to make all requests
-        self.headers = utils.get_headers()
+        self.headers = utils.get_headers(self.bookmaker_info.name)
 
     async def collect(self) -> None:
         # get the url required to make request for leagues data
         url = utils.get_url(name='leagues')
         # get the params required to make the request for leagues data
-        params = utils.get_params(name='leagues')
+        params = utils.get_params(self.bookmaker_info.name, name='leagues')
         # make the request to get leagues data
         await self.req_mngr.get(url, self._parse_leagues, headers=self.headers, params=params)
 
@@ -102,7 +102,7 @@ class Payday(BookmakerPlug):
                 # extract the league from league_data
                 if league := extract_league(league_data):
                     # get the params necessary for requesting contests data for this league
-                    params = utils.get_params(name='contests', var_1=league)
+                    params = utils.get_params(self.bookmaker_info.name, name='contests', var_1=league)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_contests, clean_league(league), headers=self.headers, params=params))
 
@@ -115,7 +115,7 @@ class Payday(BookmakerPlug):
             # get contests dictionary and the contest id from it, if both exists continue executing
             if (contests := data.get('contests')) and (contest_id := extract_contest_id(contests)):
                 # get the url required to request for prop lines using the contest id
-                url = utils.get_url().format(contest_id)
+                url = utils.get_url(self.bookmaker_info.name).format(contest_id)
                 # make request for prop lines
                 await self.req_mngr.get(url, self._parse_lines, league, headers=self.headers)
 
@@ -131,34 +131,34 @@ class Payday(BookmakerPlug):
                 # for each player prop data dictionary in game_data's player props if they exist
                 for player_prop_data in game_data.get('player_props', []):
                     # get the market id from the db and extract the market name
-                    market_id, market, message = extract_market(player_prop_data, league)
+                    market_id, market= extract_market(self.bookmaker_info.nameplayer_prop_data, league)
                     # only keep going if the both exist
                     if market_id and market:
                         # get some player dictionary and the numeric over/under line, if both exist keep executing
                         if (player_data := player_prop_data.get('player')) and (line := player_prop_data.get('value')):
                             # get the subject id from the db and extract the subject name
-                            subject_id, subject, message = extract_subject(player_data, teams_dict, league)
+                            subject_id, subject= extract_subject(self.bookmaker_info.nameplayer_data, teams_dict, league)
                             # if both exist, then keep executing
                             if subject_id and subject:
                                 # for each general prop line label
                                 for label in ['Over', 'Under']:
                                     # update shared data
-                                    self.add_and_update({
+                                    self.update_betting_lines({
                                         'batch_id': self.batch_id,
                                         'time_processed': datetime.now(),
                                         'league': league,
                                         'game_info': game_info,
                                         'market_category': 'player_props',
-                                        'market_id': market_id,
-                                        'market': market,
-                                        'subject_id': subject_id,
-                                        'subject': subject,
-                                        'bookmaker': self.info.name,
+                                        'market_id': str(market_id),
+                                        'market': market_name,
+                                        'subject_id': str(subject_id),
+                                        'subject': subject_name,
+                                        'bookmaker': self.bookmaker_info.name,
                                         'label': label,
                                         'line': line,
-                                        'odds': self.info.default_payout.odds
+                                        'odds': self.bookmaker_info.default_payout.odds
                                     })
 
 
 if __name__ == "__main__":
-    asyncio.run(run(Payday))
+    utils.run(Payday))

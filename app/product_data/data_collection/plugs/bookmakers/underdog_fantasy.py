@@ -123,14 +123,14 @@ def extract_league(a_id: str, game_ids_dict: dict, games_dict: dict, solo_games_
         # get the league name, if exists then keep executing
         if league := match_data.get('sport_id'):
             # clean the league name
-            cleaned_league = clean_league(league)
+            cleaned_league = utils.clean_league(league)
             # check if the cleaned league name is valid
-            if is_league_valid(cleaned_league):
+            if utils.is_league_valid(cleaned_league):
                 # return the cleaned and valid league name
                 return cleaned_league
 
 
-def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get market and market id
     if market := data.get('display_stat'):
         # get the cleaned market name
@@ -169,10 +169,10 @@ def get_odds(default_odds: float, multiplier: float) -> float:
     return round(default_odds * multiplier, 3)
 
 
-class UnderdogFantasy(BookmakerPlug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+class UnderdogFantasy(utils.BookmakerPlug):
+    def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id)
 
     async def collect(self) -> None:
         # get the url required to request teams data
@@ -180,7 +180,7 @@ class UnderdogFantasy(BookmakerPlug):
         # get the headers required to request teams data
         headers = utils.get_headers(name='teams')
         # get the cookies required to get teams data
-        cookies = utils.get_cookies()
+        cookies = utils.get_cookies(self.bookmaker_info.name)
         # make the request for teams data
         await self.req_mngr.get(url, self._parse_teams, headers=headers, cookies=cookies)
 
@@ -190,9 +190,9 @@ class UnderdogFantasy(BookmakerPlug):
             # get the teams dict from response data, if exists keep going
             if teams_dict := extract_teams_dict(json_data):
                 # get the required url to request for prop lines
-                url = utils.get_url()
+                url = utils.get_url(self.bookmaker_info.name)
                 # get the required headers to request for prop lines
-                headers = utils.get_headers()
+                headers = utils.get_headers(self.bookmaker_info.name)
                 # make the request for the prop lines
                 await self.req_mngr.get(url, self._parse_lines, teams_dict, headers=headers)
 
@@ -216,11 +216,11 @@ class UnderdogFantasy(BookmakerPlug):
                     # extract the league from match data dictionary, if exists keep executing
                     if league := extract_league(a_id, game_ids_dict, games_dict, solo_games_dict):
                         # get the market id from db and the market name
-                        market_id, market, message = extract_market(a_data, league)
+                        market_id, market= extract_market(self.bookmaker_info.namea_data, league)
                         # if both exist then keep executing
                         if market_id and market:
                             # get the subject id from db and extract the subject name
-                            subject_id, subject, message = extract_subject(a_id, league, player_ids_dict, players_dict)
+                            subject_id, subject= extract_subject(self.bookmaker_info.namea_id, league, player_ids_dict, players_dict)
                             # if both exist keep executing
                             if subject_id and subject:
                                 # get the numeric over/under line, if exists keep executing
@@ -230,22 +230,22 @@ class UnderdogFantasy(BookmakerPlug):
                                         # extract the multiplier from the dictionary, (might not exist but keep going)
                                         multiplier = extract_multiplier(outcome_data)
                                         # update shared data
-                                        self.add_and_update({
+                                        self.update_betting_lines({
                                             'batch_id': self.batch_id,
                                             'time_processed': datetime.now(),
                                             'league': league,
                                             'market_category': 'player_props',
-                                            'market_id': market_id,
-                                            'market': market,
-                                            'subject_id': subject_id,
-                                            'subject': subject,
-                                            'bookmaker': self.info.name,
+                                            'market_id': str(market_id),
+                                            'market': market_name,
+                                            'subject_id': str(subject_id),
+                                            'subject': subject_name,
+                                            'bookmaker': self.bookmaker_info.name,
                                             'label': extract_label(outcome_data),
                                             'line': line,
                                             'multiplier': multiplier,
-                                            'odds': get_odds(self.info.default_payout.odds, multiplier)
+                                            'odds': get_odds(self.bookmaker_info.default_payout.odds, multiplier)
                                         })
 
 
 if __name__ == "__main__":
-    asyncio.run(run(UnderdogFantasy))
+    utils.run(UnderdogFantasy))

@@ -21,9 +21,9 @@ def extract_league(data: dict) -> Optional[str]:
     # get the league name from dictionary, if it exists keep executing
     if league := data.get('league'):
         # clean the league name
-        cleaned_league = clean_league(league)
+        cleaned_league = utils.clean_league(league)
         # check if the league name is valid
-        if is_league_valid(cleaned_league):
+        if utils.is_league_valid(cleaned_league):
             # return the cleaned and valid league name
             return cleaned_league
 
@@ -33,7 +33,7 @@ def extract_subject_team(data: dict) -> Optional[str]:
     return data.get('abvTeamName', data.get('teamName'))
 
 
-def extract_subject(data: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the player's name, if it exists keep going
     if subject := data.get('name'):
         # clean the player's name
@@ -49,7 +49,7 @@ def extract_multiplier(data: dict, market: str) -> Optional[float]:
         return float(m_market_data.get('multiplier', 1.0))
 
 
-def extract_market(data: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the market name from the dictionary, if exists keep going
     if market := data.get('p'):
         # clean the market name
@@ -79,18 +79,18 @@ def get_odds(default_odds: float, multiplier: float) -> float:
     return round(default_odds * multiplier, 3)
 
 
-class VividPicks(BookmakerPlug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+class VividPicks(utils.BookmakerPlug):
+    def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id)
 
     async def collect(self) -> None:
         # get the url required to request for prop lines data
-        url = utils.get_url()
+        url = utils.get_url(self.bookmaker_info.name)
         # get the headers required to request for prop lines data
-        headers = utils.get_headers()
+        headers = utils.get_headers(self.bookmaker_info.name)
         # get the json required to request for prop lines data
-        json_data = utils.get_json_data()
+        json_data = utils.get_json_data(self.bookmaker_info.name, )
         # make the request for prop lines data
         await self.req_mngr.post(url, self._parse_lines, headers=headers, json=json_data)
 
@@ -106,13 +106,13 @@ class VividPicks(BookmakerPlug):
                         # for each dictionary in event data's activePlayers if they exist
                         for player_data in event_data.get('activePlayers', []):
                             # get the subject id from db and extract the subject name from dictionary
-                            subject_id, subject, message = extract_subject(player_data, league)
+                            subject_id, subject= extract_subject(self.bookmaker_info.nameplayer_data, league)
                             # if both exist keep executing
                             if subject_id and subject:
                                 # for each dictionary in player data's visiblePlayerProps if they exist
                                 for prop_line_data in player_data.get('visiblePlayerProps', []):
                                     # get the market id from the db and extract the market name from the dictionary
-                                    market_id, market, message = extract_market(prop_line_data, league)
+                                    market_id, market= extract_market(self.bookmaker_info.nameprop_line_data, league)
                                     # keep executing if both exist
                                     if market_id and market:
                                         # get the numeric over/under line from the dictionary, keep going if exists
@@ -122,23 +122,23 @@ class VividPicks(BookmakerPlug):
                                             # for each label (depending on the value of the multiplier)
                                             for label in get_labels(multiplier):
                                                 # update shared data
-                                                self.add_and_update({
+                                                self.update_betting_lines({
                                                         'batch_id': self.batch_id,
                                                         'time_processed': datetime.now(),
                                                         'league': league,
                                                         'game_info': game_info,
                                                         'market_category': 'player_props',
-                                                        'market_id': market_id,
-                                                        'market': market,
-                                                        'subject_id': subject_id,
-                                                        'subject': subject,
-                                                        'bookmaker': self.info.name,
+                                                        'market_id': str(market_id),
+                                                        'market': market_name,
+                                                        'subject_id': str(subject_id),
+                                                        'subject': subject_name,
+                                                        'bookmaker': self.bookmaker_info.name,
                                                         'label': label,
                                                         'line': line,
                                                         'multiplier': multiplier,
-                                                        'odds': get_odds(self.info.default_payout.odds, multiplier)
+                                                        'odds': get_odds(self.bookmaker_info.default_payout.odds, multiplier)
                                                     })
 
 
 if __name__ == "__main__":
-    asyncio.run(run(VividPicks))
+    utils.run(VividPicks))

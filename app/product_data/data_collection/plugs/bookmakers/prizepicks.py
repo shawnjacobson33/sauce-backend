@@ -33,7 +33,7 @@ def extract_subjects_dict(data: dict) -> dict:
                 if subject := player_attributes.get('display_name', player_attributes.get('name')):
                     # store the player id corresponding to some of the subject's attributes
                     players_dict[player_id] = {
-                        'subject': subject,
+                        'subject': subject_name,
                         'subject_team': player_attributes.get('team', player_attributes.get('team_name')),
                         'position': player_attributes.get('position')
                     }
@@ -52,9 +52,9 @@ def extract_league_for_lines(data: dict, leagues: dict) -> Optional[str]:
                 # yield the original league name format without cleaning it (needed for market)
                 yield league
                 # clean league after extracting quarter or half info from it if it exists.
-                cleaned_league = clean_league(league[:-2] if re.match(r'^.+[1-4]([QH])$', league) else league)
+                cleaned_league = utils.clean_league(league[:-2] if re.match(r'^.+[1-4]([QH])$', league) else league)
                 # only want valid leagues
-                if is_league_valid(cleaned_league):
+                if utils.is_league_valid(cleaned_league):
                     # yield the valid and cleaned league
                     yield cleaned_league
 
@@ -81,10 +81,10 @@ def extract_position(data: dict) -> Optional[str]:
     # get the player's position, if exists then execute
     if position := data.get('position'):
         # return the cleaned position, with some logic for when a secondary position is included (ex: PG-SG)
-        return clean_position(position.split('-')[0] if '-' in position else position)
+        return utils.clean_position(position.split('-')[0] if '-' in position else position)
 
 
-def extract_subject(data: dict, subjects_dict: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, subjects_dict: dict, league: str) -> Optional[tuple[str, str]]:
     # get a dictionary that holds data on the player for the prop line, if both exist then execute
     if (relationship_new_player := data.get('new_player')) and (relationship_new_player_data := relationship_new_player.get('data')):
         # get the player id and then get the subject data that corresponds, if both exist then execute
@@ -97,10 +97,10 @@ def extract_subject(data: dict, subjects_dict: dict, league: str) -> Optional[tu
                 return get_subject_id(Subject(subject, league, subject_data.get('subject_team'), extract_position(subject_data))), cleaned_subject
 
 
-class PrizePicks(BookmakerPlug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+class PrizePicks(utils.BookmakerPlug):
+    def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id)
 
     async def collect(self) -> None:
         # get the url required to make request for leagues data
@@ -120,7 +120,7 @@ class PrizePicks(BookmakerPlug):
                     # store the league id with corresponding league name
                     leagues[league_id] = league
                     # get the url required to make request for prop lines
-                    url = utils.get_url()
+                    url = utils.get_url(self.bookmaker_info.name)
                     # make the request for prop lines
                     await self.req_mngr.get(url, self._parse_lines, leagues)
 
@@ -140,27 +140,27 @@ class PrizePicks(BookmakerPlug):
                         # if all three exist then keep executing
                         if market_id and market and league:
                             # get the subject id from the db and extract the subject name
-                            subject_id, subject, message = extract_subject(relationships_data, subjects_dict, league)
+                            subject_id, subject= extract_subject(self.bookmaker_info.namerelationships_data, subjects_dict, league)
                             # keep executing if both exist, and get numeric over/under line and check for existence
                             if subject_id and subject and (line := prop_line_attrs.get('line_score')):
                                 # for each generic label for an over/under line
                                 for label in ['Over', 'Under']:
                                     # update shared data
-                                    self.add_and_update({
+                                    self.update_betting_lines({
                                         'batch_id': self.batch_id,
                                         'time_processed': datetime.now(),
                                         'league': league,
                                         'market_category': 'player_props',
-                                        'market_id': market_id,
-                                        'market': market,
-                                        'subject_id': subject_id,
-                                        'subject': subject,
-                                        'bookmaker': self.info.name,
+                                        'market_id': str(market_id),
+                                        'market': market_name,
+                                        'subject_id': str(subject_id),
+                                        'subject': subject_name,
+                                        'bookmaker': self.bookmaker_info.name,
                                         'label': label,
                                         'line': line,
-                                        'odds': self.info.default_payout.odds
+                                        'odds': self.bookmaker_info.default_payout.odds
                                     })
 
 
 if __name__ == "__main__":
-    asyncio.run(run(PrizePicks))
+    utils.run(PrizePicks))

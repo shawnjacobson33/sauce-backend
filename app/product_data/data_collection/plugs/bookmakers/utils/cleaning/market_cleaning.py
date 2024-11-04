@@ -5,14 +5,17 @@ MARKET_MAP = {
     'Basketball': {
       # Points
         'POINTS': 'Points',  # BoomFantasy
+        'points': 'Points',  # HotStreak
       # 1Q Points
         '1Q POINTS': '1Q Points',  # BoomFantasy
       # Rebounds
         'REBOUNDS': 'Rebounds',  # BoomFantasy
+        'rebounds': 'Rebounds',  # HotStreak
       # 1Q Rebounds
         '1Q REBOUNDS': '1Q Rebounds',  # BoomFantasy
       # Assists
         'ASSISTS': 'Assists',  # BoomFantasy
+        'assists': 'Assists',  # HotStreak
       # 1Q Assists
         '1Q ASSISTS': '1Q Assists',  # BoomFantasy
       # Points + Rebounds
@@ -27,7 +30,7 @@ MARKET_MAP = {
         'POINTS_AND_ASSISTS': 'Points + Assists',  # BoomFantasy
       # Rebounds + Assists
         'Reb + Ast': 'Rebounds + Assists',  # ParlayPlay
-        'Reb + Asts': 'Rebounds + Assists',  # OwnersBox
+        'Rebs + Asts': 'Rebounds + Assists',  # OwnersBox
         'ra': 'Rebounds + Assists',  # HotStreak
         'REBOUNDS_AND_ASSISTS': 'Rebounds + Assists',  # BoomFantasy
         'Assists + Rebounds': 'Rebounds + Assists',  # DraftKings Pick6
@@ -43,6 +46,7 @@ MARKET_MAP = {
         '3PT Made': '3-Pointers Made',  # Dabble, ParlayPlay
         '3-Pointers Made': '3-Pointers Made',  # DraftKings Pick6, OwnersBox
         '3-Pointers': '3-Pointers Made',  # OddsShopper
+        'three_points_made': '3-Pointers Made',  # HotStreak
       # 3-Pointers Attempted
         '3PT Attempted': '3-Pointers Attempted',  # Dabble
       # 2-Pointers Made
@@ -60,23 +64,33 @@ MARKET_MAP = {
       # Double Doubles
         'Double Double': 'Double Doubles',  # ParlayPlay
         'Total Double Doubles': 'Double Doubles',  # OddsShopper
+        'double_double': 'Double Doubles',  # HotStreak
       # Triple Doubles
         'Triple Double': 'Triple Doubles',  # ParlayPlay
         'Total Triple Doubles': 'Triple Doubles',  # OddsShopper
+        'triple_double': 'Triple Doubles',  # HotStreak
       # Turnovers
         'TURNOVERS': 'Turnovers',  # BoomFantasy
+        'turnovers': 'Turnovers',  # HotStreak
       # Steals
         'STEALS': 'Steals',  # BoomFantasy
+        'steals': 'Steals',  # HotStreak
       # Blocks
         'BLOCKS': 'Blocks',  # BoomFantasy
         'Blocked Shots': 'Blocks',  # OwnersBox
+        'blocks': 'Blocks',
       # Blocks + Steals
         'BLOCKS_AND_STEALS': 'Blocks + Steals',  # BoomFantasy
         'stocks': 'Blocks + Steals',  # HotStreak
         'Steals + Blocks': 'Blocks + Steals',  # DraftKings Pick6, OddsShopper, OwnersBox
         'Stl + Blk': 'Blocks + Steals',  # ParlayPlay
-        # Fantasy Points
-          # TODO: RECHECK BOOKMAKERS
+      # Fantasy Points
+        'fantasy_points': 'Fantasy Points',  # HotStreak
+      # Top Point Scorer
+        'Top Point Scorer': 'Top Point Scorer',  # OddsShopper
+      # First Basket
+        'First Basket': 'First Basket',  # OddsShopper
+
     },
     'Football': {
         # Passing Yards
@@ -127,7 +141,9 @@ MARKET_MAP = {
         # Receiving Yards
           'RECEIVING_YARDS': 'Receiving Yards',  # BoomFantasy
           'Rec Yds': 'Receiving Yards',  # ParlayPlay
+          'Total Receiving Yards': 'Receiving Yards',  # OddsShopper
         # Targets
+          'Receiving Targets': 'Targets',  # ParlayPlay
         # Receptions
           'RECEPTIONS': 'Receptions',  # BoomFantasy
           'Total Receptions': 'Receptions',  # OddsShopper
@@ -181,6 +197,7 @@ MARKET_MAP = {
         # Kicking Points
           'Kicking Points': 'Kicking Points',  # DraftKingsPick6, OwnersBox
           'Kicker Points': 'Kicking Points',
+          'Total Points': 'Kicking Points',  # ParlayPlay
           'Total Kicking Points': 'Kicking Points',  # OddsShopper
         # Extra Points Made
           'Extra Point Made': 'Extra Points Made',  # Dabble
@@ -197,19 +214,32 @@ MARKET_MAP = {
     },
     'Ice Hockey': {
         # Points
-        'Points': 'Points',  # BetOnline, Dabble
-        'POINTS': 'Points',  # BoomFantasy
+          'Points': 'Points',  # BetOnline, Dabble
+          'POINTS': 'Points',  # BoomFantasy
+          'Total Points': 'Points',  # OddsShopper
         # Shots On Goal
-        'Shots On Goal': 'Shots On Goal',
-        'SHOTS_ON_GOAL': 'Shots On Goal',  # BoomFantasy
+          'Shots On Goal': 'Shots On Goal',
+          'SHOTS_ON_GOAL': 'Shots On Goal',  # BoomFantasy
+          'Shots on Goal': 'Shots On Goal',  # DraftKingsPick6
+          'Total Shots on Goal': 'Shots On Goal',  # OddsShopper
         # Blocked Shots
-        'Blocked Shots': 'Blocked Shots',
+          'Blocked Shots': 'Blocked Shots',
         # Goalie Saves
-        'Goalie Saves': 'Goalie Saves',
+          'Goalie Saves': 'Goalie Saves',
         # Goals Against
-        'Goals Against': 'Goals Against',
+          'Goals Against': 'Goals Against',
         # Assists
-        'Assists': 'Assists',
+          'Assists': 'Assists',
+          'Total Assists': 'Assists',  # OddsShopper
+        # Goals Scored
+          'Total Player Goals': 'Goals Scored',  # OddsShopper
+          'Goals': 'Goals Scored',  # OwnersBox
+        # Power Play Points
+          'Power Play Points': 'Power Play Points',  # OddsShopper
+        # First Goal Scorer
+          'First Goal Scorer': 'First Goal Scorer',  # OddsShopper
+        # Last Goal Scorer
+          'Last Goal Scorer': 'Last Goal Scorer',  # OddsShopper
     }
 }
 FANTASY_SCORE_MAP = {

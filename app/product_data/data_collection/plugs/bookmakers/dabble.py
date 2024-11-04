@@ -111,7 +111,7 @@ class Dabble(utils.BookmakerPlug):
         extract_market_map(data: dict) -> Optional[dict]:
             Builds a map of market IDs to names for easier lookup in subsequent line processing.
 
-        extract_market(data: dict, data_map: dict, league: str) -> Optional[tuple[Optional[str], str]]:
+        extract_market(bookmaker_name: str, data: dict, data_map: dict, league: str) -> Optional[tuple[Optional[str], str]]:
             Cleans and validates market names, returning the market ID and name if valid.
 
         extract_position(data: dict) -> Optional[str]:
@@ -120,7 +120,7 @@ class Dabble(utils.BookmakerPlug):
         extract_team(data: dict) -> Optional[str]:
             Extracts and standardizes the player's team abbreviation.
 
-        extract_subject(data: dict, league: str) -> Optional[tuple[Union[ObjectId, str], str]]:
+        extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[Union[ObjectId, str], str]]:
             Cleans player (subject) data, retrieving the player ID if it exists in the database.
 
         extract_label(data: dict) -> Optional[str]:

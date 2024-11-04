@@ -1,15 +1,9 @@
-import json
 import random
 from datetime import datetime
 import asyncio
 from typing import Optional
 
 from app.product_data.data_collection.plugs.bookmakers import utils
-from app.product_data.data_collection.utils import standardizing as std
-from app.product_data.data_collection.plugs.bookmakers.utils import setup
-from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
-from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league_aliases(data: dict) -> Optional[dict]:
@@ -66,10 +60,10 @@ def extract_participants(data: dict) -> dict:
             # if the player's data dictionary exists get it and execute
             if player_data := player.get('player'):
                 # get the player's name, if exists then execute
-                if subject := player_data.get('displayName'):
+                if subject_name := player_data.get('displayName'):
                     # create key-value pair for participant id and relating attributes
                     participants[participant_id] = {
-                        'subject': subject, 'position': player_data.get('position'),
+                        'subject': subject_name, 'position': player_data.get('position'),
                         'opponent_id': opponent_id, 'jersey_number': player_data.get('number')
                     }
 
@@ -95,9 +89,9 @@ def extract_league(data: dict, opponent_ids: dict) -> Optional[str]:
     # get opponent id and then league from opponent ids dict, if both exist then execute
     if (opponent_id := data.get('opponent_id')) and (league := opponent_ids.get(opponent_id)):
         # clean the league name
-        league = clean_league(league)
+        league = utils.clean_league(league)
         # check the validity of the league and if so then return the league name
-        if is_league_valid(league):
+        if utils.is_league_valid(league):
             # return the cleaned and valid league name
             return league
 
@@ -106,7 +100,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get position from data, if exists then execute
     if position := data.get('position'):
         # return the cleaned up position
-        return clean_position(position)
+        return utils.clean_position(position)
 
 
 def extract_jersey_number(data: dict) -> Optional[str]:
@@ -116,36 +110,30 @@ def extract_jersey_number(data: dict) -> Optional[str]:
         return str(jersey_number)
 
 
-def extract_subject(data: dict, league: str) -> Optional[tuple[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the subject name from the data, if it exists then execute
-    if subject := data.get('subject'):
-        # get the cleaned subject
-        subject = clean_subject(subject)
+    if subject_name := data.get('subject'):
         # get subject attributes
         position, jersey_number = extract_position(data), extract_jersey_number(data)
-        # get the subject id from the db
-        if subject_id := get_subject_id(Subject(subject, league, position=position, jersey_number=jersey_number)):
-            # cast to a string
-            subject_id = str(subject_id)
+        # create a subject object
+        subject_obj = utils.Subject(subject_name, league, position=position, jersey_number=jersey_number)
+        # gets the subject id or log message
+        subject_id, subject_name = utils.get_subject_id(bookmaker_name, subject_obj)
+        # return both subject id search result and cleaned subject
+        return subject_id, subject_name
 
-        # return the subject id and cleaned subject name
-        return subject_id, subject
 
-
-def extract_market(data: list, league: str) -> Optional[tuple[str, str]]:
+def extract_market(bookmaker_name: str, data: list, league: str) -> Optional[tuple[str, str]]:
     # make sure the data has enough elements to index properly
      if len(data) > 1:
         # get the market name from the data list
-        market = data[1]
-        # get the cleaned market
-        cleaned_market = clean_market(market, 'hot_streak', league=league)
-        # get the market id from the db
-        if market_id := get_market_id(Market(cleaned_market, league)):
-            # cast it to a string
-            market_id = str(market_id)
-
-        # get and return the market id from the db along with the market name
-        return market_id, cleaned_market
+        market_name = data[1]
+        # create a market object
+        market_obj = utils.Market(market_name, league=league)
+        # gets the market id or log message
+        market_id, market_name = utils.get_market_id(bookmaker_name, market_obj)
+        # return both market id search result and cleaned market
+        return market_id, market_name
 
 
 def extract_line(data: dict) -> Optional[str]:
@@ -168,27 +156,26 @@ def extract_odds(data: dict) -> Optional[tuple[str, str]]:
                 yield round(1 / float(prob[0]), 3), round(1 / float(prob[1]), 3)
 
 
-class HotStreak(BookmakerPlug):
-    def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+class HotStreak(utils.BookmakerPlug):
+    def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # make call to the parent class Plug
-        super().__init__(info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id)
         # get the universal url to make for all requests (uses graphql)
-        self.url = utils.get_url()
+        self.url = utils.get_url(self.bookmaker_info.name)
         # get the universal headers to make for all requests
-        self.headers = utils.get_headers()
+        self.headers = utils.get_headers(self.bookmaker_info.name)
 
     async def collect(self) -> None:
         # get the json data needed for the request for current leagues data
-        json_data = utils.get_json_data(name='leagues')
+        json_data = utils.get_json_data(self.bookmaker_info.name, name='leagues')
         # make the request for leagues data
         await self.req_mngr.post(self.url, self._parse_league_aliases, headers=self.headers, json=json_data)
 
     async def fetch_page(self, leagues: dict, page: int) -> None:
         # get the json_data (for post request) to get the data of a page of prop lines
-        json_data = utils.get_json_data(var=page)
+        json_data = utils.get_json_data(self.bookmaker_info.name, var=page)
         # make the post request for the particular (page) page of prop lines
-        return await self.req_mngr.post(self.url, self._parse_lines, leagues, page, headers=self.headers,
-                                                 json=json_data)
+        return await self.req_mngr.post(self.url, self._parse_lines, leagues, headers=self.headers, json=json_data)
 
 
     async def _parse_league_aliases(self, response) -> None:
@@ -207,7 +194,7 @@ class HotStreak(BookmakerPlug):
                 await asyncio.gather(*tasks)
 
     # TODO: GETTING UNAUTHORIZED RESPONSES FOR PAGES > 1
-    async def _parse_lines(self, response, league_aliases: dict, page) -> None:
+    async def _parse_lines(self, response, league_aliases: dict) -> None:
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('data')):
             # get the search dict from data, execute if exists
@@ -222,29 +209,35 @@ class HotStreak(BookmakerPlug):
                     if participant_id and market_components and (participant_data := participants.get(participant_id)):
                         # extract the league using an extracted dict of conn. opp. ids to league names, if exists then execute
                         if league := extract_league(participant_data, extract_opponent_ids(search, league_aliases)):
+                            # to track the leagues being collected
+                            self.metrics.add_league(league)
                             # extract the market id and market name from data
-                            market_id, market, message = extract_market(market_components, league)
+                            market_id, market_name = extract_market(self.bookmaker_info.name, market_components, league)
                             # if they both exist then execute
-                            if market_id and market:
+                            if market_id and market_name:
+                                # to track the markets being collected
+                                self.metrics.add_market((league, market_name))
                                 # get the subject id from db and extract subject from data
-                                subject_id, subject, message = extract_subject(participant_data, league)
+                                subject_id, subject_name = extract_subject(self.bookmaker_info.name, participant_data, league)
                                 # if both exist keep going
-                                if subject_id and subject:
+                                if subject_id and subject_name:
+                                    # to track the subjects being collected
+                                    self.metrics.add_subject((league, subject_name))
                                     # for each line and corresponding over/under odds pair
                                     for line, odds_pair in zip(extract_line(market_dict), extract_odds(market_dict)):
                                         # each (odds) and label are at corresponding indices, so for each of them...
                                         for odds, label in zip(odds_pair, ['Under', 'Over']):
                                             # update shared data
-                                            self.add_and_update({
+                                            self.update_betting_lines({
                                                 'batch_id': self.batch_id,
                                                 'time_processed': str(datetime.now()),
                                                 'league': league,
                                                 'market_category': 'player_props',
-                                                'market_id': market_id,
-                                                'market': market,
-                                                'subject_id': subject_id,
-                                                'subject': subject,
-                                                'bookmaker': self.info.name,
+                                                'market_id': str(market_id),
+                                                'market': market_name,
+                                                'subject_id': str(subject_id),
+                                                'subject': subject_name,
+                                                'bookmaker': self.bookmaker_info.name,
                                                 'label': label,
                                                 'line': line,
                                                 'odds': odds
@@ -252,5 +245,4 @@ class HotStreak(BookmakerPlug):
 
 
 if __name__ == "__main__":
-    asyncio.run(run(HotStreak))
-    Plug.save_to_file()
+    utils.run(HotStreak)
