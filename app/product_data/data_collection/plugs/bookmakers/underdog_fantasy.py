@@ -2,11 +2,12 @@ import asyncio
 from datetime import datetime
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import utils
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.utils import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
-    clean_league
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_teams_dict(data: dict) -> dict:
@@ -168,18 +169,18 @@ def get_odds(default_odds: float, multiplier: float) -> float:
     return round(default_odds * multiplier, 3)
 
 
-class UnderdogFantasy(Plug):
+class UnderdogFantasy(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
         super().__init__(info, batch_id, req_mngr)
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get the url required to request teams data
-        url = self.req_packager.get_url(name='teams')
+        url = utils.get_url(name='teams')
         # get the headers required to request teams data
-        headers = self.req_packager.get_headers(name='teams')
+        headers = utils.get_headers(name='teams')
         # get the cookies required to get teams data
-        cookies = self.req_packager.get_cookies()
+        cookies = utils.get_cookies()
         # make the request for teams data
         await self.req_mngr.get(url, self._parse_teams, headers=headers, cookies=cookies)
 
@@ -189,9 +190,9 @@ class UnderdogFantasy(Plug):
             # get the teams dict from response data, if exists keep going
             if teams_dict := extract_teams_dict(json_data):
                 # get the required url to request for prop lines
-                url = self.req_packager.get_url()
+                url = utils.get_url()
                 # get the required headers to request for prop lines
-                headers = self.req_packager.get_headers()
+                headers = utils.get_headers()
                 # make the request for the prop lines
                 await self.req_mngr.get(url, self._parse_lines, teams_dict, headers=headers)
 
@@ -215,11 +216,11 @@ class UnderdogFantasy(Plug):
                     # extract the league from match data dictionary, if exists keep executing
                     if league := extract_league(a_id, game_ids_dict, games_dict, solo_games_dict):
                         # get the market id from db and the market name
-                        market_id, market = extract_market(a_data, league)
+                        market_id, market, message = extract_market(a_data, league)
                         # if both exist then keep executing
                         if market_id and market:
                             # get the subject id from db and extract the subject name
-                            subject_id, subject = extract_subject(a_id, league, player_ids_dict, players_dict)
+                            subject_id, subject, message = extract_subject(a_id, league, player_ids_dict, players_dict)
                             # if both exist keep executing
                             if subject_id and subject:
                                 # get the numeric over/under line, if exists keep executing

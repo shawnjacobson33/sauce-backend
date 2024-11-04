@@ -5,9 +5,10 @@ from bs4 import BeautifulSoup
 import asyncio
 
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
+from app.product_data.data_collection.plugs.bookmakers.utils import is_league_valid, clean_market, clean_subject, \
     clean_league, clean_position
 
 
@@ -60,16 +61,16 @@ def extract_subject(data: dict, league: str) -> Optional[tuple[str, str]]:
         return subject_id, subject
 
 
-class DraftKingsPick6(Plug):
+class DraftKingsPick6(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # make call to parent class Plug
         super().__init__(info, batch_id, req_mngr)
         # get universal request headers used for many requests
-        self.headers = self.req_packager.get_headers()
+        self.headers = utils.get_headers()
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get url to request sports
-        url = self.req_packager.get_url()
+        url = utils.get_url()
         # make a request to get the sports
         await self.req_mngr.get(url, self._parse_sports, headers=self.headers)
 
@@ -102,7 +103,7 @@ class DraftKingsPick6(Plug):
                 # get pickable data and market_category data, if both exist then execute
                 if (pick_data := prop_line_data.get('pickable')) and (m_category_data := pick_data.get('marketCategory')):
                     # get the market id from the db and extract the market from the data dict
-                    market_id, market = extract_market(m_category_data, league)
+                    market_id, market, message = extract_market(m_category_data, league)
                     # # only execute if market id and market exist
                     # if market_id and market:
                     # get the over/under numeric line for the prop line, execute if exists
@@ -110,7 +111,7 @@ class DraftKingsPick6(Plug):
                         # for each subject in the pickableEntities if they exist
                         for entity in pick_data.get('pickableEntities', []):
                             # get the subject id from the db and extract the subject from data
-                            subject_id, subject = extract_subject(entity, league)
+                            subject_id, subject, message = extract_subject(entity, league)
                             # execute if both subject id and subject exist
                             if subject_id and subject:
                                 # for each label Over and Under update shared data prop lines
@@ -134,4 +135,3 @@ class DraftKingsPick6(Plug):
 
 if __name__ == "__main__":
     asyncio.run(run(DraftKingsPick6))
-    Plug.save_to_file()

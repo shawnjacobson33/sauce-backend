@@ -2,11 +2,12 @@ import asyncio
 from datetime import datetime
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import utils
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.utils import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
-    clean_league, clean_position
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -76,16 +77,16 @@ def extract_odds_and_label(data: dict) -> Optional[tuple[str, str]]:
     # yield from ((odds, label) for odds, label in odds_and_labels if odds)
 
 
-class ParlayPlay(Plug):
+class ParlayPlay(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
         super().__init__(info, batch_id, req_mngr)
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get the url that is required to make requests for prop lines
-        url = self.req_packager.get_url()
+        url = utils.get_url()
         # get the headers required to make requests for prop lines
-        headers = self.req_packager.get_headers()
+        headers = utils.get_headers()
         # make the request for prop lines
         await self.req_mngr.get(url, self._parse_lines, headers=headers)
 
@@ -97,13 +98,13 @@ class ParlayPlay(Plug):
                 # extract the league, if it exists then keep executing
                 if league := extract_league(player_data):
                     # get the subject id from db and extract the subject name from a dictionary
-                    subject_id, subject = extract_subject(player_data, league)
+                    subject_id, subject, message = extract_subject(player_data, league)
                     # if both subject id and subject exist then keep executing
                     if subject_id and subject:
                         # for each stat dictionary in the player data dictionary if they exist
                         for stat_data in player_data.get('stats', []):
                             # get the market id from the db and extract the market
-                            market_id, market = extract_market(stat_data, league)
+                            market_id, market, message = extract_market(stat_data, league)
                             # # if both exist then keep executing
                             # if market_id and market:
                             # get a dictionary of data around market, lines, and odds

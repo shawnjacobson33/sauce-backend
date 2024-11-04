@@ -2,11 +2,12 @@ import asyncio
 from datetime import datetime
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import utils
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.utils import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
-    clean_league
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_game_info(data: dict) -> Optional[str]:
@@ -78,18 +79,18 @@ def get_odds(default_odds: float, multiplier: float) -> float:
     return round(default_odds * multiplier, 3)
 
 
-class VividPicks(Plug):
+class VividPicks(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
         super().__init__(info, batch_id, req_mngr)
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get the url required to request for prop lines data
-        url = self.req_packager.get_url()
+        url = utils.get_url()
         # get the headers required to request for prop lines data
-        headers = self.req_packager.get_headers()
+        headers = utils.get_headers()
         # get the json required to request for prop lines data
-        json_data = self.req_packager.get_json_data()
+        json_data = utils.get_json_data()
         # make the request for prop lines data
         await self.req_mngr.post(url, self._parse_lines, headers=headers, json=json_data)
 
@@ -105,13 +106,13 @@ class VividPicks(Plug):
                         # for each dictionary in event data's activePlayers if they exist
                         for player_data in event_data.get('activePlayers', []):
                             # get the subject id from db and extract the subject name from dictionary
-                            subject_id, subject = extract_subject(player_data, league)
+                            subject_id, subject, message = extract_subject(player_data, league)
                             # if both exist keep executing
                             if subject_id and subject:
                                 # for each dictionary in player data's visiblePlayerProps if they exist
                                 for prop_line_data in player_data.get('visiblePlayerProps', []):
                                     # get the market id from the db and extract the market name from the dictionary
-                                    market_id, market = extract_market(prop_line_data, league)
+                                    market_id, market, message = extract_market(prop_line_data, league)
                                     # keep executing if both exist
                                     if market_id and market:
                                         # get the numeric over/under line from the dictionary, keep going if exists

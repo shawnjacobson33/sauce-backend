@@ -2,11 +2,12 @@ from datetime import datetime
 import asyncio
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import utils
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.utils import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
-    clean_league
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -71,18 +72,18 @@ def extract_line_and_label(data: dict) -> Optional[tuple[str, str]]:
             return 'Over', outcome_info_components[-1][:-1]
 
 
-class Rebet(Plug):
+class Rebet(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
         super().__init__(info, batch_id, req_mngr)
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get the url required to request tourney ids data
-        url = self.req_packager.get_url(name='tourney_ids')
+        url = utils.get_url(name='tourney_ids')
         # get the headers required to request tourney ids data
-        headers = self.req_packager.get_headers(name='tourney_ids')
+        headers = utils.get_headers(name='tourney_ids')
         # get the json data required to request tourney ids data with POST request
-        json_data = self.req_packager.get_json_data(name='tourney_ids')
+        json_data = utils.get_json_data(name='tourney_ids')
         # make the post request for tourney ids data
         await self.req_mngr.post(url, self._parse_tourney_ids, headers=headers, json=json_data)
 
@@ -96,11 +97,11 @@ class Rebet(Plug):
                 # get the tournament id, if exist keep executing
                 if tournament_id := league_data.get('tournament_id'):
                     # get the url required to request for prop lines
-                    url = self.req_packager.get_url()
+                    url = utils.get_url()
                     # get the headers required to request for prop lines
-                    headers = self.req_packager.get_headers()
+                    headers = utils.get_headers()
                     # get the json data required to request for prop lines using tournament id
-                    json_data = self.req_packager.get_json_data(var=tournament_id)
+                    json_data = utils.get_json_data(var=tournament_id)
                     # add the request to tasks
                     tasks.append(self.req_mngr.post(url, self._parse_lines, headers=headers, json=json_data))
 
@@ -117,11 +118,11 @@ class Rebet(Plug):
                     # for each market dictionary in the odds data dictionary's market if they exist
                     for market_data in odds_data.get('market', []):
                         # get the market id from the db and extract the market name from dictionary
-                        market_id, market = extract_market(market_data, league)
+                        market_id, market, message = extract_market(market_data, league)
                         # if both exist then keep executing
                         if market_id and market:
                             # get the subject id from db, and extract the subject name from dictionary
-                            subject_id, subject = extract_subject(market_data, league)
+                            subject_id, subject, message = extract_subject(market_data, league)
                             # if both exist then keep executing
                             if subject_id and subject:
                                 # get dictionary that holds data on odds, label, line, if exists then execute

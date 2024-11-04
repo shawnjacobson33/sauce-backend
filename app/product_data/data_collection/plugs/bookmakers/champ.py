@@ -1,11 +1,12 @@
 import asyncio
 from datetime import datetime
 
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
 from app.product_data.data_collection.utils.requesting import RequestManager
 from app.product_data.data_collection.utils.constants import IN_SEASON_LEAGUES, LEAGUE_SPORT_MAP
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, clean_market, clean_subject, clean_position
+from app.product_data.data_collection.plugs.bookmakers.utils import clean_market, clean_subject, clean_position
 
 
 # Champ formats leagues slightly differently...used for making requests
@@ -15,19 +16,19 @@ def get_in_season_leagues():
     return [league_name_map.get(league, league) for league in IN_SEASON_LEAGUES if league_name_map.get(league, league) in valid_champ_leagues]
 
 
-class Champ(Plug):
+class Champ(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         super().__init__(info, batch_id, req_mngr)
 
-    async def start(self):
-        url = self.req_packager.get_url()
-        headers = self.req_packager.get_headers()
+    async def collect(self):
+        url = utils.get_url()
+        headers = utils.get_headers()
         tasks = []
         for league in get_in_season_leagues():
             if not is_league_good(clean_league(league)):
                 continue
 
-            json_data = self.req_packager.get_json_data(var=league)
+            json_data = utils.get_json_data(var=league)
             tasks.append(self.req_mngr.post(url, self._parse_lines, league, headers=headers, json=json_data))
 
         await asyncio.gather(*tasks)

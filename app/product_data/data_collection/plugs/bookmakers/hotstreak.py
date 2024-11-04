@@ -4,11 +4,12 @@ from datetime import datetime
 import asyncio
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import utils
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.utils import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
-    clean_league, clean_position, is_market_valid
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league_aliases(data: dict) -> Optional[dict]:
@@ -167,24 +168,24 @@ def extract_odds(data: dict) -> Optional[tuple[str, str]]:
                 yield round(1 / float(prob[0]), 3), round(1 / float(prob[1]), 3)
 
 
-class HotStreak(Plug):
+class HotStreak(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # make call to the parent class Plug
         super().__init__(info, batch_id, req_mngr)
         # get the universal url to make for all requests (uses graphql)
-        self.url = self.req_packager.get_url()
+        self.url = utils.get_url()
         # get the universal headers to make for all requests
-        self.headers = self.req_packager.get_headers()
+        self.headers = utils.get_headers()
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get the json data needed for the request for current leagues data
-        json_data = self.req_packager.get_json_data(name='leagues')
+        json_data = utils.get_json_data(name='leagues')
         # make the request for leagues data
         await self.req_mngr.post(self.url, self._parse_league_aliases, headers=self.headers, json=json_data)
 
     async def fetch_page(self, leagues: dict, page: int) -> None:
         # get the json_data (for post request) to get the data of a page of prop lines
-        json_data = self.req_packager.get_json_data(var=page)
+        json_data = utils.get_json_data(var=page)
         # make the post request for the particular (page) page of prop lines
         return await self.req_mngr.post(self.url, self._parse_lines, leagues, page, headers=self.headers,
                                                  json=json_data)
@@ -222,11 +223,11 @@ class HotStreak(Plug):
                         # extract the league using an extracted dict of conn. opp. ids to league names, if exists then execute
                         if league := extract_league(participant_data, extract_opponent_ids(search, league_aliases)):
                             # extract the market id and market name from data
-                            market_id, market = extract_market(market_components, league)
+                            market_id, market, message = extract_market(market_components, league)
                             # if they both exist then execute
                             if market_id and market:
                                 # get the subject id from db and extract subject from data
-                                subject_id, subject = extract_subject(participant_data, league)
+                                subject_id, subject, message = extract_subject(participant_data, league)
                                 # if both exist keep going
                                 if subject_id and subject:
                                     # for each line and corresponding over/under odds pair

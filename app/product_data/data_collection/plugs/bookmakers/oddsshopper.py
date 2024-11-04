@@ -2,11 +2,12 @@ from datetime import datetime, timedelta
 import asyncio
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import utils
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.utils import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
-    clean_league
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 BOOKMAKER_MAP = {
@@ -91,18 +92,18 @@ def extract_odds_and_other_stats(data: dict) -> Optional[tuple[float, float, flo
         return round(odds, 3), round(1 / odds, 3), extract_true_win_probability(data), extract_expected_value(data)
 
 
-class OddsShopper(Plug):
+class OddsShopper(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
         super().__init__(info, batch_id, req_mngr)
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get the url to request matchups data
-        url = self.req_packager.get_url(name='matchups')
+        url = utils.get_url(name='matchups')
         # get the headers to request matchups data
-        headers = self.req_packager.get_headers()
+        headers = utils.get_headers()
         # get the cookies to request matchups data
-        cookies = self.req_packager.get_cookies()
+        cookies = utils.get_cookies()
         # make request for matchups data
         await self.req_mngr.get(url, self._parse_matchups, headers=headers, cookies=cookies)
 
@@ -122,11 +123,11 @@ class OddsShopper(Plug):
                             # get dates which are required for params of url for prop lines
                             start_date, end_date = get_dates()
                             # get the url required to request prop lines and format it with the offer id
-                            url = self.req_packager.get_url().format(offer_id)
+                            url = utils.get_url().format(offer_id)
                             # get the headers required to request prop lines
-                            headers = self.req_packager.get_headers()
+                            headers = utils.get_headers()
                             # get the params required to request prop lines, using start_date, and end date
-                            params = self.req_packager.get_params(var_1=start_date, var_2=end_date)
+                            params = utils.get_params(var_1=start_date, var_2=end_date)
                             # add the request to tasks
                             tasks.append(self.req_mngr.get(url, self._parse_lines, league, headers=headers, params=params))
 
@@ -141,11 +142,11 @@ class OddsShopper(Plug):
                 # gets the game info from the dictionary
                 game_info = event.get('eventName')
                 # get the market id from db and extract market from the data
-                market_id, market = extract_market(event, league)
+                market_id, market, message = extract_market(event, league)
                 # # only keep executing if market id and market exist
                 # if market_id and market:
                 # get the subject id from the db and extract the subject from outcome
-                subject_id, subject = extract_subject(event, league)
+                subject_id, subject, message = extract_subject(event, league)
                 # only if both exist should execution keep going
                 if subject_id and subject:
                     # iterate through each side or bookmaker for the prop line

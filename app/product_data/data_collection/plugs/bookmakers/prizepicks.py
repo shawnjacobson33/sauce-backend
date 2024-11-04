@@ -3,11 +3,12 @@ import re
 from datetime import datetime
 from typing import Optional, Iterable
 
+from app.product_data.data_collection.plugs.bookmakers import utils
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.utils import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
-    clean_league, is_market_valid, clean_position
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league_for_leagues(data: dict) -> Optional[str]:
@@ -58,7 +59,7 @@ def extract_league_for_lines(data: dict, leagues: dict) -> Optional[str]:
                     yield cleaned_league
 
 
-def extract_market_and_league(data: dict, league_generator) -> Optional[tuple[str, str, str]]:
+def extract_market_and_league(data: dict, league_generator) -> Optional[tuple[Union[ObjectId, str], str]]:
     # get the unformatted league, if exists then keep executing
     if league := next(league_generator):
         # get the market name and check for validity, if exists and valid then execute
@@ -96,14 +97,14 @@ def extract_subject(data: dict, subjects_dict: dict, league: str) -> Optional[tu
                 return get_subject_id(Subject(subject, league, subject_data.get('subject_team'), extract_position(subject_data))), cleaned_subject
 
 
-class PrizePicks(Plug):
+class PrizePicks(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
         super().__init__(info, batch_id, req_mngr)
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get the url required to make request for leagues data
-        url = self.req_packager.get_url(name='leagues')
+        url = utils.get_url(name='leagues')
         # make request for leagues data
         await self.req_mngr.get(url, self._parse_leagues)
 
@@ -119,7 +120,7 @@ class PrizePicks(Plug):
                     # store the league id with corresponding league name
                     leagues[league_id] = league
                     # get the url required to make request for prop lines
-                    url = self.req_packager.get_url()
+                    url = utils.get_url()
                     # make the request for prop lines
                     await self.req_mngr.get(url, self._parse_lines, leagues)
 
@@ -139,7 +140,7 @@ class PrizePicks(Plug):
                         # if all three exist then keep executing
                         if market_id and market and league:
                             # get the subject id from the db and extract the subject name
-                            subject_id, subject = extract_subject(relationships_data, subjects_dict, league)
+                            subject_id, subject, message = extract_subject(relationships_data, subjects_dict, league)
                             # keep executing if both exist, and get numeric over/under line and check for existence
                             if subject_id and subject and (line := prop_line_attrs.get('line_score')):
                                 # for each generic label for an over/under line

@@ -2,11 +2,12 @@ import asyncio
 from datetime import datetime
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import utils
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.utils import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
-    clean_league, clean_position
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_sports_dict(data: dict) -> dict:
@@ -52,7 +53,7 @@ def extract_position(data: dict) -> Optional[str]:
         return clean_position(position)
 
 
-def extract_subject(data: dict, league: str) -> Optional[tuple[str, str, str]]:
+def extract_subject(data: dict, league: str) -> Optional[tuple[Union[ObjectId, str], str]]:
     # get player data dictionary, if exists keep going
     if player_data := data.get('player'):
         # get the first and last name of the player, if both exist keep going
@@ -63,16 +64,16 @@ def extract_subject(data: dict, league: str) -> Optional[tuple[str, str, str]]:
             return get_subject_id(Subject(cleaned_subject, league, player_data.get('teamAbbr'), extract_position(player_data))), cleaned_subject, player_data.get('eventName')
 
 
-class SuperDraft(Plug):
+class SuperDraft(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
         super().__init__(info, batch_id, req_mngr)
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get the url required to request prop lines data
-        url = self.req_packager.get_url()
+        url = utils.get_url()
         # get the headers required to request prop lines data
-        headers = self.req_packager.get_headers()
+        headers = utils.get_headers()
         # make the request for the prop lines
         await self.req_mngr.get(url, self._parse_lines, headers=headers)
 
@@ -86,7 +87,7 @@ class SuperDraft(Plug):
                 # extract the league name from the dictionary, if exists keep going
                 if league := extract_league(prop_line_data, sports_dict):
                     # get the market id and extract the market name from the dictionary
-                    market_id, market = extract_market(prop_line_data, league)
+                    market_id, market, message = extract_market(prop_line_data, league)
                     # if both exist then keep going
                     if market_id and market:
                         # get the subject id from the db and extract the subject name from the dictionary

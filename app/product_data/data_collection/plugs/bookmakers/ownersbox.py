@@ -2,11 +2,12 @@ from datetime import datetime
 import asyncio
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import utils
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.utils import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
-    clean_league, clean_position
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -111,18 +112,18 @@ def get_label(data: dict) -> Optional[str]:
             yield label
 
 
-class OwnersBox(Plug):
+class OwnersBox(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
         super().__init__(info, batch_id, req_mngr)
         # get the universal headers required to make requests
-        self.headers = self.req_packager.get_headers()
+        self.headers = utils.get_headers()
         # get the universal cookies required to make requests
-        self.cookies = self.req_packager.get_cookies()
+        self.cookies = utils.get_cookies()
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get the url required to make request for leagues data
-        url = self.req_packager.get_url(name='leagues')
+        url = utils.get_url(name='leagues')
         # make the request for the leagues data
         await self.req_mngr.get(url, self._parse_leagues, headers=self.headers, cookies=self.cookies)
 
@@ -132,13 +133,13 @@ class OwnersBox(Plug):
             # initialize structure to hold all requests to make
             tasks = []
             # get the url required to make requests for markets data
-            url = self.req_packager.get_url(name='markets')
+            url = utils.get_url(name='markets')
             # for each league in the response data dictionary
             for league in json_data:
                 # only execute if the league is valid...also clean the league before checking
                 if is_league_valid(clean_league(league)):
                     # if valid get the params to make the request required to get markets data for this league
-                    params = self.req_packager.get_params(name='markets', var_1=league)
+                    params = utils.get_params(name='markets', var_1=league)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_markets, league, headers=self.headers, cookies=self.cookies, params=params))
 
@@ -151,13 +152,13 @@ class OwnersBox(Plug):
             # initialize structure to hold all requests to make
             tasks = []
             # get the url required to make the request for prop lines
-            url = self.req_packager.get_url()
+            url = utils.get_url()
             # for each market in the response data
             for market in json_data:
                 # get market id (not from db), if exists add request
                 if market_id := market.get('id'):
                     # get the params required to make request for prop lines
-                    params = self.req_packager.get_params(var_1=league, var_2=market_id)
+                    params = utils.get_params(var_1=league, var_2=market_id)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_lines, headers=self.headers, cookies=self.cookies, params=params))
 
@@ -172,11 +173,11 @@ class OwnersBox(Plug):
                 # get the league name, if exists then keep executing
                 if league := extract_league(prop_line_data):
                     # get the market id from db and extract the market name
-                    market_id, market = extract_market(prop_line_data, league)
+                    market_id, market, message = extract_market(prop_line_data, league)
                     # # if both exist continue executing
                     # if market_id and market:
                     # get the subject id from db and extract the subject name from the dictionary
-                    subject_id, subject = extract_subject(prop_line_data, league)
+                    subject_id, subject, message = extract_subject(prop_line_data, league)
                     # if both exist then continue executing
                     if subject_id and subject:
                         # get the numeric over/under line, execute if exists

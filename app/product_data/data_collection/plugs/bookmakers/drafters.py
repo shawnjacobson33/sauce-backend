@@ -3,9 +3,10 @@ from datetime import datetime
 from typing import Optional
 
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, clean_market, clean_subject, clean_position, \
+from app.product_data.data_collection.plugs.bookmakers.utils import clean_market, clean_subject, clean_position, \
     is_market_valid
 
 
@@ -55,16 +56,16 @@ def extract_position(data: dict) -> Optional[str]:
         return clean_position(position.strip())
 
 
-class Drafters(Plug):
+class Drafters(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
         super().__init__(info, batch_id, req_mngr)
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get url to make a request for prop lines
-        url = self.req_packager.get_url()
+        url = utils.get_url()
         # get headers to make a request for prop lines
-        headers = self.req_packager.get_headers()
+        headers = utils.get_headers()
         # make asynchronous request for prop lines
         await self.req_mngr.get(url, self._parse_lines, headers=headers)
 
@@ -82,11 +83,11 @@ class Drafters(Plug):
                     # for each player in event's players if they exist
                     for player in event.get('players', []):
                         # extract the subject id from db and get subject from player dict
-                        subject_id, subject = extract_subject(player, subject_team)
+                        subject_id, subject, message = extract_subject(player, subject_team)
                         # only execute if both exist
                         if subject_id and subject:
                             # get market id from db and extract market from player dict
-                            market_id, market = extract_market(player)
+                            market_id, market, message = extract_market(player)
                             # only execute if both exist
                             if market_id and market:
                                 # get numeric over/under line and execute if exists

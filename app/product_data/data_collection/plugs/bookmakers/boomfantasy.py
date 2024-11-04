@@ -1,21 +1,18 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
-from app.product_data.data_collection.plugs.bookmakers import helpers
-from app.product_data.data_collection.utils import standardizing as std
-from app.product_data.data_collection.plugs.bookmakers.reports import setup
-from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
-from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
+from bson import ObjectId
+
+from app.product_data.data_collection.plugs.bookmakers import utils
 
 
 def extract_league(data: dict) -> Optional[str]:
     # get name of league, executes if exists
     if league := data.get('league'):
         # clean the league name
-        cleaned_league = helpers.clean_league(league.upper())
+        cleaned_league = utils.clean_league(league.upper())
         # checks if the league is valid
-        if helpers.is_league_valid(cleaned_league):
+        if utils.is_league_valid(cleaned_league):
             # cleans the league name
             return cleaned_league
 
@@ -40,22 +37,19 @@ def extract_player_info(data: dict) -> Optional[tuple[Optional[str], Optional[st
         return player_image_data.get('abbreviation'), player_image_data.get('jerseyNumber')
 
 
-def extract_subject(data: dict, league: str) -> Optional[tuple[Optional[str], str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[Union[ObjectId, str], str]]:
     # gets the league section's title and options from that title, executes if they both exist
     if (title := data.get('title')) and (options := title.get('o')):
         # gets the first and last name of the player, executes if both exist
         if (first_name := options.get('firstName')) and (last_name := options.get('lastName')):
-            # gets the full name of subject and cleans it
-            cleaned_subject = helpers.clean_subject(' '.join([first_name, last_name]))
             # get some player attributes
             subject_team, jersey_number = extract_player_info(data)
-            # gets the subject id of this player
-            if subject_id := std.get_subject_id(Subject(cleaned_subject, league, team=subject_team, jersey_number=jersey_number)):
-                # cast the subject id to a string
-                subject_id = str(subject_id)
-
-            # return both subject and subject id
-            return subject_id, cleaned_subject
+            # create a subject object
+            subject_obj = utils.Subject(' '.join([first_name, last_name]), league, team=subject_team, jersey_number=jersey_number)
+            # gets the subject id or log message
+            subject_id, subject_name = utils.get_subject_id(bookmaker_name, subject_obj)
+            # return both subject id search result and cleaned subject
+            return subject_id, subject_name
 
 
 def extract_line(data: dict) -> Optional[tuple[str, str]]:
@@ -76,18 +70,15 @@ def extract_period(data: dict) -> Optional[str]:
         return period
 
 
-def extract_market(data: dict, league: str, period: Optional[str] = None) -> Optional[tuple[Optional[str], str]]:
+def extract_market(bookmaker_name: str, data: dict, league: str, period_type: Optional[str] = None) -> Optional[tuple[Union[ObjectId, str], str]]:
     # get the market name, if exists keep going
-    if market := data.get("statistic"):
-        # cleans the market
-        cleaned_market = helpers.clean_market(market, 'boom_fantasy', period_classifier=period)
+    if market_name := data.get("statistic"):
+        # create a market object
+        market_obj = utils.Market(market_name, league=league)
         # gets the market id
-        if market_id := std.get_market_id(Market(cleaned_market, league)):
-            # cast the market id to a string
-            market_id = str(market_id)
-
-        # return both market and market id
-        return market_id, cleaned_market
+        market_id, market_name = utils.get_market_id(bookmaker_name, market_obj, period_type=period_type)
+        # return both market id and cleaned market
+        return market_id, market_name
 
 
 def extract_label_and_odds(data: list) -> Optional[tuple[str, float]]:
@@ -97,7 +88,7 @@ def extract_label_and_odds(data: list) -> Optional[tuple[str, float]]:
         return data[1].title(), float(data[2])
 
 
-class BoomFantasy(BookmakerPlug):
+class BoomFantasy(utils.BookmakerPlug):
     """
     BoomFantasy is a class that represents the process of collecting and parsing player prop lines from
     the BoomFantasy API. It inherits from the `Plug` class and utilizes asynchronous requests to gather
@@ -117,22 +108,22 @@ class BoomFantasy(BookmakerPlug):
             data storage for further use.
     """
 
-    def __init__(self, bookmaker_info: Bookmaker, batch_id: str, req_mngr: RequestManager):
+    def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id, req_mngr)
+        super().__init__(bookmaker_info, batch_id)
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # gets the url to get prop lines
-        url = self.req_packager.get_url()
+        url = utils.get_url(self.bookmaker_info.name)
         # get the headers that will be sent with request for prop lines
-        headers = self.req_packager.get_headers()
+        headers = utils.get_headers(self.bookmaker_info.name)
         # gets params that will be sent with request for prop lines
-        params = self.req_packager.get_params()
+        params = utils.get_params(self.bookmaker_info.name)
         # gets valid tokens needed to access data
         tokens_data = {
-            'url': self.req_packager.get_url(name='tokens'),
-            'headers': self.req_packager.get_headers(name='tokens'),
-            'json_data': self.req_packager.get_json_data(name='tokens')
+            'url': utils.get_url(self.bookmaker_info.name, name='tokens'),
+            'headers': utils.get_headers(self.bookmaker_info.name, name='tokens'),
+            'json_data': utils.get_json_data(self.bookmaker_info.name ,name='tokens')
         }
         # because of tokens, use a special get method to request data
         await self.req_mngr.get_bf(url, tokens_data, self._parse_lines, headers=headers, params=params)
@@ -148,53 +139,58 @@ class BoomFantasy(BookmakerPlug):
                     if section_data.get('status') == 'active':
                         # if they exist execute
                         if league := extract_league(section_data):
+                            # to track the leagues being collected
+                            self.metrics.add_league(league)
                             # extract the game info from the dictionary
                             game_info = extract_game_info(section_data)
                             # for each section in the league's sections if they exist
                             for qg_data in section_data.get('qG', []):
                                 # extract the subject and get the subject id from the response data and database
-                                subject_id, subject = extract_subject(qg_data, league)
+                                subject_id, subject = extract_subject(self.bookmaker_info.name, qg_data, league)
                                 # if they both exist then execute
                                 if subject_id and subject:
+                                    # to track the subjects being collected
+                                    self.metrics.add_subject((league, subject))
                                     # get the period classifier from dictionary (fullGame, firstQuarter, etc.)
                                     period = extract_period(qg_data)
                                     # get more prop line info from the league's section's fullQuestions if they exist
                                     for q_data in qg_data.get('q', []):
                                         # extract the market and market id from the response data and database
-                                        market_id, market = extract_market(q_data, league, period)
-                                        # # if they both exist then execute
-                                        # if market_id and market:
-                                        # for each dictionary in q_data's c field
-                                        for c_data in q_data.get('c', []):
-                                            # extract the numeric line for the prop line, if exists keep going
-                                            if line := c_data.get('l'):
-                                                # for each over or under side to the prop line if they exist.
-                                                for more_c_data in c_data.get('c', []):
-                                                    # extract the label and multiplier from the list
-                                                    label, odds = extract_label_and_odds(more_c_data)
-                                                    # calculate the implied probability
-                                                    implied_prob = 1 / odds
-                                                    # if both exist the keep going
-                                                    if label and odds:
-                                                        # update shared data
-                                                        self.update_betting_lines({
-                                                            'batch_id': self.batch_id,
-                                                            'time_processed': str(datetime.now()),
-                                                            'league': league,
-                                                            'game_info': game_info,
-                                                            'market_category': 'player_props',
-                                                            'market_id': market_id,
-                                                            'market': market,
-                                                            'subject_id': subject_id,
-                                                            'subject': subject,
-                                                            'bookmaker': self.bookmaker_info.name,
-                                                            'label': label,
-                                                            'line': line,
-                                                            'odds': odds,
-                                                            'implied_prob': implied_prob
-                                                        })
-
+                                        market_id, market = extract_market(self.bookmaker_info.name, q_data, league, period)
+                                        # if both exist then keep going
+                                        if market_id and market:
+                                            # to track the markets being collected
+                                            self.metrics.add_market((league, market))
+                                            # for each dictionary in q_data's c field
+                                            for c_data in q_data.get('c', []):
+                                                # extract the numeric line for the prop line, if exists keep going
+                                                if line := c_data.get('l'):
+                                                    # for each over or under side to the prop line if they exist.
+                                                    for more_c_data in c_data.get('c', []):
+                                                        # extract the label and multiplier from the list
+                                                        label, odds = extract_label_and_odds(more_c_data)
+                                                        # calculate the implied probability
+                                                        implied_prob = 1 / odds
+                                                        # if both exist the keep going
+                                                        if label and odds:
+                                                            # update shared data
+                                                            self.update_betting_lines({
+                                                                'batch_id': self.batch_id,
+                                                                'time_processed': str(datetime.now()),
+                                                                'league': league,
+                                                                'game_info': game_info,
+                                                                'market_category': 'player_props',
+                                                                'market_id': str(market_id),
+                                                                'market': market,
+                                                                'subject_id': str(subject_id),
+                                                                'subject': subject,
+                                                                'bookmaker': self.bookmaker_info.name,
+                                                                'label': label,
+                                                                'line': line,
+                                                                'odds': odds,
+                                                                'implied_prob': implied_prob
+                                                            })
 
 
 if __name__ == "__main__":
-    setup.run(BoomFantasy)
+    utils.run(BoomFantasy)

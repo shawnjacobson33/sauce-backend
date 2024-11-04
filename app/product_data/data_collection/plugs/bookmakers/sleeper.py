@@ -3,11 +3,12 @@ from datetime import datetime
 from collections import defaultdict
 from typing import Optional
 
+from app.product_data.data_collection.plugs.bookmakers import utils
+from app.product_data.data_collection.utils import standardizing as std
+from app.product_data.data_collection.plugs.bookmakers.utils import setup
 from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.utils.objects import Subject, Market, Plug, Bookmaker
-from app.product_data.data_collection.utils.standardizing import get_subject_id, get_market_id
-from app.product_data.data_collection.plugs.bookmakers.helpers import run, is_league_valid, clean_market, clean_subject, \
-    clean_league, clean_position
+from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
+from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -55,18 +56,18 @@ def extract_label(data: dict) -> Optional[str]:
         return label.title()
 
 # TODO: Sleeper recently added alt_lines
-class Sleeper(Plug):
+class Sleeper(BookmakerPlug):
     def __init__(self, info: Bookmaker, batch_id: str, req_mngr: RequestManager):
         # call parent class Plug
         super().__init__(info, batch_id, req_mngr)
         # get universally used headers to make requests
-        self.headers = self.req_packager.get_headers()
+        self.headers = utils.get_headers()
 
-    async def start(self) -> None:
+    async def collect(self) -> None:
         # get the url required to request player data
-        url = self.req_packager.get_url(name='players')
+        url = utils.get_url(name='players')
         # get params required to request player data
-        params = self.req_packager.get_params()
+        params = utils.get_params()
         # make the request for player data
         await self.req_mngr.get(url, self._parse_players, headers=self.headers, params=params)
 
@@ -91,7 +92,7 @@ class Sleeper(Plug):
                             }
 
             # get the url required to make request for prop lines
-            url = self.req_packager.get_url()
+            url = utils.get_url()
             # make the request for prop lines data
             await self.req_mngr.get(url, self._parse_lines, players_dict, headers=self.headers)
 
@@ -103,11 +104,11 @@ class Sleeper(Plug):
                 # extract the league name from dictionary
                 if league := extract_league(prop_line_data):
                     # get the subject id from db and extract player name from dictionary
-                    subject_id, subject = extract_subject(prop_line_data, players, league)
+                    subject_id, subject, message = extract_subject(prop_line_data, players, league)
                     # if both exist then keep going
                     if subject_id and subject:
                         # get the market id from db and extract the market name from dictionary
-                        market_id, market = extract_market(prop_line_data, league)
+                        market_id, market, message = extract_market(prop_line_data, league)
                         # if both exist then keep executing
                         if market_id and market:
                             # for each dictionary containing label, line, odds in prop_line_data's options if exists
