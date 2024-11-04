@@ -30,6 +30,9 @@ LEAGUE_MAP = {
     'TENNIS W': 'TENNIS',
     'TENNIS M': 'TENNIS',
     # PrizePicks
+    'CBB': 'NCAAM',
+    'WCBB': 'NCAAW',
+    'CFB': 'NCAAF',
     'MLBLIVE': 'MLB',
     'UFC': 'MMA',
     'EPL': 'SOCCER',
@@ -52,23 +55,10 @@ LEAGUE_MAP = {
     'MSOCCER': 'SOCCER',
     'FIFA': 'SOCCER',
 }
-POSITION_MAP = {
-    'Forward': 'F',
-    'Pitcher': 'P',
-    'Defender': 'D',
-    'Hitter': 'H',
-    'Guard': 'G',
-    'Forward-Center': 'F-C',
-}
 
 
 def clean_league(league: str) -> str:
     # run the .replace() command for college football instead of hashing it into a dictionary because PrizePicks
-    # weird ass segments league names for each quarter, half, full game. Ex: CFB1Q, CFB1H, CFB
-    cleaned_league = league.strip().upper().replace('CFB', 'NCAAF')
+    # league names for each quarter, half, full game. Ex: CFB1Q, CFB1H, CFB
+    cleaned_league = league.strip().upper()
     return LEAGUE_MAP.get(cleaned_league, cleaned_league)
-
-
-def clean_position(position: str) -> str:
-    """Small formatting fixes for positions"""
-    return POSITION_MAP.get(position, position)

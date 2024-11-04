@@ -44,20 +44,20 @@ def get_league(data: dict, leagues: dict) -> Optional[tuple[str, str]]:
         # get another dictionary for relationship league data and a league id if they both exist.
         if (relationship_league_data := relationship_league.get('data')) and (league_id := relationship_league_data.get('id')):
             # the league id must exist in the leagues data store and also get the league name from the store
-            if (league_id in leagues) and (league := leagues.get(league_id)):
+            if league_name := leagues.get(league_id):
                 # clean league after extracting quarter or half info from it if it exists.
-                cleaned_league = utils.clean_league(league[:-2] if re.match(r'^.+[1-4]([QH])$', league) else league)
+                cleaned_league = utils.clean_league(league_name[:-2] if re.match(r'^.+[1-4]([QH])$', league_name) else league_name)
                 # only want valid leagues
                 if utils.is_league_valid(cleaned_league):
                     # return the valid and cleaned league, and the original league name format without cleaning it (needed for market)
-                    return league, cleaned_league
+                    return league_name, cleaned_league
 
     return None, None
 
 
 def extract_market(bookmaker_name: str, data: dict, uncleaned_league: str, cleaned_league: str) -> Optional[tuple[ObjectId, str]]:
     # get the market name and check for validity, if exists and valid then execute
-    if (market_name := data.get('stat_type')) and utils.is_market_valid(market_name):
+    if (market_name := data.get('stat_type', data.get('stat_display_name'))) and utils.is_market_valid(market_name):
         # in order to create comparable market names -- for Quarter and Half Markets
         if re.match(r'^.+[1-4]([QH])$', uncleaned_league):
             # re-format the market name
@@ -69,6 +69,8 @@ def extract_market(bookmaker_name: str, data: dict, uncleaned_league: str, clean
         market_id, market_name = utils.get_market_id(bookmaker_name, market_obj)
         # return both market id search result and cleaned market
         return market_id, market_name
+
+    return None, None
 
 
 def extract_position(data: dict) -> Optional[str]:
@@ -84,7 +86,7 @@ def extract_subject(bookmaker_name: str, data: dict, subjects_dict: dict, league
         # get the player id and then get the subject data that corresponds, if both exist then execute
         if (player_id := relationship_new_player_data.get('id')) and (subject_data := subjects_dict.get(str(player_id))):
             # get the subject name and check if it is a 'combo' player prop, if exists keep executing
-            if (subject_name := subject_data.get('player_name')) and (' + ' not in subject_name):
+            if (subject_name := subject_data.get('subject')) and (' + ' not in subject_name):
                 # get player attributes
                 subject_team, position = subject_data.get('subject_team'), extract_position(subject_data)
                 # create a subject object
@@ -135,7 +137,7 @@ class PrizePicks(utils.BookmakerPlug):
                 # get a dictionary that holds data on prop line attributes
                 if relationships_data := prop_line_data.get('relationships'):
                     # get some prop line attributes and only get prop lines that aren't alt (takes separate requests)
-                    if (prop_line_attrs := prop_line_data.get('attributes')) and (prop_line_attrs.get('odds_type') != 'standard'):
+                    if (prop_line_attrs := prop_line_data.get('attributes')) and (prop_line_attrs.get('odds_type') == 'standard'):
                         # get league data for prop lines
                         uncleaned_league, cleaned_league = get_league(relationships_data, leagues)
                         # if both exist keep executing

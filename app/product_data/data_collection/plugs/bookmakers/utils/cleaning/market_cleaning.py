@@ -27,12 +27,14 @@ MARKET_MAP = {
         'pr': 'Points + Rebounds',  # HotStreak
         'POINTS_AND_REBOUNDS': 'Points + Rebounds',  # BoomFantasy
         'P+R': 'Points + Rebounds',  # Payday
+        'Pts+Rebs': 'Points + Rebounds',  # PrizePicks
       # Points + Assists
         'Pts + Ast': 'Points + Assists',  # ParlayPlay
         'Pts + Asts': 'Points + Assists',  # OwnersBox
         'pa': 'Points + Assists',  # HotStreak
         'POINTS_AND_ASSISTS': 'Points + Assists',  # BoomFantasy
         'P+A': 'Points + Assists',  # Payday
+        'Pts+Asts': 'Points + Assists',  # PrizePicks
       # Rebounds + Assists
         'Reb + Ast': 'Rebounds + Assists',  # ParlayPlay
         'Rebs + Asts': 'Rebounds + Assists',  # OwnersBox
@@ -40,6 +42,7 @@ MARKET_MAP = {
         'REBOUNDS_AND_ASSISTS': 'Rebounds + Assists',  # BoomFantasy
         'R+A': 'Rebounds + Assists',  # Payday
         'Assists + Rebounds': 'Rebounds + Assists',  # DraftKings Pick6
+        'Rebs+Asts': 'Rebounds + Assists',  # PrizePicks
       # Points + Rebounds + Assists
         'Pts + Reb + Ast': 'Points + Rebounds + Assists',  # ParlayPlay, BetOnline
         'Pts + Rebs + Asts': 'Points + Rebounds + Assists',  # OwnersBox
@@ -48,6 +51,8 @@ MARKET_MAP = {
         'P+R+A': 'Points + Rebounds + Assists',  # Payday
         'Points + Assists + Rebounds': 'Points + Rebounds + Assists',  # DraftKings Pick6
         'Pts+Rebs+Asts': 'Points + Rebounds + Assists',  # PrizePicks
+      # 1H Points + Rebounds + Assists
+        '1H Pts+Rebs+Asts': '1H Points + Rebounds + Assists',  # PrizePicks
       # 3-Pointers Made
         'Three Point Field Goals Made': '3-Pointers Made',  # BetOnline
         'MADE_THREE_POINTERS': '3-Pointers Made',  # BoomFantasy
@@ -94,8 +99,12 @@ MARKET_MAP = {
         'stocks': 'Blocks + Steals',  # HotStreak
         'Steals + Blocks': 'Blocks + Steals',  # DraftKings Pick6, OddsShopper, OwnersBox
         'Stl + Blk': 'Blocks + Steals',  # ParlayPlay
+        'Blks+Stls': 'Blocks + Steals',  # PrizePicks
       # Fantasy Points
         'fantasy_points': 'Fantasy Points',  # HotStreak
+        'Fantasy Score': 'Fantasy Points',  # PrizePicks
+      # 1H Fantasy Points
+        '1H Fantasy Score': '1H Fantasy Points',  # PrizePicks
       # Top Point Scorer
         'Top Point Scorer': 'Top Point Scorer',  # OddsShopper
       # First Basket
@@ -109,6 +118,8 @@ MARKET_MAP = {
           'Pass Yds': 'Passing Yards',  # ParlayPlay
           'PASSYDS': 'Passing Yards',  # Payday
           'Pass Yards': 'Passing Yards',  # PrizePicks
+        # 1H Passing Yards
+          '1H Pass Yards': '1H Passing Yards',  # PrizePicks
         # Passing Attempts
           'Pass Attempts': 'Passing Attempts',  # BetOnline, ParlayPlay
           'PASSING_ATTEMPTS': 'Passing Attempts',  # BoomFantasy
@@ -131,6 +142,7 @@ MARKET_MAP = {
           'INTERCEPTIONS_THROWN': 'Interceptions Thrown',  # BoomFantasy
           'Interceptions Thrown': 'Interceptions Thrown',  # DraftKingsPick6
           'Total Interceptions Thrown': 'Interceptions Thrown',  # OddsShopper
+          'INT': 'Interceptions Thrown',  # PrizePicks
         # Longest Passing Completion
           'Longest Passing Completion': 'Longest Passing Completion',  # OddsShopper
           'Longest Passing Completion (Yards)': 'Longest Passing Completion',  # Dabble
@@ -141,6 +153,8 @@ MARKET_MAP = {
           'Rush Yds': 'Rushing Yards',  # ParlayPlay
           'RUSHYDS': 'Rushing Yards',  # Payday
           'Rush Yards': 'Rushing Yards',  # PrizePicks
+        # 1H Rushing Yards
+          '1H Rush Yards': '1H Rushing Yards',  # PrizePicks
         # Carries
           'Carries': 'Carries',  # BetOnline
           'RUSHING_ATTEMPTS': 'Carries',  # BoomFantasy
@@ -158,8 +172,11 @@ MARKET_MAP = {
           'Rec Yds': 'Receiving Yards',  # ParlayPlay
           'Total Receiving Yards': 'Receiving Yards',  # OddsShopper
           'RECYDS': 'Receiving Yards',  # Payday
+        # 1H Receiving Yards
+          '1H Receiving Yards': '1H Receiving Yards',  # PrizePicks
         # Targets
           'Receiving Targets': 'Targets',  # ParlayPlay
+          'Rec Targets': 'Targets',  # PrizePicks
         # Receptions
           'RECEPTIONS': 'Receptions',  # BoomFantasy
           'Total Receptions': 'Receptions',  # OddsShopper
@@ -176,12 +193,14 @@ MARKET_MAP = {
           'Total Pass + Rush Yards': 'Passing + Rushing Yards',  # OddsShopper
           'Total Passing + Rushing Yards': 'Passing + Rushing Yards',  # OddsShopper
           'Pass + Rush Yards': 'Passing + Rushing Yards',  # OwnersBox, ParlayPlay
+          'Pass+Rush Yds': 'Passing + Rushing Yards',  # PrizePicks
         # Rushing + Receiving Yards
           'Rushing + Receiving Yards': 'Rushing + Receiving Yards',  # MoneyLine
           'Receiving Yards + Rushing Yards': 'Rushing + Receiving Yards',  # Dabble
           'Rush + Rec Yards': 'Rushing + Receiving Yards',  # DraftKingsPick6, OwnersBox, ParlayPlay
           'Total Rush + Rec Yards': 'Rushing + Receiving Yards',  # OddsShopper
           'Total Rushing + Receiving Yards': 'Rushing + Receiving Yards',  # OddsShopper
+          'Rush+Rec Yds': 'Rushing + Receiving Yards',  # PrizePicks
         # Rushing + Receiving Touchdowns
           'Rushing + Receiving Touchdowns': 'Rushing + Receiving Touchdowns',  # MoneyLine
           'Receiving + Rushing Touchdowns': 'Rushing + Receiving Touchdowns',  # Dabble
@@ -194,8 +213,10 @@ MARKET_MAP = {
           'TOTAL_TOUCHDOWNS': 'Total Touchdowns',  # BoomFantasy
           'Total Passing + Rushing + Receiving TDs': 'Total Touchdowns',  # OddsShopper
         # Fantasy Points
-          # TODO: RECHECK BOOKMAKERS
           'Fantasy Points': 'Fantasy Points',  # ParlayPlay
+          'Fantasy Score': 'Fantasy Points',  # PrizePicks
+        # 1H Fantasy Points
+          '1H Fantasy Score': '1H Fantasy Points',  # PrizePicks
         # Sacks
           'Total Sacks': 'Sacks',  # OddsShopper
         # Total Tackles
@@ -263,6 +284,12 @@ MARKET_MAP = {
           'First Goal Scorer': 'First Goal Scorer',  # OddsShopper
         # Last Goal Scorer
           'Last Goal Scorer': 'Last Goal Scorer',  # OddsShopper
+        # Faceoffs Won
+          'Faceoffs Won': 'Faceoffs Won',  # PrizePicks
+        # Hits
+          'Hits': 'Hits',  # PrizePicks
+        # Time On Ice
+          'Time On Ice': 'Time On Ice',  # PrizePicks
     }
 }
 FANTASY_SCORE_MAP = {
