@@ -22,6 +22,8 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tup
         # return both market id search result and cleaned market
         return market_id, market_name
 
+    return None, None
+
 
 def extract_position(data: dict) -> Optional[str]:
     # get the player's position, if exists keep executing
@@ -50,6 +52,8 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tu
             subject_id, subject_name = utils.get_subject_id(bookmaker_name, subject_obj)
             # return both subject id search result and cleaned subject
             return subject_id, subject_name
+
+    return None, None
 
 
 def extract_line(data: dict) -> Optional[str]:

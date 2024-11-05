@@ -40,6 +40,8 @@ def extract_market(bookmaker_name: str, data: dict, data_map: dict, league: str)
             # return both market id search result and cleaned market
             return market_id, market_name
 
+    return None, None
+
 
 def extract_position(data: dict) -> Optional[str]:
     # get the player's position, if exists keep going
@@ -66,6 +68,8 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tu
         subject_id, subject_name = utils.get_subject_id(bookmaker_name, subject_obj)
         # return both subject id search result and cleaned subject
         return subject_id, subject_name
+
+    return None, None
 
 
 def extract_label(data: dict) -> Optional[str]:
@@ -170,11 +174,12 @@ class Dabble(utils.BookmakerPlug):
             # for event in competition's events, if the events data exists
             for event in json_data.get('data', []):
                 # gets the event id, game information, and checks whether this event is displayed, if all exist execute
-                if (event_id := event.get('id')) and (game_info := event.get('name')) and event.get('isDisplayed'):
-                    # gets the url required to request for prop lines and inserts event id into url string
-                    url = utils.get_url(self.bookmaker_info.name).format(event_id)
-                    # add the request task to tasks
-                    tasks.append(self.req_mngr.get(url, self._parse_lines, league, game_info))
+                if (event_id := event.get('id')) and event.get('isDisplayed'):
+                    if game_info := event.get('name'):
+                        # gets the url required to request for prop lines and inserts event id into url string
+                        url = utils.get_url(self.bookmaker_info.name).format(event_id)
+                        # add the request task to tasks
+                        tasks.append(self.req_mngr.get(url, self._parse_lines, league, game_info))
 
             # complete requests asynchronously
             await asyncio.gather(*tasks)

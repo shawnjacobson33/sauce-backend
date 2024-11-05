@@ -51,6 +51,8 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tu
             # return both subject id search result and cleaned subject
             return subject_id, subject_name
 
+    return None, None
+
 
 def extract_line(data: dict) -> Optional[tuple[str, str]]:
     # get the pick selection data, execute if exists
@@ -79,6 +81,8 @@ def extract_market(bookmaker_name: str, data: dict, league: str, period_type: Op
         market_id, market_name = utils.get_market_id(bookmaker_name, market_obj, period_type=period_type)
         # return both market id and cleaned market
         return market_id, market_name
+
+    return None, None
 
 
 def extract_label_and_odds(data: list) -> Optional[tuple[str, float]]:
@@ -123,7 +127,7 @@ class BoomFantasy(utils.BookmakerPlug):
         tokens_data = {
             'url': utils.get_url(self.bookmaker_info.name, name='tokens'),
             'headers': utils.get_headers(self.bookmaker_info.name, name='tokens'),
-            'json_data': utils.get_json_data(self.bookmaker_info.name, self.bookmaker_info.name ,name='tokens')
+            'json_data': utils.get_json_data(self.bookmaker_info.name, name='tokens')
         }
         # because of tokens, use a special get method to request data
         await self.req_mngr.get_bf(url, tokens_data, self._parse_lines, headers=headers, params=params)
@@ -146,21 +150,21 @@ class BoomFantasy(utils.BookmakerPlug):
                             # for each section in the league's sections if they exist
                             for qg_data in section_data.get('qG', []):
                                 # extract the subject and get the subject id from the response data and database
-                                subject_id, subject = extract_subject(self.bookmaker_info.name, qg_data, league)
+                                subject_id, subject_name = extract_subject(self.bookmaker_info.name, qg_data, league)
                                 # if they both exist then execute
-                                if subject_id and subject:
+                                if subject_id and subject_name:
                                     # to track the subjects being collected
-                                    self.metrics.add_subject((league, subject))
+                                    self.metrics.add_subject((league, subject_name))
                                     # get the period classifier from dictionary (fullGame, firstQuarter, etc.)
                                     period = extract_period(qg_data)
                                     # get more prop line info from the league's section's fullQuestions if they exist
                                     for q_data in qg_data.get('q', []):
                                         # extract the market and market id from the response data and database
-                                        market_id, market = extract_market(self.bookmaker_info.name, q_data, league, period)
+                                        market_id, market_name = extract_market(self.bookmaker_info.name, q_data, league, period)
                                         # if both exist then keep going
-                                        if market_id and market:
+                                        if market_id and market_name:
                                             # to track the markets being collected
-                                            self.metrics.add_market((league, market))
+                                            self.metrics.add_market((league, market_name))
                                             # for each dictionary in q_data's c field
                                             for c_data in q_data.get('c', []):
                                                 # extract the numeric line for the prop line, if exists keep going

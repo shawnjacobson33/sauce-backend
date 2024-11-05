@@ -1,13 +1,9 @@
-import asyncio
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
+
+from bson import ObjectId
 
 from app.product_data.data_collection.plugs.bookmakers import utils
-from app.product_data.data_collection.utils import standardizing as std
-from app.product_data.data_collection.plugs.bookmakers.utils import setup
-from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
-from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_sports_dict(data: dict) -> dict:
@@ -37,13 +33,18 @@ def extract_league(data: dict, sports_dict: dict) -> Optional[str]:
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get 3 different dictionaries holding market data, if all exist keep going
-    if (choices := data.get('choices')) and (actor := choices[0].get('actor')) and (requirements := actor.get('winningRequirement')):
-        # get the market name from the dictionary, if exists keep going
-        if market := requirements[0].get('name'):
-            # clean the market name
-            cleaned_market = clean_market(market, league)
-            # return the market id and cleaned market name
-            return get_market_id(Market(cleaned_market, league)), cleaned_market
+    if (choices := data.get('choices')) and (actor := choices[0].get('actor')):
+        if requirements := actor.get('winningRequirement'):
+            # get the market name from the dictionary, if exists keep going
+            if market_name := requirements[0].get('name'):
+                # create a market object
+                market_obj = utils.Market(market_name, league=league)
+                # gets the market id or log message
+                market_id, market_name = utils.get_market_id(bookmaker_name, market_obj)
+                # return both market id search result and cleaned market
+                return market_id, market_name
+
+    return None, None
 
 
 def extract_position(data: dict) -> Optional[str]:
@@ -53,15 +54,23 @@ def extract_position(data: dict) -> Optional[str]:
         return utils.clean_position(position)
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[Union[ObjectId, str], str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[Union[ObjectId, str], str, Optional[str]]]:
     # get player data dictionary, if exists keep going
     if player_data := data.get('player'):
         # get the first and last name of the player, if both exist keep going
         if (first_name := player_data.get('fName')) and (first_name != 'combined') and (last_name := player_data.get('lName')):
-            # get the player's full name and clean it
-            cleaned_subject = clean_subject(' '.join([first_name, last_name]))
-            # return the subject's id from the db and the cleaned subject name and some game info
-            return get_subject_id(Subject(cleaned_subject, league, player_data.get('teamAbbr'), extract_position(player_data))), cleaned_subject, player_data.get('eventName')
+            # get some game info
+            game_info = player_data.get('eventName')
+            # get player attributes
+            subject_team, position = player_data.get('teamAbbr'), extract_position(player_data)
+            # create a subject object
+            subject_obj = utils.Subject(' '.join([first_name, last_name]), league, subject_team, position)
+            # gets the subject id or log message
+            subject_id, subject_name = utils.get_subject_id(bookmaker_name, subject_obj)
+            # return both subject id search result and cleaned subject
+            return subject_id, subject_name, game_info
+
+    return None, None
 
 
 class SuperDraft(utils.BookmakerPlug):
@@ -86,14 +95,20 @@ class SuperDraft(utils.BookmakerPlug):
             for prop_line_data in json_data.get('props', []):
                 # extract the league name from the dictionary, if exists keep going
                 if league := extract_league(prop_line_data, sports_dict):
+                    # to track the leagues being collected
+                    self.metrics.add_league(league)
                     # get the market id and extract the market name from the dictionary
-                    market_id, market= extract_market(self.bookmaker_info.nameprop_line_data, league)
+                    market_id, market_name = extract_market(self.bookmaker_info.name, prop_line_data, league)
                     # if both exist then keep going
-                    if market_id and market:
+                    if market_id and market_name:
+                        # to track the markets being collected
+                        self.metrics.add_market((league, market_name))
                         # get the subject id from the db and extract the subject name from the dictionary
-                        subject_id, subject, game_info = extract_subject(prop_line_data, league)
+                        subject_id, subject_name, game_info = extract_subject(self.bookmaker_info.name, prop_line_data, league)
                         # if both exist then keep going
-                        if subject_id and subject:
+                        if subject_id and subject_name:
+                            # to track the subjects being collected
+                            self.metrics.add_subject((league, subject_name))
                             # get the numeric over/under line from the dictionary
                             if line := prop_line_data.get('line'):
                                 # for each generic over/under label for prop lines
@@ -101,7 +116,7 @@ class SuperDraft(utils.BookmakerPlug):
                                     # update shared data
                                     self.update_betting_lines({
                                         'batch_id': self.batch_id,
-                                        'time_processed': datetime.now(),
+                                        'time_processed': str(datetime.now()),
                                         'league': league,
                                         'market_category': 'player_props',
                                         'market_id': str(market_id),
@@ -117,4 +132,4 @@ class SuperDraft(utils.BookmakerPlug):
 
 
 if __name__ == "__main__":
-    utils.run(SuperDraft))
+    utils.run(SuperDraft)

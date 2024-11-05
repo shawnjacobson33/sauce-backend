@@ -43,6 +43,8 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tu
         # return both subject id search result and cleaned subject
         return subject_id, subject_name
 
+    return None, None
+
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the dictionary that holds market data and get market name, if both exist then execute
@@ -54,6 +56,8 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tup
         # return both market id search result and cleaned market
         return market_id, market_name
 
+    return None, None
+
 
 def extract_odds_and_label(data: dict) -> Optional[tuple[str, str]]:
     # get odds and labels
@@ -64,7 +68,7 @@ def extract_odds_and_label(data: dict) -> Optional[tuple[str, str]]:
     # # yield for each over and under label and over odds or under odds corresponding, if the odds for a label exist
     # yield from ((odds, label) for odds, label in odds_and_labels if odds)
 
-
+# TODO: TWEAK SO YOU GET SPORTS FROM https://parlayplay.io/api/v1/sports/ AND THEN USE THEM AS PARAMS IN PROP LINES URL
 class ParlayPlay(utils.BookmakerPlug):
     def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug
@@ -78,6 +82,7 @@ class ParlayPlay(utils.BookmakerPlug):
         # make the request for prop lines
         await self.req_mngr.get(url, self._parse_lines, headers=headers)
 
+    # TODO: NOT GETTING ALL LINES ON THE APP?
     async def _parse_lines(self, response) -> None:
         # get the response data, if exists then keep executing
         if json_data := response.json():

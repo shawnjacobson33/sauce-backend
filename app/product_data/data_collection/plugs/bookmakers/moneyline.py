@@ -25,6 +25,8 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tup
         # return both market id search result and cleaned market
         return market_id, market_name
 
+    return None, None
+
 
 def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the subject data from data, if exists keep going
@@ -40,6 +42,8 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tu
         # return both subject id search result and cleaned subject
         return subject_id, subject_name
 
+    return None, None
+
 
 def extract_line_and_label(data: dict) -> Optional[tuple[str, str]]:
     # there are 2 option components 1, 2
@@ -54,6 +58,7 @@ def extract_line_and_label(data: dict) -> Optional[tuple[str, str]]:
                 yield line_and_label_components[1], line_and_label_components[0].lower().title()
 
 
+# TODO: CHECK IS_BOOSTED LOGIC
 class MoneyLine(utils.BookmakerPlug):
     def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug

@@ -49,6 +49,7 @@ class RequestManager:
             await func(response, *args)
         else:
             print(f"Failed to retrieve {url} with status code {response.status_code}")
+            print(f"ERROR: {response.content}")
 
     async def post(self, url, func, *args, **kwargs):
         response = await self.post_thread(url, **kwargs)
@@ -56,8 +57,7 @@ class RequestManager:
             await func(response, *args)
         else:
             print(f"Failed to retrieve {url} with status code {response.status_code}")
-            print(response.content)
-            return response
+            print(f"ERROR: {response.content}")
 
     async def get_bf(self, url: str, tokens_data: dict, func, headers, params) -> None:
         # get file_path to tokens and the current tokens

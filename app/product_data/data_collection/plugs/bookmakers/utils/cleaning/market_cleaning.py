@@ -118,12 +118,15 @@ MARKET_MAP = {
           'Pass Yds': 'Passing Yards',  # ParlayPlay
           'PASSYDS': 'Passing Yards',  # Payday
           'Pass Yards': 'Passing Yards',  # PrizePicks
+          'passing_yards': 'Passing Yards',  # Sleeper
+          'PassingYards': 'Passing Yards',  # Vivid Picks
         # 1H Passing Yards
           '1H Pass Yards': '1H Passing Yards',  # PrizePicks
         # Passing Attempts
           'Pass Attempts': 'Passing Attempts',  # BetOnline, ParlayPlay
           'PASSING_ATTEMPTS': 'Passing Attempts',  # BoomFantasy
           'Total Passing Attempts': 'Passing Attempts',  # OddsShopper
+          'passing_attempts': 'Passing Attempts',  # Sleeper
         # Completions
           'Completions': 'Completions',  # DraftKingsPick6, OwnersBox
           'Passing Completions': 'Completions',  # Dabble
@@ -131,28 +134,37 @@ MARKET_MAP = {
           'PASSING_COMPLETIONS': 'Completions',  # BoomFantasy
           'Total Pass Completions': 'Completions',   # OddsShopper
           'CMP': 'Completions',  # Payday
+          'pass_completions': 'Completions',  # Sleeper
         # Passing Touchdowns
           'Passing Touchdowns': 'Passing Touchdowns',  # MoneyLine, OwnersBox
           'Passing TDs': 'Passing Touchdowns',  # BetOnline, ParlayPlay
           'PASSING_TOUCHDOWNS': 'Passing Touchdowns',  # BoomFantasy
           'Total Passing Touchdowns': 'Passing Touchdowns',  # OddsShopper
           'Pass TDs': 'Passing Touchdowns',  # ParlayPlay
+          'passing_touchdowns': 'Passing Touchdowns',  # Sleeper
+          'PassingTouchdowns': 'Passing Touchdowns',  # Vivid Picks
+          'PASSTD': 'Passing Touchdowns',  # Payday
         # Interceptions Thrown -- IMPORTANT FOR SOME BOOKMAKERS THEY FORMAT Interceptions as Passing Interceptions, AND SOME DO Interceptions as actual Interceptions caught.
           'Pass Interceptions': 'Interceptions Thrown',  # BetOnline
           'INTERCEPTIONS_THROWN': 'Interceptions Thrown',  # BoomFantasy
           'Interceptions Thrown': 'Interceptions Thrown',  # DraftKingsPick6
           'Total Interceptions Thrown': 'Interceptions Thrown',  # OddsShopper
           'INT': 'Interceptions Thrown',  # PrizePicks
+          'interceptions': 'Interceptions Thrown',  # Sleeper
+          'passing_interceptions': 'Interceptions Thrown',  # HotStreak
         # Longest Passing Completion
           'Longest Passing Completion': 'Longest Passing Completion',  # OddsShopper
           'Longest Passing Completion (Yards)': 'Longest Passing Completion',  # Dabble
           'Longest Pass': 'Longest Passing Completion',  # ParlayPlay
+          'longest_pass': 'Longest Passing Completion',  # HotStreak
         # Rushing Yards
           'RUSHING_YARDS': 'Rushing Yards',  # BoomFantasy
           'Total Rushing Yards': 'Rushing Yards',  # OddsShopper
           'Rush Yds': 'Rushing Yards',  # ParlayPlay
           'RUSHYDS': 'Rushing Yards',  # Payday
           'Rush Yards': 'Rushing Yards',  # PrizePicks
+          'rushing_yards': 'Rushing Yards',  # Sleeper
+          'RushingYards': 'Rushing Yards',  # Vivid Picks
         # 1H Rushing Yards
           '1H Rush Yards': '1H Rushing Yards',  # PrizePicks
         # Carries
@@ -161,17 +173,23 @@ MARKET_MAP = {
           'Rushing Attempts': 'Carries',  # Dabble, OwnersBox
           'Total Rushing Attempts': 'Carries',  # OddsShopper
           'Rush Attempts': 'Carries',  # ParlayPlay
+          'rushing_attempts': 'Carries',  # Sleeper
+          'carries': 'Carries',  # HotStreak
         # Rushing Touchdowns
           'RUSHING_TOUCHDOWNS': 'Rushing Touchdowns',  # BoomFantasy
           'Total Rushing Touchdowns': 'Rushing Touchdowns',  # OddsShopper
+          'rushing_touchdowns': 'Rushing Touchdowns',  # Sleeper
         # Longest Rush
           'Longest Rush': 'Longest Rush',  # OddsShopper, OwnersBox, ParlayPlay
           'Longest Rush (Yards)': 'Longest Rush',  # Dabble
+          'longest_rush': 'Longest Rush',  # HotStreak
         # Receiving Yards
           'RECEIVING_YARDS': 'Receiving Yards',  # BoomFantasy
           'Rec Yds': 'Receiving Yards',  # ParlayPlay
           'Total Receiving Yards': 'Receiving Yards',  # OddsShopper
           'RECYDS': 'Receiving Yards',  # Payday
+          'receiving_yards': 'Receiving Yards',  # Sleeper
+          'ReceivingYards': 'Receiving Yards',  # Vivid Picks
         # 1H Receiving Yards
           '1H Receiving Yards': '1H Receiving Yards',  # PrizePicks
         # Targets
@@ -181,12 +199,15 @@ MARKET_MAP = {
           'RECEPTIONS': 'Receptions',  # BoomFantasy
           'Total Receptions': 'Receptions',  # OddsShopper
           'REC': 'Receptions',  # Payday
+          'receptions': 'Receptions',  # Sleeper
         # Receiving Touchdowns
           'RECEIVING_TOUCHDOWNS': 'Receiving Touchdowns',  # BoomFantasy
           'Total Receiving Touchdowns': 'Receiving Touchdowns',  # OddsShopper
+          'receiving_touchdowns': 'Receiving Touchdowns',  # Sleeper
         # Longest Reception
           'Longest Reception': 'Longest Reception',  # OddsShopper, OwnersBox, ParlayPlay
           'Longest Reception (Yards)': 'Longest Reception',  # Dabble
+          'longest_reception': 'Longest Reception',  # HotStreak
         # Passing + Rushing Touchdowns
         # Passing + Rushing Yards
           'Passing Yards + Rushing Yards': 'Passing + Rushing Yards',  # Dabble
@@ -194,6 +215,8 @@ MARKET_MAP = {
           'Total Passing + Rushing Yards': 'Passing + Rushing Yards',  # OddsShopper
           'Pass + Rush Yards': 'Passing + Rushing Yards',  # OwnersBox, ParlayPlay
           'Pass+Rush Yds': 'Passing + Rushing Yards',  # PrizePicks
+          'passing_and_rushing_yards': 'Passing + Rushing Yards',  # Sleeper
+          'passing_plus_rushing_yards': 'Passing + Rushing Yards',  # HotStreak
         # Rushing + Receiving Yards
           'Rushing + Receiving Yards': 'Rushing + Receiving Yards',  # MoneyLine
           'Receiving Yards + Rushing Yards': 'Rushing + Receiving Yards',  # Dabble
@@ -201,6 +224,8 @@ MARKET_MAP = {
           'Total Rush + Rec Yards': 'Rushing + Receiving Yards',  # OddsShopper
           'Total Rushing + Receiving Yards': 'Rushing + Receiving Yards',  # OddsShopper
           'Rush+Rec Yds': 'Rushing + Receiving Yards',  # PrizePicks
+          'rushing_and_receiving_yards': 'Rushing + Receiving Yards',  # Sleeper
+          'receiving_plus_rushing_yards': 'Rushing + Receiving Yards',  # HotStreak
         # Rushing + Receiving Touchdowns
           'Rushing + Receiving Touchdowns': 'Rushing + Receiving Touchdowns',  # MoneyLine
           'Receiving + Rushing Touchdowns': 'Rushing + Receiving Touchdowns',  # Dabble
@@ -212,43 +237,56 @@ MARKET_MAP = {
           'Total Touchdowns': 'Total Touchdowns',  # OddsShopper
           'TOTAL_TOUCHDOWNS': 'Total Touchdowns',  # BoomFantasy
           'Total Passing + Rushing + Receiving TDs': 'Total Touchdowns',  # OddsShopper
+          'anytime_touchdowns': 'Total Touchdowns',  # Sleeper
+          'Anytime TD Scored': 'Total Touchdowns',  # Vivid Picks
         # Fantasy Points
           'Fantasy Points': 'Fantasy Points',  # ParlayPlay
           'Fantasy Score': 'Fantasy Points',  # PrizePicks
+          'fantasy_points': 'Fantasy Points',  # Sleeper
         # 1H Fantasy Points
           '1H Fantasy Score': '1H Fantasy Points',  # PrizePicks
         # Sacks
           'Total Sacks': 'Sacks',  # OddsShopper
+          'sacks': 'Sacks',  # Sleeper
         # Total Tackles
           'Tackles': 'Total Tackles',  # BetOnline
           'Tackles + Assists': 'Total Tackles',  # DraftKingsPick6, OwnersBox
           'Total Tackles + Assists': 'Total Tackles',  # OddsShopper
           'Tackles S+A': 'Total Tackles',  # ParlayPlay
           'Tackles Solo+Assists': 'Total Tackles',  # Payday
+          'tackles_and_assists': 'Total Tackles',  # Sleeper
         # Tackle Assists
           'Tackle Assists': 'Tackle Assists',  # Dabble
           'Total Assists': 'Tackle Assists',   # OddsShopper
+          'assists': 'Tackle Assists',  # Sleeper
         # Solo Tackles
           'Solo Tackles': 'Solo Tackles',  # OwnersBox, ParlayPlay
           'Tackle Tackles': 'Solo Tackles',  # OddsShopper
+          'tackles': 'Solo Tackles',  # Sleeper
         # Interceptions -- IMPORTANT FOR SOME BOOKMAKERS THEY FORMAT Interceptions as Passing Interceptions, AND SOME DO Interceptions as actual Interceptions caught.
            # Dabble, OwnersBox -- "Interceptions" TODO: IMPLEMENT LOGIC
            # ParlayPlay -- "Interception"
            # PrizePicks -- 'INT'
+           'defensive_interceptions': 'Interceptions',
         # Kicking Points
           'Kicking Points': 'Kicking Points',  # DraftKingsPick6, OwnersBox
           'Kicker Points': 'Kicking Points',
           'Total Points': 'Kicking Points',  # ParlayPlay
           'Total Kicking Points': 'Kicking Points',  # OddsShopper
+          'kicking_points': 'Kicking Points',  # Sleeper
         # Extra Points Made
           'Extra Point Made': 'Extra Points Made',  # Dabble
           'Total Extra Points Made': 'Extra Points Made',  # OddsShopper
           'XP Made': 'Extra Points Made',  # OwnersBox
           'PAT': 'Extra Points Made',  # Payday
+          'extra_points': 'Extra Points Made',  # HotStreak
         # Field Goals Made
           'Field Goal Made': 'Field Goals Made',  # Dabble
           'Total Field Goals Made': 'Field Goals Made',  # OddsShopper
           'FG Made': 'Field Goals Made',  # OwnersBox
+          'field_goal_made': 'Field Goals Made',  # Sleeper
+          'field_goals': 'Field Goals Made',  # HotStreak
+          'FGM': 'Field Goals Made',  # Payday
         # First Touchdown Scorer
           'First Touchdown Scorer': 'First Touchdown Scorer',  # OddsShopper
         # Last Touchdown Scorer
@@ -259,12 +297,18 @@ MARKET_MAP = {
           'Points': 'Points',  # BetOnline, Dabble
           'POINTS': 'Points',  # BoomFantasy
           'Total Points': 'Points',  # OddsShopper
+          'points': 'Points',  # Sleeper
+          'Player points (incl. overtime)': 'Points',  # Rebet
         # Shots On Goal
           'Shots On Goal': 'Shots On Goal',
           'SHOTS_ON_GOAL': 'Shots On Goal',  # BoomFantasy
           'Shots on Goal': 'Shots On Goal',  # DraftKingsPick6
           'Total Shots on Goal': 'Shots On Goal',  # OddsShopper
           'SOG': 'Shots On Goal',  # Payday
+          'shots': 'Shots On Goal',  # Sleeper
+          'Shots': 'Shots On Goal',  # SuperDraft
+          'ShotsOnGoal': 'Shots On Goal',  # Vivid Picks
+          'Player shots on goal (incl. overtime)': 'Shots On Goal',  # Rebet
         # Blocked Shots
           'Blocked Shots': 'Blocked Shots',
         # Goalie Saves
@@ -275,11 +319,18 @@ MARKET_MAP = {
           'Assists': 'Assists',
           'Total Assists': 'Assists',  # OddsShopper
           'AST': 'Assists',  # Payday
+          'assists': 'Assists',  # Sleeper
+          'Player assists (incl. overtime)': 'Assists',  # Rebet
         # Goals Scored
           'Total Player Goals': 'Goals Scored',  # OddsShopper
           'Goals': 'Goals Scored',  # OwnersBox
+          'goals': 'Goals Scored',  # Sleeper
+          'GOL': 'Goals Scored',  # Payday
+          'Player goals (incl. overtime)': 'Goals Scored',  # Rebet
         # Power Play Points
           'Power Play Points': 'Power Play Points',  # OddsShopper
+          'powerplay_points': 'Power Play Points',  # Sleeper
+          'Powerplay Points': 'Power Play Points',  # Dabble
         # First Goal Scorer
           'First Goal Scorer': 'First Goal Scorer',  # OddsShopper
         # Last Goal Scorer

@@ -3,11 +3,6 @@ import asyncio
 from typing import Optional
 
 from app.product_data.data_collection.plugs.bookmakers import utils
-from app.product_data.data_collection.utils import standardizing as std
-from app.product_data.data_collection.plugs.bookmakers.utils import setup
-from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
-from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -25,16 +20,20 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tup
     # only want markets that are in the domain of player props
     if data.get('tab_name') == 'Player Props':
         # get the market name and check
-        if market := data.get('name'):
+        if market_name := data.get('name'):
             # fix some formatting issues specific to Rebet's formatting
-            if '{%player}' in market:
+            if '{%player}' in market_name:
                 # re-formats the market name
-                market = ' '.join(market.split(' (')[0].split()[1:]).title()
+                market_name = ' '.join(market_name.split(' (')[0].split()[1:]).title()
 
-            # clean the market name
-            cleaned_market = clean_market(market)
-            # return the market id from the db and the cleaned market name
-            return get_market_id(Market(cleaned_market, league)), cleaned_market
+            # create a market object
+            market_obj = utils.Market(market_name, league=league)
+            # gets the market id or log message
+            market_id, market_name = utils.get_market_id(bookmaker_name, market_obj)
+            # return both market id search result and cleaned market
+            return market_id, market_name
+
+    return None, None
 
 
 def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
@@ -44,10 +43,14 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tu
         subject_name_components = subject.split(', ')
         # check if the list has at least two elements
         if len(subject_name_components) > 1:
-            # clean the subject with a reformatted subject name...switching last name and first name order
-            cleaned_subject = clean_subject(f'{subject_name_components[1]} {subject_name_components[0]}')
-            # return the subject id from db and the cleaned subject name
-            return get_subject_id(Subject(cleaned_subject, league)), cleaned_subject
+            # create a subject object
+            subject_obj = utils.Subject(f'{subject_name_components[1]} {subject_name_components[0]}', league)
+            # gets the subject id or log message
+            subject_id, subject_name = utils.get_subject_id(bookmaker_name, subject_obj)
+            # return both subject id search result and cleaned subject
+            return subject_id, subject_name
+
+    return None, None
 
 
 def extract_odds(data: dict) -> Optional[str]:
@@ -79,9 +82,9 @@ class Rebet(utils.BookmakerPlug):
 
     async def collect(self) -> None:
         # get the url required to request tourney ids data
-        url = utils.get_url(name='tourney_ids')
+        url = utils.get_url(self.bookmaker_info.name, name='tourney_ids')
         # get the headers required to request tourney ids data
-        headers = utils.get_headers(name='tourney_ids')
+        headers = utils.get_headers(self.bookmaker_info.name, name='tourney_ids')
         # get the json data required to request tourney ids data with POST request
         json_data = utils.get_json_data(self.bookmaker_info.name, name='tourney_ids')
         # make the post request for tourney ids data
@@ -115,16 +118,22 @@ class Rebet(utils.BookmakerPlug):
             for event_data in data.get('events', []):
                 # extract league name from the dictionary and get data dic, if both exists keep executing
                 if (league := extract_league(event_data)) and (odds_data := event_data.get('odds')):
+                    # to track the leagues being collected
+                    self.metrics.add_league(league)
                     # for each market dictionary in the odds data dictionary's market if they exist
                     for market_data in odds_data.get('market', []):
                         # get the market id from the db and extract the market name from dictionary
-                        market_id, market= extract_market(self.bookmaker_info.namemarket_data, league)
+                        market_id, market_name = extract_market(self.bookmaker_info.name, market_data, league)
                         # if both exist then keep executing
-                        if market_id and market:
+                        if market_id and market_name:
+                            # to track the markets being collected
+                            self.metrics.add_market((league, market_name))
                             # get the subject id from db, and extract the subject name from dictionary
-                            subject_id, subject= extract_subject(self.bookmaker_info.namemarket_data, league)
+                            subject_id, subject_name = extract_subject(self.bookmaker_info.name, market_data, league)
                             # if both exist then keep executing
-                            if subject_id and subject:
+                            if subject_id and subject_name:
+                                # to track the subjects being collected
+                                self.metrics.add_subject((league, subject_name))
                                 # get dictionary that holds data on odds, label, line, if exists then execute
                                 if outcomes_data := market_data.get('outcome', []):
                                     # convert to list if outcomes data only returns a dictionary
@@ -140,7 +149,7 @@ class Rebet(utils.BookmakerPlug):
                                                 # update shared data
                                                 self.update_betting_lines({
                                                     'batch_id': self.batch_id,
-                                                    'time_processed': datetime.now(),
+                                                    'time_processed': str(datetime.now()),
                                                     'league': league,
                                                     'market_category': 'player_props',
                                                     'market_id': str(market_id),
@@ -155,4 +164,4 @@ class Rebet(utils.BookmakerPlug):
 
 
 if __name__ == "__main__":
-    utils.run(Rebet))
+    utils.run(Rebet)

@@ -1,14 +1,8 @@
-import asyncio
 from datetime import datetime
 from collections import defaultdict
 from typing import Optional
 
 from app.product_data.data_collection.plugs.bookmakers import utils
-from app.product_data.data_collection.utils import standardizing as std
-from app.product_data.data_collection.plugs.bookmakers.utils import setup
-from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
-from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -31,22 +25,34 @@ def extract_position(data: dict) -> Optional[str]:
 
 def extract_subject(bookmaker_name: str, data: dict, players_dict: dict, league: str) -> Optional[tuple[str, str]]:
     # get the player's id and their data from dictionaries, if both exist keep executing
-    if (player_id := data.get('subject_id')) and (player_data := players_dict.get(league).get(player_id)):
-        # get the subject's name from the dictionary
-        if subject := player_data.get('subject'):
-            # get the cleaned subject name
-            cleaned_subject = clean_subject(subject)
-            # return the subject id from the db and the cleaned subject name
-            return get_subject_id(Subject(cleaned_subject, league, player_data.get('subject_team'), extract_position(player_data))), cleaned_subject
+    if (player_id := data.get('subject_id')) and (league_data := players_dict.get(league)):
+        # get some player data dictionary
+        if player_data := league_data.get(player_id):
+            # get the subject's name from the dictionary
+            if subject_name := player_data.get('subject'):
+                # get player attributes
+                subject_team, position = player_data.get('subject_team'), extract_position(player_data)
+                # create a subject object
+                subject_obj = utils.Subject(subject_name, league, team=subject_team, position=position)
+                # gets the subject id or log message
+                subject_id, subject_name = utils.get_subject_id(bookmaker_name, subject_obj)
+                # return both subject id search result and cleaned subject
+                return subject_id, subject_name
+
+    return None, None
 
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get the market name from the dictionary, if exists keep going
-    if market := data.get('wager_type'):
-        # get the cleaned market name
-        cleaned_market = clean_market(market, league)
-        # return the market id from db and the cleaned market name
-        return get_market_id(Market(market, league)), cleaned_market
+    if market_name := data.get('wager_type'):
+        # create a market object
+        market_obj = utils.Market(market_name, league=league)
+        # gets the market id or log message
+        market_id, market_name = utils.get_market_id(bookmaker_name, market_obj)
+        # return both market id search result and cleaned market
+        return market_id, market_name
+
+    return None, None
 
 
 def extract_label(data: dict) -> Optional[str]:
@@ -65,7 +71,7 @@ class Sleeper(utils.BookmakerPlug):
 
     async def collect(self) -> None:
         # get the url required to request player data
-        url = utils.get_url(name='players')
+        url = utils.get_url(self.bookmaker_info.name, name='players')
         # get params required to request player data
         params = utils.get_params(self.bookmaker_info.name)
         # make the request for player data
@@ -79,17 +85,19 @@ class Sleeper(utils.BookmakerPlug):
             # for each player's data in the json
             for player_data in json_data:
                 # get the subject team and player id, if both exists then keep executing
-                if subject_team := player_data.get('team') and (player_id := player_data.get('player_id')):
+                if (subject_team := player_data.get('team')) and (player_id := player_data.get('player_id')):
                     # get subject's first and last name, if both exist then keep executing
                     if (first_name := player_data.get('first_name')) and (last_name := player_data.get('last_name')):
                         # get the subject's sport, if exists then keep executing
                         if subject_sport := player_data.get('sport'):
-                            # store data about the subject, corresponding to their sport and id
-                            players_dict[subject_sport][player_id] = {
-                                'subject_team': subject_team,
-                                'subject': ' '.join([first_name, last_name]),
-                                'position': player_data.get('position')
-                            }
+                            cleaned_league = utils.clean_league(subject_sport)
+                            if utils.is_league_valid(cleaned_league):
+                                # store data about the subject, corresponding to their sport and id
+                                players_dict[cleaned_league][player_id] = {
+                                    'subject_team': subject_team,
+                                    'subject': ' '.join([first_name, last_name]),
+                                    'position': player_data.get('position')
+                                }
 
             # get the url required to make request for prop lines
             url = utils.get_url(self.bookmaker_info.name)
@@ -103,24 +111,30 @@ class Sleeper(utils.BookmakerPlug):
             for prop_line_data in json_data:
                 # extract the league name from dictionary
                 if league := extract_league(prop_line_data):
+                    # to track the leagues being collected
+                    self.metrics.add_league(league)
                     # get the subject id from db and extract player name from dictionary
-                    subject_id, subject= extract_subject(self.bookmaker_info.nameprop_line_data, players, league)
+                    subject_id, subject_name = extract_subject(self.bookmaker_info.name, prop_line_data, players, league)
                     # if both exist then keep going
-                    if subject_id and subject:
+                    if subject_id and subject_name:
+                        # to track the subjects being collected
+                        self.metrics.add_subject((league, subject_name))
                         # get the market id from db and extract the market name from dictionary
-                        market_id, market= extract_market(self.bookmaker_info.nameprop_line_data, league)
+                        market_id, market_name = extract_market(self.bookmaker_info.name, prop_line_data, league)
                         # if both exist then keep executing
-                        if market_id and market:
+                        if market_id and market_name:
+                            # to track the markets being collected
+                            self.metrics.add_market((league, market_name))
                             # for each dictionary containing label, line, odds in prop_line_data's options if exists
                             for outcome_data in prop_line_data.get('options', []):
                                 # get the numeric over/under line and the decimal odds from the dictionary, if both exist keep going
-                                if (line := outcome_data.get('outcome_value')) and (odds := prop_line_data.get('payout_multiplier')):
+                                if (line := outcome_data.get('outcome_value')) and (odds := outcome_data.get('payout_multiplier')):
                                     # get the over or under label from the dictionary, if exists keep going
                                     if label := extract_label(outcome_data):
                                         # update shared data
                                         self.update_betting_lines({
                                             'batch_id': self.batch_id,
-                                            'time_processed': datetime.now(),
+                                            'time_processed': str(datetime.now()),
                                             'league': league,
                                             'market_category': 'player_props',
                                             'market_id': str(market_id),
@@ -130,9 +144,9 @@ class Sleeper(utils.BookmakerPlug):
                                             'bookmaker': self.bookmaker_info.name,
                                             'label': label,
                                             'line': line,
-                                            'odds': odds
+                                            'odds': float(odds)
                                         })
 
 
 if __name__ == "__main__":
-    utils.run(Sleeper))
+    utils.run(Sleeper)

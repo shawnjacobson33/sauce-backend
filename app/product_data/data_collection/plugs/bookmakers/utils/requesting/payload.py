@@ -29,7 +29,7 @@ URL_MAP = {
         'markets': 'https://app.ownersbox.com/fsp/marketType/active?',
         'prop_lines': 'https://app.ownersbox.com/fsp/v2/market?'
     }, 'ParlayPlay': {
-        'prop_lines': 'https://parlayplay.io/api/v1/crossgame/search/?sport=All&league=&includeAlt=true'
+        'prop_lines': 'https://parlayplay.io/api/v1/crossgame/search/?sport=All&league=&includeAlt=true&version=2'
     },
     'Payday': {
         'leagues': 'https://api.paydayfantasy.com/api/v2/app/contests/total',

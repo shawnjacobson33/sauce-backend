@@ -1,13 +1,7 @@
-import asyncio
 from datetime import datetime
 from typing import Optional
 
 from app.product_data.data_collection.plugs.bookmakers import utils
-from app.product_data.data_collection.utils import standardizing as std
-from app.product_data.data_collection.plugs.bookmakers.utils import setup
-from app.product_data.data_collection.utils.requesting import RequestManager
-from app.product_data.data_collection.plugs.bookmakers.base import BookmakerPlug
-from app.product_data.data_collection.utils.objects import Subject, Market, Bookmaker
 
 
 def extract_teams_dict(data: dict) -> dict:
@@ -132,22 +126,32 @@ def extract_league(a_id: str, game_ids_dict: dict, games_dict: dict, solo_games_
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get market and market id
-    if market := data.get('display_stat'):
-        # get the cleaned market name
-        cleaned_market = clean_market(market, league)
-        # return the market id from the db and the clean market name
-        return get_market_id(Market(cleaned_market, league)), cleaned_market
+    if market_name := data.get('display_stat'):
+        # create a market object
+        market_obj = utils.Market(market_name, league=league)
+        # gets the market id or log message
+        market_id, market_name = utils.get_market_id(bookmaker_name, market_obj)
+        # return both market id search result and cleaned market
+        return market_id, market_name
+
+    return None, None
 
 
-def extract_subject(a_id: str, league: str, player_ids_dict: dict, players_dict: dict) -> Optional[tuple[str, str]]:
+def extract_subject(bookmaker_name: str, a_id: str, league: str, player_ids_dict: dict, players_dict: dict) -> Optional[tuple[str, str]]:
     # get player id and dictionary, if both exist keep executing
     if (player_id := player_ids_dict.get(a_id)) and (player_data := players_dict.get(player_id)):
         # get the player name, if exists keep executing
-        if subject := player_data.get('subject'):
-            # clean the subject name
-            cleaned_subject = clean_subject(subject)
-            # return the subject id from the db and the cleaned subject name
-            return get_subject_id(Subject(cleaned_subject, league, team=player_data.get('subject_team'))), cleaned_subject
+        if subject_name := player_data.get('subject'):
+            # get player attributes
+            subject_team = player_data.get('subject_team')
+            # create a subject object
+            subject_obj = utils.Subject(subject_name, league, team=subject_team)
+            # gets the subject id or log message
+            subject_id, subject_name = utils.get_subject_id(bookmaker_name, subject_obj)
+            # return both subject id search result and cleaned subject
+            return subject_id, subject_name
+
+    return None, None
 
 
 def extract_label(data: dict) -> Optional[str]:
@@ -176,9 +180,9 @@ class UnderdogFantasy(utils.BookmakerPlug):
 
     async def collect(self) -> None:
         # get the url required to request teams data
-        url = utils.get_url(name='teams')
+        url = utils.get_url(self.bookmaker_info.name, name='teams')
         # get the headers required to request teams data
-        headers = utils.get_headers(name='teams')
+        headers = utils.get_headers(self.bookmaker_info.name, name='teams')
         # get the cookies required to get teams data
         cookies = utils.get_cookies(self.bookmaker_info.name)
         # make the request for teams data
@@ -215,14 +219,20 @@ class UnderdogFantasy(utils.BookmakerPlug):
                 if a_id and a_data:
                     # extract the league from match data dictionary, if exists keep executing
                     if league := extract_league(a_id, game_ids_dict, games_dict, solo_games_dict):
+                        # to track the leagues being collected
+                        self.metrics.add_league(league)
                         # get the market id from db and the market name
-                        market_id, market= extract_market(self.bookmaker_info.namea_data, league)
+                        market_id, market_name = extract_market(self.bookmaker_info.name, a_data, league)
                         # if both exist then keep executing
-                        if market_id and market:
+                        if market_id and market_name:
+                            # to track the markets being collected
+                            self.metrics.add_market((league, market_name))
                             # get the subject id from db and extract the subject name
-                            subject_id, subject= extract_subject(self.bookmaker_info.namea_id, league, player_ids_dict, players_dict)
+                            subject_id, subject_name = extract_subject(self.bookmaker_info.name, a_id, league, player_ids_dict, players_dict)
                             # if both exist keep executing
-                            if subject_id and subject:
+                            if subject_id and subject_name:
+                                # to track the subjects being collected
+                                self.metrics.add_subject((league, subject_name))
                                 # get the numeric over/under line, if exists keep executing
                                 if line := prop_line_data.get('stat_value'):
                                     # for each dictionary in prop_line_data's options if they exist
@@ -232,7 +242,7 @@ class UnderdogFantasy(utils.BookmakerPlug):
                                         # update shared data
                                         self.update_betting_lines({
                                             'batch_id': self.batch_id,
-                                            'time_processed': datetime.now(),
+                                            'time_processed': str(datetime.now()),
                                             'league': league,
                                             'market_category': 'player_props',
                                             'market_id': str(market_id),
@@ -248,4 +258,4 @@ class UnderdogFantasy(utils.BookmakerPlug):
 
 
 if __name__ == "__main__":
-    utils.run(UnderdogFantasy))
+    utils.run(UnderdogFantasy)

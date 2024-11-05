@@ -122,6 +122,8 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tu
         # return both subject id search result and cleaned subject
         return subject_id, subject_name
 
+    return None, None
+
 
 def extract_market(bookmaker_name: str, data: list, league: str) -> Optional[tuple[str, str]]:
     # make sure the data has enough elements to index properly
@@ -134,6 +136,8 @@ def extract_market(bookmaker_name: str, data: list, league: str) -> Optional[tup
         market_id, market_name = utils.get_market_id(bookmaker_name, market_obj)
         # return both market id search result and cleaned market
         return market_id, market_name
+
+     return None, None
 
 
 def extract_line(data: dict) -> Optional[str]:

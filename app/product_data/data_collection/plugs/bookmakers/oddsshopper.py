@@ -39,6 +39,8 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[tup
         # return both market id search result and cleaned market
         return market_id, market_name
 
+    return None, None
+
 
 def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tuple[str, str]]:
     # get a list of dictionaries and the first dictionary in the list, if exists keep going
@@ -51,6 +53,8 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[tu
             subject_id, subject_name = utils.get_subject_id(bookmaker_name, subject_obj)
             # return both subject id search result and cleaned subject
             return subject_id, subject_name
+
+    return None, None
 
 
 def extract_bookmaker(data: dict) -> Optional[str]:
@@ -123,9 +127,12 @@ class OddsShopper(utils.BookmakerPlug):
             # add all requests to the event loop and make the asynchronously
             await asyncio.gather(*tasks)
 
+    # TODO: ANYWAY TO CHANGE game_info FORMAT? DON'T GET DATA FROM BOOKMAKERS YOU ALREADY HAVE?
     async def _parse_lines(self, response, league: str) -> None:
         # get json data from response and check its existence
         if json_data := response.json():
+            # to track the leagues being collected
+            self.metrics.add_league(league)
             # for each event/game in the response data
             for event in json_data:
                 # gets the game info from the dictionary
@@ -134,10 +141,14 @@ class OddsShopper(utils.BookmakerPlug):
                 market_id, market_name = extract_market(self.bookmaker_info.name, event, league)
                 # only keep executing if market id and market exist
                 if market_id and market_name:
+                    # to track the markets being collected
+                    self.metrics.add_market((league, market_name))
                     # get the subject id from the db and extract the subject from outcome
                     subject_id, subject_name = extract_subject(self.bookmaker_info.name, event, league)
                     # only if both exist should execution keep going
                     if subject_id and subject_name:
+                        # to track the subjects being collected
+                        self.metrics.add_subject((league, subject_name))
                         # iterate through each side or bookmaker for the prop line
                         for side in event.get('sides', []):
                             # get the label from the side dictionary, only keep going if it exists
