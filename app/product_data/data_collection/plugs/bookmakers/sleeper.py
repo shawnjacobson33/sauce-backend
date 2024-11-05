@@ -1,8 +1,19 @@
+import asyncio
 from datetime import datetime
 from collections import defaultdict
 from typing import Optional
 
 from app.product_data.data_collection.plugs.bookmakers import utils
+from app.product_data.data_collection.plugs.utils.definitions import IN_SEASON_LEAGUES
+
+
+# formatting consistency
+LEAGUE_MAP = {
+    'NCAAF': 'CFB',
+    'NCAAM': 'CBB'
+}
+# get in-season leagues
+LEAGUES = [LEAGUE_MAP.get(league, league).lower() for league in IN_SEASON_LEAGUES if league != 'NCAAW']
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -99,10 +110,31 @@ class Sleeper(utils.BookmakerPlug):
                                     'position': player_data.get('position')
                                 }
 
-            # get the url required to make request for prop lines
-            url = utils.get_url(self.bookmaker_info.name)
-            # make the request for prop lines data
-            await self.req_mngr.get(url, self._parse_lines, players_dict, headers=self.headers)
+            # create a list to store requests to make
+            tasks = list()
+            # for each in season league mapped towards sleeper's format
+            for league_name in LEAGUES:
+                # get the url required to make request for prop lines
+                url = utils.get_url(self.bookmaker_info.name)
+                # create a dictionary of params specific to a particular league
+                params = {
+                    'sports%5B%5D': league_name,
+                    'dynamic': 'true',
+                    'include_preseason': 'true',
+                    'eg': '18.control'
+                }
+                # add the request task to the list
+                tasks.append(self.req_mngr.get(url, self._parse_lines, players_dict, headers=self.headers, params=params))
+                # Sleeper also offers alt_lines...make separate request for those
+                alt_url = url.replace('available', 'available_alt')
+                # delete some parameters that aren't used in typical requests to this endpoint
+                del params['dynamic']
+                del params['eg']
+                # add the request for alt prop lines data to the list
+                tasks.append(self.req_mngr.get(alt_url, self._parse_lines, players_dict, headers=self.headers, params=params))
+
+            # start making requests asynchronously
+            await asyncio.gather(*tasks)
 
     async def _parse_lines(self, response, players: dict) -> None:
         # get response data as json, if exists keep going

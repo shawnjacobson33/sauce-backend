@@ -29,7 +29,8 @@ URL_MAP = {
         'markets': 'https://app.ownersbox.com/fsp/marketType/active?',
         'prop_lines': 'https://app.ownersbox.com/fsp/v2/market?'
     }, 'ParlayPlay': {
-        'prop_lines': 'https://parlayplay.io/api/v1/crossgame/search/?sport=All&league=&includeAlt=true&version=2'
+        'sports': 'https://parlayplay.io/api/v1/sports/',
+        'prop_lines': 'https://parlayplay.io/api/v1/crossgame/search/?'
     },
     'Payday': {
         'leagues': 'https://api.paydayfantasy.com/api/v2/app/contests/total',
@@ -43,7 +44,7 @@ URL_MAP = {
         'prop_lines': 'https://api.rebet.app/prod/sportsbook-v3/load-sportsbook-data-v3'
     }, 'Sleeper': {
         'players': 'https://api.sleeper.app/players',
-        'prop_lines': 'https://api.sleeper.app/lines/available?dynamic=true&include_preseason=true&eg=15.control'
+        'prop_lines': 'https://api.sleeper.app/lines/available?'
     }, 'SuperDraft': {
         'prop_lines': 'https://api.superdraft.io/api/prop/v3/active-fantasy'
     },
@@ -482,6 +483,7 @@ def get_params(bookmaker_name: str, name: str = 'prop_lines', var_1=None, var_2=
             }
         }
     }
+
     return params_map.get(bookmaker_name).get(name)
 
 
