@@ -12,7 +12,8 @@ URL_MAP = {
         'events': 'https://api.dabble.com/competitions/{}/sport-fixtures',
         'prop_lines': 'https://api.dabble.com/sportfixtures/details/{}'
     }, 'Drafters': {
-        'prop_lines': 'https://node.drafters.com/props-game/get-props-games'
+        'leagues': 'https://api.drafters.com/games/list/draft_user?page_type=props',
+        'prop_lines': 'https://node.drafters.com/props-game/get-props-games/{}?'
     }, 'DraftKingsPick6': {
         'prop_lines': "https://pick6.draftkings.com/"
     },
@@ -144,15 +145,27 @@ HEADERS_MAP = {
         }
 
     }, 'Drafters': {
+        'leagues': {
+            'Host': 'api.drafters.com',
+            'accept': '*/*',
+            'app_version': '13.9',
+            'accept-language': 'en-US,en;q=0.9',
+            'device_type': 'ios',
+            'user-agent': 'Drafters/11 CFNetwork/1568.100.1.2.1 Darwin/24.0.0',
+            'device_id': 'c4Nl5dUj2EBxtUqi5sWVNk:APA91bG1zzkCnqCs_Rumf2Senn56oGoQ_li1Rwf_ICXjZer_sgzWgVSiv9bSTCGMJE3m3R8bP4Ssy33l14BtZ-QVMLBDTPEb_gjiSpoHD_ZB4sbhkDX5n4A',
+            'authorizations': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MjQwOTkxMzUsImp0aSI6Ik5qQmxaalU1TXpRNFlqVTRObUkyWldVMk0yVTRNV1k0TVRVM1l6YzFOVE13WldZeVlqTXdNbUkzTkdObVpXTTNPREZsT1RRMU1EVTRaRGhtT0RNME1BPT0iLCJpc3MiOiJodHRwczpcL1wvYXBpLmRyYWZ0ZXJzLmNvbVwvIiwibmJmIjoxNzI0MDk5MTI1LCJleHAiOjE3NTUyMDMxMjUsImRhdGEiOnsiaWQiOiI4MTUwMyIsInVzZXJuYW1lIjoidGhlcmVhbHNsaW0iLCJkcmFmdGVyc19pZCI6InRoZXJlYWxzbGltIiwiZW1haWwiOiJzaGF3bmphY29ic29uMzNAZ21haWwuY29tIn19.p86Dtjv0L-mraFMhbcvHMdHparpUsR1tXEymQcdwMrg',
+            'user_agent': 'iPhone 14 Pro',
+            'access_token': 'draft_user',
+        },
         'prop_lines': {
             'Host': 'node.drafters.com',
             'accept': '*/*',
-            'app_version': '13.7',
-            'if-none-match': 'W/"71e64-mEhxPh4ljtQEfs/ywHWFIsBrtwU"',
+            'app_version': '13.9',
+            'if-none-match': 'W/"2f5da-fV756NucLWh9zD0SwzIim/BBSTU"',
             'accept-language': 'en-US,en;q=0.9',
             'device_type': 'ios',
-            'user-agent': 'Drafters/1 CFNetwork/1496.0.7 Darwin/23.5.0',
-            'device_id': 'cwEL85ss0EYPrM04yxrkGf:APA91bG2MtKk_iLZ-_twLz8QU_6CscuU3DQkPVw9m-6mNPTssieqvi51X6MCBlVfGkx4ygTdi7vGCT2WZsGRe_GbY8sO4Scx34WxTErCaXBQwWZNMlDiZu9YODqBqv5MrnXBVN_nX9_f',
+            'user-agent': 'Drafters/11 CFNetwork/1568.100.1.2.1 Darwin/24.0.0',
+            'device_id': 'c4Nl5dUj2EBxtUqi5sWVNk:APA91bG1zzkCnqCs_Rumf2Senn56oGoQ_li1Rwf_ICXjZer_sgzWgVSiv9bSTCGMJE3m3R8bP4Ssy33l14BtZ-QVMLBDTPEb_gjiSpoHD_ZB4sbhkDX5n4A',
             'authorizations': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MjQwOTkxMzUsImp0aSI6Ik5qQmxaalU1TXpRNFlqVTRObUkyWldVMk0yVTRNV1k0TVRVM1l6YzFOVE13WldZeVlqTXdNbUkzTkdObVpXTTNPREZsT1RRMU1EVTRaRGhtT0RNME1BPT0iLCJpc3MiOiJodHRwczpcL1wvYXBpLmRyYWZ0ZXJzLmNvbVwvIiwibmJmIjoxNzI0MDk5MTI1LCJleHAiOjE3NTUyMDMxMjUsImRhdGEiOnsiaWQiOiI4MTUwMyIsInVzZXJuYW1lIjoidGhlcmVhbHNsaW0iLCJkcmFmdGVyc19pZCI6InRoZXJlYWxzbGltIiwiZW1haWwiOiJzaGF3bmphY29ic29uMzNAZ21haWwuY29tIn19.p86Dtjv0L-mraFMhbcvHMdHparpUsR1tXEymQcdwMrg',
             'user_agent': 'iPhone 14 Pro',
             'access_token': 'draft_user',
@@ -181,12 +194,11 @@ HEADERS_MAP = {
             'Host': 'api.hotstreak.gg',
             'accept': '*/*',
             'content-type': 'application/json',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJIb3RTdHJlYWsgKHByb2R1Y3Rpb24pIiwic3ViIjoiSHNmOjpVc2VyOnBydEpBNnciLCJleHAiOjE3MzAxNzU3MzcsImlhdCI6MTcyNzU4MzczN30.rZDcR_OhHMY9gd6l57xRpSiNk16aYntW4NquRZe_hzM',
+            'authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJIb3RTdHJlYWsgKHByb2R1Y3Rpb24pIiwic3ViIjoiSHNmOjpVc2VyOnBydEpBNnciLCJleHAiOjE3MzM0NTI4NjIsImlhdCI6MTczMDg2MDg2Mn0.-c_-vETSoxMMtMNf1y17HkXvVA0XOLxKnxc5ehNE3Es',
             'x-requested-with': 'ios',
             'user-agent': 'HotStreak/1717696638 CFNetwork/1496.0.7 Darwin/23.5.0',
             'accept-language': 'en-US,en;q=0.9',
         }
-
     }, 'MoneyLine': {
         'prop_lines': {
             'Host': 'moneylineapp.com',
@@ -612,7 +624,11 @@ def get_json_data(bookmaker_name: str, name: str = 'prop_lines', var=None):
                 }
             }
         }, 'HotStreak': {
-            'leagues': {
+            'tokens': {
+                'query': 'query session { session {\n        __typename\ngeneratedAt\njwt\nuser {\n\n__typename\nid\naffiliate\nbalances {\n\n__typename\nlockedBonus\nlockedRegular\nplayable\nrefundable\ntotal\nunlockedBonus\nunlockedRegular\nwithdrawable\n\n}\nbroadcastChannel\ncoupons {\n\n__typename\nid\ncode\ncreatedAt\nexpiry\ngeneratedAt\nkind\nmeta\nmultiUse\nupdatedAt\nused\nvalue\n\n}\ncreatedAt\ndateOfBirth\ndepositCount\nemail\nentryCount\nestimatedHold\nfirstName\ngeoRestricted\nhandle\nknownAt\nkycStatus\nlastName\nlastUtm\nloyaltyRank\noauths {\n\n__typename\nid\ncreatedAt\ndiscardedAt\ndisplayName\ngeneratedAt\nprovider\nupdatedAt\n\n}\npermissions\nphone\npusherId\npusherToken\nqualifiedAt\nrelevantRewards {\n\n__typename\nid\namount\nclaimedAt\ncreatedAt\nday\nexpiresAt\ngeneratedAt\nkind\nmeta\nupdatedAt\n\n}\nreferralCode\nreferrerReferralCode\nrestrictedAt\nsecret\nsuperUser\nverificationSession {\n\n__typename\nid\nclientSecret\ncreatedAt\nephemeralKeySecret\nexternalId\ngeneratedAt\nlastError\nstatus\nupdatedAt\nurl\n\n}\nxp\nzip\n\n}\n\n      } }',
+                'variables': {},
+                'operationName': 'session',
+            }, 'leagues': {
                 'query': 'query system { system {\n        __typename\ngeneratedAt\nmaximumDeposit\nmaximumInPlayWager\nmaximumPregameWager\nmaximumReferrals\nminimumDeposit\nminimumInPlayWager\nminimumPregameWager\nminimumWithdraw\npublicBroadcastChannel\npusherAppKey\npusherCluster\nreferrerBonus\nsports {\n\n__typename\nid\nactive\ncreatedAt\ngeneratedAt\ninPlay\nleagues {\n\n__typename\nid\nalias\ncreatedAt\ngeneratedAt\nname\novertimeClock\novertimePeriods\nregulationClock\nregulationPeriods\nsportId\nupdatedAt\n\n}\nname\nupdatedAt\n\n}\n\n      } }',
                 'variables': {},
                 'operationName': 'system',

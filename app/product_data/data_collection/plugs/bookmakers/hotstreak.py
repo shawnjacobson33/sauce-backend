@@ -89,11 +89,13 @@ def extract_league(data: dict, opponent_ids: dict) -> Optional[str]:
     # get opponent id and then league from opponent ids dict, if both exist then execute
     if (opponent_id := data.get('opponent_id')) and (league := opponent_ids.get(opponent_id)):
         # clean the league name
-        league = utils.clean_league(league)
+        cleaned_league = utils.clean_league(league)
         # check the validity of the league and if so then return the league name
-        if utils.is_league_valid(league):
+        if utils.is_league_valid(cleaned_league):
             # return the cleaned and valid league name
-            return league
+            return cleaned_league
+        else:
+            print(cleaned_league)
 
 
 def extract_position(data: dict) -> Optional[str]:
@@ -170,17 +172,30 @@ class HotStreak(utils.BookmakerPlug):
         self.headers = utils.get_headers(self.bookmaker_info.name)
 
     async def collect(self) -> None:
-        # get the json data needed for the request for current leagues data
-        json_data = utils.get_json_data(self.bookmaker_info.name, name='leagues')
-        # make the request for leagues data
-        await self.req_mngr.post(self.url, self._parse_league_aliases, headers=self.headers, json=json_data)
+        # get the json data associated with requesting for session data
+        json_data = utils.get_json_data(self.bookmaker_info.name, name='tokens')
+        # make the request for session data
+        await self.req_mngr.post(self.url, self._parse_token, headers=self.headers, json=json_data)
+
+    async def _parse_token(self, response) -> None:
+        # get the response data as json and get another dictionary nested inside
+        if (json_data := response.json()) and (data := json_data.get('data')):
+            # get some session data dictionary
+            if session_data := data.get('session'):
+                # get the fresh token, if it exists keep going
+                if token := session_data.get('jwt'):
+                    # update the authorization token
+                    self.headers['authorization'] = f'Bearer {token}'
+                    # get the json data needed for the request for current leagues data
+                    json_data = utils.get_json_data(self.bookmaker_info.name, name='leagues')
+                    # make the request for leagues data
+                    await self.req_mngr.post(self.url, self._parse_league_aliases, headers=self.headers, json=json_data)
 
     async def fetch_page(self, leagues: dict, page: int) -> None:
         # get the json_data (for post request) to get the data of a page of prop lines
         json_data = utils.get_json_data(self.bookmaker_info.name, var=page)
         # make the post request for the particular (page) page of prop lines
         return await self.req_mngr.post(self.url, self._parse_lines, leagues, headers=self.headers, json=json_data)
-
 
     async def _parse_league_aliases(self, response) -> None:
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
@@ -197,7 +212,7 @@ class HotStreak(utils.BookmakerPlug):
                 # make all the requests asynchronously
                 await asyncio.gather(*tasks)
 
-    # TODO: GETTING UNAUTHORIZED RESPONSES FOR PAGES > 1
+    # TODO: BETTER BUT STILL MISSING NCAAM AND NCAAW AND NCAAF
     async def _parse_lines(self, response, league_aliases: dict) -> None:
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('data')):

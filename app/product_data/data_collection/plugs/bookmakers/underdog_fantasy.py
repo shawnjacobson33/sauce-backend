@@ -46,7 +46,7 @@ def extract_games_dict(data: dict) -> dict:
         # get the game id from the dictionary, if exists keep going
         if game_id := game_data.get('id'):
             # store the id along with the game data dictionary
-            game_data[game_id] = game_data
+            games_dict[game_id] = game_data
 
     # return the game data dictionary
     return games_dict
@@ -60,7 +60,7 @@ def extract_solo_games_dict(data: dict) -> dict:
         # get the game id from the dictionary, if it exists keep going
         if game_id := solo_game_data.get('id'):
             # store the game id corresponding to the dictionary of solo game data
-            solo_game_data[game_id] = solo_game_data
+            solo_games_dict[game_id] = solo_game_data
 
     # return the dictionary of ids and data
     return solo_games_dict
@@ -88,7 +88,7 @@ def extract_players_dict(data: dict, teams_dict: dict) -> dict:
         # get the player id from the dictionary, if it exists keep executing
         if player_id := player_data.get('id'):
             # store the id along with corresponding player data
-            player_data[player_id] = {
+            players_dict[player_id] = {
                 'subject': extract_player_name(player_data),
                 'subject_team': extract_subject_team(player_data, teams_dict)
             }

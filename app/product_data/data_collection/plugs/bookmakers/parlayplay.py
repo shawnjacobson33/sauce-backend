@@ -53,10 +53,8 @@ def extract_odds_and_label(data: dict) -> Optional[tuple[str, str]]:
     for odds, label in odds_and_labels:
         if odds:
             yield odds, label
-    # # yield for each over and under label and over odds or under odds corresponding, if the odds for a label exist
-    # yield from ((odds, label) for odds, label in odds_and_labels if odds)
 
-# TODO: TWEAK SO YOU GET SPORTS FROM https://parlayplay.io/api/v1/sports/ AND THEN USE THEM AS PARAMS IN PROP LINES URL
+
 class ParlayPlay(utils.BookmakerPlug):
     def __init__(self, bookmaker_info: utils.Bookmaker, batch_id: str):
         # call parent class Plug
@@ -102,7 +100,6 @@ class ParlayPlay(utils.BookmakerPlug):
             # make all requests asynchronously
             await asyncio.gather(*tasks)
 
-    # TODO: NOT GETTING ALL LINES ON THE APP?
     async def _parse_lines(self, response, league: str) -> None:
         # get the response data, if exists then keep executing
         if json_data := response.json():

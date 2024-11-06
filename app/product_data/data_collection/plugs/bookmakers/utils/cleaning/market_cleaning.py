@@ -28,6 +28,7 @@ MARKET_MAP = {
         'POINTS_AND_REBOUNDS': 'Points + Rebounds',  # BoomFantasy
         'P+R': 'Points + Rebounds',  # Payday
         'Pts+Rebs': 'Points + Rebounds',  # PrizePicks
+        'Points+Rebounds': 'Points + Rebounds',  # Drafters
       # Points + Assists
         'Pts + Ast': 'Points + Assists',  # ParlayPlay
         'Pts + Asts': 'Points + Assists',  # OwnersBox
@@ -35,6 +36,7 @@ MARKET_MAP = {
         'POINTS_AND_ASSISTS': 'Points + Assists',  # BoomFantasy
         'P+A': 'Points + Assists',  # Payday
         'Pts+Asts': 'Points + Assists',  # PrizePicks
+        'Points+Assists': 'Points + Assists',  # Drafters
       # Rebounds + Assists
         'Reb + Ast': 'Rebounds + Assists',  # ParlayPlay
         'Rebs + Asts': 'Rebounds + Assists',  # OwnersBox
@@ -43,6 +45,7 @@ MARKET_MAP = {
         'R+A': 'Rebounds + Assists',  # Payday
         'Assists + Rebounds': 'Rebounds + Assists',  # DraftKings Pick6
         'Rebs+Asts': 'Rebounds + Assists',  # PrizePicks
+        'Rebounds+Assists': 'Rebounds + Assists',  # Drafters
       # Points + Rebounds + Assists
         'Pts + Reb + Ast': 'Points + Rebounds + Assists',  # ParlayPlay, BetOnline
         'Pts + Rebs + Asts': 'Points + Rebounds + Assists',  # OwnersBox
@@ -62,6 +65,7 @@ MARKET_MAP = {
         '3PM': '3-Pointers Made',  # Payday
         'three_points_made': '3-Pointers Made',  # HotStreak
         '3-PT Made': '3-Pointers Made',  # PrizePicks
+        '3 Pointers Made': '3-Pointers Made',  # Drafters
       # 3-Pointers Attempted
         '3PT Attempted': '3-Pointers Attempted',  # Dabble
       # 2-Pointers Made
@@ -100,6 +104,7 @@ MARKET_MAP = {
         'Steals + Blocks': 'Blocks + Steals',  # DraftKings Pick6, OddsShopper, OwnersBox
         'Stl + Blk': 'Blocks + Steals',  # ParlayPlay
         'Blks+Stls': 'Blocks + Steals',  # PrizePicks
+        'Blocks+Steals': 'Blocks + Steals',  # Drafters
       # Fantasy Points
         'fantasy_points': 'Fantasy Points',  # HotStreak
         'Fantasy Score': 'Fantasy Points',  # PrizePicks
@@ -157,6 +162,7 @@ MARKET_MAP = {
           'Longest Passing Completion (Yards)': 'Longest Passing Completion',  # Dabble
           'Longest Pass': 'Longest Passing Completion',  # ParlayPlay
           'longest_pass': 'Longest Passing Completion',  # HotStreak
+          'Longest Completion': 'Longest Passing Completion',  # Drafters
         # Rushing Yards
           'RUSHING_YARDS': 'Rushing Yards',  # BoomFantasy
           'Total Rushing Yards': 'Rushing Yards',  # OddsShopper
@@ -226,6 +232,7 @@ MARKET_MAP = {
           'Rush+Rec Yds': 'Rushing + Receiving Yards',  # PrizePicks
           'rushing_and_receiving_yards': 'Rushing + Receiving Yards',  # Sleeper
           'receiving_plus_rushing_yards': 'Rushing + Receiving Yards',  # HotStreak
+          'Rush+Receiving Yds': 'Rushing + Receiving Yards',  # Drafters
         # Rushing + Receiving Touchdowns
           'Rushing + Receiving Touchdowns': 'Rushing + Receiving Touchdowns',  # MoneyLine
           'Receiving + Rushing Touchdowns': 'Rushing + Receiving Touchdowns',  # Dabble
@@ -259,6 +266,7 @@ MARKET_MAP = {
           'Tackle Assists': 'Tackle Assists',  # Dabble
           'Total Assists': 'Tackle Assists',   # OddsShopper
           'assists': 'Tackle Assists',  # Sleeper
+          'Assists': 'Tackle Assists',  # Underdog Fantasy
         # Solo Tackles
           'Solo Tackles': 'Solo Tackles',  # OwnersBox, ParlayPlay
           'Tackle Tackles': 'Solo Tackles',  # OddsShopper
@@ -267,7 +275,8 @@ MARKET_MAP = {
            # Dabble, OwnersBox -- "Interceptions" TODO: IMPLEMENT LOGIC
            # ParlayPlay -- "Interception"
            # PrizePicks -- 'INT'
-           'defensive_interceptions': 'Interceptions',
+          'defensive_interceptions': 'Interceptions',
+          'Defensive Interceptions': 'Interceptions',  # Underdog Fantasy
         # Kicking Points
           'Kicking Points': 'Kicking Points',  # DraftKingsPick6, OwnersBox
           'Kicker Points': 'Kicking Points',
@@ -291,6 +300,8 @@ MARKET_MAP = {
           'First Touchdown Scorer': 'First Touchdown Scorer',  # OddsShopper
         # Last Touchdown Scorer
           'Last Touchdown Scorer': 'Last Touchdown Scorer',  # OddsShopper
+        # Fumbles Lost
+          'Fumbles Lost': 'Fumbles Lost',  # Underdog Fantasy
     },
     'Ice Hockey': {
         # Points
@@ -313,8 +324,13 @@ MARKET_MAP = {
           'Blocked Shots': 'Blocked Shots',
         # Goalie Saves
           'Goalie Saves': 'Goalie Saves',
+          'Saves': 'Goalie Saves',  # Drafters
+        # 1st Period Goalie Saves
+          '1st Period Saves': '1st Period Goalie Saves',  # Underdog Fantasy
         # Goals Against
           'Goals Against': 'Goals Against',
+        # 1st Period Goals Against
+          '1st Period Goals Against': '1st Period Goals Against',  # Underdog Fantasy
         # Assists
           'Assists': 'Assists',
           'Total Assists': 'Assists',  # OddsShopper
@@ -331,6 +347,7 @@ MARKET_MAP = {
           'Power Play Points': 'Power Play Points',  # OddsShopper
           'powerplay_points': 'Power Play Points',  # Sleeper
           'Powerplay Points': 'Power Play Points',  # Dabble
+          'power_play_points': 'Power Play Points',  # HotStreak
         # First Goal Scorer
           'First Goal Scorer': 'First Goal Scorer',  # OddsShopper
         # Last Goal Scorer
@@ -341,6 +358,9 @@ MARKET_MAP = {
           'Hits': 'Hits',  # PrizePicks
         # Time On Ice
           'Time On Ice': 'Time On Ice',  # PrizePicks
+          'Time on Ice': 'Time On Ice',  # Underdog Fantasy
+        # Fantasy Points
+          'Fantasy Points': 'Fantasy Points',  # Underdog Fantasy
     }
 }
 FANTASY_SCORE_MAP = {
