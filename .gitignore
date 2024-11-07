@@ -1,3 +1,4 @@
 # IGNORE ALL JSON FILES
 *.json
 *.txt
+.DS_Store
