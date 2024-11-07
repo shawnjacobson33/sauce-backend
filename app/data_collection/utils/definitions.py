@@ -28,10 +28,18 @@ LEAGUE_SPORT_MAP = {
 def get_in_season_leagues() -> list:
     current_month = datetime.now().month
     in_season_leagues = []
+
     for league, in_season_months in LEAGUES_SCHEDULE.items():
-        in_season_months = in_season_months.split('-')
-        if (int(in_season_months[0]) <= current_month <= 12) or (1 <= current_month <= int(in_season_months[-1])):
-            in_season_leagues.append(league)
+        start_month, end_month = map(int, in_season_months.split('-'))
+
+        if start_month <= end_month:
+            # Non-wrapping range (e.g., March to October)
+            if start_month <= current_month <= end_month:
+                in_season_leagues.append(league)
+        else:
+            # Wrapping range (e.g., September to February)
+            if current_month >= start_month or current_month <= end_month:
+                in_season_leagues.append(league)
 
     return in_season_leagues
 

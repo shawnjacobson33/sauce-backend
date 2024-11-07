@@ -6,10 +6,10 @@ import asyncio
 
 from app import database as db
 from app.data_collection import bookmakers as bkm
-
+from app.data_collection.bookmakers import BettingLines
 
 BOOKMAKER_PLUGS = {
-    "BetOnline": bkm.BetOnline,
+    # "BetOnline": bkm.BetOnline,
     "BoomFantasy": bkm.BoomFantasy,
     "Dabble": bkm.Dabble,
     "Drafters": bkm.Drafters,
@@ -40,9 +40,9 @@ def configure(plug) -> bkm.BookmakerPlug:
     return plug(bookmaker_info, batch_id)
 
 
-def save_pending_markets_to_file(bookmaker_name: str):
+def save_pending_markets_to_file():
     # create a custom file path to store the betting lines sample
-    file_path = f'utils/reporting/reports/{bookmaker_name}/json_data/pending_markets.json'
+    file_path = f'utils/reports/general/pending_markets.json'
     # make any directories that don't already exist
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     file_path = os.path.join(os.path.dirname(__file__), file_path)
@@ -51,9 +51,9 @@ def save_pending_markets_to_file(bookmaker_name: str):
         json.dump(bkm.Markets.get_pending_data(), f, indent=4)
 
 
-def save_pending_subjects_to_file(bookmaker_name: str):
+def save_pending_subjects_to_file():
     # create a custom file path to store the betting lines sample
-    file_path = f'utils/reporting/reports/{bookmaker_name}/json_data/pending_subjects.json'
+    file_path = f'utils/reports/general/pending_subjects.json'
     # make any directories that don't already exist
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     file_path = os.path.join(os.path.dirname(__file__), file_path)
@@ -62,9 +62,9 @@ def save_pending_subjects_to_file(bookmaker_name: str):
         json.dump(bkm.Subjects.get_pending_data(), f, indent=4)
 
 
-def save_betting_lines_to_file(bookmaker_name: str):
+def save_betting_lines_to_file():
     # create a custom file path to store the betting lines sample
-    file_path = f'utils/reporting/reports/{bookmaker_name}/json_data/betting_lines.json'
+    file_path = f'utils/reports/general/betting_lines.json'
     # make any directories that don't already exist
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     file_path = os.path.join(os.path.dirname(__file__), file_path)
@@ -100,10 +100,10 @@ def cleanup(bookmaker_plug: bkm.BookmakerPlug):
             log_content(bookmaker_plug, content_type='metric', content=f'TIME {t2 - t1}s')
             log_content(bookmaker_plug, content_type='metric', content=f'# of BETTING LINES {bookmaker_plug.betting_lines_collected}')
             # save the pending markets, and subjects that were not found in the database to a file to be evaluated
-            save_pending_markets_to_file(bookmaker_plug.bookmaker_info.name)
-            save_pending_subjects_to_file(bookmaker_plug.bookmaker_info.name)
+            save_pending_markets_to_file()
+            save_pending_subjects_to_file()
             # save the sample data of betting lines to a file for inspection
-            save_betting_lines_to_file(bookmaker_plug.bookmaker_info.name)
+            save_betting_lines_to_file()
             # return the function call as part of the decorator
             return result
 
@@ -125,8 +125,11 @@ async def run(plug: str, run_all: bool = False):
         tasks.append(start_collecting(bookmaker_plug))
 
     # start making requests asynchronously
+    t1 = time.time()
     await asyncio.gather(*tasks)
+    t2 = time.time()
 
+    print(f"[TOTAL]: {BettingLines.size()}, {round(t2-t1, 3)}s")
 
 async def start_collecting(bookmaker_plug: bkm.BookmakerPlug):
     # a decorator to log metrics and save samples of the data in a file

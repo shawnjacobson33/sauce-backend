@@ -39,8 +39,8 @@ def insert():
     collection = db[collection_name]
 
     collection.insert_one({
-        'name': 'Rushing Yards in First 5 Attempts',
-        'sport': 'Football'
+        'name': '1H Points',
+        'sport': 'Basketball'
     })
 
     # DELETING DUPLICATES
@@ -53,4 +53,4 @@ def insert():
         counter_dict[(doc[attribute], doc['name'])] += 1
 
 
-insert()
+# insert()

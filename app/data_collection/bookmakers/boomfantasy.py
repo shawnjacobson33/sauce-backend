@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Optional, Union, Any
 
-from app import database as db
 from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 

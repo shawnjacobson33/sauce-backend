@@ -2,27 +2,34 @@ import asyncio
 from datetime import datetime
 from typing import Optional, Union, Any
 
-from app import database as db
 from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
+UNAVAILABLE_LEAGUES = ['NCAAM', 'NCAAW']
 # pre-defined markets that will be used for url params
 MARKETS = {
-    'Football': [
-        'Passing%2520Yards',
-        'Pass%2520Completions',
-        'Passing%2520TDs',
-        'Pass%2520Attempts',
-        'Rushing%2520Yards',
-        'Carries',
-        'Receiving%2520Yards',
-        'Receptions',
-        'Pass%2520Interceptions',
-        'Tackles',
-        'Sacks',
-        'Interceptions'
-    ],
+    'Football': {
+        'NFL': [
+            'Passing%2520Yards',
+            'Pass%2520Completions',
+            'Passing%2520TDs',
+            'Pass%2520Attempts',
+            'Rushing%2520Yards',
+            'Carries',
+            'Receiving%2520Yards',
+            'Receptions',
+            'Pass%2520Interceptions',
+            'Sacks',
+            'Interceptions'
+        ],
+        'NCAAFB': [
+            'Passing%2520Yards',
+            'Passing%2520TDs',
+            'Rushing%2520Yards',
+            'Receiving%2520Yards',
+        ]
+    },
     'Basketball': [
         'Points',
         'Rebounds',
@@ -48,8 +55,8 @@ MARKETS = {
 LEAGUE_MAP = {
     'NCAAF': 'NCAAFB'
 }
-# get in-season leagues
-LEAGUES = [LEAGUE_MAP.get(league, league).lower() for league in dc_utils.IN_SEASON_LEAGUES]
+# get in-season and available leagues
+LEAGUES = [LEAGUE_MAP.get(league, league).lower() for league in dc_utils.IN_SEASON_LEAGUES if league not in UNAVAILABLE_LEAGUES]
 
 
 def extract_game_id(data: dict) -> Optional[str]:
@@ -59,6 +66,20 @@ def extract_game_id(data: dict) -> Optional[str]:
         if provider_data.get('name') == 'nix':
             # return the game id from the provider data if it exists
             return provider_data.get('id')
+
+
+def get_league_markets(league: str) -> list[str]:
+    # get the sport
+    sport = dc_utils.LEAGUE_SPORT_MAP.get(league, league)
+    # gets stored markets to include in the params of url
+    league_markets = MARKETS.get(sport, [])
+    # if the sport is football then get the specific markets associated with NFL or NCAAFB
+    if sport == 'Football':
+        # get the markets
+        league_markets = league_markets.get(league, [])
+
+    # return the list of league markets
+    return league_markets
 
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
@@ -162,14 +183,13 @@ class BetOnline(bkm_utils.BookmakerPlug):
                     url = bkm_utils.get_url(self.bookmaker_info.name)
                     # get headers for request to get prop lines
                     headers = bkm_utils.get_headers(self.bookmaker_info.name)
-                    # gets stored markets to include in the params of url
-                    league_markets = MARKETS.get(dc_utils.LEAGUE_SPORT_MAP.get(league))
                     # for every market
-                    for market in league_markets:
+                    for market in get_league_markets(league):
                         # get params for request to get prop lines
                         params = bkm_utils.get_params(self.bookmaker_info.name, var_1=game_id, var_2=market)
                         # add the request task for this market to tasks
                         tasks.append(self.req_mngr.get(url, self._parse_lines, league, headers=headers, params=params))
+                        # await asyncio.sleep(0.5)
 
             # asynchronously collect prop lines
             await asyncio.gather(*tasks)

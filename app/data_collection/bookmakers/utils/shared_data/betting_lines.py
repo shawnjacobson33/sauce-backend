@@ -22,3 +22,8 @@ class BettingLines:
         # Acquire the lock to ensure thread safety
         with cls._lock:
             cls._betting_lines[key].append(value)
+
+    @classmethod
+    def size(cls):
+        # gets the total amount of betting lines stored
+        return sum(len(value) for value in cls._betting_lines.values())
