@@ -118,6 +118,7 @@ MARKET_MAP = {
       # Turnovers
         'TURNOVERS': 'Turnovers',  # BoomFantasy
         'turnovers': 'Turnovers',  # HotStreak
+        'Turnovers  ': 'Turnovers',  # Underdog Fantasy
       # Steals
         'STEALS': 'Steals',  # BoomFantasy
         'steals': 'Steals',  # HotStreak
@@ -383,13 +384,16 @@ MARKET_MAP = {
           'Total Shots On Goal': 'Shots On Goal',  # Rebet
         # Blocked Shots
           'Blocked Shots': 'Blocked Shots',
+          'BLKS': 'Blocked Shots',  # Payday
         # Goalie Saves
           'Goalie Saves': 'Goalie Saves',
           'Saves': 'Goalie Saves',  # Drafters
+          'Total Saves': 'Goalie Saves',  # OddsShopper
         # 1st Period Goalie Saves
           '1st Period Saves': '1st Period Goalie Saves',  # Underdog Fantasy
         # Goals Against
           'Goals Against': 'Goals Against',
+          'Total Goals Against': 'Goals Against',  # OddsShopper
         # 1st Period Goals Against
           '1st Period Goals Against': '1st Period Goals Against',  # Underdog Fantasy
         # Assists
@@ -423,6 +427,8 @@ MARKET_MAP = {
           'Time on Ice': 'Time On Ice',  # Underdog Fantasy
         # Fantasy Points
           'Fantasy Points': 'Fantasy Points',  # Underdog Fantasy
+        # Shutouts
+          'Total Shutouts': 'Shutouts',  # OddsShopper
     }
 }
 FANTASY_SCORE_MAP = {

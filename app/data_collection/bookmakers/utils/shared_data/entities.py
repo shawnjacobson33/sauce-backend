@@ -38,74 +38,90 @@ def structure_data(cursor) -> dict:
     return partitioned_data
 
 
+def restructure_sets(data: dict) -> dict:
+    restructured_data = dict()
+    for key, values in data.items():
+        subjects = list()
+        for value in values:
+            value_dict = dict()
+            for attribute in value:
+                value_dict[attribute[0]] = attribute[1]
+
+            subjects.append(value_dict)
+
+        restructured_data[key] = subjects
+
+    return restructured_data
+
+
 class Subjects:
     _subjects_dict: dict = structure_data(SUBJECTS_CURSOR)  # Dictionary is much faster than any other data structure.
-    _subjects_pending: dict = defaultdict(set)  # Hold data that needs to be evaluated manually before db insertion
-    _lock = threading.Lock()
+    _valid_subjects: dict = defaultdict(set)
+    _pending_subjects: dict = defaultdict(set)  # Hold data that needs to be evaluated manually before db insertion
+    _lock1 = threading.Lock()
+    _lock2 = threading.Lock()
+    _lock3 = threading.Lock()
 
     @classmethod
-    def get_dict(cls):
+    def get_stored_subjects(cls):
         return cls._subjects_dict
 
     @classmethod
-    def get_pending_data(cls) -> dict:
-        restructured_data = dict()
-        for key, values in cls._subjects_pending.items():
-            subjects = list()
-            for value in values:
-                value_dict = dict()
-                for attribute in value:
-                    value_dict[attribute[0]] = attribute[1]
-
-                subjects.append(value_dict)
-
-            restructured_data[key] = subjects
-
-        return restructured_data
+    def get_pending_subjects(cls) -> dict:
+        return restructure_sets(cls._pending_subjects)
 
     @classmethod
-    def update_dict(cls, key, value):
-        with cls._lock:
+    def get_valid_subjects(cls) -> dict:
+        return restructure_sets(cls._valid_subjects)
+
+    @classmethod
+    def update_stored_subjects(cls, key, value):
+        with cls._lock1:
             cls._subjects_dict[key] = value
 
     @classmethod
-    def add_pending_data(cls, key: str, data: tuple):
-        with cls._lock:
-            cls._subjects_pending[key].add(data)
+    def update_pending_subjects(cls, key: str, data: tuple):
+        with cls._lock2:
+            cls._pending_subjects[key].add(data)
+
+    @classmethod
+    def update_valid_subjects(cls, key: str, data: tuple):
+        with cls._lock3:
+            cls._valid_subjects[key].add(data)
 
 
 class Markets:
     _markets_dict: dict = structure_data(MARKETS_CURSOR)  # Dictionary is much faster than any other data structure.
-    _markets_pending: dict = defaultdict(set)  # Hold data that needs to be evaluated manually before db insertion
-    _lock = threading.Lock()
+    _valid_markets: dict = defaultdict(set)
+    _pending_markets: dict = defaultdict(set)  # Hold data that needs to be evaluated manually before db insertion
+    _lock1 = threading.Lock()
+    _lock2 = threading.Lock()
+    _lock3 = threading.Lock()
 
     @classmethod
-    def get_dict(cls) -> dict:
+    def get_stored_markets(cls) -> dict:
         return cls._markets_dict
 
     @classmethod
-    def get_pending_data(cls) -> dict:
-        # converting sets to dictionaries, so it can be serialized into json
-        restructured_data = dict()
-        for key, values in cls._markets_pending.items():
-            subjects = list()
-            for value in values:
-                value_dict = dict()
-                for attribute in value:
-                    value_dict[attribute[0]] = attribute[1]
-
-                subjects.append(value_dict)
-
-            restructured_data[key] = subjects
-
-        return restructured_data
+    def get_pending_markets(cls) -> dict:
+        return restructure_sets(cls._pending_markets)
 
     @classmethod
-    def update_dict(cls, key, value):
-        with cls._lock:
+    def get_valid_markets(cls) -> dict:
+        return restructure_sets(cls._valid_markets)
+
+    @classmethod
+    def update_stored_markets(cls, key, value):
+        with cls._lock1:
             cls._markets_dict[key] = value
 
     @classmethod
-    def add_pending_data(cls, key: str, data: tuple):
-        with cls._lock:
-            cls._markets_pending[key].add(data)
+    def update_pending_markets(cls, key: str, data: tuple):
+        with cls._lock2:
+            cls._pending_markets[key].add(data)
+
+    @classmethod
+    def update_valid_markets(cls, key: str, data: tuple):
+        with cls._lock3:
+            cls._valid_markets[key].add(data)
+

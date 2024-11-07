@@ -40,34 +40,55 @@ def configure(plug) -> bkm.BookmakerPlug:
     return plug(bookmaker_info, batch_id)
 
 
-def save_pending_markets_to_file():
-    # create a custom file path to store the betting lines sample
-    file_path = f'utils/reports/general/pending_markets.json'
+def get_file_path(entity_type: str, is_pending: bool) -> str:
+    # get a customizable file path
+    file_path = f'utils/reports/{"pending" if is_pending else "valid"}_{entity_type}.json'
     # make any directories that don't already exist
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    file_path = os.path.join(os.path.dirname(__file__), file_path)
+    # return file path
+    return file_path
+
+
+def save_valid_markets_to_file() -> None:
+    # create a custom file path to store the betting lines sample
+    file_path = get_file_path(entity_type='markets', is_pending=False)
+    # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Markets.get_pending_data(), f, indent=4)
+        json.dump(bkm.Markets.get_valid_markets(), f, indent=4)
+
+
+def save_valid_subjects_to_file() -> None:
+    # create a custom file path to store the betting lines sample
+    file_path = get_file_path(entity_type='subjects', is_pending=False)
+    # open the pending markets file
+    with open(file_path, 'w') as f:
+        # save the betting lines to the file, in pretty print mode
+        json.dump(bkm.Subjects.get_valid_subjects(), f, indent=4)
+
+
+def save_pending_markets_to_file() -> None:
+    # create a custom file path to store the betting lines sample
+    file_path = get_file_path(entity_type='markets', is_pending=True)
+    # open the pending markets file
+    with open(file_path, 'w') as f:
+        # save the betting lines to the file, in pretty print mode
+        json.dump(bkm.Markets.get_pending_markets(), f, indent=4)
 
 
 def save_pending_subjects_to_file():
     # create a custom file path to store the betting lines sample
-    file_path = f'utils/reports/general/pending_subjects.json'
-    # make any directories that don't already exist
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    file_path = os.path.join(os.path.dirname(__file__), file_path)
+    file_path = get_file_path(entity_type='subjects', is_pending=True)
+    # open the pending subjects file
     with open(file_path, 'w') as f:
-        # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Subjects.get_pending_data(), f, indent=4)
+        # save the pending subjects to the file, in pretty print mode
+        json.dump(bkm.Subjects.get_pending_subjects(), f, indent=4)
 
 
 def save_betting_lines_to_file():
     # create a custom file path to store the betting lines sample
-    file_path = f'utils/reports/general/betting_lines.json'
-    # make any directories that don't already exist
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    file_path = os.path.join(os.path.dirname(__file__), file_path)
+    file_path = 'utils/reports/betting_lines.json'
+    # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
         json.dump(bkm.BettingLines.get(), f, indent=4)
@@ -99,11 +120,6 @@ def cleanup(bookmaker_plug: bkm.BookmakerPlug):
             log_content(bookmaker_plug, content_type='metric', content=f'BATCH ID {bookmaker_plug.batch_id}')
             log_content(bookmaker_plug, content_type='metric', content=f'TIME {t2 - t1}s')
             log_content(bookmaker_plug, content_type='metric', content=f'# of BETTING LINES {bookmaker_plug.betting_lines_collected}')
-            # save the pending markets, and subjects that were not found in the database to a file to be evaluated
-            save_pending_markets_to_file()
-            save_pending_subjects_to_file()
-            # save the sample data of betting lines to a file for inspection
-            save_betting_lines_to_file()
             # return the function call as part of the decorator
             return result
 
@@ -128,8 +144,19 @@ async def run(plug: str, run_all: bool = False):
     t1 = time.time()
     await asyncio.gather(*tasks)
     t2 = time.time()
-
+    # Output total number of betting lines collected and the time it took to run entire job
     print(f"[TOTAL]: {BettingLines.size()}, {round(t2-t1, 3)}s")
+    # save the valid markets, and subjects that were found in the database to a file to be evaluated
+    save_valid_markets_to_file()
+    save_valid_subjects_to_file()
+    # save the pending markets, and subjects that were not found in the database to a file to be evaluated
+    save_pending_markets_to_file()
+    save_pending_subjects_to_file()
+    # save the sample data of betting lines to a file for inspection
+    save_betting_lines_to_file()
+    # output the size of the file storing the betting lines
+    print(f"[FILE SIZE]: {round(os.path.getsize('utils/reports/betting_lines.json') / (1024 ** 2), 2)} MB")
+
 
 async def start_collecting(bookmaker_plug: bkm.BookmakerPlug):
     # a decorator to log metrics and save samples of the data in a file
