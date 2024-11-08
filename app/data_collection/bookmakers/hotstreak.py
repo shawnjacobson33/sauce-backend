@@ -3,7 +3,6 @@ from datetime import datetime
 import asyncio
 from typing import Optional, Union, Any
 
-from app import database as db
 from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
@@ -229,19 +228,15 @@ class HotStreak(bkm_utils.BookmakerPlug):
                         # extract the league using an extracted dict of conn. opp. ids to league names, if exists then execute
                         if league := extract_league(participant_data, extract_opponent_ids(search, league_aliases)):
                             # to track the leagues being collected
-                            self.metrics.add_league(league)
+                            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
                             # extract the market id and market name from data
                             market_id, market_name = extract_market(self.bookmaker_info.name, market_components, league)
                             # if they both exist then execute
                             if market_id and market_name:
-                                # to track the markets being collected
-                                self.metrics.add_market((league, market_name))
                                 # get the subject id from db and extract subject from data
                                 subject_id, subject_name = extract_subject(self.bookmaker_info.name, participant_data, league)
                                 # if both exist keep going
                                 if subject_id and subject_name:
-                                    # to track the subjects being collected
-                                    self.metrics.add_subject((league, subject_name))
                                     # for each line and corresponding over/under odds pair
                                     for line, odds_pair in zip(extract_line(market_dict), extract_odds(market_dict)):
                                         # each (odds) and label are at corresponding indices, so for each of them...

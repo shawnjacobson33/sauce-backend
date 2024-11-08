@@ -2,7 +2,6 @@ import asyncio
 from datetime import datetime
 from typing import Optional, Union, Any
 
-from app import database as db
 from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
@@ -107,7 +106,7 @@ class Drafters(bkm_utils.BookmakerPlug):
         # get response data, if exists execute
         if json_data := response.json():
             # to track the leagues being collected
-            self.metrics.add_league(league)
+            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
             # for each event in the data's entities
             for event_data in json_data.get('entities', []):
                 # check if the event is valid before executing
@@ -122,14 +121,10 @@ class Drafters(bkm_utils.BookmakerPlug):
                         subject_id, subject_name = extract_subject(self.bookmaker_info.name, player_data, league, subject_team)
                         # only execute if both exist
                         if subject_id and subject_name:
-                            # to track the subjects being collected
-                            self.metrics.add_subject((league, subject_name))
                             # get market id from db and extract market from player dict
                             market_id, market_name = extract_market(self.bookmaker_info.name, player_data, league)
                             # only execute if both exist
                             if market_id and market_name:
-                                # to track the markets being collected
-                                self.metrics.add_market((league, market_name))
                                 # get numeric over/under line and execute if exists
                                 if line := player_data.get('bid_stats_value'):
                                     # for each label Over and Under update shared data

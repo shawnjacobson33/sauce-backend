@@ -143,7 +143,7 @@ class BoomFantasy(bkm_utils.BookmakerPlug):
                         # if they exist execute
                         if league := extract_league(section_data):
                             # to track the leagues being collected
-                            self.metrics.add_league(league)
+                            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
                             # extract the game info from the dictionary
                             game_info = extract_game_info(section_data)
                             # for each section in the league's sections if they exist
@@ -152,8 +152,6 @@ class BoomFantasy(bkm_utils.BookmakerPlug):
                                 subject_id, subject_name = extract_subject(self.bookmaker_info.name, qg_data, league)
                                 # if they both exist then execute
                                 if subject_id and subject_name:
-                                    # to track the subjects being collected
-                                    self.metrics.add_subject((league, subject_name))
                                     # get the period classifier from dictionary (fullGame, firstQuarter, etc.)
                                     period = extract_period(qg_data)
                                     # get more prop line info from the league's section's fullQuestions if they exist
@@ -162,8 +160,6 @@ class BoomFantasy(bkm_utils.BookmakerPlug):
                                         market_id, market_name = extract_market(self.bookmaker_info.name, q_data, league, period)
                                         # if both exist then keep going
                                         if market_id and market_name:
-                                            # to track the markets being collected
-                                            self.metrics.add_market((league, market_name))
                                             # for each dictionary in q_data's c field
                                             for c_data in q_data.get('c', []):
                                                 # extract the numeric line for the prop line, if exists keep going

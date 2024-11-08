@@ -145,19 +145,15 @@ class Sleeper(bkm_utils.BookmakerPlug):
                 # extract the league name from dictionary
                 if league := extract_league(prop_line_data):
                     # to track the leagues being collected
-                    self.metrics.add_league(league)
+                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
                     # get the subject id from db and extract player name from dictionary
                     subject_id, subject_name = extract_subject(self.bookmaker_info.name, prop_line_data, players, league)
                     # if both exist then keep going
                     if subject_id and subject_name:
-                        # to track the subjects being collected
-                        self.metrics.add_subject((league, subject_name))
                         # get the market id from db and extract the market name from dictionary
                         market_id, market_name = extract_market(self.bookmaker_info.name, prop_line_data, league)
                         # if both exist then keep executing
                         if market_id and market_name:
-                            # to track the markets being collected
-                            self.metrics.add_market((league, market_name))
                             # for each dictionary containing label, line, odds in prop_line_data's options if exists
                             for outcome_data in prop_line_data.get('options', []):
                                 # get the numeric over/under line and the decimal odds from the dictionary, if both exist keep going

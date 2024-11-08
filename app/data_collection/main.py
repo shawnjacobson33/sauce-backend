@@ -8,6 +8,7 @@ from app import database as db
 from app.data_collection import bookmakers as bkm
 from app.data_collection.bookmakers import BettingLines
 
+
 BOOKMAKER_PLUGS = {
     # "BetOnline": bkm.BetOnline,
     "BoomFantasy": bkm.BoomFantasy,
@@ -29,15 +30,27 @@ BOOKMAKER_PLUGS = {
 }
 
 
-def configure(plug) -> bkm.BookmakerPlug:
+def configure(bookmaker_plug) -> bkm.BookmakerPlug:
     # get a database instance
     session = db.Database.get()
     # create a batch id for all betting lines in this run to use
     batch_id = str(uuid.uuid4())
     # get some attributes of the bookmaker from the database
-    bookmaker_info = bkm.Bookmaker(db.get_bookmaker(session, plug.__name__))
+    bookmaker_info = bkm.Bookmaker(db.get_bookmaker(session, bookmaker_plug.__name__))
     # create an instance of the bookmaker plug
-    return plug(bookmaker_info, batch_id)
+    return bookmaker_plug(bookmaker_info, batch_id)
+
+
+def output_bookmaker_job_stats(bookmaker_plug: bkm.BookmakerPlug, time_taken: float) -> None:
+    # Because OddsShopper isn't actually a bookmaker, but a tool that holds other bookmaker's odds
+    if bookmaker_plug.bookmaker_info.name == 'OddsShopper':
+        # for every bookmaker that they offer
+        for bookmaker in bkm.ODDSSHOPPER_NOVEL_BOOKMAKERS:
+            # output the amount of lines collected from each bookmaker they offer and the time taken for the whole job.
+            print(f'[{bookmaker}]: {bkm.BettingLines.size(bookmaker=bookmaker)}, {round(time_taken, 3)}s')
+    else:
+        # otherwise just output for the inputted bookmaker plug
+        print(f'[{bookmaker_plug.bookmaker_info.name}]: {bookmaker_plug.betting_lines_collected}, {round(time_taken, 3)}s')
 
 
 def get_file_path(entity_type: str, is_pending: bool) -> str:
@@ -47,6 +60,15 @@ def get_file_path(entity_type: str, is_pending: bool) -> str:
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     # return file path
     return file_path
+
+
+def save_valid_leagues_to_file() -> None:
+    # create a custom file path to store the betting lines sample
+    file_path = get_file_path(entity_type='leagues', is_pending=False)
+    # open the pending markets file
+    with open(file_path, 'w') as f:
+        # save the betting lines to the file, in pretty print mode
+        json.dump(bkm.Leagues.get_valid_leagues(), f, indent=4)
 
 
 def save_valid_markets_to_file() -> None:
@@ -94,18 +116,6 @@ def save_betting_lines_to_file():
         json.dump(bkm.BettingLines.get(), f, indent=4)
 
 
-def log_headers(bookmaker_plug: bkm.BookmakerPlug, header_type: str, headline: str) -> None:
-    # log some template headers based on the input given
-    bookmaker_plug.log(f'*** {header_type.upper()} *********************************************************************** {header_type.upper()} ***')
-    bookmaker_plug.log(f'---------------------------------------> {header_type.upper()} {headline.upper()} <----------------------------------------')
-    bookmaker_plug.log(f'*** {header_type.upper()} *********************************************************************** {header_type.upper()} ***')
-
-
-def log_content(bookmaker_plug: bkm.BookmakerPlug, content_type: str, content: str) -> None:
-    # log a template for different content based upon the input given
-    bookmaker_plug.log(f'--- FOUND ------------------------> {content_type.upper()}: {content} <---------------------------- FOUND ---')
-
-
 def cleanup(bookmaker_plug: bkm.BookmakerPlug):
     def decorator(func):
         async def wrapper(*args, **kwargs):
@@ -113,13 +123,8 @@ def cleanup(bookmaker_plug: bkm.BookmakerPlug):
             t1 = time.time()
             result = await func(*args, **kwargs)
             t2 = time.time()
-            # console print a message
-            print(f'[{bookmaker_plug.bookmaker_info.name}]: {bookmaker_plug.betting_lines_collected}, {round(t2-t1, 3)}s')
-            # log different metrics
-            log_headers(bookmaker_plug, header_type='metrics', headline='report')
-            log_content(bookmaker_plug, content_type='metric', content=f'BATCH ID {bookmaker_plug.batch_id}')
-            log_content(bookmaker_plug, content_type='metric', content=f'TIME {t2 - t1}s')
-            log_content(bookmaker_plug, content_type='metric', content=f'# of BETTING LINES {bookmaker_plug.betting_lines_collected}')
+            # output the statistics from the job
+            output_bookmaker_job_stats(bookmaker_plug, t2-t1)
             # return the function call as part of the decorator
             return result
 
@@ -146,7 +151,8 @@ async def run(plug: str, run_all: bool = False):
     t2 = time.time()
     # Output total number of betting lines collected and the time it took to run entire job
     print(f"[TOTAL]: {BettingLines.size()}, {round(t2-t1, 3)}s")
-    # save the valid markets, and subjects that were found in the database to a file to be evaluated
+    # save the valid markets, leagues and subjects that were found in the database to a file to be evaluated
+    save_valid_leagues_to_file()
     save_valid_markets_to_file()
     save_valid_subjects_to_file()
     # save the pending markets, and subjects that were not found in the database to a file to be evaluated
@@ -164,21 +170,6 @@ async def start_collecting(bookmaker_plug: bkm.BookmakerPlug):
     async def collect():
         # wait until the plug is finished collecting its data
         await bookmaker_plug.collect()
-
-        # log league reports
-        log_headers(bookmaker_plug, header_type='leagues', headline='report')
-        for league in bookmaker_plug.metrics.get_leagues_report():
-            log_content(bookmaker_plug, content_type='league', content=league.upper())
-
-        # log market reports
-        log_headers(bookmaker_plug, header_type='markets', headline='report')
-        for market, count in bookmaker_plug.metrics.get_markets_report().items():
-            log_content(bookmaker_plug, content_type='market', content=f'{market} ({count})')
-
-        # log subject reports
-        log_headers(bookmaker_plug, header_type='subjects', headline='report')
-        for subject, count in bookmaker_plug.metrics.get_subjects_report().items():
-            log_content(bookmaker_plug, content_type='subject', content=f'{subject} ({count})')
 
     # wait until the collection process is done
     await collect()

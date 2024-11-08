@@ -28,12 +28,8 @@ def get_subject_id(bookmaker_name: str, subject: Subject) -> Optional[tuple[Obje
         filtered_data = filter_subject_data(subject.league)
         # get the matched data if it exists
         if matched_data := filtered_data.get(cleaned_subject):
-            # update the subject object's name
-            subject.name = cleaned_subject
-            # set the market object's id
-            subject.id = matched_data['id']
             # update the shared dictionary of valid subjects
-            Subjects.update_valid_subjects(bookmaker_name, tuple(subject.__dict__.items()))
+            Subjects.update_valid_subjects(bookmaker_name, tuple(matched_data.items()))
             # return the matched subject id and the actual name of the subject stored in the database
             return matched_data['id'], matched_data['name']
 
@@ -52,7 +48,7 @@ def get_market_id(bookmaker_name: str, market: Market, period_type: str = None) 
             # update the market object's name
             market.name = cleaned_market
             # set the market object's id
-            market.id = matched_id
+            market.id = str(matched_id)
             # update the shared dictionary of valid markets
             Markets.update_valid_markets(bookmaker_name, tuple(market.__dict__.items()))
             # return the id of the matched market if it exists

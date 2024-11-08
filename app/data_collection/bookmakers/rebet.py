@@ -76,6 +76,8 @@ def extract_line_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, Non
             # return the label as 'Over' and the line from components
             return 'Over', outcome_info_components[-1][:-1]
 
+    return None, None
+
 
 class Rebet(bkm_utils.BookmakerPlug):
     def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
@@ -121,21 +123,17 @@ class Rebet(bkm_utils.BookmakerPlug):
                 # extract league name from the dictionary and get data dic, if both exists keep executing
                 if (league := extract_league(event_data)) and (odds_data := event_data.get('odds')):
                     # to track the leagues being collected
-                    self.metrics.add_league(league)
+                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
                     # for each market dictionary in the odds data dictionary's market if they exist
                     for market_data in odds_data.get('market', []):
                         # get the market id from the db and extract the market name from dictionary
                         market_id, market_name = extract_market(self.bookmaker_info.name, market_data, league)
                         # if both exist then keep executing
                         if market_id and market_name:
-                            # to track the markets being collected
-                            self.metrics.add_market((league, market_name))
                             # get the subject id from db, and extract the subject name from dictionary
                             subject_id, subject_name = extract_subject(self.bookmaker_info.name, market_data, league)
                             # if both exist then keep executing
                             if subject_id and subject_name:
-                                # to track the subjects being collected
-                                self.metrics.add_subject((league, subject_name))
                                 # get dictionary that holds data on odds, label, line, if exists then execute
                                 if outcomes_data := market_data.get('outcome', []):
                                     # convert to list if outcomes data only returns a dictionary

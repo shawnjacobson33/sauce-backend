@@ -106,23 +106,19 @@ class ParlayPlay(bkm_utils.BookmakerPlug):
         # get the response data, if exists then keep executing
         if json_data := response.json():
             # to track the leagues being collected
-            self.metrics.add_league(league)
+            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
             # for each player in the response data's players if they exist
             for player_data in json_data.get('players', []):
                 # get the subject id from db and extract the subject name from a dictionary
                 subject_id, subject_name = extract_subject(self.bookmaker_info.name, player_data, league)
                 # if both subject id and subject exist then keep executing
                 if subject_id and subject_name:
-                    # to track the subjects being collected
-                    self.metrics.add_subject((league, subject_name))
                     # for each stat dictionary in the player data dictionary if they exist
                     for stat_data in player_data.get('stats', []):
                         # get the market id from the db and extract the market
                         market_id, market_name = extract_market(self.bookmaker_info.name, stat_data, league)
                         # if both exist then keep executing
                         if market_id and market_name:
-                            # to track the markets being collected
-                            self.metrics.add_market((league, market_name))
                             # get a dictionary of data around market, lines, and odds
                             if alt_lines_data := stat_data.get('altLines'):
                                 # for each dictionary holding line, odds data if values exist

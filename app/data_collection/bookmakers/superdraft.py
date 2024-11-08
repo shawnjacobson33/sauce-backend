@@ -96,19 +96,15 @@ class SuperDraft(bkm_utils.BookmakerPlug):
                 # extract the league name from the dictionary, if exists keep going
                 if league := extract_league(prop_line_data, sports_dict):
                     # to track the leagues being collected
-                    self.metrics.add_league(league)
+                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
                     # get the market id and extract the market name from the dictionary
                     market_id, market_name = extract_market(self.bookmaker_info.name, prop_line_data, league)
                     # if both exist then keep going
                     if market_id and market_name:
-                        # to track the markets being collected
-                        self.metrics.add_market((league, market_name))
                         # get the subject id from the db and extract the subject name from the dictionary
                         subject_id, subject_name, game_info = extract_subject(self.bookmaker_info.name, prop_line_data, league)
                         # if both exist then keep going
                         if subject_id and subject_name:
-                            # to track the subjects being collected
-                            self.metrics.add_subject((league, subject_name))
                             # get the numeric over/under line from the dictionary
                             if line := prop_line_data.get('line'):
                                 # for each generic over/under label for prop lines

@@ -16,8 +16,9 @@ from .superdraft import SuperDraft
 from .underdogfantasy import UnderdogFantasy
 from .vividpicks import VividPicks
 from .oddsshopper import OddsShopper
-from .utils import Bookmaker, BookmakerPlug, BettingLines, Subjects, Markets
+from .utils import Bookmaker, BookmakerPlug, BettingLines, Subjects, Markets, Leagues, ODDSSHOPPER_NOVEL_BOOKMAKERS
 
 __all__ = ['BetOnline', 'BoomFantasy', 'Dabble', 'Drafters', 'DraftKingsPick6', 'HotStreak', 'MoneyLine', 'OwnersBox',
            'Payday', 'PrizePicks', 'ParlayPlay', 'Rebet', 'Sleeper', 'SuperDraft', 'UnderdogFantasy', 'VividPicks',
-           'OddsShopper', 'Bookmaker', 'BookmakerPlug']
+           'OddsShopper', 'Bookmaker', 'BookmakerPlug', 'BettingLines', 'Subjects', 'Markets', 'Leagues',
+           'ODDSSHOPPER_NOVEL_BOOKMAKERS']

@@ -54,6 +54,20 @@ def restructure_sets(data: dict) -> dict:
     return restructured_data
 
 
+class Leagues:
+    _valid_leagues: dict = defaultdict(set)
+    _lock1 = threading.Lock()
+
+    @classmethod
+    def get_valid_leagues(cls):
+        return restructure_sets(cls._valid_leagues)
+
+    @classmethod
+    def update_valid_leagues(cls, bookmaker: str, league: str):
+        with cls._lock1:
+            cls._valid_leagues[bookmaker].add((('name', league),))
+
+
 class Subjects:
     _subjects_dict: dict = structure_data(SUBJECTS_CURSOR)  # Dictionary is much faster than any other data structure.
     _valid_subjects: dict = defaultdict(set)

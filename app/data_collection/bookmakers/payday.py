@@ -130,7 +130,7 @@ class Payday(bkm_utils.BookmakerPlug):
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('data')):
             # to track the leagues being collected
-            self.metrics.add_league(league)
+            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
             # for each game in data's games if they exist
             for game_data in data.get('games', []):
                 # get game info from dictionary
@@ -143,16 +143,12 @@ class Payday(bkm_utils.BookmakerPlug):
                     market_id, market_name = extract_market(self.bookmaker_info.name, player_prop_data, league)
                     # only keep going if the both exist
                     if market_id and market_name:
-                        # to track the markets being collected
-                        self.metrics.add_market((league, market_name))
                         # get some player dictionary and the numeric over/under line, if both exist keep executing
                         if (player_data := player_prop_data.get('player')) and (line := player_prop_data.get('value')):
                             # get the subject id from the db and extract the subject name
                             subject_id, subject_name = extract_subject(self.bookmaker_info.name, player_data, teams_dict, league)
                             # if both exist, then keep executing
                             if subject_id and subject_name:
-                                # to track the subjects being collected
-                                self.metrics.add_subject((league, subject_name))
                                 # for each general prop line label
                                 for label in ['Over', 'Under']:
                                     # update shared data

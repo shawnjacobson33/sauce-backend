@@ -197,24 +197,20 @@ class BetOnline(bkm_utils.BookmakerPlug):
     async def _parse_lines(self, response, league: str) -> None:
         # get the response data as json, if exists keep going
         if json_data := response.json():
-            # to track the leagues being collected
-            self.metrics.add_league(league)
+            # update shared leagues data
+            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
             # for each prop line in the response data
             for prop_line_data in json_data:
                 # get the market id from the db and extract the market name from the dictionary
                 market_id, market_name = extract_market(self.bookmaker_info.name, prop_line_data, league)
                 # if both exist then keep going
                 if market_id and market_name:
-                    # to track the markets being collected
-                    self.metrics.add_market((league, market_name))
                     # for every player in the prop line
                     for player_data in prop_line_data.get('players', []):
                         # get the subject id from the db and extract the subject name from dictionary
                         subject_id, subject_name = extract_subject(self.bookmaker_info.name, player_data, league)
                         # if both exist then keep going
                         if subject_id and subject_name:
-                            # to track the subjects being collected
-                            self.metrics.add_subject((league, subject_name))
                             # for all markets that the player has
                             for market_data in player_data.get('markets', []):
                                 # market must exist and active on BetOnline

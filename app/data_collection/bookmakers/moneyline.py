@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Optional, Union, Any
 
-from app import database as db
 from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
@@ -86,19 +85,15 @@ class MoneyLine(bkm_utils.BookmakerPlug):
                 # extract the league name, keep going if it exists
                 if league := extract_league(prop_line):
                     # to track the leagues being collected
-                    self.metrics.add_league(league)
+                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
                     # extract the market id from database and market name from dictionary
                     market_id, market_name = extract_market(self.bookmaker_info.name, prop_line, league)
                     # if both exist continue executing
                     if market_id and market_name:
-                        # to track the markets being collected
-                        self.metrics.add_market((league, market_name))
                         # extract the subject id and subject name from the database and dictionary respectively
                         subject_id, subject_name = extract_subject(self.bookmaker_info.name, prop_line, league)
                         # if they both exist, continue executing
                         if subject_id and subject_name:
-                            # to track the subjects being collected
-                            self.metrics.add_subject((league, subject_name))
                             # get line and label for every one that exists
                             for line, label in extract_line_and_label(prop_line):
                                 # update shared data

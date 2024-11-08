@@ -2,7 +2,6 @@ from datetime import datetime
 import asyncio
 from typing import Optional, Union, Any
 
-from app import database as db
 from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
@@ -155,7 +154,7 @@ class Dabble(bkm_utils.BookmakerPlug):
                 # extract the league from competition and get the competition id, if both exist then execute
                 if (league := extract_league(competition)) and (competition_id := competition.get('id')):
                     # to track the leagues being collected
-                    self.metrics.add_league(league)
+                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
                     # get the url required to request the current events for each competition and insert comp id into it
                     url = bkm_utils.get_url(self.bookmaker_info.name, name='events').format(competition_id)
                     # get the params required to request the current events
@@ -195,14 +194,10 @@ class Dabble(bkm_utils.BookmakerPlug):
                 market_id, market_name = extract_market(self.bookmaker_info.name, player_prop_data, markets_map, league)
                 # if both exist then keep going
                 if market_id and market_name:
-                    # to track the markets being collected
-                    self.metrics.add_market((league, market_name))
                     # get the subject id from the db and extract the subject name from dictionary
                     subject_id, subject_name = extract_subject(self.bookmaker_info.name, player_prop_data, league)
                     # if both exist then keep going
                     if subject_id and subject_name:
-                        # to track the subjects being collected
-                        self.metrics.add_subject((league, subject_name))
                         # get over/under label for player prop and get numeric line, only execute if both exist
                         if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
                             # update shared data

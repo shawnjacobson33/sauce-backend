@@ -147,15 +147,11 @@ class PrizePicks(bkm_utils.BookmakerPlug):
                             # if all three exist then keep executing
                             if market_id and market_name:
                                 # to track the leagues being collected
-                                self.metrics.add_league(cleaned_league)
-                                # to track the markets being collected
-                                self.metrics.add_market((cleaned_league, market_name))
+                                bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, cleaned_league)
                                 # get the subject id from the db and extract the subject name
                                 subject_id, subject_name = extract_subject(self.bookmaker_info.name, relationships_data, subjects_dict, cleaned_league)
                                 # keep executing if both exist
                                 if subject_id and subject_name:
-                                    # to track the subjects being collected
-                                    self.metrics.add_subject((cleaned_league, subject_name))
                                     # get numeric over/under line and check for existence
                                     if line := prop_line_attrs.get('line_score'):
                                         # for each generic label for an over/under line

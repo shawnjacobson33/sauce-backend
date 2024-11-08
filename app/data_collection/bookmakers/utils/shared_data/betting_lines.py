@@ -24,6 +24,13 @@ class BettingLines:
             cls._betting_lines[key].append(value)
 
     @classmethod
-    def size(cls):
+    def size(cls, bookmaker: str = None) -> int:
+        # if bookmaker is inputted
+        if bookmaker:
+            # get the lines associated with that bookmaker
+            bookmaker_lines = cls._betting_lines.get(bookmaker, 0)
+            # return the number of lines they have
+            return len(bookmaker_lines)
+
         # gets the total amount of betting lines stored
         return sum(len(value) for value in cls._betting_lines.values())

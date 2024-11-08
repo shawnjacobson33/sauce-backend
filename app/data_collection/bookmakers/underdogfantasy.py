@@ -222,19 +222,15 @@ class UnderdogFantasy(bkm_utils.BookmakerPlug):
                     # extract the league from match data dictionary, if exists keep executing
                     if league := extract_league(a_id, game_ids_dict, games_dict, solo_games_dict):
                         # to track the leagues being collected
-                        self.metrics.add_league(league)
+                        bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
                         # get the market id from db and the market name
                         market_id, market_name = extract_market(self.bookmaker_info.name, a_data, league)
                         # if both exist then keep executing
                         if market_id and market_name:
-                            # to track the markets being collected
-                            self.metrics.add_market((league, market_name))
                             # get the subject id from db and extract the subject name
                             subject_id, subject_name = extract_subject(self.bookmaker_info.name, a_id, league, player_ids_dict, players_dict)
                             # if both exist keep executing
                             if subject_id and subject_name:
-                                # to track the subjects being collected
-                                self.metrics.add_subject((league, subject_name))
                                 # get the numeric over/under line, if exists keep executing
                                 if line := prop_line_data.get('stat_value'):
                                     # for each dictionary in prop_line_data's options if they exist

@@ -117,23 +117,19 @@ class VividPicks(bkm_utils.BookmakerPlug):
                     # extract the league name from dictionary, if it exists keep going
                     if league := extract_league(event_data):
                         # to track the leagues being collected
-                        self.metrics.add_league(league)
+                        bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
                         # for each dictionary in event data's activePlayers if they exist
                         for player_data in event_data.get('activePlayers', []):
                             # get the subject id from db and extract the subject name from dictionary
                             subject_id, subject_name = extract_subject(self.bookmaker_info.name, player_data, league)
                             # if both exist keep executing
                             if subject_id and subject_name:
-                                # to track the subjects being collected
-                                self.metrics.add_subject((league, subject_name))
                                 # for each dictionary in player data's visiblePlayerProps if they exist
                                 for prop_line_data in player_data.get('visiblePlayerProps', []):
                                     # get the market id from the db and extract the market name from the dictionary
                                     market_id, market_name = extract_market(self.bookmaker_info.name, prop_line_data, league)
                                     # keep executing if both exist
                                     if market_id and market_name:
-                                        # to track the markets being collected
-                                        self.metrics.add_market((league, market_name))
                                         # get the numeric over/under line from the dictionary, keep going if exists
                                         if line := prop_line_data.get('val'):
                                             # extract the multiplier from the dictionary
@@ -142,18 +138,18 @@ class VividPicks(bkm_utils.BookmakerPlug):
                                             for label in get_labels(multiplier):
                                                 # update shared data
                                                 self.update_betting_lines({
-                                                        'batch_id': self.batch_id,
-                                                        'time_processed': str(datetime.now()),
-                                                        'league': league,
-                                                        'game_info': game_info,
-                                                        'market_category': 'player_props',
-                                                        'market_id': str(market_id),
-                                                        'market': market_name,
-                                                        'subject_id': str(subject_id),
-                                                        'subject': subject_name,
-                                                        'bookmaker': self.bookmaker_info.name,
-                                                        'label': label,
-                                                        'line': line,
-                                                        'multiplier': multiplier,
-                                                        'odds': get_odds(self.bookmaker_info.default_payout.odds, multiplier)
-                                                    })
+                                                    'batch_id': self.batch_id,
+                                                    'time_processed': str(datetime.now()),
+                                                    'league': league,
+                                                    'game_info': game_info,
+                                                    'market_category': 'player_props',
+                                                    'market_id': str(market_id),
+                                                    'market': market_name,
+                                                    'subject_id': str(subject_id),
+                                                    'subject': subject_name,
+                                                    'bookmaker': self.bookmaker_info.name,
+                                                    'label': label,
+                                                    'line': line,
+                                                    'multiplier': multiplier,
+                                                    'odds': get_odds(self.bookmaker_info.default_payout.odds, multiplier)
+                                                })

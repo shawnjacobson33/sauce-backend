@@ -4,7 +4,6 @@ from typing import Optional, Union, Any
 from bs4 import BeautifulSoup
 import asyncio
 
-from app import database as db
 from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
@@ -95,6 +94,8 @@ class DraftKingsPick6(bkm_utils.BookmakerPlug):
     async def _parse_lines(self, response, league: str) -> None:
         # gets the json data from the response and then the redundant data from pickableIdToPickableMap field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('pickableIdToPickableMap')):
+            # to track the leagues being collected
+            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
             # for every prop line in the data
             for prop_line_data in data.values():
                 # get pickable data and market_category data, if both exist then execute
@@ -103,8 +104,6 @@ class DraftKingsPick6(bkm_utils.BookmakerPlug):
                     market_id, market_name = extract_market(self.bookmaker_info.name, m_category_data, league)
                     # # only execute if market id and market exist
                     if market_id and market_name:
-                        # to track the markets being collected
-                        self.metrics.add_market((league, market_name))
                         # get the over/under numeric line for the prop line, execute if exists
                         if line := extract_line(prop_line_data):
                             # for each subject in the pickableEntities if they exist
@@ -113,8 +112,6 @@ class DraftKingsPick6(bkm_utils.BookmakerPlug):
                                 subject_id, subject_name = extract_subject(self.bookmaker_info.name, entity, league)
                                 # execute if both subject id and subject exist
                                 if subject_id and subject_name:
-                                    # to track the subjects being collected
-                                    self.metrics.add_subject((league, subject_name))
                                     # for each label Over and Under update shared data prop lines
                                     for label in ['Over', 'Under']:
                                         # update shared data

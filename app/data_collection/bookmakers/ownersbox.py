@@ -168,19 +168,15 @@ class OwnersBox(bkm_utils.BookmakerPlug):
                 # get the league name, if exists then keep executing
                 if league := extract_league(prop_line_data):
                     # to track the leagues being collected
-                    self.metrics.add_league(league)
+                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
                     # get the market id from db and extract the market name
                     market_id, market_name = extract_market(self.bookmaker_info.name, prop_line_data, league)
                     # # if both exist continue executing
                     if market_id and market_name:
-                        # to track the markets being collected
-                        self.metrics.add_market((league, market_name))
                         # get the subject id from db and extract the subject name from the dictionary
                         subject_id, subject_name = extract_subject(self.bookmaker_info.name, prop_line_data, league)
                         # if both exist then continue executing
                         if subject_id and subject_name:
-                            # to track the subjects being collected
-                            self.metrics.add_subject((league, subject_name))
                             # get the numeric over/under line, execute if exists
                             if line := extract_line(prop_line_data):
                                 # get game info

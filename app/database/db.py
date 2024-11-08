@@ -39,8 +39,8 @@ def insert():
     collection = db[collection_name]
 
     collection.insert_one({
-        'name': 'Shutouts',
-        'sport': 'Ice Hockey'
+        'name': 'Average Yards Per Punt',
+        'sport': 'Football'
     })
 
     # DELETING DUPLICATES
@@ -53,4 +53,13 @@ def insert():
         counter_dict[(doc[attribute], doc['name'])] += 1
 
 
-insert()
+# insert()
+nba_abbr_teams = [
+    'BOS', 'BRK', 'NYK', 'TOR', 'PHI', 'CLE', 'IND', 'CHI', 'DET', 'MIL', 'ATL', 'MIA', 'CHA', 'ORL', 'WAS', 'OKC',
+    'DEN', 'MIN', 'POR', 'UTA', 'GSW', 'PHX', 'SAC', 'LAC', 'LAL', 'HOU', 'DAL', 'MEM', 'SAS', 'NOP'
+]
+
+nba_teams = [
+    { 'abbr_name': 'BOS', 'full_name': 'Boston Celtics' }, { 'abbr_name': 'BRK', 'full_name': 'Brooklyn Nets' },
+    { 'abbr_name': 'BOS', 'full_name': 'Boston Celtics' }, { 'abbr_name': 'BOS', 'full_name': 'Boston Celtics' },
+]

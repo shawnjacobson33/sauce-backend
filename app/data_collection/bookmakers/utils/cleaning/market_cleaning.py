@@ -1,4 +1,4 @@
-from typing import Optional, Union, Any
+from typing import Optional
 
 
 MARKET_MAP = {
@@ -12,17 +12,21 @@ MARKET_MAP = {
       # 1Q Points
         '1Q POINTS': '1Q Points',  # BoomFantasy
         'first_qtr_points': '1Q Points',  # Sleeper
+      # 1H Points
+        '1H POINTS': '1H Points',  # BoomFantasy
       # Rebounds
         'REBOUNDS': 'Rebounds',  # BoomFantasy
         'rebounds': 'Rebounds',  # HotStreak
         'REB': 'Rebounds',  # Payday
         'Total Rebounds': 'Rebounds',  # Rebet
         'Player rebounds (incl. overtime)': 'Rebounds',  # Rebet
-      # 1H Points
-        '1H POINTS': '1H Points',  # BoomFantasy
       # 1Q Rebounds
         '1Q REBOUNDS': '1Q Rebounds',  # BoomFantasy
         'first_qtr_rebounds': '1Q Rebounds',  # Sleeper
+      # Defensive Rebounds
+        'Defensive Rebounds': 'Defensive Rebounds',  # PrizePicks
+      # Offensive Rebounds
+        'Offensive Rebounds': 'Offensive Rebounds',  # PrizePicks
       # Assists
         'ASSISTS': 'Assists',  # BoomFantasy
         'assists': 'Assists',  # HotStreak
@@ -73,9 +77,12 @@ MARKET_MAP = {
         'Pts+Rebs+Asts': 'Points + Rebounds + Assists',  # PrizePicks
         'pts_reb_ast': 'Points + Rebounds + Assists',  # Sleeper
         'Pts + Rbs + Asts': 'Points + Rebounds + Assists',  # SuperDraft
+      # 1Q Points + Rebounds + Assists
+        '1Q Pts + Rebs + Asts': '1Q Points + Rebounds + Assists',  # Underdog Fantasy
       # 1H Points + Rebounds + Assists
         '1H Pts+Rebs+Asts': '1H Points + Rebounds + Assists',  # PrizePicks
         '1H POINTS_REBOUNDS_ASSISTS': '1H Points + Rebounds + Assists',  # BoomFantasy
+        '1H Pts + Rebs + Asts': '1H Points + Rebounds + Assists',  # Underdog Fantasy
       # 2H Points + Rebounds + Assists
         '2H Pts+Rebs+Asts': '2H Points + Rebounds + Assists',  # PrizePicks
       # 3-Pointers Made
@@ -91,8 +98,13 @@ MARKET_MAP = {
         'threes_made': '3-Pointers Made',  # Sleeper
         'Total 3-Point Field Goals': '3-Pointers Made',  # Rebet
         'Player 3-point field goals (incl. overtime)': '3-Pointers Made',  # Rebet
+      # 1Q 3-Pointers Made
+        '1Q 3-Pointers Made': '1Q 3-Pointers Made',  # Underdog Fantasy
+      # 1H 3-Pointers Made
+        '1H 3-Pointers Made': '1H 3-Pointers Made',  # Underdog Fantasy
       # 3-Pointers Attempted
         '3PT Attempted': '3-Pointers Attempted',  # Dabble
+        '3-PT Attempted': '3-Pointers Attempted',  # PrizePicks
       # 2-Pointers Made
         '2PT Made': '2-Pointers Made',  # Dabble
       # 2-Pointers Attempted
@@ -166,6 +178,7 @@ MARKET_MAP = {
           '1Q PASSING_YARDS': '1Q Passing Yards',  # BoomFantasy
         # 1H Passing Yards
           '1H Pass Yards': '1H Passing Yards',  # PrizePicks
+          '1H PASSING_YARDS': '1H Passing Yards',  # BoomFantasy
         # Passing Attempts
           'Pass Attempts': 'Passing Attempts',  # BetOnline, ParlayPlay
           'PASSING_ATTEMPTS': 'Passing Attempts',  # BoomFantasy
@@ -216,6 +229,7 @@ MARKET_MAP = {
           '1Q RUSHING_YARDS': '1Q Rushing Yards',  # BoomFantasy
         # 1H Rushing Yards
           '1H Rush Yards': '1H Rushing Yards',  # PrizePicks
+          '1H RUSHING_YARDS': '1H Rushing Yards',  # BoomFantasy
         # Carries
           'Carries': 'Carries',  # BetOnline
           'RUSHING_ATTEMPTS': 'Carries',  # BoomFantasy
@@ -245,6 +259,7 @@ MARKET_MAP = {
           '1Q RECEIVING_YARDS': '1Q Receiving Yards',  # BoomFantasy
         # 1H Receiving Yards
           '1H Receiving Yards': '1H Receiving Yards',  # PrizePicks
+          '1H RECEIVING_YARDS': '1H Receiving Yards',  # BoomFantasy
         # Targets
           'Receiving Targets': 'Targets',  # ParlayPlay
           'Rec Targets': 'Targets',  # PrizePicks
@@ -362,7 +377,8 @@ MARKET_MAP = {
           'Sacks Taken': 'Sacks Taken',  # Underdog Fantasy
         # Completion Percentage
           'Completion Percentage': 'Completion Percentage',  # Underdog Fantasy
-
+        # Average Yards Per Punt
+          'Avg Yards Per Punt': 'Average Yards Per Punt',  # Underdog Fantasy
     },
     'Ice Hockey': {
         # Points
@@ -385,10 +401,15 @@ MARKET_MAP = {
         # Blocked Shots
           'Blocked Shots': 'Blocked Shots',
           'BLKS': 'Blocked Shots',  # Payday
+          'Blocks': 'Blocked Shots',  # DraftKingsPick6
         # Goalie Saves
           'Goalie Saves': 'Goalie Saves',
           'Saves': 'Goalie Saves',  # Drafters
           'Total Saves': 'Goalie Saves',  # OddsShopper
+          'GoaltendingSaves': 'Goalie Saves',  # VividPicks
+          'saves': 'Goalie Saves',  # Sleeper
+          'SAV': 'Goalie Saves',  # Payday
+          'SAVES': 'Goalie Saves',  # BoomFantasy
         # 1st Period Goalie Saves
           '1st Period Saves': '1st Period Goalie Saves',  # Underdog Fantasy
         # Goals Against
@@ -420,6 +441,7 @@ MARKET_MAP = {
           'Last Goal Scorer': 'Last Goal Scorer',  # OddsShopper
         # Faceoffs Won
           'Faceoffs Won': 'Faceoffs Won',  # PrizePicks
+          'Face Offs Won': 'Faceoffs Won',  # DraftKingsPick6
         # Hits
           'Hits': 'Hits',  # PrizePicks
         # Time On Ice
@@ -427,38 +449,10 @@ MARKET_MAP = {
           'Time on Ice': 'Time On Ice',  # Underdog Fantasy
         # Fantasy Points
           'Fantasy Points': 'Fantasy Points',  # Underdog Fantasy
+          'Fantasy Score': 'Fantasy Points',  # Ice Hockey
         # Shutouts
           'Total Shutouts': 'Shutouts',  # OddsShopper
     }
-}
-FANTASY_SCORE_MAP = {
-    'NBA': 'Basketball Fantasy Points',
-    'WNBA': 'Basketball Fantasy Points',
-    'WNBA1Q': 'Basketball Fantasy Points',
-    'WNBA2Q': 'Basketball Fantasy Points',
-    'WNBA3Q': 'Basketball Fantasy Points',
-    'WNBA4Q': 'Basketball Fantasy Points',
-    'WNBA1H': 'Basketball Fantasy Points',
-    'WNBA2H': 'Basketball Fantasy Points',
-    'NCAAB': 'Basketball Fantasy Points',
-    'NFL': 'Football Fantasy Points',
-    'NFL1Q': 'Football Fantasy Points',
-    'NFL2Q': 'Football Fantasy Points',
-    'NFL3Q': 'Football Fantasy Points',
-    'NFL4Q': 'Football Fantasy Points',
-    'NFL1H': 'Football Fantasy Points',
-    'NFL2H': 'Football Fantasy Points',
-    'CFB': 'Football Fantasy Points',
-    'CFB1Q': 'Football Fantasy Points',
-    'CFB2Q': 'Football Fantasy Points',
-    'CFB3Q': 'Football Fantasy Points',
-    'CFB4Q': 'Football Fantasy Points',
-    'CFB1H': 'Football Fantasy Points',
-    'CFB2H': 'Football Fantasy Points',
-    'NCAAF': 'Football Fantasy Points',
-    'NCAAFB': 'Football Fantasy Points',
-    'MLB': 'Baseball Fantasy Points',
-    'NHL': 'Ice Hockey Fantasy Points',
 }
 PERIOD_CLASSIFIER_MAP = {
     'firstQuarter': '1Q',
