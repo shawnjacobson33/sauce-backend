@@ -82,15 +82,13 @@ def get_league_markets(league: str) -> list[str]:
     return league_markets
 
 
-def extract_market(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # gets and cleans the market if it exists
     if market_name := data.get('statistic'):
         # gets the market id or log message
-        market_id, market_name = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
-        return market_id, market_name
-
-    return None, None
+        return market
 
 
 def extract_position(data: dict) -> Optional[str]:
@@ -100,30 +98,26 @@ def extract_position(data: dict) -> Optional[str]:
         return bkm_utils.clean_position(position)
 
 
-def extract_subject_team(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_subject_team(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get the subject's team name from data
     if subject_team := data.get('team'):
         # get the team id and team name from the database
-        team_id, team_name = bkm_utils.get_team_id(bookmaker_name, league, subject_team)
-        # return the team id and team name
-        return team_id, team_name
-
-    return None, None
+        if team_data := bkm_utils.get_team_id(bookmaker_name, league, subject_team):
+            # return the team id and team name
+            return team_data
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # gets the player name, if it exists then keep going
     if subject_name := data.get('name'):
         # extract a dictionary including the team id from database and the cleaned subject team name
         team = extract_subject_team(bookmaker_name, data, league)
         # extract some player attributes
         position = extract_position(data)
-        # gets the subject id or log message
-        subject_id, subject_name = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position)
+        # gets the subject id and subject name
+        subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position)
         # return both subject id search result and cleaned subject
-        return subject_id, subject_name
-
-    return None, None
+        return subject
 
 
 def extract_label(data: dict) -> Optional[str]:
@@ -198,7 +192,6 @@ class BetOnline(bkm_utils.BookmakerPlug):
                         params = bkm_utils.get_params(self.bookmaker_info.name, var_1=game_id, var_2=market)
                         # add the request task for this market to tasks
                         tasks.append(self.req_mngr.get(url, self._parse_lines, league, headers=headers, params=params))
-                        # await asyncio.sleep(0.5)
 
             # asynchronously collect prop lines
             await asyncio.gather(*tasks)
@@ -211,15 +204,11 @@ class BetOnline(bkm_utils.BookmakerPlug):
             # for each prop line in the response data
             for prop_line_data in json_data:
                 # get the market id from the db and extract the market name from the dictionary
-                market_id, market_name = extract_market(self.bookmaker_info.name, prop_line_data, league)
-                # if both exist then keep going
-                if market_id and market_name:
+                if market := extract_market(self.bookmaker_info.name, prop_line_data, league):
                     # for every player in the prop line
                     for player_data in prop_line_data.get('players', []):
                         # get the subject id from the db and extract the subject name from dictionary
-                        subject_id, subject_name = extract_subject(self.bookmaker_info.name, player_data, league)
-                        # if both exist then keep going
-                        if subject_id and subject_name:
+                        if subject := extract_subject(self.bookmaker_info.name, player_data, league):
                             # for all markets that the player has
                             for market_data in player_data.get('markets', []):
                                 # market must exist and active on BetOnline
@@ -236,10 +225,10 @@ class BetOnline(bkm_utils.BookmakerPlug):
                                                 'time_processed': str(datetime.now()),
                                                 'league': league,
                                                 'market_category': 'player_props',
-                                                'market_id': str(market_id),
-                                                'market': market_name,
-                                                'subject_id': str(subject_id),
-                                                'subject': subject_name,
+                                                'market_id': market['id'],
+                                                'market': market['name'],
+                                                'subject_id': subject['id'],
+                                                'subject': subject['name'],
                                                 'bookmaker': self.bookmaker_info.name,
                                                 'label': label,
                                                 'line': line,

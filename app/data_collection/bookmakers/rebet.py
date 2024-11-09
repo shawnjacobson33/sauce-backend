@@ -2,8 +2,6 @@ from datetime import datetime
 import asyncio
 from typing import Optional, Union, Any
 
-from app import database as db
-from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -18,7 +16,7 @@ def extract_league(data: dict) -> Optional[str]:
             return cleaned_league
 
 
-def extract_market(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # only want markets that are in the domain of player props
     if data.get('tab_name') == 'Player Props':
         # get the market name and check
@@ -28,31 +26,25 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Union[tuple[
                 # re-formats the market name
                 market_name = ' '.join(market_name.split(' (')[0].split()[1:]).title()
 
-            # create a market object
-            market_obj = dc_utils.Market(market_name, league=league)
             # gets the market id or log message
-            market_id, market_name = bkm_utils.get_market_id(bookmaker_name, market_obj)
+            market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
             # return both market id search result and cleaned market
-            return market_id, market_name
-
-    return None, None
+            return market
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get subject name from the dictionary, continue executing if it exists
     if subject := data.get('player_name'):
         # needed to extract and reformat the name
         subject_name_components = subject.split(', ')
         # check if the list has at least two elements
         if len(subject_name_components) > 1:
-            # create a subject object
-            subject_obj = dc_utils.Subject(f'{subject_name_components[1]} {subject_name_components[0]}', league)
+            # get the subject name
+            subject_name = f'{subject_name_components[1]} {subject_name_components[0]}'
             # gets the subject id or log message
-            subject_id, subject_name = bkm_utils.get_subject_id(bookmaker_name, subject_obj)
+            subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name)
             # return both subject id search result and cleaned subject
-            return subject_id, subject_name
-
-    return None, None
+            return subject
 
 
 def extract_odds(data: dict) -> Optional[str]:
@@ -127,13 +119,9 @@ class Rebet(bkm_utils.BookmakerPlug):
                     # for each market dictionary in the odds data dictionary's market if they exist
                     for market_data in odds_data.get('market', []):
                         # get the market id from the db and extract the market name from dictionary
-                        market_id, market_name = extract_market(self.bookmaker_info.name, market_data, league)
-                        # if both exist then keep executing
-                        if market_id and market_name:
+                        if market := extract_market(self.bookmaker_info.name, market_data, league):
                             # get the subject id from db, and extract the subject name from dictionary
-                            subject_id, subject_name = extract_subject(self.bookmaker_info.name, market_data, league)
-                            # if both exist then keep executing
-                            if subject_id and subject_name:
+                            if subject := extract_subject(self.bookmaker_info.name, market_data, league):
                                 # get dictionary that holds data on odds, label, line, if exists then execute
                                 if outcomes_data := market_data.get('outcome', []):
                                     # convert to list if outcomes data only returns a dictionary
@@ -152,10 +140,10 @@ class Rebet(bkm_utils.BookmakerPlug):
                                                     'time_processed': str(datetime.now()),
                                                     'league': league,
                                                     'market_category': 'player_props',
-                                                    'market_id': str(market_id),
-                                                    'market': market_name,
-                                                    'subject_id': str(subject_id),
-                                                    'subject': subject_name,
+                                                    'market_id': market['id'],
+                                                    'market': market['name'],
+                                                    'subject_id': subject['id'],
+                                                    'subject': subject['name'],
                                                     'bookmaker': self.bookmaker_info.name,
                                                     'label': label,
                                                     'line': line,

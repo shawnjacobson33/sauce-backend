@@ -1,9 +1,7 @@
 import re
 from datetime import datetime
-from typing import Optional, Union, Any
+from typing import Optional
 
-from app import database as db
-from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -29,7 +27,7 @@ def extract_subjects_dict(data: dict) -> dict:
                 if subject_name := player_attributes.get('display_name', player_attributes.get('name')):
                     # store the player id corresponding to some of the subject's attributes
                     players_dict[player_id] = {
-                        'subject': subject_name,
+                        'subject': subject_name['name'],
                         'subject_team': player_attributes.get('team', player_attributes.get('team_name')),
                         'position': player_attributes.get('position')
                     }
@@ -38,7 +36,7 @@ def extract_subjects_dict(data: dict) -> dict:
     return players_dict
 
 
-def get_league(data: dict, leagues: dict) -> Union[tuple[Any, Any], tuple[None, None]]:
+def get_league(data: dict, leagues: dict) -> Optional[dict[str, str]]:
     # get some dictionaries from relationship data, if both exist keep going
     if relationship_league := data.get('league'):
         # get another dictionary for relationship league data and a league id if they both exist.
@@ -50,27 +48,24 @@ def get_league(data: dict, leagues: dict) -> Union[tuple[Any, Any], tuple[None, 
                 # only want valid leagues
                 if bkm_utils.is_league_valid(cleaned_league):
                     # return the valid and cleaned league, and the original league name format without cleaning it (needed for market)
-                    return league_name, cleaned_league
+                    return {
+                        'uncleaned': league_name,
+                        'cleaned': cleaned_league
+                    }
 
-    return None, None
 
-
-def extract_market(bookmaker_name: str, data: dict, uncleaned_league: str, cleaned_league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_market(bookmaker_name: str, data: dict, league: dict) -> Optional[dict[str, str]]:
     # get the market name and check for validity, if exists and valid then execute
     if (market_name := data.get('stat_type', data.get('stat_display_name'))) and bkm_utils.is_market_valid(market_name):
         # in order to create comparable market names -- for Quarter and Half Markets
-        if re.match(r'^.+[1-4]([QH])$', uncleaned_league):
+        if re.match(r'^.+[1-4]([QH])$', league['uncleaned']):
             # re-format the market name
-            market_name = f'{uncleaned_league[-2:]} {market_name}'
+            market_name = f'{league["uncleaned"][-2:]} {market_name}'
 
-        # create market object
-        market_obj = dc_utils.Market(market_name, cleaned_league)
         # gets the market id or log message
-        market_id, market_name = bkm_utils.get_market_id(bookmaker_name, market_obj)
+        market = bkm_utils.get_market_id(bookmaker_name, league['cleaned'], market_name)
         # return both market id search result and cleaned market
-        return market_id, market_name
-
-    return None, None
+        return market
 
 
 def extract_position(data: dict) -> Optional[str]:
@@ -80,7 +75,16 @@ def extract_position(data: dict) -> Optional[str]:
         return bkm_utils.clean_position(position.split('-')[0] if '-' in position else position)
 
 
-def extract_subject(bookmaker_name: str, data: dict, subjects_dict: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+    # get the player's team name from the dictionary
+    if team_name := data.get('subject_team'):
+        # get the team id and team name from the database
+        if team_data := bkm_utils.get_team_id(bookmaker_name, league, team_name):
+            # return the team id and team name
+            return team_data
+
+
+def extract_subject(bookmaker_name: str, data: dict, subjects_dict: dict, league: str) -> Optional[dict[str, str]]:
     # get a dictionary that holds data on the player for the prop line, if both exist then execute
     if (relationship_new_player := data.get('new_player')) and (relationship_new_player_data := relationship_new_player.get('data')):
         # get the player id and then get the subject data that corresponds, if both exist then execute
@@ -88,15 +92,11 @@ def extract_subject(bookmaker_name: str, data: dict, subjects_dict: dict, league
             # get the subject name and check if it is a 'combo' player prop, if exists keep executing
             if (subject_name := subject_data.get('subject')) and (' + ' not in subject_name):
                 # get player attributes
-                subject_team, position = subject_data.get('subject_team'), extract_position(subject_data)
-                # create a subject object
-                subject_obj = dc_utils.Subject(subject_name, league, team=subject_team, position=position)
+                team, position = extract_team(bookmaker_name, league, subject_data), extract_position(subject_data)
                 # gets the subject id or log message
-                subject_id, subject_name = bkm_utils.get_subject_id(bookmaker_name, subject_obj)
+                subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position)
                 # return both subject id search result and cleaned subject
-                return subject_id, subject_name
-
-    return None, None
+                return subject
 
 
 class PrizePicks(bkm_utils.BookmakerPlug):
@@ -139,19 +139,13 @@ class PrizePicks(bkm_utils.BookmakerPlug):
                     # get some prop line attributes and only get prop lines that aren't alt (takes separate requests)
                     if (prop_line_attrs := prop_line_data.get('attributes')) and (prop_line_attrs.get('odds_type') == 'standard'):
                         # get league data for prop lines
-                        uncleaned_league, cleaned_league = get_league(relationships_data, leagues)
-                        # if both exist keep executing
-                        if uncleaned_league and cleaned_league:
+                        if league := get_league(relationships_data, leagues):
                             # get the market id from db and extract market and league name from data, pass a generator to get the league
-                            market_id, market_name = extract_market(self.bookmaker_info.name, prop_line_attrs, uncleaned_league, cleaned_league)
-                            # if all three exist then keep executing
-                            if market_id and market_name:
+                            if market := extract_market(self.bookmaker_info.name, prop_line_attrs, league):
                                 # to track the leagues being collected
-                                bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, cleaned_league)
+                                bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league['cleaned'])
                                 # get the subject id from the db and extract the subject name
-                                subject_id, subject_name = extract_subject(self.bookmaker_info.name, relationships_data, subjects_dict, cleaned_league)
-                                # keep executing if both exist
-                                if subject_id and subject_name:
+                                if subject := extract_subject(self.bookmaker_info.name, relationships_data, subjects_dict, league['cleaned']):
                                     # get numeric over/under line and check for existence
                                     if line := prop_line_attrs.get('line_score'):
                                         # for each generic label for an over/under line
@@ -160,12 +154,12 @@ class PrizePicks(bkm_utils.BookmakerPlug):
                                             self.update_betting_lines({
                                                 'batch_id': self.batch_id,
                                                 'time_processed': str(datetime.now()),
-                                                'league': cleaned_league,
+                                                'league': league['cleaned'],
                                                 'market_category': 'player_props',
-                                                'market_id': str(market_id),
-                                                'market': market_name,
-                                                'subject_id': str(subject_id),
-                                                'subject': subject_name,
+                                                'market_id': market['id'],
+                                                'market': market['name'],
+                                                'subject_id': subject['id'],
+                                                'subject': subject['name'],
                                                 'bookmaker': self.bookmaker_info.name,
                                                 'label': label,
                                                 'line': line,

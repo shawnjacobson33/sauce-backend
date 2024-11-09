@@ -1,7 +1,6 @@
 from datetime import datetime
-from typing import Optional, Union, Any
+from typing import Optional, Any
 
-from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -29,31 +28,33 @@ def extract_game_info(data: dict) -> Optional[str]:
                 return ' @ '.join([away_team, home_team])
 
 
-def extract_player_info(data: dict) -> Optional[tuple[Optional[str], Optional[str]]]:
+def extract_player_info(bookmaker_name: str, league: str, data: dict) -> tuple[Any, dict[str, Any]]:
     # get a dictionary, if exists keep going
     if player_image_data := data.get('playerImage'):
-        # get the abbreviated team name that the player is on and their jersey number
-        return player_image_data.get('abbreviation'), player_image_data.get('jerseyNumber')
+        # get the team name if it exists
+        if team_name := player_image_data.get('abbreviation'):
+            # get the team id and team name from the database
+            team_data = bkm_utils.get_team_id(bookmaker_name, league, team_name)
+            # get the abbreviated team name that the player is on and their jersey number
+            return player_image_data.get('jerseyNumber'), team_data
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # gets the league section's title and options from that title, executes if they both exist
     if (title := data.get('title')) and (options := title.get('o')):
         # gets the first and last name of the player, executes if both exist
         if (first_name := options.get('firstName')) and (last_name := options.get('lastName')):
+            # get subject name
+            subject_name = ' '.join([first_name, last_name])
             # get some player attributes
-            subject_team, jersey_number = extract_player_info(data)
-            # create a subject object
-            subject_obj = dc_utils.Subject(' '.join([first_name, last_name]), league, team=subject_team, jersey_number=jersey_number)
-            # gets the subject id or log message
-            subject_id, subject_name = bkm_utils.get_subject_id(bookmaker_name, subject_obj)
+            jersey_number, team = extract_player_info(bookmaker_name, league, data)
+            # gets the subject id and subject name
+            subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, jersey_number=jersey_number)
             # return both subject id search result and cleaned subject
-            return subject_id, subject_name
-
-    return None, None
+            return subject
 
 
-def extract_line(data: dict) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_line(data: dict) -> Optional[tuple[str, str]]:
     # get the pick selection data, execute if exists
     if pick_selection_title := data.get('pickSelectionTitle'):
         # get additional data from pick selection, execute if exists
@@ -71,17 +72,13 @@ def extract_period(data: dict) -> Optional[str]:
         return period
 
 
-def extract_market(bookmaker_name: str, data: dict, league: str, period_type: Optional[str] = None) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_market(bookmaker_name: str, data: dict, league: str, period_type: Optional[str] = None) -> Optional[dict[str, str]]:
     # get the market name, if exists keep going
     if market_name := data.get("statistic"):
-        # create a market object
-        market_obj = dc_utils.Market(market_name, league=league)
         # gets the market id
-        market_id, market_name = bkm_utils.get_market_id(bookmaker_name, market_obj, period_type=period_type)
+        market = bkm_utils.get_market_id(bookmaker_name, league, market_name, period_type=period_type)
         # return both market id and cleaned market
-        return market_id, market_name
-
-    return None, None
+        return market
 
 
 def extract_label_and_odds(data: list) -> Optional[tuple[str, float]]:
@@ -149,17 +146,13 @@ class BoomFantasy(bkm_utils.BookmakerPlug):
                             # for each section in the league's sections if they exist
                             for qg_data in section_data.get('qG', []):
                                 # extract the subject and get the subject id from the response data and database
-                                subject_id, subject_name = extract_subject(self.bookmaker_info.name, qg_data, league)
-                                # if they both exist then execute
-                                if subject_id and subject_name:
+                                if subject := extract_subject(self.bookmaker_info.name, qg_data, league):
                                     # get the period classifier from dictionary (fullGame, firstQuarter, etc.)
                                     period = extract_period(qg_data)
                                     # get more prop line info from the league's section's fullQuestions if they exist
                                     for q_data in qg_data.get('q', []):
                                         # extract the market and market id from the response data and database
-                                        market_id, market_name = extract_market(self.bookmaker_info.name, q_data, league, period)
-                                        # if both exist then keep going
-                                        if market_id and market_name:
+                                        if market := extract_market(self.bookmaker_info.name, q_data, league, period):
                                             # for each dictionary in q_data's c field
                                             for c_data in q_data.get('c', []):
                                                 # extract the numeric line for the prop line, if exists keep going
@@ -179,10 +172,10 @@ class BoomFantasy(bkm_utils.BookmakerPlug):
                                                                 'league': league,
                                                                 'game_info': game_info,
                                                                 'market_category': 'player_props',
-                                                                'market_id': str(market_id),
-                                                                'market': market_name,
-                                                                'subject_id': str(subject_id),
-                                                                'subject': subject_name,
+                                                                'market_id': market['id'],
+                                                                'market': market['name'],
+                                                                'subject_id': subject['id'],
+                                                                'subject': subject['name'],
                                                                 'bookmaker': self.bookmaker_info.name,
                                                                 'label': label,
                                                                 'line': line,

@@ -1,7 +1,5 @@
 from typing import Optional
 
-from bson import ObjectId
-
 from app.data_collection.utils import Subject, Market, Team
 from app.data_collection.bookmakers.utils.shared_data import Subjects, Markets, Teams
 from app.data_collection.bookmakers.utils.cleaning import clean_subject, clean_market, clean_team
@@ -41,7 +39,7 @@ def update_team_object(team: Team, cleaned_team_name: str, team_id: str) -> None
     # update the abbreviated or full team name of the object
     setattr(team, 'abbr_name' if len(cleaned_team_name) < 5 else 'full_name', cleaned_team_name)
     # set the market object's id
-    team.id = str(team_id)
+    team.id = team_id
 
 
 def update_market_object(market: Market, cleaned_market_name: str, market_id: str) -> None:
@@ -51,7 +49,7 @@ def update_market_object(market: Market, cleaned_market_name: str, market_id: st
     market.id = str(market_id)
 
 
-def get_subject_id(bookmaker_name: str, league: str, subject_name: str, **kwargs) -> Optional[tuple[ObjectId, str]]:
+def get_subject_id(bookmaker_name: str, league: str, subject_name: str, **kwargs) -> Optional[dict[str, str]]:
     # create a subject object
     subject = Subject(subject_name, league, **kwargs)
     # clean the subject name
@@ -60,17 +58,21 @@ def get_subject_id(bookmaker_name: str, league: str, subject_name: str, **kwargs
         filtered_data = filter_subject_data(subject.league)
         # get the matched data if it exists
         if matched_data := filtered_data.get(cleaned_subject):
+            # cast the matched id to a string
+            matched_data['id'] = str(matched_data['id'])
             # update the shared dictionary of valid subjects
             Subjects.update_valid_data(bookmaker_name, tuple(matched_data.items()))
             # return the matched subject id and the actual name of the subject stored in the database
-            return matched_data['id'], matched_data['name']
+            return {
+                'id': matched_data['id'],
+                'name': matched_data['name']
+            }
 
     # update the shared dictionary of pending subjects
     Subjects.update_pending_data(bookmaker_name, tuple(subject.__dict__.items()))
-    return None, None
 
 
-def get_market_id(bookmaker_name: str, league: str, market_name: str, period_type: str = None) -> Optional[tuple[ObjectId, str]]:
+def get_market_id(bookmaker_name: str, league: str, market_name: str, period_type: str = None) -> Optional[dict[str, str]]:
     # create a market object
     market = Market(market_name, league=league)
     # clean the market name
@@ -79,16 +81,20 @@ def get_market_id(bookmaker_name: str, league: str, market_name: str, period_typ
         filtered_data = filter_market_data(market.sport)
         # get the matched data if it exists
         if matched_id := filtered_data.get(cleaned_market):
+            # cast the matched id to a string
+            matched_id = str(matched_id)
             # update the market object attributes
             update_market_object(market, cleaned_market, matched_id)
             # update the shared dictionary of valid markets
             Markets.update_valid_data(bookmaker_name, tuple(market.__dict__.items()))
-            # return the id of the matched market if it exists
-            return matched_id, cleaned_market
+            # return the market id and cleaned name
+            return {
+                'id': matched_id,
+                'name': cleaned_market
+            }
 
     # update the shared dictionary of pending markets
     Markets.update_pending_data(bookmaker_name if not period_type else cleaned_market, tuple(market.__dict__.items()))
-    return None, None
 
 
 def get_team_id(bookmaker_name: str, league: str, team_name: str) -> Optional[dict]:
@@ -100,6 +106,8 @@ def get_team_id(bookmaker_name: str, league: str, team_name: str) -> Optional[di
         filtered_data = filter_team_data(team.league)
         # get the matched data if it exists
         if matched_id := filtered_data.get(cleaned_team):
+            # cast to a string
+            matched_id = str(matched_id)
             # update the team object with new data
             update_team_object(team, cleaned_team, matched_id)
             # update the shared dictionary of valid teams

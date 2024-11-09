@@ -1,8 +1,7 @@
 from datetime import datetime
 import asyncio
-from typing import Optional, Union, Any
+from typing import Optional
 
-from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -27,19 +26,15 @@ def extract_market_map(data: dict) -> Optional[dict]:
     }
 
 
-def extract_market(bookmaker_name: str, data: dict, data_map: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_market(bookmaker_name: str, data: dict, data_map: dict, league: str) -> Optional[dict[str, str]]:
     # get the market id from the response data, if that exists get the market name, if they both exist execute
     if (data_map_market_id := data.get('marketId')) and (market_name := data_map.get(data_map_market_id)):
         # check if the market is valid
         if bkm_utils.is_market_valid(market_name):
-            # create a market object
-            market_obj = dc_utils.Market(market_name, league)
             # gets the market id or log message
-            market_id, market_name = bkm_utils.get_market_id(bookmaker_name, market_obj)
+            market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
             # return both market id search result and cleaned market
-            return market_id, market_name
-
-    return None, None
+            return market
 
 
 def extract_position(data: dict) -> Optional[str]:
@@ -49,26 +44,24 @@ def extract_position(data: dict) -> Optional[str]:
         return bkm_utils.clean_position(position)
 
 
-def extract_team(data: dict) -> Optional[str]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
     # get the subject team name abbreviated, if exists keep going
     if subject_team := data.get('teamAbbreviation'):
-        # return the team in all uppercase
-        return subject_team.upper()
+        # get the team id and team name from the database
+        if team_data := bkm_utils.get_team_id(bookmaker_name, league, subject_team.upper()):
+            # return the team id and team name
+            return team_data
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get subject name from the data, if exists then execute
     if subject_name := data.get('playerName'):
         # extract player attributes
-        subject_team, position = extract_team(data), extract_position(data)
-        # create a subject object
-        subject_obj = dc_utils.Subject(subject_name, league, team=subject_team, position=position)
+        team, position = extract_team(bookmaker_name, league, data), extract_position(data)
         # gets the subject id or log message
-        subject_id, subject_name = bkm_utils.get_subject_id(bookmaker_name, subject_obj)
+        subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position)
         # return both subject id search result and cleaned subject
-        return subject_id, subject_name
-
-    return None, None
+        return subject
 
 
 def extract_label(data: dict) -> Optional[str]:
@@ -191,13 +184,9 @@ class Dabble(bkm_utils.BookmakerPlug):
             # for each prop line in data's player props if they exist
             for player_prop_data in data.get('playerProps', []):
                 # get the market id from the db and extract the market name from the dictionary
-                market_id, market_name = extract_market(self.bookmaker_info.name, player_prop_data, markets_map, league)
-                # if both exist then keep going
-                if market_id and market_name:
+                if market := extract_market(self.bookmaker_info.name, player_prop_data, markets_map, league):
                     # get the subject id from the db and extract the subject name from dictionary
-                    subject_id, subject_name = extract_subject(self.bookmaker_info.name, player_prop_data, league)
-                    # if both exist then keep going
-                    if subject_id and subject_name:
+                    if subject := extract_subject(self.bookmaker_info.name, player_prop_data, league):
                         # get over/under label for player prop and get numeric line, only execute if both exist
                         if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
                             # update shared data
@@ -207,10 +196,10 @@ class Dabble(bkm_utils.BookmakerPlug):
                                 'league': league,
                                 'game_info': game_info,
                                 'market_category': 'player_props',
-                                'market_id': str(market_id),
-                                'market': market_name,
-                                'subject_id': str(subject_id),
-                                'subject': subject_name,
+                                'market_id': market['id'],
+                                'market': market['name'],
+                                'subject_id': subject['id'],
+                                'subject': subject['name'],
                                 'bookmaker': self.bookmaker_info.name,
                                 'label': label,
                                 'line': line,

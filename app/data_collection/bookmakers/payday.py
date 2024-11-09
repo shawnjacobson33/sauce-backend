@@ -1,9 +1,7 @@
 from datetime import datetime
 import asyncio
-from typing import Optional, Union, Any
+from typing import Optional
 
-from app import database as db
-from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -40,17 +38,13 @@ def extract_teams_dict(data: dict) -> dict:
         return teams_dict
 
 
-def extract_market(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get the market name, if exists keep going
     if market_name := data.get('name'):
-        # create a market object
-        market_obj = dc_utils.Market(market_name, league=league)
         # gets the market id or log message
-        market_id, market_name = bkm_utils.get_market_id(bookmaker_name, market_obj)
+        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
-        return market_id, market_name
-
-    return None, None
+        return market
 
 
 def extract_position(data: dict) -> Optional[str]:
@@ -60,26 +54,24 @@ def extract_position(data: dict) -> Optional[str]:
         return bkm_utils.clean_position(position)
 
 
-def extract_subject_team(data: dict, teams_dict: dict) -> Optional[str]:
+def extract_team(bookmaker_name: str, league: str, data: dict, teams_dict: dict) -> Optional[dict[str, str]]:
     # get the subject's team id, if exists keep executing
-    if team_id := data.get('team_id'):
-        # return, if exists, the subject's team stored in the teams dict
-        return teams_dict.get(team_id)
+    if (team_id := data.get('team_id')) and (team_name := teams_dict.get(team_id)):
+        # get the team id and team name from the database
+        if team_data := bkm_utils.get_team_id(bookmaker_name, league, team_name):
+            # return the team id and team name
+            return team_data
 
 
-def extract_subject(bookmaker_name: str, data: dict, teams_dict: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_subject(bookmaker_name: str, data: dict, teams_dict: dict, league: str) -> Optional[dict[str, str]]:
     # get the subject's name, if it exists keep executing
     if subject_name := data.get('name'):
         # get player attributes
-        subject_team, position, jersey_number = extract_subject_team(data, teams_dict), extract_position(data), data.get('number')
-        # create subject object
-        subject_obj = dc_utils.Subject(subject_name, league, subject_team, position, jersey_number)
+        team, position, jersey_number = extract_team(bookmaker_name, league, data, teams_dict), extract_position(data), data.get('number')
         # gets the subject id or log message
-        subject_id, subject_name = bkm_utils.get_subject_id(bookmaker_name, subject_obj)
+        subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position, jersey_number=jersey_number)
         # return both subject id search result and cleaned subject
-        return subject_id, subject_name
-
-    return None, None
+        return subject
 
 
 class Payday(bkm_utils.BookmakerPlug):
@@ -140,15 +132,11 @@ class Payday(bkm_utils.BookmakerPlug):
                 # for each player prop data dictionary in game_data's player props if they exist
                 for player_prop_data in game_data.get('player_props', []):
                     # get the market id from the db and extract the market name
-                    market_id, market_name = extract_market(self.bookmaker_info.name, player_prop_data, league)
-                    # only keep going if the both exist
-                    if market_id and market_name:
+                    if market := extract_market(self.bookmaker_info.name, player_prop_data, league):
                         # get some player dictionary and the numeric over/under line, if both exist keep executing
                         if (player_data := player_prop_data.get('player')) and (line := player_prop_data.get('value')):
                             # get the subject id from the db and extract the subject name
-                            subject_id, subject_name = extract_subject(self.bookmaker_info.name, player_data, teams_dict, league)
-                            # if both exist, then keep executing
-                            if subject_id and subject_name:
+                            if subject := extract_subject(self.bookmaker_info.name, player_data, teams_dict, league):
                                 # for each general prop line label
                                 for label in ['Over', 'Under']:
                                     # update shared data
@@ -158,10 +146,10 @@ class Payday(bkm_utils.BookmakerPlug):
                                         'league': league,
                                         'game_info': game_info,
                                         'market_category': 'player_props',
-                                        'market_id': str(market_id),
-                                        'market': market_name,
-                                        'subject_id': str(subject_id),
-                                        'subject': subject_name,
+                                        'market_id': market['id'],
+                                        'market': market['name'],
+                                        'subject_id': subject['id'],
+                                        'subject': subject['name'],
                                         'bookmaker': self.bookmaker_info.name,
                                         'label': label,
                                         'line': line,

@@ -60,7 +60,7 @@ class Champ(bkm_utils.BookmakerPlug):
 
                 for prop in player.get('props', []):
                     market_id, market, line = None, prop.get('title'), prop.get('value')
-                    if market:
+                    if market :=
                         market = clean_market(market)
                         market_id = self.ds.get_market_id(Market(market, league))
 
@@ -77,10 +77,10 @@ class Champ(bkm_utils.BookmakerPlug):
                             'league': league,
                             'game_info': game_info,
                             'market_category': 'player_props',
-                            'market_id': str(market_id),
-                            'market': market_name,
-                            'subject_id': str(subject_id),
-                            'subject': subject_name,
+                            'market_id': market['id'],
+                            'market': market['name'],
+                            'subject_id': subject['id'],
+                            'subject': subject['name'],
                             'bookmaker': self.bookmaker_info.name,
                             'label': label,
                             'line': line,

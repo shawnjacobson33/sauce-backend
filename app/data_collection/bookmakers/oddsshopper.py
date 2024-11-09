@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
 import asyncio
-from typing import Optional, Union, Any
+from typing import Optional
 
-from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -30,32 +29,24 @@ def get_dates() -> tuple[str, str]:
     return datetime.now().strftime(date_format)[:-3] + 'Z', (datetime.now() + timedelta(days=8)).strftime(date_format)[:-3] + 'Z'
 
 
-def extract_market(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get the market name, if it exists keep executing
     if market_name := data.get('offerName'):
-        # create a market object
-        market_obj = dc_utils.Market(market_name, league=league)
         # gets the market id or log message
-        market_id, market_name = bkm_utils.get_market_id(bookmaker_name, market_obj)
+        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
-        return market_id, market_name
-
-    return None, None
+        return market
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get a list of dictionaries and the first dictionary in the list, if exists keep going
     if (participants_data := data.get('participants')) and (first_participants_data := participants_data[0]):
         # get the subject's name from the dictionary, if exists keep going
         if subject_name := first_participants_data.get('name'):
-            # create a subject object
-            subject_obj = dc_utils.Subject(subject_name, league)
             # gets the subject id or log message
-            subject_id, subject_name = bkm_utils.get_subject_id(bookmaker_name, subject_obj)
+            subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name)
             # return both subject id search result and cleaned subject
-            return subject_id, subject_name
-
-    return None, None
+            return subject
 
 
 def extract_bookmaker(data: dict) -> Optional[str]:
@@ -139,13 +130,9 @@ class OddsShopper(bkm_utils.BookmakerPlug):
                 # gets the game info from the dictionary
                 game_info = event.get('eventName')
                 # get the market id from db and extract market from the data
-                market_id, market_name = extract_market(self.bookmaker_info.name, event, league)
-                # only keep executing if market id and market exist
-                if market_id and market_name:
+                if market := extract_market(self.bookmaker_info.name, event, league):
                     # get the subject id from the db and extract the subject from outcome
-                    subject_id, subject_name = extract_subject(self.bookmaker_info.name, event, league)
-                    # only if both exist should execution keep going
-                    if subject_id and subject_name:
+                    if subject := extract_subject(self.bookmaker_info.name, event, league):
                         # iterate through each side or bookmaker for the prop line
                         for side in event.get('sides', []):
                             # get the label from the side dictionary, only keep going if it exists
@@ -163,10 +150,10 @@ class OddsShopper(bkm_utils.BookmakerPlug):
                                             'league': league,
                                             'game_info': game_info,
                                             'market_category': 'player_props',
-                                            'market_id': str(market_id),
-                                            'market': market_name,
-                                            'subject_id': str(subject_id),
-                                            'subject': subject_name,
+                                            'market_id': market['id'],
+                                            'market': market['name'],
+                                            'subject_id': subject['id'],
+                                            'subject': subject['name'],
                                             'bookmaker': bookmaker,
                                             'label': label,
                                             'line': outcome.get('line', '0.5'),

@@ -1,24 +1,19 @@
 from datetime import datetime
-from typing import Optional, Union, Any
+from typing import Optional
 
 from bs4 import BeautifulSoup
 import asyncio
 
-from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
-def extract_market(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get market name, if exists then execute
     if market_name := data.get('marketName'):
-        # create a market object
-        market_obj = dc_utils.Market(market_name, league=league)
         # gets the market id or log message
-        market_id, market_name = bkm_utils.get_market_id(bookmaker_name, market_obj)
+        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
-        return market_id, market_name
-
-    return None, None
+        return market
 
 
 def extract_line(data: dict) -> Optional[str]:
@@ -28,11 +23,13 @@ def extract_line(data: dict) -> Optional[str]:
         return active_market.get('targetValue')
 
 
-def extract_team(data: dict) -> Optional[str]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
     # get the team data dictionary, if exists then execute
-    if team_data := data.get('team'):
-        # return the player's team name abbreviated, if it doesn't exist then will return None
-        return team_data.get('abbreviation')
+    if (team_data := data.get('team')) and (team_name := team_data.get('abbreviation')):
+        # get the team id and team name from the database
+        if team_data := bkm_utils.get_team_id(bookmaker_name, league, team_name):
+            # return the team id and team name
+            return team_data
 
 
 def extract_position(data: dict) -> Optional[str]:
@@ -42,19 +39,15 @@ def extract_position(data: dict) -> Optional[str]:
         return bkm_utils.clean_position(position.split('/')[0] if '/' in position else position)
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get the subject name and the competitions dict, if both exist then execute
     if (subject_name := data.get('displayName')) and (competitions := data.get('pickableCompetitions')):
         # get player attributes
-        subject_team, position = extract_team(competitions[0]), extract_position(competitions[0])
-        # create a subject object
-        subject_obj = dc_utils.Subject(subject_name, league, team=subject_team, position=position)
+        team, position = extract_team(bookmaker_name, league, competitions[0]), extract_position(competitions[0])
         # gets the subject id or log message
-        subject_id, subject_name = bkm_utils.get_subject_id(bookmaker_name, subject_obj)
+        subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position)
         # return both subject id search result and cleaned subject
-        return subject_id, subject_name
-
-    return None, None
+        return subject
 
 
 class DraftKingsPick6(bkm_utils.BookmakerPlug):
@@ -101,17 +94,13 @@ class DraftKingsPick6(bkm_utils.BookmakerPlug):
                 # get pickable data and market_category data, if both exist then execute
                 if (pick_data := prop_line_data.get('pickable')) and (m_category_data := pick_data.get('marketCategory')):
                     # get the market id from the db and extract the market from the data dict
-                    market_id, market_name = extract_market(self.bookmaker_info.name, m_category_data, league)
-                    # # only execute if market id and market exist
-                    if market_id and market_name:
+                    if market := extract_market(self.bookmaker_info.name, m_category_data, league):
                         # get the over/under numeric line for the prop line, execute if exists
                         if line := extract_line(prop_line_data):
                             # for each subject in the pickableEntities if they exist
                             for entity in pick_data.get('pickableEntities', []):
                                 # get the subject id from the db and extract the subject from data
-                                subject_id, subject_name = extract_subject(self.bookmaker_info.name, entity, league)
-                                # execute if both subject id and subject exist
-                                if subject_id and subject_name:
+                                if subject := extract_subject(self.bookmaker_info.name, entity, league):
                                     # for each label Over and Under update shared data prop lines
                                     for label in ['Over', 'Under']:
                                         # update shared data
@@ -120,10 +109,10 @@ class DraftKingsPick6(bkm_utils.BookmakerPlug):
                                             'time_processed': str(datetime.now()),
                                             'league': league,
                                             'market_category': 'player_props',
-                                            'market_id': str(market_id),
-                                            'market': market_name,
-                                            'subject_id': str(subject_id),
-                                            'subject': subject_name,
+                                            'market_id': market['id'],
+                                            'market': market['name'],
+                                            'subject_id': subject['id'],
+                                            'subject': subject['name'],
                                             'bookmaker': self.bookmaker_info.name,
                                             'label': label,
                                             'line': line,

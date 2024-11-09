@@ -68,7 +68,7 @@ def save_valid_leagues_to_file() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Leagues.get_valid_leagues(), f, indent=4)
+        json.dump(bkm.Leagues.get_valid_data(), f, indent=4)
 
 
 def save_valid_markets_to_file() -> None:
@@ -77,7 +77,7 @@ def save_valid_markets_to_file() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Markets.get_valid_markets(), f, indent=4)
+        json.dump(bkm.Markets.get_valid_data(), f, indent=4)
 
 
 def save_valid_subjects_to_file() -> None:
@@ -86,7 +86,7 @@ def save_valid_subjects_to_file() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Subjects.get_valid_subjects(), f, indent=4)
+        json.dump(bkm.Subjects.get_valid_data(), f, indent=4)
 
 
 def save_pending_markets_to_file() -> None:
@@ -95,7 +95,7 @@ def save_pending_markets_to_file() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Markets.get_pending_markets(), f, indent=4)
+        json.dump(bkm.Markets.get_pending_data(), f, indent=4)
 
 
 def save_pending_subjects_to_file():
@@ -104,7 +104,7 @@ def save_pending_subjects_to_file():
     # open the pending subjects file
     with open(file_path, 'w') as f:
         # save the pending subjects to the file, in pretty print mode
-        json.dump(bkm.Subjects.get_pending_subjects(), f, indent=4)
+        json.dump(bkm.Subjects.get_pending_data(), f, indent=4)
 
 
 def save_betting_lines_to_file():
@@ -176,4 +176,4 @@ async def start_collecting(bookmaker_plug: bkm.BookmakerPlug):
 
 
 if __name__ == '__main__':
-    asyncio.run(run("", run_all=True))
+    asyncio.run(run("MoneyLine", run_all=False))

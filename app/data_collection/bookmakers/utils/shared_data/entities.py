@@ -13,8 +13,6 @@ TEAMS_CURSOR = DB[db.TEAMS_COLLECTION_NAME]
 
 
 def get_structured_docs(docs: list[dict], cursor_name: str) -> dict:
-    # this is the default which is used by markets
-    structured_docs = {doc['name']: doc['_id'] for doc in docs}
     # get a different structure if subjects
     if cursor_name == 'subjects':
         # re-format the name so it can be more easily matched with bookmaker's subject names
@@ -26,6 +24,10 @@ def get_structured_docs(docs: list[dict], cursor_name: str) -> dict:
         structured_docs = {doc['abbr_name']: doc['_id'] for doc in docs}
         # also use full names as keys
         structured_docs.update({doc['full_name']: doc['_id'] for doc in docs})
+
+    else:
+        # this is the default which is used by markets
+        structured_docs = {doc['name']: doc['_id'] for doc in docs}
 
     # return the structured docs
     return structured_docs
@@ -65,8 +67,44 @@ def restructure_sets(data: dict) -> dict:
     return restructured_data
 
 
-class Entity:
+class Leagues:
     _stored_data: dict  # Dictionary is much faster than any other data structure.
+    _valid_data: dict = defaultdict(set)
+    _pending_data: dict = defaultdict(set)  # Hold data that needs to be evaluated manually before db insertion
+    _lock1 = threading.Lock()
+    _lock2 = threading.Lock()
+    _lock3 = threading.Lock()
+
+    @classmethod
+    def get_stored_data(cls):
+        return cls._stored_data
+
+    @classmethod
+    def get_pending_data(cls) -> dict:
+        return restructure_sets(cls._pending_data)
+
+    @classmethod
+    def get_valid_data(cls) -> dict:
+        return restructure_sets(cls._valid_data)
+
+    @classmethod
+    def update_stored_data(cls, key, value):
+        with cls._lock1:
+            cls._stored_data[key] = value
+
+    @classmethod
+    def update_pending_data(cls, key: str, data: tuple):
+        with cls._lock2:
+            cls._pending_data[key].add(data)
+
+    @classmethod
+    def update_valid_leagues(cls, bookmaker: str, league: str):
+        with cls._lock1:
+            cls._valid_data[bookmaker].add((('name', league),))
+
+
+class Subjects:
+    _stored_data: dict = structure_data(SUBJECTS_CURSOR)  # Unique to Subjects
     _valid_data: dict = defaultdict(set)
     _pending_data: dict = defaultdict(set)  # Hold data that needs to be evaluated manually before db insertion
     _lock1 = threading.Lock()
@@ -101,21 +139,73 @@ class Entity:
             cls._valid_data[key].add(data)
 
 
-class Leagues(Entity):
+class Markets:
+    _stored_data: dict = structure_data(MARKETS_CURSOR)  # Unique to Markets
+    _valid_data: dict = defaultdict(set)
+    _pending_data: dict = defaultdict(set)  # Hold data that needs to be evaluated manually before db insertion
+    _lock1 = threading.Lock()
+    _lock2 = threading.Lock()
+    _lock3 = threading.Lock()
 
     @classmethod
-    def update_valid_leagues(cls, bookmaker: str, league: str):
+    def get_stored_data(cls):
+        return cls._stored_data
+
+    @classmethod
+    def get_pending_data(cls) -> dict:
+        return restructure_sets(cls._pending_data)
+
+    @classmethod
+    def get_valid_data(cls) -> dict:
+        return restructure_sets(cls._valid_data)
+
+    @classmethod
+    def update_stored_data(cls, key, value):
         with cls._lock1:
-            cls._valid_data[bookmaker].add((('name', league),))
+            cls._stored_data[key] = value
+
+    @classmethod
+    def update_pending_data(cls, key: str, data: tuple):
+        with cls._lock2:
+            cls._pending_data[key].add(data)
+
+    @classmethod
+    def update_valid_data(cls, key: str, data: tuple):
+        with cls._lock3:
+            cls._valid_data[key].add(data)
 
 
-class Subjects(Entity):
-    _stored_data: dict = structure_data(SUBJECTS_CURSOR)  # Unique to Subjects
-
-
-class Markets(Entity):
-    _stored_data: dict = structure_data(MARKETS_CURSOR)  # Unique to Markets
-
-
-class Teams(Entity):
+class Teams:
     _stored_data: dict = structure_data(TEAMS_CURSOR)  # Unique to Teams
+    _valid_data: dict = defaultdict(set)
+    _pending_data: dict = defaultdict(set)  # Hold data that needs to be evaluated manually before db insertion
+    _lock1 = threading.Lock()
+    _lock2 = threading.Lock()
+    _lock3 = threading.Lock()
+
+    @classmethod
+    def get_stored_data(cls):
+        return cls._stored_data
+
+    @classmethod
+    def get_pending_data(cls) -> dict:
+        return restructure_sets(cls._pending_data)
+
+    @classmethod
+    def get_valid_data(cls) -> dict:
+        return restructure_sets(cls._valid_data)
+
+    @classmethod
+    def update_stored_data(cls, key, value):
+        with cls._lock1:
+            cls._stored_data[key] = value
+
+    @classmethod
+    def update_pending_data(cls, key: str, data: tuple):
+        with cls._lock2:
+            cls._pending_data[key].add(data)
+
+    @classmethod
+    def update_valid_data(cls, key: str, data: tuple):
+        with cls._lock3:
+            cls._valid_data[key].add(data)

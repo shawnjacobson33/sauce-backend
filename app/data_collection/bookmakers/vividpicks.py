@@ -1,8 +1,6 @@
 from datetime import datetime
-from typing import Optional, Union, Any
+from typing import Optional
 
-from app import database as db
-from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -24,24 +22,24 @@ def extract_league(data: dict) -> Optional[str]:
             return cleaned_league
 
 
-def extract_subject_team(data: dict) -> Optional[str]:
-    # return the abbreviate team name, if it doesn't exist return the regular team name
-    return data.get('abvTeamName', data.get('teamName'))
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+    # get the team name from the dictionary
+    if team_name := data.get('abvTeamName', data.get('teamName')):
+        # get the team id and team name from the database
+        if team_data := bkm_utils.get_team_id(bookmaker_name, league, team_name):
+            # return the team id and team name
+            return team_data
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get the player's name, if it exists keep going
     if subject_name := data.get('name'):
         # get player attributes
-        subject_team = extract_subject_team(data)
-        # create a subject object
-        subject_obj = dc_utils.Subject(subject_name, league, team=subject_team)
+        team = extract_team(bookmaker_name, league, data)
         # gets the subject id or log message
-        subject_id, subject_name = bkm_utils.get_subject_id(bookmaker_name, subject_obj)
+        subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team)
         # return both subject id search result and cleaned subject
-        return subject_id, subject_name
-
-    return None, None
+        return subject
 
 
 def extract_multiplier(data: dict, market: str) -> Optional[float]:
@@ -51,17 +49,13 @@ def extract_multiplier(data: dict, market: str) -> Optional[float]:
         return float(m_market_data.get('multiplier', 1.0))
 
 
-def extract_market(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get the market name from the dictionary, if exists keep going
     if market_name := data.get('p'):
-        # create a market object
-        market_obj = dc_utils.Market(market_name, league=league)
         # gets the market id or log message
-        market_id, market_name = bkm_utils.get_market_id(bookmaker_name, market_obj)
+        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
-        return market_id, market_name
-
-    return None, None
+        return market
 
 
 def get_labels(multiplier: Optional[float]) -> list:
@@ -88,7 +82,7 @@ def get_odds(default_odds: float, multiplier: Optional[float]) -> float:
         # return the product of the bookmaker's default odds stored in the db with the multiplier to get adjusted odds
         return round(default_odds * multiplier, 3)
 
-    # otherwise the default best odds available will just be used
+    # otherwise the default-best odds available will just be used
     return default_odds
 
 # TODO: DIFFERENT FORMAT FOR game_info?
@@ -121,19 +115,15 @@ class VividPicks(bkm_utils.BookmakerPlug):
                         # for each dictionary in event data's activePlayers if they exist
                         for player_data in event_data.get('activePlayers', []):
                             # get the subject id from db and extract the subject name from dictionary
-                            subject_id, subject_name = extract_subject(self.bookmaker_info.name, player_data, league)
-                            # if both exist keep executing
-                            if subject_id and subject_name:
+                            if subject := extract_subject(self.bookmaker_info.name, player_data, league):
                                 # for each dictionary in player data's visiblePlayerProps if they exist
                                 for prop_line_data in player_data.get('visiblePlayerProps', []):
                                     # get the market id from the db and extract the market name from the dictionary
-                                    market_id, market_name = extract_market(self.bookmaker_info.name, prop_line_data, league)
-                                    # keep executing if both exist
-                                    if market_id and market_name:
+                                    if market := extract_market(self.bookmaker_info.name, prop_line_data, league):
                                         # get the numeric over/under line from the dictionary, keep going if exists
                                         if line := prop_line_data.get('val'):
                                             # extract the multiplier from the dictionary
-                                            multiplier = extract_multiplier(player_data, market_name)
+                                            multiplier = extract_multiplier(player_data, market['name'])
                                             # for each label (depending on the value of the multiplier)
                                             for label in get_labels(multiplier):
                                                 # update shared data
@@ -143,10 +133,10 @@ class VividPicks(bkm_utils.BookmakerPlug):
                                                     'league': league,
                                                     'game_info': game_info,
                                                     'market_category': 'player_props',
-                                                    'market_id': str(market_id),
-                                                    'market': market_name,
-                                                    'subject_id': str(subject_id),
-                                                    'subject': subject_name,
+                                                    'market_id': market['id'],
+                                                    'market': market['name'],
+                                                    'subject_id': subject['id'],
+                                                    'subject': subject['name'],
                                                     'bookmaker': self.bookmaker_info.name,
                                                     'label': label,
                                                     'line': line,

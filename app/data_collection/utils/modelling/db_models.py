@@ -22,10 +22,11 @@ class Market:
         return f"Market(name: {self.name}, sport: {self.sport})"
 
 
-@dataclass
 class Subject:
-    name: str
-    league: Optional[str] = None
-    team: Optional[dict] = None
-    position: Optional[str] = None
-    jersey_number: Optional[str] = None
+    def __init__(self, name: str, league: str, team: Optional[dict] = None, position: Optional[dict] = None, jersey_number: Optional[dict] = None):
+        self.name = name
+        self.league = league
+        self.team_id = team['id'] if team else None
+        self.team_name = team.get('abbr_name', team.get('full_name')) if team else None
+        self.position = position
+        self.jersey_number = jersey_number
