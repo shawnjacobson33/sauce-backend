@@ -1,3 +1,3 @@
-from .db_models import Subject, Market
+from .db_models import Subject, Market, Team
 
-__all__ = ['Subject', 'Market']
+__all__ = ['Subject', 'Market', 'Team']

@@ -54,12 +54,47 @@ def insert():
 
 
 # insert()
-nba_abbr_teams = [
-    'BOS', 'BRK', 'NYK', 'TOR', 'PHI', 'CLE', 'IND', 'CHI', 'DET', 'MIL', 'ATL', 'MIA', 'CHA', 'ORL', 'WAS', 'OKC',
-    'DEN', 'MIN', 'POR', 'UTA', 'GSW', 'PHX', 'SAC', 'LAC', 'LAL', 'HOU', 'DAL', 'MEM', 'SAS', 'NOP'
-]
 
-nba_teams = [
-    { 'abbr_name': 'BOS', 'full_name': 'Boston Celtics' }, { 'abbr_name': 'BRK', 'full_name': 'Brooklyn Nets' },
-    { 'abbr_name': 'BOS', 'full_name': 'Boston Celtics' }, { 'abbr_name': 'BOS', 'full_name': 'Boston Celtics' },
-]
+# db = get_client()[DATABASE_NAME]
+# collection_name = 'teams-v1'
+# collection = db[collection_name]
+#
+#
+# ncaaf_top_programs_abbr = [
+#     'ALA', 'OSU', 'UGA', 'MICH', 'CLEM', 'TEX', 'LSU', 'OU', 'ND', 'PSU',
+#     'USC', 'ORE', 'UF', 'TENN', 'AUB', 'WISC', 'MIA', 'FSU', 'MSU', 'IOWA',
+#     'OKST', 'KY', 'UNC', 'MIZZ', 'ARIZ', 'TCU', 'KSU', 'SDSU', 'BAYL'
+# ]
+#
+# ncaaf_top_programs_schools = [
+#     'Alabama', 'Ohio State', 'Georgia', 'Michigan', 'Clemson', 'Texas',
+#     'LSU', 'Oklahoma', 'Notre Dame', 'Penn State', 'USC', 'Oregon',
+#     'Florida', 'Tennessee', 'Auburn', 'Wisconsin', 'Miami', 'Florida State',
+#     'Michigan State', 'Iowa', 'Oklahoma State', 'Kentucky', 'North Carolina',
+#     'Missouri', 'Arizona', 'TCU', 'Kansas State', 'San Diego State', 'Baylor'
+# ]
+#
+#
+# docs = list()
+# for abbr, full in zip(ncaaf_top_programs_abbr, ncaaf_top_programs_schools):
+#     doc = {
+#         'abbr_name': abbr,
+#         'full_name': full,
+#         'league': 'NCAA'
+#     }
+#
+#     docs.append(doc)
+#
+#
+# collection.insert_many(docs)
+#
+#
+# # DELETING DUPLICATES
+# attribute = 'sport' if 'markets' in collection_name else 'league'
+# counter_dict = defaultdict(int)
+# for doc in collection.find():
+#     if counter_dict[(doc[attribute], doc['abbr_name'])] > 0:
+#         collection.delete_one({'_id': doc['_id']})
+#
+#     counter_dict[(doc[attribute], doc['abbr_name'])] += 1
+

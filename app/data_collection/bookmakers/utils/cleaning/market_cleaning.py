@@ -469,7 +469,7 @@ def clean_period_classifier(period_classifier: Optional[str]) -> Optional[str]:
     return formatted_cleaned_period
 
 
-def clean_market(market: str, sport: str, period_classifier: str = None) -> Optional[str]:
+def clean_market(market: str, sport: str, period_classifier: str = None) -> str:
     # if the bookmaker does (1Q, 2Q) betting lines
     if period_classifier:
         # re-format the market to include the period classifier at the beginning of it if exists (Points Rebounds -> 1Q Points Rebounds)
@@ -482,4 +482,5 @@ def clean_market(market: str, sport: str, period_classifier: str = None) -> Opti
             # return the standardized market name
             return mapped_market
 
+    # otherwise return original market name
     return market

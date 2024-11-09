@@ -1,4 +1,5 @@
-from .modelling import Subject, Market
+from .modelling import *
 from .definitions import *
 
-__all__ = ['IN_SEASON_LEAGUES', 'IN_SEASON_SPORTS', "Subject", "Market"]
+__all__ = ['IN_SEASON_LEAGUES', 'IN_SEASON_SPORTS', "Subject", "Market", 'Team']
+

@@ -28,7 +28,7 @@ class BettingLines:
         # if bookmaker is inputted
         if bookmaker:
             # get the lines associated with that bookmaker
-            bookmaker_lines = cls._betting_lines.get(bookmaker, 0)
+            bookmaker_lines = cls._betting_lines.get(bookmaker, "")
             # return the number of lines they have
             return len(bookmaker_lines)
 

@@ -5,13 +5,12 @@ from app.data_collection.utils.definitions import LEAGUE_SPORT_MAP
 
 # ***************************** DATABASE MODELS *********************************
 
+
 @dataclass
-class Subject:
-    name: str
-    league: Optional[str] = None
-    team: Optional[str] = None
-    position: Optional[str] = None
-    jersey_number: Optional[str] = None
+class Team:
+    league: str
+    abbr_name: Optional[str] = None
+    full_name: Optional[str] = None
 
 
 class Market:
@@ -24,6 +23,9 @@ class Market:
 
 
 @dataclass
-class Team:
+class Subject:
     name: str
     league: Optional[str] = None
+    team: Optional[dict] = None
+    position: Optional[str] = None
+    jersey_number: Optional[str] = None

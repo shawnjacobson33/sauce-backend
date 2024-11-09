@@ -85,10 +85,8 @@ def get_league_markets(league: str) -> list[str]:
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
     # gets and cleans the market if it exists
     if market_name := data.get('statistic'):
-        # create a market object
-        market_obj = dc_utils.Market(market_name, league=league)
         # gets the market id or log message
-        market_id, market_name = bkm_utils.get_market_id(bookmaker_name, market_obj)
+        market_id, market_name = bkm_utils.get_market_id(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market_id, market_name
 
@@ -102,15 +100,26 @@ def extract_position(data: dict) -> Optional[str]:
         return bkm_utils.clean_position(position)
 
 
+def extract_subject_team(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
+    # get the subject's team name from data
+    if subject_team := data.get('team'):
+        # get the team id and team name from the database
+        team_id, team_name = bkm_utils.get_team_id(bookmaker_name, league, subject_team)
+        # return the team id and team name
+        return team_id, team_name
+
+    return None, None
+
+
 def extract_subject(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
     # gets the player name, if it exists then keep going
     if subject_name := data.get('name'):
+        # extract a dictionary including the team id from database and the cleaned subject team name
+        team = extract_subject_team(bookmaker_name, data, league)
         # extract some player attributes
-        subject_team, position = data.get('team'), extract_position(data)
-        # create a subject object
-        subject_obj = dc_utils.Subject(subject_name, league, team=subject_team, position=position)
+        position = extract_position(data)
         # gets the subject id or log message
-        subject_id, subject_name = bkm_utils.get_subject_id(bookmaker_name, subject_obj)
+        subject_id, subject_name = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position)
         # return both subject id search result and cleaned subject
         return subject_id, subject_name
 
