@@ -98,6 +98,7 @@ class NFLScheduleCollector(gm_utils.ScheduleCollector):
             self.update_games({
                 'time_processed': str(datetime.now()),
                 "game_time": extract_game_time(row),
+                "league": self.source_info.name,
                 "away_team": away_team,
                 "home_team": home_team,
                 "box_score_url": extract_box_score_url(row),

@@ -98,6 +98,7 @@ class NBAScheduleCollector(gm_utils.ScheduleCollector):
             self.update_games({
                 'time_processed': str(datetime.now()),
                 "game_time": extract_game_time(row),
+                "league": self.source_info.name,
                 "away_team": extract_data(row, 'visitor_team_name'),
                 "home_team": extract_data(row, 'home_team_name'),
                 "box_score_url": extract_box_score_url(row),
