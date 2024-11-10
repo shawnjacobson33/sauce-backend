@@ -1,194 +1,106 @@
-# import pprint
-# from typing import Union
+import json
+from collections import defaultdict
+from typing import Union
+
+from app.database.db import get_client, DATABASE_NAME
+from app.database.utils.definitions import SUBJECTS_COLLECTION_NAME, MARKETS_COLLECTION_NAME, TEAMS_COLLECTION_NAME
+
+
+db = get_client()[DATABASE_NAME]
+
+
+def delete_duplicates(collection, name: str, attribute: str):
+    # DELETING DUPLICATES
+    counter_dict = defaultdict(int)
+    for doc in collection.find():
+        if counter_dict[(doc[attribute], doc[name])] > 0:
+            collection.delete_one({'_id': doc['_id']})
+
+        counter_dict[(doc[attribute], doc[name])] += 1
+
+
+def insert_subject(subject_data: dict = None, insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
+    collection = db[SUBJECTS_COLLECTION_NAME]
+    if insert_all:
+        with open('../../data_collection/utils/reports/pending_subjects.json') as file:
+            pending_subjects = json.load(file)
+            pending_subjects = [subject for bookmaker, subjects in pending_subjects.items() for subject in subjects if
+                             (bookmaker not in exclude) and ((subject['league'], subject['name'],) not in exclude)]
+            collection.insert_many(pending_subjects)
+    else:
+        collection.insert_one({
+            'name': subject_data['name'],
+            'league': subject_data['league'],
+            'team': subject_data['team'],
+            'position': subject_data['position'],
+            'jersey_number': subject_data['jersey_number']
+        })
+
+    delete_duplicates(collection, 'name', 'league')
+
+
+def insert_market(market_data: dict = None, insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
+    collection = db[MARKETS_COLLECTION_NAME]
+    if insert_all:
+        with open('../../data_collection/utils/reports/pending_markets.json') as file:
+            pending_markets = json.load(file)
+            pending_markets = [market for bookmaker, markets in pending_markets.items() for market in markets if
+                                (bookmaker not in exclude) and ((market['sport'], market['name'],) not in exclude)]
+            collection.insert_many(pending_markets)
+    else:
+        collection.insert_one({
+            'name': market_data['name'],
+            'sport': market_data['sport']
+        })
+
+    delete_duplicates(collection, 'name', 'sport')
+
+
+def insert_team(team_data: list[dict], insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
+    collection = db[TEAMS_COLLECTION_NAME]
+    if insert_all:
+        with open('../../data_collection/utils/reports/pending_teams.json') as file:
+            pending_teams = json.load(file)
+            pending_teams = [team for bookmaker, teams in pending_teams.items() for team in teams if
+                             (bookmaker not in exclude) and ((team['league'], team['abbr_name'],) not in exclude)]
+            collection.insert_many(pending_teams)
+    else:
+        collection.insert_many({
+            team_data
+        })
+
+    delete_duplicates(collection, 'abbr_name', 'league')
+
+
+
+
+
+# insert_subject()
+# insert_market()
+# insert_team()
+
+
+# ncaaf_top_programs_abbr = [
+#     'ALA', 'OSU', 'UGA', 'MICH', 'CLEM', 'TEX', 'LSU', 'OU', 'ND', 'PSU',
+#     'USC', 'ORE', 'UF', 'TENN', 'AUB', 'WISC', 'MIA', 'FSU', 'MSU', 'IOWA',
+#     'OKST', 'KY', 'UNC', 'MIZZ', 'ARIZ', 'TCU', 'KSU', 'SDSU', 'BAYL'
+# ]
 #
-# import pymongo
-# from pymongo.collection import Collection
-#
-# from database import get_db
-# from app.data_sourcing.bkm_utils.objects import Market, Subject
-# from app.data_sourcing.bkm_utils.constants import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME, \
-#     BOOKMAKERS_COLLECTION_NAME
-#
-#
-# db = get_db()
-#
-# subjects = db[SUBJECT_COLLECTION_NAME]
-# markets = db[MARKETS_COLLECTION_NAME]
-# bookmakers = db[BOOKMAKERS_COLLECTION_NAME]
+# ncaaf_top_programs_schools = [
+#     'Alabama', 'Ohio State', 'Georgia', 'Michigan', 'Clemson', 'Texas',
+#     'LSU', 'Oklahoma', 'Notre Dame', 'Penn State', 'USC', 'Oregon',
+#     'Florida', 'Tennessee', 'Auburn', 'Wisconsin', 'Miami', 'Florida State',
+#     'Michigan State', 'Iowa', 'Oklahoma State', 'Kentucky', 'North Carolina',
+#     'Missouri', 'Arizona', 'TCU', 'Kansas State', 'San Diego State', 'Baylor'
+# ]
 #
 #
-# # ************* REMOVE OPERATIONS ***************
-# def remove_last_batch(batch_id: str, collection: Collection):
-#     """Only deletes newly inserted documents"""
-#     collection.delete_many({'batch_id': batch_id})
-#
-# def remove_entity(entity: Union[Subject, Market], removable_attrs: list = None, insert_new: bool = False, add_to: Union[Subject, Market] = None):
-#     """Will remove entire doc or alt_name"""
-#     if not removable_attrs:
-#         removable_attrs = list()
-#
-#     collection = subjects if isinstance(entity, Subject) else markets
-#     # filter by league or sport to avoid higher likelihood of unwanted deletes
-#     col_filter = {
-#         f'attributes.{"league" if isinstance(entity, Subject) else "sport"}': entity.league
-#         if isinstance(entity, Subject) else entity.sport
+# docs = list()
+# for abbr, full in zip(ncaaf_top_programs_abbr, ncaaf_top_programs_schools):
+#     doc = {
+#         'abbr_name': abbr,
+#         'full_name': full,
+#         'league': 'NCAA'
 #     }
-#     # attempt to delete an entire doc that contains the entity
-#     if not collection.delete_one({'name': entity.name, **col_filter}).deleted_count:
-#         # to find docs where the alt_names field contains entity's name
-#         col_filter['attributes.alt_names'] = {'$in': [entity.name]}
-#         # find a doc matching the criteria and apply operations
-#         result = collection.find_one_and_update(col_filter, {
-#             '$pull': {
-#                 'attributes.alt_names': entity.name
-#             },
-#             '$set': {
-#                 f'attributes.{attribute}': None for attribute in removable_attrs if attribute != 'name'
-#             }
-#         })  # to remove entity's name and desired attributes
-#         print(f"Successfully Removed {entity.name} from {result['name']}'s alt_names!")
-#         # print(f"{result['name']}'s Updated Attributes: ")
-#         # pprint.pprint(result['attributes'])
 #
-#     else:
-#         print(f"Successfully Removed {entity.name}!")
-#
-#     if insert_new:
-#         # insert a new doc for the entity with all attributes and an empty 'alt_names' list
-#         collection.insert_one({'name': entity.name, 'attributes': {**{
-#             attribute: value for attribute, value in entity.__dict__.items() if attribute != 'name'
-#         }, 'alt_names': list()}})
-#         print(f"Successfully Inserted {entity.name}!")
-#
-#     if add_to:
-#         del col_filter['attributes.alt_names']
-#         result = collection.find_one_and_update({'name': add_to.name, **col_filter}, {
-#             '$push': {'attributes.alt_names': entity.name},
-#             '$set': {
-#                 f'attributes.{attribute}': value for attribute, value in entity.__dict__.items()
-#                 if attribute != 'name' and not add_to.__dict__[attribute]
-#             }
-#         })
-#         print(f"Successfully Added '{entity.name}' to '{result['name']}'s alt_names!")
-#         # print(f"{result.name}'s Updated Attributes: ")
-#         # pprint.pprint(result['attributes'])
-#
-# # ************** INSERT OPERATIONS ***************
-# def insert_entity(entity: Union[Subject, Market]):
-#     new_doc = {
-#         'name': entity.name,
-#         'attributes': {
-#             **entity.__dict__,
-#             'alt_names': []
-#         }
-#     }
-#     del new_doc['attributes']['name']
-#     subjects.insert_one(new_doc) if isinstance(entity, Subject) else markets.insert_one(new_doc)
-#     print(f"Successfully inserted {entity}!")
-#
-# # ************** UPDATE OPERATIONS ***************
-# def add_entity(alt_entity: Union[Subject, Market], new_entity: Union[Subject, Market], addable_attrs: list = None, delete_old: bool = False):
-#     if not addable_attrs:
-#         addable_attrs = list()
-#
-#     collection = subjects if isinstance(new_entity, Subject) else markets
-#     # will delete the alt_entity's doc if it was a mistake to create one
-#     if delete_old:
-#         remove_entity(alt_entity)
-#
-#     # filter by league or sport to avoid higher likelihood of unwanted deletes
-#     col_filter = {
-#         f'attributes.{"league" if isinstance(new_entity, Subject) else "sport"}': new_entity.league
-#         if isinstance(new_entity, Subject) else new_entity.sport
-#     }
-#     result = collection.find_one_and_update({'name': new_entity.name, **col_filter}, {'$push': {'attributes.alt_names': alt_entity.name}})
-#     if not result:
-#         # to find docs where the alt_names field contains entity's name
-#         col_filter['attributes.alt_names'] = {'$in': [new_entity.name]}
-#         result = collection.find_one_and_update(col_filter, {
-#             '$push': {
-#                 'attributes.alt_names': new_entity.name
-#             },
-#             '$set': {
-#                 f'attributes.{attribute}': value for attribute, value in new_entity.__dict__.items()
-#                 if attribute != 'name' and attribute in addable_attrs
-#             }
-#         })
-#
-#         print(f"Successfully added '{alt_entity.name}' to '{result['name']}'s alt_names!")
-#
-#     print(f"Successfully added '{alt_entity.name}' to '{result['name']}'s alt_names!")
-#
-#
-# def update_attribute_value(field: str, old_attribute: str, new_attribute: str, collection: Collection):
-#     collection.update_many({field: old_attribute}, {'$set': {field: new_attribute}})
-#
-#
-# def update_field_names(old_field_names: list, new_field_names: list, collection: Collection):
-#     assert len(old_field_names) == len(new_field_names), "Both Field Names Lists Must Be Same Length!"
-#     for i, field_name in enumerate(old_field_names):
-#         collection.update_many({}, {'$rename': {field_name: new_field_names[i]}})
-#
-# # ***********************************************************************************
-# # remove_last_batch('43f9bbc5-0853-4ec2-b1a8-3bee4b2073a3', subjects)
-# # update_attribute_value(field='attributes.position', old_attribute='Forward-Center', new_attribute='F-C', collection=subjects)
-# # update_field_names(old_field_names=['attributes.position'], new_field_names=['attributes.jersey_number'], collection=subjects)
-#
-# # Subjects:
-# # remove_entity(entity=Subject('Tayven Jackson', 'NCAAF', team='IU', position=None, jersey_number=None), insert_new=True)
-# # TODO: Add in functionality to switch alt_name and 'name'
-# # add_entity(alt_entity=Subject('Cameron Atkinson', 'NHL', team='TB', position=None, jersey_number=None), new_entity=Subject('Cam Atkinson', 'NHL', team='TBL', position='F', jersey_number=None), delete_old=True)
-#
-# # update_attribute(name='position', old_attribute='', new_attribute='D', collection=subjects)
-# # insert_entity(Subject('Josh Hart', 'NBA', 'NYK'))
-#
-# # Markets:
-# # remove_entity(entity=Market('Fantasy Points', sport='Football'), insert_new=False, add_to=None)
-# # add_entity(alt_entity=Market('Goaltending Saves', sport='Ice Hockey'), new_entity=Market('Goalie Saves', sport='Ice Hockey'), delete_old=True)
-#
-# # ***********************************************************************************
-#
-# # ODDS CONVERSION FORMULA:
-# # ----- Positive: (American odds / 100) + 1 = decimal odds
-# # ----- Negative: (100 / American odds) + 1 = decimal odds
-#
-# # BOOKMAKER PAYOUTS DOC STRUCTURE
-# # fields:
-# # ------- bookmaker: str ('PrizePicks')
-# # ------- default_odds: dict
-# # ------------ legs: int (3)
-# # ------------ is_insured: bool (False)
-# # ------------ odds: float (2.00)
-# # ------- payouts: list
-# # ------------ {
-# # ----------------- legs: int (3)
-# # ----------------- is_insured: bool (False)
-# # ----------------- odds: float (2.00)
-# # ------------ }
-# # --------------------------------------------
-#
-# # bookmaker_payouts.delete_one({'bookmaker': 'Drafters'})
-#
-# # bookmakers.insert_one({
-# #     'name': 'OddsShopper',
-# #     'is_dfs': False,
-# #     'default_odds': {
-# #         'legs': 6,
-# #         'is_insured': False,
-# #         'odds': round(1 / ((1.0 / 10) ** (1.0/6)), 3)
-# #     }, 'payouts': [
-# #         {'legs': 2, 'is_insured': False, 'odds': round(1 / ((1.0 / 2) ** (1.0/2)), 3)},
-# #         {'legs': 3, 'is_insured': False, 'odds': round(1 / ((1.0 / 3) ** (1.0/3)), 3)},
-# #         {'legs': 4, 'is_insured': False, 'odds': round(1 / ((1.0 / 4) ** (1.0/4)), 3)},
-# #         {'legs': 5, 'is_insured': False, 'odds': round(1 / ((1.0 / 5) ** (1.0/5)), 3)},
-# #         # {'legs': 6, 'is_insured': False, 'odds': round(1 / ((1.0 / 10) ** (1.0/6)), 3)},
-# #         # {'legs': 7, 'is_insured': False, 'odds': round(1 / ((1.0 / ????) ** (1.0/7)), 3)},
-# #         # {'legs': 8, 'is_insured': False, 'odds': round(1 / ((1.0 / ????) ** (1.0/8)), 3)},
-# #         # {'legs': 9, 'is_insured': False, 'odds': round(1 / ((1.0 / ????) ** (1.0/9)), 3)},
-# #         # {'legs': 10, 'is_insured': False, 'odds': round(1 / ((1.0 / ????) ** (1.0/10)), 3)},
-# #         # {'legs': 3, 'is_insured': True, 'odds': 1.817},
-# #         # {'legs': 7, 'is_insured': False, 'odds': 1.746},
-# #         # {'legs': 8, 'is_insured': True, 'odds': 1.781},
-# #         # {'legs': 8, 'is_insured': False, 'odds': 1.775},
-# #     ]
-# # })
+#     docs.append(doc)

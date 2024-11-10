@@ -8,23 +8,6 @@ from bs4 import BeautifulSoup
 from app.data_collection.games import utils as gm_utils
 
 
-# TODO: Same as NHL
-def get_current_nba_season():
-    now = datetime.now()
-    year = now.year
-    month = now.month
-
-    # Determine the season based on the month
-    if month >= 10:  # October to December
-        season = f"{year + 1}"
-    elif month <= 6:  # January to June
-        season = f"{year}"
-    else:  # July to September (off-season)
-        season = f"{year}"
-
-    return season
-
-
 def convert_to_datetime(date_str, time_str):
     # Parse the date string
     date_obj = datetime.strptime(date_str, "%a, %b %d, %Y")
@@ -56,36 +39,45 @@ def extract_data(tr_elem, attr_name: str) -> Optional[str]:
         return td_elem.text
 
 
-def extract_game_time(row) -> Optional[str]:
+def extract_game_time(row, valid_dates: list[datetime]) -> Optional[str]:
     # get the start time of the game if it exists
     if (game_date := extract_game_date(row)) and (start_time := extract_data(row, 'game_start_time')):
-        # convert it to a comparable datetime object and then cast to a string
-        return str(convert_to_datetime(game_date, start_time))
+        # convert it to a comparable datetime object
+        game_datetime = convert_to_datetime(game_date, start_time)
+        # make sure that this game is in the desired date range
+        if game_datetime.strftime("%Y-%m-%d") in valid_dates:
+            # cast to a string and return
+            return str(game_datetime)
 
 
 def extract_box_score_url(tr_elem) -> Optional[str]:
     # extracts the url pointing to the corresponding box score for this game
-    if td_elem := tr_elem.find('td', {'data-stat': 'box_score_text'}):
-        if a_elem := td_elem.find('a'):
-            return a_elem.get('href')
+    if th_elem := tr_elem.find('th', {'data-stat': 'date_game'}):
+        # get the link holding box score url
+        if box_score_identifier := th_elem.get('csk'):
+            # return both if both exist
+            return f'/boxscores/{box_score_identifier}.html'
 
 
 class NBAScheduleCollector(gm_utils.ScheduleCollector):
     def __init__(self, source_info: gm_utils.Source):
         super().__init__(source_info)
 
-    async def collect(self):
-        # get the url for basketball-reference.com's nba schedules
+    async def collect(self, n_days: int = 1):
+        # generate a range of dates predicated upon n_days param
+        date_list = gm_utils.get_date_range(n_days)
+        # Get the month and season for each date (if needed)
+        target_months = [datetime.strptime(date, "%Y-%m-%d").strftime("%B").lower() for date in date_list]
+        # Get the URL for the NBA schedule
         url = gm_utils.get_url(self.source_info.name, self.source_info.league, 'schedule')
-        # get the current month and season (november 2025)
-        current_month = datetime.now().strftime("%B").lower()
-        current_season = get_current_nba_season()
-        # format the url with the dates
-        formatted_url = url.format(current_season, current_month)
-        # asynchronously request the data and call parse schedule
-        await gm_utils.fetch(formatted_url, self._parse_schedule)
+        # Use each date’s month to format URLs and fetch data
+        for month in target_months:
+            # format the url with the current season (2025) and month
+            formatted_url = url.format(gm_utils.CURR_SEASON_1, month)
+            # Asynchronously request the data and call parse schedule for each formatted URL
+            await gm_utils.fetch(formatted_url, self._parse_schedule, date_list)
 
-    async def _parse_schedule(self, html_content):
+    async def _parse_schedule(self, html_content, dates: list[datetime]):
         # initializes a html parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # extracts the table element that holds schedule data
@@ -94,22 +86,25 @@ class NBAScheduleCollector(gm_utils.ScheduleCollector):
         rows = table.find_all('tr')[1:]
         # for each row
         for row in rows:
-            # adds the game and all of its extracted data to the shared data structure
-            self.update_games({
-                'time_processed': str(datetime.now()),
-                "game_time": extract_game_time(row),
-                "league": self.source_info.name,
-                "away_team": extract_data(row, 'visitor_team_name'),
-                "home_team": extract_data(row, 'home_team_name'),
-                "box_score_url": extract_box_score_url(row),
-                "game_notes": extract_data(row, 'game_remarks')
-            })
+            # get the time and date of the game and check if it's in the right range of dates desired
+            if game_time := extract_game_time(row, dates):
+                # adds the game and all of its extracted data to the shared data structure
+                self.update_games({
+                    'time_processed': str(datetime.now()),
+                    'source': f'basketball-{self.source_info.name.lower()}',
+                    "league": self.source_info.league,
+                    "game_time": game_time,
+                    "away_team": extract_data(row, 'visitor_team_name'),
+                    "home_team": extract_data(row, 'home_team_name'),
+                    "box_score_url": extract_box_score_url(row),
+                    "game_notes": extract_data(row, 'game_remarks')
+                })
 
 
 async def main():
     from app.data_collection.games.utils.shared_data import Games
     source = gm_utils.Source('Reference', 'NBA')
-    await NBAScheduleCollector(source).collect()
+    await NBAScheduleCollector(source).collect(n_days=2)
     pprint.pprint(Games.get_games())
 
 if __name__ == '__main__':
