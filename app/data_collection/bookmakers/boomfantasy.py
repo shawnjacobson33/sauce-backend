@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional, Any
 
+from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -34,7 +35,7 @@ def extract_player_info(bookmaker_name: str, league: str, data: dict) -> tuple[A
         # get the team name if it exists
         if team_name := player_image_data.get('abbreviation'):
             # get the team id and team name from the database
-            team_data = bkm_utils.get_team_id(bookmaker_name, league, team_name)
+            team_data = dc_utils.get_team_id(bookmaker_name, league, team_name)
             # get the abbreviated team name that the player is on and their jersey number
             return player_image_data.get('jerseyNumber'), team_data
 

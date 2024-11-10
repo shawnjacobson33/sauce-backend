@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime
 from typing import Optional
 
+from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -21,7 +22,7 @@ def extract_subject_team(bookmaker_name: str, league: str, data: dict) -> Option
     # get the team the player is on and only return if it exists and doesn't equal MMA
     if (subject_team := data.get('own')) and (subject_team != 'MMA'):
         # get the team id and team name from the database
-        if team_data := bkm_utils.get_team_id(bookmaker_name, league, subject_team):
+        if team_data := dc_utils.get_team_id(bookmaker_name, league, subject_team):
             # return the team id and team name
             return team_data
 

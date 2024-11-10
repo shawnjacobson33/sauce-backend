@@ -1,9 +1,9 @@
 from dataclasses import dataclass
+from typing import Optional
 
+from app.data_collection.utils import LEAGUE_SPORT_MAP
 from app.data_collection.bookmakers.utils.shared_data import BettingLines
 from app.data_collection.bookmakers.utils.requesting import RequestManager
-
-
 
 # ***************************** EXTRA HELPERS *********************************
 
@@ -26,6 +26,25 @@ class Bookmaker:
             d_data, p_data = bookmaker_info['default_odds'], bookmaker_info['payouts']
             self.default_payout: Payout = Payout(d_data['legs'], d_data['is_insured'], d_data['odds'])
             self.payouts: list[Payout] = [Payout(data['legs'], data['is_insured'], data['odds']) for data in p_data]
+
+
+class Market:
+    def __init__(self, name: str, league: Optional[str] = None, sport: Optional[str] = None):
+        self.name = name
+        self.sport = LEAGUE_SPORT_MAP.get(league) if not sport else sport
+
+    def __str__(self):
+        return f"Market(name: {self.name}, sport: {self.sport})"
+
+
+class Subject:
+    def __init__(self, name: str, league: str, team: Optional[dict] = None, position: Optional[dict] = None, jersey_number: Optional[dict] = None):
+        self.name = name
+        self.league = league
+        self.team_id = team['id'] if team else None
+        self.team_name = team.get('abbr_name', team.get('full_name')) if team else None
+        self.position = position
+        self.jersey_number = jersey_number
 
 # ***************************** BASE MODELS *********************************
 

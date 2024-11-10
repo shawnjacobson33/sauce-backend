@@ -1,9 +1,13 @@
 TEAMS_MAP = {
     'NBA': {
         # PHX - Phoenix Suns
-        'PHO': 'PHX',  # Dabble, OwnersBox
+          'PHO': 'PHX',  # Dabble, OwnersBox
         # NYK - New York Knicks
-        'NY': 'NYK',  # Dabble
+          'NY': 'NYK',  # Dabble
+        # GSW - Golden State Warriors
+          'GS': 'GSW',  # OwnersBox, Dabble, Payday
+        # WAS - Washington Wizards
+          'WSH': 'WAS',  # Payday
     },
     'NFL': {
         # JAX - Jacksonville Jaguars
@@ -12,7 +16,6 @@ TEAMS_MAP = {
           'WSH': 'WAS',  # BoomFantasy, Payday
         # LAR - Los Angeles Rams
           'LA': 'LAR',  # VividPicks
-
     },
     'MLB': {},
     'NHL': {
@@ -21,6 +24,10 @@ TEAMS_MAP = {
         # LA - Los Angeles Kings
           'LA': 'LA',  # MoneyLine, SuperDraft, VividPicks, PrizePicks, OwnersBox
           'LAK': 'LA',  # ParlayPlay, DraftKingsPick6
+        # NJ - New Jersey Devils
+          'NJD': 'NJ',  # ParlayPlay, DraftKingsPick6
+        # ANA - Anaheim Ducks
+          'ANH': 'ANA',  # OwnersBox
     },
     'WNBA': {},
     'NCAA': {
@@ -70,8 +77,14 @@ TEAMS_MAP = {
           'BAMA': 'BAMA',  # VividPicks
         # IND - Indiana
           'IND': 'IND',  # VividPicks
+          'INDIANA': 'Indiana',  # Payday
         # WAKE - Wake Forest
           'WAKE': 'WAKE',  # VividPicks
+          'WAKE FOREST': 'Wake Forest',  # Payday
+        # GONZ - Gonzaga
+          'GONZAGA': 'Gonzaga',  # Payday
+        # MICH - Michigan
+          'MICHIGAN': 'Michigan',  # Payday
     }
 }
 

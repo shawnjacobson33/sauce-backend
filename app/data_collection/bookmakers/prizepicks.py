@@ -2,6 +2,7 @@ import re
 from datetime import datetime
 from typing import Optional
 
+from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -79,7 +80,7 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
     # get the player's team name from the dictionary
     if team_name := data.get('subject_team'):
         # get the team id and team name from the database
-        if team_data := bkm_utils.get_team_id(bookmaker_name, league, team_name):
+        if team_data := dc_utils.get_team_id(bookmaker_name, league, team_name):
             # return the team id and team name
             return team_data
 

@@ -47,7 +47,7 @@ URL_MAP = {
         'players': 'https://api.sleeper.app/players',
         'prop_lines': 'https://api.sleeper.app/lines/available?'
     }, 'SuperDraft': {
-        'prop_lines': 'https://api.superdraft.io/api/prop/v3/active-fantasy'
+        'prop_lines': 'https://api.superdraft.io/api/prop/v3/active-fantasy?sportId={}&renderProps=false'
     },
     'ThriveFantasy': {
         'prop_lines': 'https://api.thrivefantasy.com/houseProp/upcomingHouseProps'

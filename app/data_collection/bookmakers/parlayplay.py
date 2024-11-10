@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime
 from typing import Optional, Union, Any
 
+from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -16,7 +17,7 @@ def extract_subject_team(bookmaker_name: str, league: str, data: dict) -> Option
     # get the dictionary holding player's team, if exists execute
     if (team_data := data.get('team')) and (team_name := team_data.get('teamAbbreviation')):
         # get the team id and team name from the database
-        if team_data := bkm_utils.get_team_id(bookmaker_name, league, team_name):
+        if team_data := dc_utils.get_team_id(bookmaker_name, league, team_name):
             # return the team id and team name
             return team_data
 

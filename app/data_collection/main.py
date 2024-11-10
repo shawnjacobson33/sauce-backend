@@ -6,6 +6,7 @@ import asyncio
 
 from app import database as db
 from app.data_collection import bookmakers as bkm
+from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import BettingLines
 
 
@@ -95,7 +96,7 @@ def save_valid_teams_to_file() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Teams.get_valid_data(), f, indent=4)
+        json.dump(dc_utils.Teams.get_valid_data(), f, indent=4)
 
 
 def save_pending_markets_to_file() -> None:
@@ -122,7 +123,7 @@ def save_pending_teams_to_file():
     # open the pending subjects file
     with open(file_path, 'w') as f:
         # save the pending subjects to the file, in pretty print mode
-        json.dump(bkm.Teams.get_pending_data(), f, indent=4)
+        json.dump(dc_utils.Teams.get_pending_data(), f, indent=4)
 
 
 def save_betting_lines_to_file():
@@ -196,4 +197,4 @@ async def start_collecting(bookmaker_plug: bkm.BookmakerPlug):
 
 
 if __name__ == '__main__':
-    asyncio.run(run("", run_all=True))
+    asyncio.run(run("SuperDraft", run_all=False))

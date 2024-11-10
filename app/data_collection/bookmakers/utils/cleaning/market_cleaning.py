@@ -275,6 +275,8 @@ MARKET_MAP = {
           'Total Receptions': 'Receptions',  # OddsShopper
           'REC': 'Receptions',  # Payday
           'receptions': 'Receptions',  # Sleeper
+        # 2H Receptions
+          '2H Receptions': '2H Receptions',  # PrizePicks
         # Receiving Touchdowns
           'RECEIVING_TOUCHDOWNS': 'Receiving Touchdowns',  # BoomFantasy
           'Total Receiving Touchdowns': 'Receiving Touchdowns',  # OddsShopper
@@ -358,6 +360,8 @@ MARKET_MAP = {
           'Total Points': 'Kicking Points',  # ParlayPlay
           'Total Kicking Points': 'Kicking Points',  # OddsShopper
           'kicking_points': 'Kicking Points',  # Sleeper
+        # 2H Kicking Points
+          '2H Kicking Points': '2H Kicking Points',  # PrizePicks
         # Extra Points Made
           'Extra Point Made': 'Extra Points Made',  # Dabble
           'Total Extra Points Made': 'Extra Points Made',  # OddsShopper

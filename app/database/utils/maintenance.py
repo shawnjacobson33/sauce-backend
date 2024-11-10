@@ -48,15 +48,12 @@ def insert_market(market_data: dict = None, insert_all: bool = False, exclude: l
                                 (bookmaker not in exclude) and ((market['sport'], market['name'],) not in exclude)]
             collection.insert_many(pending_markets)
     else:
-        collection.insert_one({
-            'name': market_data['name'],
-            'sport': market_data['sport']
-        })
+        collection.insert_one(market_data)
 
     delete_duplicates(collection, 'name', 'sport')
 
 
-def insert_team(team_data: list[dict], insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
+def insert_team(team_data: dict = None, insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
     collection = db[TEAMS_COLLECTION_NAME]
     if insert_all:
         with open('../../data_collection/utils/reports/pending_teams.json') as file:
@@ -65,9 +62,7 @@ def insert_team(team_data: list[dict], insert_all: bool = False, exclude: list[U
                              (bookmaker not in exclude) and ((team['league'], team['abbr_name'],) not in exclude)]
             collection.insert_many(pending_teams)
     else:
-        collection.insert_many({
-            team_data
-        })
+        collection.insert_one(team_data)
 
     delete_duplicates(collection, 'abbr_name', 'league')
 
@@ -76,8 +71,21 @@ def insert_team(team_data: list[dict], insert_all: bool = False, exclude: list[U
 
 
 # insert_subject()
-# insert_market()
-# insert_team()
+# market = {
+#     'name': '2H Kicking Points',
+#     'sport': 'Football'
+# }
+# insert_market(
+#     market_data=market
+# )
+# team = {
+#     'abbr_name': 'WIS',
+#     'full_name': 'Wisconsin',
+#     'league': 'NCAA'
+# }
+# insert_team(
+#     team_data=team
+# )
 
 
 # ncaaf_top_programs_abbr = [

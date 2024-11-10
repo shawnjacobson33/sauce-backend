@@ -1,3 +1,3 @@
-from .bookmaker_models import Bookmaker, BookmakerPlug
+from .models import *
 
-__all__ = ['Bookmaker', 'BookmakerPlug']
+__all__ = ['Subject', 'Market', 'Bookmaker', 'BookmakerPlug']

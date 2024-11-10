@@ -1,7 +1,10 @@
+import asyncio
 from datetime import datetime
 from typing import Optional, Any, Union
 
+from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import utils as bkm_utils
+from app.data_collection.bookmakers.to_do.unabated import headers
 
 
 def extract_sports_dict(data: dict) -> dict:
@@ -52,7 +55,7 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
     # get the player's team name from the dictionary
     if team_name := data.get('teamAbbr'):
         # get the team id and team name from the database
-        if team_data := bkm_utils.get_team_id(bookmaker_name, league, team_name):
+        if team_data := dc_utils.get_team_id(bookmaker_name, league, team_name):
             # return the team id and team name
             return team_data
 
@@ -81,14 +84,39 @@ class SuperDraft(bkm_utils.BookmakerPlug):
     def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
         # call parent class Plug
         super().__init__(bookmaker_info, batch_id)
+        # get the headers required to request prop lines data
+        self.headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        # update headers timestamp
+        self.headers['timestamp'] = str(datetime.now())
 
     async def collect(self) -> None:
         # get the url required to request prop lines data
-        url = bkm_utils.get_url(self.bookmaker_info.name)
-        # get the headers required to request prop lines data
-        headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        url = bkm_utils.get_url(self.bookmaker_info.name).format('0')
         # make the request for the prop lines
-        await self.req_mngr.get(url, self._parse_lines, headers=headers)
+        await self.req_mngr.get(url, self._parse_leagues, headers=self.headers)
+
+    async def _parse_leagues(self, response) -> None:
+        # get response data in json, if exists then keep going
+        if json_data := response.json():
+            # initialize a structure to hold requests to make
+            tasks = list()
+            # for each sports data dictionary
+            for sport_data in json_data.get('sports', []):
+                # get the league name
+                if league_name := sport_data.get('sName'):
+                    # clean the league name
+                    cleaned_league = bkm_utils.clean_league(league_name)
+                    # if it is a valid league and has props available
+                    if bkm_utils.is_league_valid(cleaned_league) and sport_data.get('hasProps'):
+                        # get the league id if exists
+                        if league_id := sport_data.get('sportId'):
+                            # get the url with the inserted sport id param
+                            url = bkm_utils.get_url(self.bookmaker_info.name).format(league_id)
+                            # add the request for the prop lines
+                            tasks.append(self.req_mngr.get(url, self._parse_lines, headers=self.headers))
+
+            # asynchronously request prop lines for all leagues
+            await asyncio.gather(*tasks)
 
     async def _parse_lines(self, response) -> None:
         # get response data in json, if exists then keep going
