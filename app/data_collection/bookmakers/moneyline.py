@@ -87,7 +87,7 @@ class MoneyLine(bkm_utils.BookmakerPlug):
             # for each prop line in the data, if they exist
             for prop_line in data:
                 # extract the league name, keep going if it exists
-                if league := extract_league(prop_line):
+                if league := extract_league(prop_line):  # TODO: BUG - GETTING "NFL" AS LEAGUE FOR NCAAF PLAYERS
                     # to track the leagues being collected
                     bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
                     # extract the market id from database and market name from dictionary

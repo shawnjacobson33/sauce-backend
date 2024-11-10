@@ -7,7 +7,7 @@ from app.data_collection.bookmakers.utils.cleaning import clean_subject, clean_m
 
 def create_team_object(league: str, team_name: str) -> Team:
     # create a team object
-    team_obj = Team(league)
+    team_obj = Team(league if 'NCAA' not in league else 'NCAA')  # College Teams stored under one 'NCAA' umbrella
     # update the object's attributes depending on if the bookmaker uses abbr_name or full_name
     setattr(team_obj, 'abbr_name' if len(team_name) < 5 else 'full_name', team_name)
     # return the updated team object

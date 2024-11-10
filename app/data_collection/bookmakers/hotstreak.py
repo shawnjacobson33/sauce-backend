@@ -62,7 +62,7 @@ def extract_participants(data: dict) -> dict:
                 if subject_name := player_data.get('displayName'):
                     # create key-value pair for participant id and relating attributes
                     participants[participant_id] = {
-                        'subject': subject_name['name'], 'position': player_data.get('position'),
+                        'subject': subject_name, 'position': player_data.get('position'),
                         'opponent_id': opponent_id, 'jersey_number': player_data.get('number')
                     }
 

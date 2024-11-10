@@ -10,6 +10,15 @@ DB = db.Database.get()
 SUBJECTS_CURSOR = DB[db.SUBJECTS_COLLECTION_NAME]
 MARKETS_CURSOR = DB[db.MARKETS_COLLECTION_NAME]
 TEAMS_CURSOR = DB[db.TEAMS_COLLECTION_NAME]
+PARTITIONS = {
+    'markets': IN_SEASON_SPORTS,
+    'subjects': IN_SEASON_LEAGUES,
+    'teams': [league if 'NCAA' not in league else 'NCAA' for league in IN_SEASON_LEAGUES]  # Because all college team names are stored under 'NCAA' umbrella
+}
+
+
+def get_partitions(cursor_name: str) -> str:
+    return PARTITIONS[cursor_name]
 
 
 def get_structured_docs(docs: list[dict], cursor_name: str) -> dict:
@@ -36,12 +45,10 @@ def get_structured_docs(docs: list[dict], cursor_name: str) -> dict:
 def structure_data(cursor) -> dict:
     # get collection being used
     cursor_name = cursor.name.split('-')[0]
-    # get partitions to ensure valid keys (if there was a LeBron James in the NBA and MLB)
-    partitions = IN_SEASON_SPORTS if cursor_name == 'markets' else IN_SEASON_LEAGUES  # Markets use sports and Subjects use leagues
     # initialize a dictionary to hold all the data partitioned
     partitioned_data = dict()
     # for each partition in the partitions predicated upon the cursor name
-    for partition in partitions:
+    for partition in get_partitions(cursor_name):
         # filter by league or sport and don't include the batch_id
         filtered_docs = cursor.find({f'{"sport" if cursor_name == "markets" else "league"}': partition})
         # structure the documents and data based upon whether its markets or subjects data

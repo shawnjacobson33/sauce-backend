@@ -1,23 +1,84 @@
-
-
-
 TEAMS_MAP = {
     'NBA': {
+        # PHX - Phoenix Suns
+        'PHO': 'PHX',  # Dabble, OwnersBox
+        # NYK - New York Knicks
+        'NY': 'NYK',  # Dabble
+    },
+    'NFL': {
+        # JAX - Jacksonville Jaguars
+          'JAC': 'JAX',  # MoneyLine, PrizePicks, VividPicks, SuperDraft
+        # WAS - Washington Commanders
+          'WSH': 'WAS',  # BoomFantasy, Payday
+        # LAR - Los Angeles Rams
+          'LA': 'LAR',  # VividPicks
 
     },
-    'NFL': {},
     'MLB': {},
-    'NHL': {},
+    'NHL': {
+        # CBJ - Columbus Blue Jackets
+          'CLS': 'CBJ',  # OwnersBox, SuperDraft
+        # LA - Los Angeles Kings
+          'LA': 'LA',  # MoneyLine, SuperDraft, VividPicks, PrizePicks, OwnersBox
+          'LAK': 'LA',  # ParlayPlay, DraftKingsPick6
+    },
     'WNBA': {},
-    'NCAA': {}
+    'NCAA': {
+        # SF - San Francisco
+          'SF': 'SF',  # ParlayPlay, VividPicks, PrizePicks, Underdog Fantasy, BoomFantasy
+          'SAN FRANCISCO': 'San Francisco',  # Payday
+        # USU - Utah State
+          'USU': 'USU',  # ParlayPlay,
+          'UTS': 'USU',  # VividPicks
+        # PEPP - Pepperdine
+          'PEPP': 'PEPP',  # ParlayPlay, VividPicks, PrizePicks
+          'PEPPERDINE': 'Pepperdine',  # Payday
+        # WSU - Washington State
+          'WSU': 'WSU',  # ParlayPlay, Dabble, Payday
+          'WST': 'WSU',  # VividPicks
+        # UNLV - UNLV
+          'UNLV': 'UNLV',  # ParlayPlay, VividPicks, Sleeper, Payday
+        # WASH - Washington
+          'WASH': 'WASH', # ParlayPlay, VividPicks, PrizePicks, Underdog Fantasy, Sleeper, Dabble
+          'WSH': 'WASH',  # BoomFantasy, Payday
+        # AFA - Air Force
+          'AFA': 'AFA',  # ParlayPlay
+          'AF': 'AFA',  # VividPicks
+        # FRES - Fresno State
+          'FRES': 'FRES',  # ParlayPlay
+          'FRE': 'FRES',  # VividPicks
+        # NEV - Nevada
+          'NEV': 'NEV',  # ParlayPlay, VividPicks, PrizePicks, Underdog Fantasy, Sleeper
+        # HOU - Houston
+          'HOU': 'HOU',  # ParlayPlay, VividPicks, PrizePicks, Underdog Fantasy, Sleeper, Dabble, BoomFantasy
+        # BSU - Boise State
+          'BSU': 'BSU',
+          'BOISE': 'Boise State',  # ParlayPlay
+        # HAW - Hawaii
+          'HAW': 'HAW',  # VividPicks
+          'HAWAII': 'Hawaii',  # ParlayPlay
+        # BYU - BYU
+          'BYU': 'BYU',  # ParlayPlay
+        # UTAH - Utah
+          'UTAH': 'UTAH',  # ParlayPlay
+          'UTH': 'UTAH',  # VividPicks
+        # OKLA - Oklahoma
+          'OKL': 'OKLA',  # VividPicks
+        # MIZZ - Missouri
+          'MIZ': 'MIZZ',  # VividPicks
+        # BAMA - Alabama
+          'BAMA': 'BAMA',  # VividPicks
+        # IND - Indiana
+          'IND': 'IND',  # VividPicks
+        # WAKE - Wake Forest
+          'WAKE': 'WAKE',  # VividPicks
+    }
 }
 
 
 def clean_team(team: str, league: str):
-    # because in the database...to reduce redundancy all college team names have one league 'NCAA'
-    formatted_league = league[:4] if 'NCAA' in league else league
     # get the teams associated with the mapped league name
-    if partitioned_team_map := TEAMS_MAP.get(formatted_league):
+    if partitioned_team_map := TEAMS_MAP.get(league):
         # map the team name to a standardized version in the TEAM_MAP, if it doesn't exist
         if mapped_team := partitioned_team_map.get(team):
             # return the standardized team name

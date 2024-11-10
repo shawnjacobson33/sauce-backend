@@ -89,6 +89,15 @@ def save_valid_subjects_to_file() -> None:
         json.dump(bkm.Subjects.get_valid_data(), f, indent=4)
 
 
+def save_valid_teams_to_file() -> None:
+    # create a custom file path to store the betting lines sample
+    file_path = get_file_path(entity_type='teams', is_pending=False)
+    # open the pending markets file
+    with open(file_path, 'w') as f:
+        # save the betting lines to the file, in pretty print mode
+        json.dump(bkm.Teams.get_valid_data(), f, indent=4)
+
+
 def save_pending_markets_to_file() -> None:
     # create a custom file path to store the betting lines sample
     file_path = get_file_path(entity_type='markets', is_pending=True)
@@ -105,6 +114,15 @@ def save_pending_subjects_to_file():
     with open(file_path, 'w') as f:
         # save the pending subjects to the file, in pretty print mode
         json.dump(bkm.Subjects.get_pending_data(), f, indent=4)
+
+
+def save_pending_teams_to_file():
+    # create a custom file path to store the betting lines sample
+    file_path = get_file_path(entity_type='teams', is_pending=True)
+    # open the pending subjects file
+    with open(file_path, 'w') as f:
+        # save the pending subjects to the file, in pretty print mode
+        json.dump(bkm.Teams.get_pending_data(), f, indent=4)
 
 
 def save_betting_lines_to_file():
@@ -151,13 +169,15 @@ async def run(plug: str, run_all: bool = False):
     t2 = time.time()
     # Output total number of betting lines collected and the time it took to run entire job
     print(f"[TOTAL]: {BettingLines.size()}, {round(t2-t1, 3)}s")
-    # save the valid markets, leagues and subjects that were found in the database to a file to be evaluated
+    # save the valid markets,teams, leagues and subjects that were found in the database to a file to be evaluated
     save_valid_leagues_to_file()
     save_valid_markets_to_file()
     save_valid_subjects_to_file()
-    # save the pending markets, and subjects that were not found in the database to a file to be evaluated
+    save_valid_teams_to_file()
+    # save the pending markets, teams and subjects that were not found in the database to a file to be evaluated
     save_pending_markets_to_file()
     save_pending_subjects_to_file()
+    save_pending_teams_to_file()
     # save the sample data of betting lines to a file for inspection
     save_betting_lines_to_file()
     # output the size of the file storing the betting lines
@@ -176,4 +196,4 @@ async def start_collecting(bookmaker_plug: bkm.BookmakerPlug):
 
 
 if __name__ == '__main__':
-    asyncio.run(run("MoneyLine", run_all=False))
+    asyncio.run(run("", run_all=True))

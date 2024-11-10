@@ -179,6 +179,8 @@ MARKET_MAP = {
         # 1H Passing Yards
           '1H Pass Yards': '1H Passing Yards',  # PrizePicks
           '1H PASSING_YARDS': '1H Passing Yards',  # BoomFantasy
+        # 2H Passing Yards
+          '2H Pass Yards': '2H Passing Yards',  # PrizePicks
         # Passing Attempts
           'Pass Attempts': 'Passing Attempts',  # BetOnline, ParlayPlay
           'PASSING_ATTEMPTS': 'Passing Attempts',  # BoomFantasy
@@ -230,6 +232,8 @@ MARKET_MAP = {
         # 1H Rushing Yards
           '1H Rush Yards': '1H Rushing Yards',  # PrizePicks
           '1H RUSHING_YARDS': '1H Rushing Yards',  # BoomFantasy
+        # 2H Rushing Yards
+          '2H Rush Yards': '2H Rushing Yards',  # PrizePicks
         # Carries
           'Carries': 'Carries',  # BetOnline
           'RUSHING_ATTEMPTS': 'Carries',  # BoomFantasy
@@ -243,6 +247,7 @@ MARKET_MAP = {
           'Total Rushing Touchdowns': 'Rushing Touchdowns',  # OddsShopper
           'rushing_touchdowns': 'Rushing Touchdowns',  # Sleeper
           'Rushing TDs': 'Rushing Touchdowns',  # Underdog Fantasy
+          'RushingTouchdowns': 'Rushing Touchdowns',  # VividPicks
         # Longest Rush
           'Longest Rush': 'Longest Rush',  # OddsShopper, OwnersBox, ParlayPlay
           'Longest Rush (Yards)': 'Longest Rush',  # Dabble
@@ -260,6 +265,8 @@ MARKET_MAP = {
         # 1H Receiving Yards
           '1H Receiving Yards': '1H Receiving Yards',  # PrizePicks
           '1H RECEIVING_YARDS': '1H Receiving Yards',  # BoomFantasy
+        # 2H Receiving Yards
+          '2H Receiving Yards': '2H Receiving Yards',  # PrizePicks
         # Targets
           'Receiving Targets': 'Targets',  # ParlayPlay
           'Rec Targets': 'Targets',  # PrizePicks
@@ -318,6 +325,8 @@ MARKET_MAP = {
           'fantasy_points': 'Fantasy Points',  # Sleeper
         # 1H Fantasy Points
           '1H Fantasy Score': '1H Fantasy Points',  # PrizePicks
+        # 2H Fantasy Points
+          '2H Fantasy Score': '2H Fantasy Points',  # PrizePicks
         # Sacks
           'Total Sacks': 'Sacks',  # OddsShopper
           'sacks': 'Sacks',  # Sleeper
@@ -379,6 +388,8 @@ MARKET_MAP = {
           'Completion Percentage': 'Completion Percentage',  # Underdog Fantasy
         # Average Yards Per Punt
           'Avg Yards Per Punt': 'Average Yards Per Punt',  # Underdog Fantasy
+        # Punts
+          'Total Punts': 'Punts',  # Underdog Fantasy
     },
     'Ice Hockey': {
         # Points
@@ -423,6 +434,7 @@ MARKET_MAP = {
           'AST': 'Assists',  # Payday
           'assists': 'Assists',  # Sleeper
           'Player assists (incl. overtime)': 'Assists',  # Rebet
+          'ASSISTS': 'Assists',  # BoomFantasy
         # Goals Scored
           'Total Player Goals': 'Goals Scored',  # OddsShopper
           'Goals': 'Goals Scored',  # OwnersBox
@@ -447,6 +459,7 @@ MARKET_MAP = {
         # Time On Ice
           'Time On Ice': 'Time On Ice',  # PrizePicks
           'Time on Ice': 'Time On Ice',  # Underdog Fantasy
+          'Time On Ice (In Reg)': 'Time On Ice',  # Rebet
         # Fantasy Points
           'Fantasy Points': 'Fantasy Points',  # Underdog Fantasy
           'Fantasy Score': 'Fantasy Points',  # Ice Hockey

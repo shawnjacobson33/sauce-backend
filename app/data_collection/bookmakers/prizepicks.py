@@ -27,7 +27,7 @@ def extract_subjects_dict(data: dict) -> dict:
                 if subject_name := player_attributes.get('display_name', player_attributes.get('name')):
                     # store the player id corresponding to some of the subject's attributes
                     players_dict[player_id] = {
-                        'subject': subject_name['name'],
+                        'subject': subject_name,
                         'subject_team': player_attributes.get('team', player_attributes.get('team_name')),
                         'position': player_attributes.get('position')
                     }

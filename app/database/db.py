@@ -33,13 +33,13 @@ def get_bookmaker(db, bookmaker: str) -> dict:
     return db[BOOKMAKERS_COLLECTION_NAME].find_one({'name': bookmaker})
 
 
-def insert():
+def insert_market():
     db = get_client()[DATABASE_NAME]
     collection_name = 'markets-v4'
     collection = db[collection_name]
 
     collection.insert_one({
-        'name': 'Average Yards Per Punt',
+        'name': 'Punts',
         'sport': 'Football'
     })
 
@@ -53,7 +53,32 @@ def insert():
         counter_dict[(doc[attribute], doc['name'])] += 1
 
 
-# insert()
+def insert_team():
+    db = get_client()[DATABASE_NAME]
+    collection_name = 'teams-v1'
+    collection = db[collection_name]
+
+    collection.insert_one({
+        'abbr_name': 'WAKE',
+        'full_name': 'Wake Forest',
+        'league': 'NCAA'
+    })
+
+    # DELETING DUPLICATES
+    attribute = 'sport' if 'markets' in collection_name else 'league'
+    counter_dict = defaultdict(int)
+    for doc in collection.find():
+        if counter_dict[(doc[attribute], doc['abbr_name'])] > 0:
+            collection.delete_one({'_id': doc['_id']})
+
+        counter_dict[(doc[attribute], doc['abbr_name'])] += 1
+
+
+# insert_market()
+insert_team()
+
+
+
 
 # db = get_client()[DATABASE_NAME]
 # collection_name = 'teams-v1'
