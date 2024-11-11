@@ -2,12 +2,10 @@ import json
 from collections import defaultdict
 from typing import Union
 
-from app.database.db import get_client, DATABASE_NAME
+from app.database.db import get_db_session
 from app.database.utils.definitions import SUBJECTS_COLLECTION_NAME, MARKETS_COLLECTION_NAME, TEAMS_COLLECTION_NAME
 
-
-db = get_client()[DATABASE_NAME]
-
+MongoDB = get_db_session()
 
 def delete_duplicates(collection, name: str, attribute: str):
     # DELETING DUPLICATES
@@ -20,7 +18,7 @@ def delete_duplicates(collection, name: str, attribute: str):
 
 
 def insert_subject(subject_data: dict = None, insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
-    collection = db[SUBJECTS_COLLECTION_NAME]
+    collection = MongoDB[SUBJECTS_COLLECTION_NAME]
     if insert_all:
         with open('../../data_collection/utils/reports/pending_subjects.json') as file:
             pending_subjects = json.load(file)
@@ -40,7 +38,7 @@ def insert_subject(subject_data: dict = None, insert_all: bool = False, exclude:
 
 
 def insert_market(market_data: dict = None, insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
-    collection = db[MARKETS_COLLECTION_NAME]
+    collection = MongoDB[MARKETS_COLLECTION_NAME]
     if insert_all:
         with open('../../data_collection/utils/reports/pending_markets.json') as file:
             pending_markets = json.load(file)
@@ -54,12 +52,12 @@ def insert_market(market_data: dict = None, insert_all: bool = False, exclude: l
 
 
 def insert_team(team_data: dict = None, insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
-    collection = db[TEAMS_COLLECTION_NAME]
+    collection = MongoDB[TEAMS_COLLECTION_NAME]
     if insert_all:
         with open('../../data_collection/utils/reports/pending_teams.json') as file:
             pending_teams = json.load(file)
-            pending_teams = [team for bookmaker, teams in pending_teams.items() for team in teams if
-                             (bookmaker not in exclude) and ((team['league'], team['abbr_name'],) not in exclude)]
+            pending_teams = [team_obj for bookmaker, teams in pending_teams.items() for team_obj in teams if
+                             (bookmaker not in exclude) and ((team_obj['league'], team_obj['abbr_name'],) not in exclude)]
             collection.insert_many(pending_teams)
     else:
         collection.insert_one(team_data)
@@ -78,37 +76,11 @@ def insert_team(team_data: dict = None, insert_all: bool = False, exclude: list[
 # insert_market(
 #     market_data=market
 # )
-# team = {
-#     'abbr_name': 'WIS',
-#     'full_name': 'Wisconsin',
-#     'league': 'NCAA'
-# }
-# insert_team(
-#     team_data=team
-# )
-
-
-# ncaaf_top_programs_abbr = [
-#     'ALA', 'OSU', 'UGA', 'MICH', 'CLEM', 'TEX', 'LSU', 'OU', 'ND', 'PSU',
-#     'USC', 'ORE', 'UF', 'TENN', 'AUB', 'WISC', 'MIA', 'FSU', 'MSU', 'IOWA',
-#     'OKST', 'KY', 'UNC', 'MIZZ', 'ARIZ', 'TCU', 'KSU', 'SDSU', 'BAYL'
-# ]
-#
-# ncaaf_top_programs_schools = [
-#     'Alabama', 'Ohio State', 'Georgia', 'Michigan', 'Clemson', 'Texas',
-#     'LSU', 'Oklahoma', 'Notre Dame', 'Penn State', 'USC', 'Oregon',
-#     'Florida', 'Tennessee', 'Auburn', 'Wisconsin', 'Miami', 'Florida State',
-#     'Michigan State', 'Iowa', 'Oklahoma State', 'Kentucky', 'North Carolina',
-#     'Missouri', 'Arizona', 'TCU', 'Kansas State', 'San Diego State', 'Baylor'
-# ]
-#
-#
-# docs = list()
-# for abbr, full in zip(ncaaf_top_programs_abbr, ncaaf_top_programs_schools):
-#     doc = {
-#         'abbr_name': abbr,
-#         'full_name': full,
-#         'league': 'NCAA'
-#     }
-#
-#     docs.append(doc)
+team = {
+    'abbr_name': 'PAC',
+    'full_name': 'Pacific',
+    'league': 'NCAA'
+}
+insert_team(
+    team_data=team
+)

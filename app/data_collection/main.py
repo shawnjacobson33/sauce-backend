@@ -33,7 +33,8 @@ async def retrieve_and_report(schedule_retriever_names: list[str] = None, lines_
     print(f'{"*" * 22} Schedule Retrieval {"*" * 22}\n')
     # run the schedule retrieving tasks first
     schedules_retrieving_time = await run_schedules_retrieving_tasks(schedule_retriever_names)
-    # TODO: Insert Game Ids into Database
+    # store any games retrieved so that the LinesRetrievers can use them for ids.
+    dc_utils.Games.store_games()
     # Output total number of betting lines collected and the time it took to run entire job
     print(f"[TOTAL GAMES]: {dc_utils.Games.size()}, {schedules_retrieving_time}s\n")
     # section header

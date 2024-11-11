@@ -33,5 +33,3 @@ class Games:
     def store_games(cls) -> None:
         list_of_games_objs = [game for games in cls._games.values() for game in games]
         db.MongoDB.fetch_collection(GAMES_COLLECTION_NAME).insert_many(list_of_games_objs)
-
-

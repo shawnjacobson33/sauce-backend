@@ -1,8 +1,8 @@
 import os
-from typing import Tuple
+from typing import Tuple, Optional
 from pymongo import MongoClient
 
-from app.database.utils import DATABASE_URL, DATABASE_NAME
+from app.database.utils import DATABASE_URL, DATABASE_NAME, SOURCES_COLLECTION_NAME
 
 
 def get_db_creds() -> Tuple[str, str]:
@@ -29,3 +29,8 @@ class MongoDB:
             return cls._db[collection_name]
         else:
             raise ValueError(f"Collection '{collection_name}' does not exist.")
+
+    @classmethod
+    def fetch_source(cls, source_name: str) -> Optional[dict]:
+        if source := cls.fetch_collection(SOURCES_COLLECTION_NAME).find_one({'name': source_name}):
+            return source

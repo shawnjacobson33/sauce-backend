@@ -32,6 +32,10 @@ TEAMS_MAP = {
           'ANH': 'ANA',  # OwnersBox
         # SJ - San Jose Sharks
           'SJS': 'SJ',  # ParlayPlay
+        # MTL - Montreal Canadiens
+          'MON': 'MTL',  # SuperDraft, OwnersBox
+        # VGK - Vegas Golden Knights
+          'VGS': 'VGK',  # Payday
     },
     'WNBA': {},
     'NCAA': {
@@ -47,6 +51,8 @@ TEAMS_MAP = {
         # WSU - Washington State
           'WSU': 'WSU',  # ParlayPlay, Dabble, Payday
           'WST': 'WSU',  # VividPicks
+          'WASHINGTON STATE': 'Washington State',  # Payday
+          'WASHST': 'Washington State',  # Dabble
         # UNLV - UNLV
           'UNLV': 'UNLV',  # ParlayPlay, VividPicks, Sleeper, Payday
         # WASH - Washington
@@ -89,6 +95,20 @@ TEAMS_MAP = {
           'GONZAGA': 'Gonzaga',  # Payday
         # MICH - Michigan
           'MICHIGAN': 'Michigan',  # Payday
+        # MARQ - Marquette
+          'MARQUETTE': 'Marquette',  # Payday
+        # PUR - Purdue
+          'PURDUE': 'Purdue',  # Payday, Dabble
+        # GRAM - Grambling State
+          'Grambling': 'Grambling State',  # sports-reference
+        # BALL - Ball State
+          'BALLST': 'Ball State',  # ParlayPlay
+        # BUFF - Buffalo
+          'BUF': 'BUFF',  # ParlayPlay, VividPicks
+        # OSU - Ohio State
+          'OHIOST': 'Ohio State',  # Dabble
+          'OHIO STATE': 'Ohio State',  # Payday
+
     }
 }
 
