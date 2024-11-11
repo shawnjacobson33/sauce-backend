@@ -127,7 +127,7 @@ def extract_label(data: dict) -> Optional[str]:
         return 'Over' if condition == 1 else 'Under'
 
 
-class BetOnline(bkm_utils.BookmakerPlug):
+class BetOnline(bkm_utils.LinesRetriever):
     """
     A class to collect and process player prop lines from BetOnline.
 
@@ -136,7 +136,7 @@ class BetOnline(bkm_utils.BookmakerPlug):
     a shared data structure for further processing.
 
     Attributes:
-        bookmaker_info (bkm_utils.Bookmaker): The bookmaker object containing BetOnline details.
+        bookmaker_info (bkm_utils.LinesSource): The bookmaker object containing BetOnline details.
         batch_id (str): Identifier for the current data collection batch.
 
     Methods:
@@ -150,21 +150,21 @@ class BetOnline(bkm_utils.BookmakerPlug):
             Processes and cleans player prop line data, updating shared prop line structures.
     """
 
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # tracks requests to complete
         tasks = []
         # these are valid in-season leagues
         for league in LEAGUES:
             # get url for request to get games
-            url = bkm_utils.get_url(self.bookmaker_info.name, name='games')
+            url = bkm_utils.get_url(self.source.name, name='games')
             # get headers for request to get games
-            headers = bkm_utils.get_headers(self.bookmaker_info.name, name='games')
+            headers = bkm_utils.get_headers(self.source.name, name='games')
             # get params for request to get games
-            params = bkm_utils.get_params(self.bookmaker_info.name, name='games', var_1=league)
+            params = bkm_utils.get_params(self.source.name, name='games', var_1=league)
             # clean the league name after setting params
             cleaned_league = bkm_utils.clean_league(league)
             # add the request task for this market to tasks
@@ -183,13 +183,13 @@ class BetOnline(bkm_utils.BookmakerPlug):
                 # extract the game id from the dictionary, if exists keep going
                 if game_id := extract_game_id(game_data):
                     # get url for request to get prop lines
-                    url = bkm_utils.get_url(self.bookmaker_info.name)
+                    url = bkm_utils.get_url(self.source.name)
                     # get headers for request to get prop lines
-                    headers = bkm_utils.get_headers(self.bookmaker_info.name)
+                    headers = bkm_utils.get_headers(self.source.name)
                     # for every market
                     for market in get_league_markets(league):
                         # get params for request to get prop lines
-                        params = bkm_utils.get_params(self.bookmaker_info.name, var_1=game_id, var_2=market)
+                        params = bkm_utils.get_params(self.source.name, var_1=game_id, var_2=market)
                         # add the request task for this market to tasks
                         tasks.append(self.req_mngr.get(url, self._parse_lines, league, headers=headers, params=params))
 
@@ -200,15 +200,15 @@ class BetOnline(bkm_utils.BookmakerPlug):
         # get the response data as json, if exists keep going
         if json_data := response.json():
             # update shared leagues data
-            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
             # for each prop line in the response data
             for prop_line_data in json_data:
                 # get the market id from the db and extract the market name from the dictionary
-                if market := extract_market(self.bookmaker_info.name, prop_line_data, league):
+                if market := extract_market(self.source.name, prop_line_data, league):
                     # for every player in the prop line
                     for player_data in prop_line_data.get('players', []):
                         # get the subject id from the db and extract the subject name from dictionary
-                        if subject := extract_subject(self.bookmaker_info.name, player_data, league):
+                        if subject := extract_subject(self.source.name, player_data, league):
                             # for all markets that the player has
                             for market_data in player_data.get('markets', []):
                                 # market must exist and active on BetOnline
@@ -229,7 +229,7 @@ class BetOnline(bkm_utils.BookmakerPlug):
                                                 'market': market['name'],
                                                 'subject_id': subject['id'],
                                                 'subject': subject['name'],
-                                                'bookmaker': self.bookmaker_info.name,
+                                                'bookmaker': self.source.name,
                                                 'label': label,
                                                 'line': line,
                                                 'odds': odds,

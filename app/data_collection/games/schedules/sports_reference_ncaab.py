@@ -69,11 +69,11 @@ class NCAABScheduleCollector(gm_utils.ScheduleCollector):
     def __init__(self, source_info: gm_utils.Source):
         super().__init__(source_info)
 
-    async def collect(self, n_days: int = 1) -> None:
+    async def retrieve(self, n_days: int = 1) -> None:
         # generate a range of dates predicated upon n_days param
         date_list = gm_utils.get_date_range(n_days, to_datetime=True)
         # get the url for pro-football-reference.com's nfl schedules
-        url = gm_utils.get_url(self.source_info.name, 'schedule')
+        url = gm_utils.get_url(self.source.name, 'schedule')
         # initialize a list of to store requests to make
         tasks = list()
         # for each date desired in the date list range
@@ -98,9 +98,9 @@ class NCAABScheduleCollector(gm_utils.ScheduleCollector):
             # get all the rows
             if rows := table.find_all('tr'):
                 # extract the away team
-                if away_team := extract_away_team(self.source_info.name, self.source_info.league, rows):
+                if away_team := extract_away_team(self.source.name, self.source.league, rows):
                     # extract both home team and game time, located on the same row
-                    home_team, game_time = extract_home_team_and_game_time(self.source_info.name, self.source_info.league, rows, date)
+                    home_team, game_time = extract_home_team_and_game_time(self.source.name, self.source.league, rows, date)
                     # if both exist
                     if home_team and game_time:
                         # extract the league (NCAAM or NCAAW)

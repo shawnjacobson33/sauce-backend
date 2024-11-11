@@ -87,18 +87,18 @@ def get_odds(default_odds: float, multiplier: Optional[float]) -> float:
     return default_odds
 
 # TODO: DIFFERENT FORMAT FOR game_info?
-class VividPicks(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class VividPicks(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get the url required to request for prop lines data
-        url = bkm_utils.get_url(self.bookmaker_info.name)
+        url = bkm_utils.get_url(self.source.name)
         # get the headers required to request for prop lines data
-        headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        headers = bkm_utils.get_headers(self.source.name)
         # get the json required to request for prop lines data
-        json_data = bkm_utils.get_json_data(self.bookmaker_info.name, )
+        json_data = bkm_utils.get_json_data(self.source.name, )
         # make the request for prop lines data
         await self.req_mngr.post(url, self._parse_lines, headers=headers, json=json_data)
 
@@ -112,15 +112,15 @@ class VividPicks(bkm_utils.BookmakerPlug):
                     # extract the league name from dictionary, if it exists keep going
                     if league := extract_league(event_data):
                         # to track the leagues being collected
-                        bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+                        bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                         # for each dictionary in event data's activePlayers if they exist
                         for player_data in event_data.get('activePlayers', []):
                             # get the subject id from db and extract the subject name from dictionary
-                            if subject := extract_subject(self.bookmaker_info.name, player_data, league):
+                            if subject := extract_subject(self.source.name, player_data, league):
                                 # for each dictionary in player data's visiblePlayerProps if they exist
                                 for prop_line_data in player_data.get('visiblePlayerProps', []):
                                     # get the market id from the db and extract the market name from the dictionary
-                                    if market := extract_market(self.bookmaker_info.name, prop_line_data, league):
+                                    if market := extract_market(self.source.name, prop_line_data, league):
                                         # get the numeric over/under line from the dictionary, keep going if exists
                                         if line := prop_line_data.get('val'):
                                             # extract the multiplier from the dictionary
@@ -138,9 +138,9 @@ class VividPicks(bkm_utils.BookmakerPlug):
                                                     'market': market['name'],
                                                     'subject_id': subject['id'],
                                                     'subject': subject['name'],
-                                                    'bookmaker': self.bookmaker_info.name,
+                                                    'bookmaker': self.source.name,
                                                     'label': label,
                                                     'line': line,
                                                     'multiplier': multiplier,
-                                                    'odds': get_odds(self.bookmaker_info.default_payout.odds, multiplier)
+                                                    'odds': get_odds(self.source.default_payout.odds, multiplier)
                                                 })

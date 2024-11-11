@@ -1,9 +1,8 @@
 import os
-from collections import defaultdict
-from typing import Tuple
+from typing import Tuple, Optional
 from pymongo import MongoClient
 
-from app.database.utils import DATABASE_URL, DATABASE_NAME, BOOKMAKERS_COLLECTION_NAME
+from app.database.utils import DATABASE_URL, DATABASE_NAME, SOURCES_COLLECTION_NAME
 
 
 def get_db_creds() -> Tuple[str, str]:
@@ -20,35 +19,16 @@ def get_client():
     return client
 
 
-class Database:
+class MongoDB:
     _db = get_client()[DATABASE_NAME]
 
     @classmethod
-    def get(cls):
+    def get_session(cls):
         return cls._db
 
 
+def get_source(db, source_name: str) -> Optional[dict]:
+    if source := db[SOURCES_COLLECTION_NAME].find_one({'name': source_name}):
+        return source
 
-def get_bookmaker(db, bookmaker: str) -> dict:
-    return db[BOOKMAKERS_COLLECTION_NAME].find_one({'name': bookmaker})
-
-
-
-
-# db = get_client()[DATABASE_NAME]
-# collection_name = 'teams-v1'
-# collection = db[collection_name]
-#
-#
-
-#
-#
-# # DELETING DUPLICATES
-# attribute = 'sport' if 'markets' in collection_name else 'league'
-# counter_dict = defaultdict(int)
-# for doc in collection.find():
-#     if counter_dict[(doc[attribute], doc['abbr_name'])] > 0:
-#         collection.delete_one({'_id': doc['_id']})
-#
-#     counter_dict[(doc[attribute], doc['abbr_name'])] += 1
 

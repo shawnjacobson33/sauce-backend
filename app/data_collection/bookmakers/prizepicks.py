@@ -100,14 +100,14 @@ def extract_subject(bookmaker_name: str, data: dict, subjects_dict: dict, league
                 return subject
 
 
-class PrizePicks(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class PrizePicks(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get the url required to make request for leagues data
-        url = bkm_utils.get_url(self.bookmaker_info.name, name='leagues')
+        url = bkm_utils.get_url(self.source.name, name='leagues')
         # make request for leagues data
         await self.req_mngr.get(url, self._parse_leagues)
 
@@ -124,7 +124,7 @@ class PrizePicks(bkm_utils.BookmakerPlug):
                     leagues[league_id] = league
 
             # get the url required to make request for prop lines
-            url = bkm_utils.get_url(self.bookmaker_info.name)
+            url = bkm_utils.get_url(self.source.name)
             # make the request for prop lines
             await self.req_mngr.get(url, self._parse_lines, leagues)
 
@@ -142,11 +142,11 @@ class PrizePicks(bkm_utils.BookmakerPlug):
                         # get league data for prop lines
                         if league := get_league(relationships_data, leagues):
                             # get the market id from db and extract market and league name from data, pass a generator to get the league
-                            if market := extract_market(self.bookmaker_info.name, prop_line_attrs, league):
+                            if market := extract_market(self.source.name, prop_line_attrs, league):
                                 # to track the leagues being collected
-                                bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league['cleaned'])
+                                bkm_utils.Leagues.update_valid_leagues(self.source.name, league['cleaned'])
                                 # get the subject id from the db and extract the subject name
-                                if subject := extract_subject(self.bookmaker_info.name, relationships_data, subjects_dict, league['cleaned']):
+                                if subject := extract_subject(self.source.name, relationships_data, subjects_dict, league['cleaned']):
                                     # get numeric over/under line and check for existence
                                     if line := prop_line_attrs.get('line_score'):
                                         # for each generic label for an over/under line
@@ -161,8 +161,8 @@ class PrizePicks(bkm_utils.BookmakerPlug):
                                                 'market': market['name'],
                                                 'subject_id': subject['id'],
                                                 'subject': subject['name'],
-                                                'bookmaker': self.bookmaker_info.name,
+                                                'bookmaker': self.source.name,
                                                 'label': label,
                                                 'line': line,
-                                                'odds': self.bookmaker_info.default_payout.odds
+                                                'odds': self.source.default_payout.odds
                                             })

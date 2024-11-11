@@ -102,18 +102,18 @@ def get_label(data: dict) -> Optional[str]:
             yield label
 
 
-class OwnersBox(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class OwnersBox(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
         # get the universal headers required to make requests
-        self.headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        self.headers = bkm_utils.get_headers(self.source.name)
         # get the universal cookies required to make requests
-        self.cookies = bkm_utils.get_cookies(self.bookmaker_info.name)
+        self.cookies = bkm_utils.get_cookies(self.source.name)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get the url required to make request for leagues data
-        url = bkm_utils.get_url(self.bookmaker_info.name, name='leagues')
+        url = bkm_utils.get_url(self.source.name, name='leagues')
         # make the request for the leagues data
         await self.req_mngr.get(url, self._parse_leagues, headers=self.headers, cookies=self.cookies)
 
@@ -123,13 +123,13 @@ class OwnersBox(bkm_utils.BookmakerPlug):
             # initialize structure to hold all requests to make
             tasks = []
             # get the url required to make requests for markets data
-            url = bkm_utils.get_url(self.bookmaker_info.name, name='markets')
+            url = bkm_utils.get_url(self.source.name, name='markets')
             # for each league in the response data dictionary
             for league in json_data:
                 # only execute if the league is valid...also clean the league before checking
                 if bkm_utils.is_league_valid(bkm_utils.clean_league(league)):
                     # if valid get the params to make the request required to get markets data for this league
-                    params = bkm_utils.get_params(self.bookmaker_info.name, name='markets', var_1=league)
+                    params = bkm_utils.get_params(self.source.name, name='markets', var_1=league)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_markets, league, headers=self.headers, cookies=self.cookies, params=params))
 
@@ -142,13 +142,13 @@ class OwnersBox(bkm_utils.BookmakerPlug):
             # initialize structure to hold all requests to make
             tasks = []
             # get the url required to make the request for prop lines
-            url = bkm_utils.get_url(self.bookmaker_info.name)
+            url = bkm_utils.get_url(self.source.name)
             # for each market in the response data
             for market in json_data:
                 # get market id (not from db), if exists add request
                 if market_id := market.get('id'):
                     # get the params required to make request for prop lines
-                    params = bkm_utils.get_params(self.bookmaker_info.name, var_1=league, var_2=market_id)
+                    params = bkm_utils.get_params(self.source.name, var_1=league, var_2=market_id)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_lines, headers=self.headers, cookies=self.cookies, params=params))
 
@@ -163,11 +163,11 @@ class OwnersBox(bkm_utils.BookmakerPlug):
                 # get the league name, if exists then keep executing
                 if league := extract_league(prop_line_data):
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                     # get the market id from db and extract the market name
-                    if market := extract_market(self.bookmaker_info.name, prop_line_data, league):
+                    if market := extract_market(self.source.name, prop_line_data, league):
                         # get the subject id from db and extract the subject name from the dictionary
-                        if subject := extract_subject(self.bookmaker_info.name, prop_line_data, league):
+                        if subject := extract_subject(self.source.name, prop_line_data, league):
                             # get the numeric over/under line, execute if exists
                             if line := extract_line(prop_line_data):
                                 # get game info
@@ -185,8 +185,8 @@ class OwnersBox(bkm_utils.BookmakerPlug):
                                         'market': market['name'],
                                         'subject_id': subject['id'],
                                         'subject': subject['name'],
-                                        'bookmaker': self.bookmaker_info.name,
+                                        'bookmaker': self.source.name,
                                         'label': label,
                                         'line': line,
-                                        'odds': self.bookmaker_info.default_payout.odds
+                                        'odds': self.source.default_payout.odds
                                     })

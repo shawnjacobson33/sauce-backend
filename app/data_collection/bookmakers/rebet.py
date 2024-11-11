@@ -71,18 +71,18 @@ def extract_line_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, Non
     return None, None
 
 
-class Rebet(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class Rebet(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get the url required to request tourney ids data
-        url = bkm_utils.get_url(self.bookmaker_info.name, name='tourney_ids')
+        url = bkm_utils.get_url(self.source.name, name='tourney_ids')
         # get the headers required to request tourney ids data
-        headers = bkm_utils.get_headers(self.bookmaker_info.name, name='tourney_ids')
+        headers = bkm_utils.get_headers(self.source.name, name='tourney_ids')
         # get the json data required to request tourney ids data with POST request
-        json_data = bkm_utils.get_json_data(self.bookmaker_info.name, name='tourney_ids')
+        json_data = bkm_utils.get_json_data(self.source.name, name='tourney_ids')
         # make the post request for tourney ids data
         await self.req_mngr.post(url, self._parse_tourney_ids, headers=headers, json=json_data)
 
@@ -96,11 +96,11 @@ class Rebet(bkm_utils.BookmakerPlug):
                 # get the tournament id, if exist keep executing
                 if tournament_id := league_data.get('tournament_id'):
                     # get the url required to request for prop lines
-                    url = bkm_utils.get_url(self.bookmaker_info.name)
+                    url = bkm_utils.get_url(self.source.name)
                     # get the headers required to request for prop lines
-                    headers = bkm_utils.get_headers(self.bookmaker_info.name)
+                    headers = bkm_utils.get_headers(self.source.name)
                     # get the json data required to request for prop lines using tournament id
-                    json_data = bkm_utils.get_json_data(self.bookmaker_info.name, var=tournament_id)
+                    json_data = bkm_utils.get_json_data(self.source.name, var=tournament_id)
                     # add the request to tasks
                     tasks.append(self.req_mngr.post(url, self._parse_lines, headers=headers, json=json_data))
 
@@ -115,13 +115,13 @@ class Rebet(bkm_utils.BookmakerPlug):
                 # extract league name from the dictionary and get data dic, if both exists keep executing
                 if (league := extract_league(event_data)) and (odds_data := event_data.get('odds')):
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                     # for each market dictionary in the odds data dictionary's market if they exist
                     for market_data in odds_data.get('market', []):
                         # get the market id from the db and extract the market name from dictionary
-                        if market := extract_market(self.bookmaker_info.name, market_data, league):
+                        if market := extract_market(self.source.name, market_data, league):
                             # get the subject id from db, and extract the subject name from dictionary
-                            if subject := extract_subject(self.bookmaker_info.name, market_data, league):
+                            if subject := extract_subject(self.source.name, market_data, league):
                                 # get dictionary that holds data on odds, label, line, if exists then execute
                                 if outcomes_data := market_data.get('outcome', []):
                                     # convert to list if outcomes data only returns a dictionary
@@ -144,7 +144,7 @@ class Rebet(bkm_utils.BookmakerPlug):
                                                     'market': market['name'],
                                                     'subject_id': subject['id'],
                                                     'subject': subject['name'],
-                                                    'bookmaker': self.bookmaker_info.name,
+                                                    'bookmaker': self.source.name,
                                                     'label': label,
                                                     'line': line,
                                                     'odds': odds,

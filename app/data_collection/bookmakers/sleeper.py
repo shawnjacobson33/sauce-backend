@@ -74,18 +74,18 @@ def extract_label(data: dict) -> Optional[str]:
         return label.title()
 
 # TODO: Sleeper recently added alt_lines
-class Sleeper(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class Sleeper(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
         # get universally used headers to make requests
-        self.headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        self.headers = bkm_utils.get_headers(self.source.name)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get the url required to request player data
-        url = bkm_utils.get_url(self.bookmaker_info.name, name='players')
+        url = bkm_utils.get_url(self.source.name, name='players')
         # get params required to request player data
-        params = bkm_utils.get_params(self.bookmaker_info.name)
+        params = bkm_utils.get_params(self.source.name)
         # make the request for player data
         await self.req_mngr.get(url, self._parse_players, headers=self.headers, params=params)
 
@@ -116,7 +116,7 @@ class Sleeper(bkm_utils.BookmakerPlug):
             # for each in season league mapped towards sleeper's format
             for league_name in LEAGUES:
                 # get the url required to make request for prop lines
-                url = bkm_utils.get_url(self.bookmaker_info.name)
+                url = bkm_utils.get_url(self.source.name)
                 # create a dictionary of params specific to a particular league
                 params = {
                     'sports%5B%5D': league_name,
@@ -145,11 +145,11 @@ class Sleeper(bkm_utils.BookmakerPlug):
                 # extract the league name from dictionary
                 if league := extract_league(prop_line_data):
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                     # get the subject id from db and extract player name from dictionary
-                    if subject := extract_subject(self.bookmaker_info.name, prop_line_data, players, league):
+                    if subject := extract_subject(self.source.name, prop_line_data, players, league):
                         # get the market id from db and extract the market name from dictionary
-                        if market := extract_market(self.bookmaker_info.name, prop_line_data, league):
+                        if market := extract_market(self.source.name, prop_line_data, league):
                             # for each dictionary containing label, line, odds in prop_line_data's options if exists
                             for outcome_data in prop_line_data.get('options', []):
                                 # get the numeric over/under line and the decimal odds from the dictionary, if both exist keep going
@@ -166,7 +166,7 @@ class Sleeper(bkm_utils.BookmakerPlug):
                                             'market': market['name'],
                                             'subject_id': subject['id'],
                                             'subject': subject['name'],
-                                            'bookmaker': self.bookmaker_info.name,
+                                            'bookmaker': self.source.name,
                                             'label': label,
                                             'line': line,
                                             'odds': float(odds)

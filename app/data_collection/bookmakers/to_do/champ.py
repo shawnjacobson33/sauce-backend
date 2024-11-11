@@ -16,19 +16,19 @@ def get_in_season_leagues():
     return [league_name_map.get(league, league) for league in IN_SEASON_LEAGUES if league_name_map.get(league, league) in valid_champ_leagues]
 
 
-class Champ(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
-        super().__init__(bookmaker_info, batch_id)
+class Champ(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
+        super().__init__(bookmaker)
 
-    async def collect(self):
-        url = bkm_utils.get_url(self.bookmaker_info.name)
-        headers = bkm_utils.get_headers(self.bookmaker_info.name)
+    async def retrieve(self):
+        url = bkm_utils.get_url(self.source.name)
+        headers = bkm_utils.get_headers(self.source.name)
         tasks = []
         for league in get_in_season_leagues():
             if not is_league_good(clean_league(league)):
                 continue
 
-            json_data = bkm_utils.get_json_data(self.bookmaker_info.name, var=league)
+            json_data = bkm_utils.get_json_data(self.source.name, var=league)
             tasks.append(self.req_mngr.post(url, self._parse_lines, league, headers=headers, json=json_data))
 
         await asyncio.gather(*tasks)
@@ -71,7 +71,7 @@ class Champ(bkm_utils.BookmakerPlug):
 
                     for label in labels:
                         # update shared data
-                        PropLines.update(''.join(self.bookmaker_info.name.split()).lower(), {
+                        PropLines.update(''.join(self.source.name.split()).lower(), {
                             'batch_id': self.batch_id,
                             'time_processed': datetime.now(),
                             'league': league,
@@ -81,11 +81,11 @@ class Champ(bkm_utils.BookmakerPlug):
                             'market': market['name'],
                             'subject_id': subject['id'],
                             'subject': subject['name'],
-                            'bookmaker': self.bookmaker_info.name,
+                            'bookmaker': self.source.name,
                             'label': label,
                             'line': line,
                             'multiplier': multiplier,
-                            'odds': round(self.bookmaker_info.default_payout.odds * multiplier, 3) if multiplier else self.bookmaker_info.default_payout.odds
+                            'odds': round(self.source.default_payout.odds * multiplier, 3) if multiplier else self.source.default_payout.odds
                         })
                         self.data_size += 1
 

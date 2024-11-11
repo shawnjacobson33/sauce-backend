@@ -50,16 +50,16 @@ def extract_odds_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, Non
             yield odds, label
 
 
-class ParlayPlay(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class ParlayPlay(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
         # get the headers required to make requests for prop lines
-        self.headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        self.headers = bkm_utils.get_headers(self.source.name)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get the url that is required to make requests for prop lines
-        url = bkm_utils.get_url(self.bookmaker_info.name, name='sports')
+        url = bkm_utils.get_url(self.source.name, name='sports')
         # make the request for prop lines
         await self.req_mngr.get(url, self._parse_sports, headers=self.headers)
 
@@ -81,7 +81,7 @@ class ParlayPlay(bkm_utils.BookmakerPlug):
                             # check if the league is valid
                             if bkm_utils.is_league_valid(cleaned_league):
                                 # get the prop lines url
-                                url = bkm_utils.get_url(self.bookmaker_info.name)
+                                url = bkm_utils.get_url(self.source.name)
                                 # include some params based upon the data collected
                                 params = {
                                     'sport': sport_name,
@@ -99,15 +99,15 @@ class ParlayPlay(bkm_utils.BookmakerPlug):
         # get the response data, if exists then keep executing
         if json_data := response.json():
             # to track the leagues being collected
-            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
             # for each player in the response data's players if they exist
             for player_data in json_data.get('players', []):
                 # get the subject id from db and extract the subject name from a dictionary
-                if subject := extract_subject(self.bookmaker_info.name, player_data, league):
+                if subject := extract_subject(self.source.name, player_data, league):
                     # for each stat dictionary in the player data dictionary if they exist
                     for stat_data in player_data.get('stats', []):
                         # get the market id from the db and extract the market
-                        if market := extract_market(self.bookmaker_info.name, stat_data, league):
+                        if market := extract_market(self.source.name, stat_data, league):
                             # get a dictionary of data around market, lines, and odds
                             if alt_lines_data := stat_data.get('altLines'):
                                 # for each dictionary holding line, odds data if values exist
@@ -126,7 +126,7 @@ class ParlayPlay(bkm_utils.BookmakerPlug):
                                                 'market': market['name'],
                                                 'subject_id': subject['id'],
                                                 'subject': subject['name'],
-                                                'bookmaker': self.bookmaker_info.name,
+                                                'bookmaker': self.source.name,
                                                 'label': label,
                                                 'line': line,
                                                 'odds': odds,

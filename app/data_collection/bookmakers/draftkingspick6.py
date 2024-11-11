@@ -51,16 +51,16 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
         return subject
 
 
-class DraftKingsPick6(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class DraftKingsPick6(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # make call to parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
         # get universal request headers used for many requests
-        self.headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        self.headers = bkm_utils.get_headers(self.source.name)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get url to request sports
-        url = bkm_utils.get_url(self.bookmaker_info.name)
+        url = bkm_utils.get_url(self.source.name)
         # make a request to get the sports
         await self.req_mngr.get(url, self._parse_sports, headers=self.headers)
 
@@ -89,19 +89,19 @@ class DraftKingsPick6(bkm_utils.BookmakerPlug):
         # gets the json data from the response and then the redundant data from pickableIdToPickableMap field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('pickableIdToPickableMap')):
             # to track the leagues being collected
-            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
             # for every prop line in the data
             for prop_line_data in data.values():
                 # get pickable data and market_category data, if both exist then execute
                 if (pick_data := prop_line_data.get('pickable')) and (m_category_data := pick_data.get('marketCategory')):
                     # get the market id from the db and extract the market from the data dict
-                    if market := extract_market(self.bookmaker_info.name, m_category_data, league):
+                    if market := extract_market(self.source.name, m_category_data, league):
                         # get the over/under numeric line for the prop line, execute if exists
                         if line := extract_line(prop_line_data):
                             # for each subject in the pickableEntities if they exist
                             for entity in pick_data.get('pickableEntities', []):
                                 # get the subject id from the db and extract the subject from data
-                                if subject := extract_subject(self.bookmaker_info.name, entity, league):
+                                if subject := extract_subject(self.source.name, entity, league):
                                     # for each label Over and Under update shared data prop lines
                                     for label in ['Over', 'Under']:
                                         # update shared data
@@ -114,8 +114,8 @@ class DraftKingsPick6(bkm_utils.BookmakerPlug):
                                             'market': market['name'],
                                             'subject_id': subject['id'],
                                             'subject': subject['name'],
-                                            'bookmaker': self.bookmaker_info.name,
+                                            'bookmaker': self.source.name,
                                             'label': label,
                                             'line': line,
-                                            'odds': self.bookmaker_info.default_payout.odds
+                                            'odds': self.source.default_payout.odds
                                         })

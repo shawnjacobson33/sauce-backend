@@ -77,18 +77,18 @@ def extract_odds_and_other_stats(data: dict) -> Optional[tuple[float, float, flo
         return round(odds, 3), round(1 / odds, 3), extract_true_win_probability(data), extract_expected_value(data)
 
 
-class OddsShopper(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class OddsShopper(bkm_utils.LinesRetriever):
+    def __init__(self, lines_hub: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(lines_hub)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get the url to request matchups data
-        url = bkm_utils.get_url(self.bookmaker_info.name, name='matchups')
+        url = bkm_utils.get_url(self.source.name, name='matchups')
         # get the headers to request matchups data
-        headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        headers = bkm_utils.get_headers(self.source.name)
         # get the cookies to request matchups data
-        cookies = bkm_utils.get_cookies(self.bookmaker_info.name)
+        cookies = bkm_utils.get_cookies(self.source.name)
         # make request for matchups data
         await self.req_mngr.get(url, self._parse_matchups, headers=headers, cookies=cookies)
 
@@ -108,11 +108,11 @@ class OddsShopper(bkm_utils.BookmakerPlug):
                             # get dates which are required for params of url for prop lines
                             start_date, end_date = get_dates()
                             # get the url required to request prop lines and format it with the offer id
-                            url = bkm_utils.get_url(self.bookmaker_info.name).format(offer_id)
+                            url = bkm_utils.get_url(self.source.name).format(offer_id)
                             # get the headers required to request prop lines
-                            headers = bkm_utils.get_headers(self.bookmaker_info.name)
+                            headers = bkm_utils.get_headers(self.source.name)
                             # get the params required to request prop lines, using start_date, and end date
-                            params = bkm_utils.get_params(self.bookmaker_info.name, var_1=start_date, var_2=end_date)
+                            params = bkm_utils.get_params(self.source.name, var_1=start_date, var_2=end_date)
                             # add the request to tasks
                             tasks.append(self.req_mngr.get(url, self._parse_lines, league, headers=headers, params=params))
 
@@ -124,15 +124,15 @@ class OddsShopper(bkm_utils.BookmakerPlug):
         # get json data from response and check its existence
         if json_data := response.json():
             # to track the leagues being collected
-            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
             # for each event/game in the response data
             for event in json_data:
                 # gets the game info from the dictionary
                 game_info = event.get('eventName')
                 # get the market id from db and extract market from the data
-                if market := extract_market(self.bookmaker_info.name, event, league):
+                if market := extract_market(self.source.name, event, league):
                     # get the subject id from the db and extract the subject from outcome
-                    if subject := extract_subject(self.bookmaker_info.name, event, league):
+                    if subject := extract_subject(self.source.name, event, league):
                         # iterate through each side or bookmaker for the prop line
                         for side in event.get('sides', []):
                             # get the label from the side dictionary, only keep going if it exists
@@ -140,7 +140,7 @@ class OddsShopper(bkm_utils.BookmakerPlug):
                                 # iterate through each outcome for each side
                                 for outcome in side.get('outcomes', []):
                                     # get the bookmaker from outcome dictionary, if exists keep executing
-                                    if bookmaker := extract_bookmaker(outcome):
+                                    if bookmaker_name := extract_bookmaker(outcome):
                                         # extract odds, implied probability, true win probability, and expected value if they exist
                                         odds, impl_prob, tw_prob, ev = extract_odds_and_other_stats(outcome)
                                         # update shared data
@@ -154,7 +154,7 @@ class OddsShopper(bkm_utils.BookmakerPlug):
                                             'market': market['name'],
                                             'subject_id': subject['id'],
                                             'subject': subject['name'],
-                                            'bookmaker': bookmaker,
+                                            'bookmaker': bookmaker_name,
                                             'label': label,
                                             'line': outcome.get('line', '0.5'),
                                             'odds': odds,
@@ -163,4 +163,4 @@ class OddsShopper(bkm_utils.BookmakerPlug):
                                                 'true_win_prob': tw_prob,
                                                 'ev': ev
                                             }
-                                        }, bookmaker=bookmaker)
+                                        }, lines_source_name=bookmaker_name)

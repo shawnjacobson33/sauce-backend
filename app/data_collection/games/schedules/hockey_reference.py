@@ -70,11 +70,11 @@ class NHLScheduleCollector(gm_utils.ScheduleCollector):
     def __init__(self, source_info: gm_utils.Source):
         super().__init__(source_info)
 
-    async def collect(self, n_days: int = 1) -> None:
+    async def retrieve(self, n_days: int = 1) -> None:
         # generate a range of dates predicated upon n_days param
         date_list = gm_utils.get_date_range(n_days)
         # get the url for hockey-reference.com's nhl schedule
-        url = gm_utils.get_url(self.source_info.name, 'schedule')
+        url = gm_utils.get_url(self.source.name, 'schedule')
         # format the url with the season
         formatted_url = url.format(gm_utils.CURR_SEASON_1)
         # asynchronously request the data and call parse schedule
@@ -92,15 +92,15 @@ class NHLScheduleCollector(gm_utils.ScheduleCollector):
             # get both game time formatted and box score url
             if game_time_data := extract_game_time_and_box_score_url(row, date_list):
                 # get the away team name and id if it exists
-                if away_team := extract_team(self.source_info.name, self.source_info.league, row,
+                if away_team := extract_team(self.source.name, self.source.league, row,
                                              'visitor_team_name'):
                     # get the home team name and id if it exists
-                    if home_team := extract_team(self.source_info.name, self.source_info.league, row,
+                    if home_team := extract_team(self.source.name, self.source.league, row,
                                                  'home_team_name'):
                         # adds the game and all of its extracted data to the shared data structure
                         self.update_games({
                             'time_processed': str(datetime.now()),
-                            "league": self.source_info.league,
+                            "league": self.source.league,
                             "game_time": game_time_data['game_time'],
                             "away_team": away_team,
                             "home_team": home_team,

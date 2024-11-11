@@ -45,9 +45,9 @@ class NCAAFScheduleCollector(gm_utils.ScheduleCollector):
     def __init__(self, source_info: gm_utils.Source):
         super().__init__(source_info)
 
-    async def collect(self, n_days: int = 1) -> None:
+    async def retrieve(self, n_days: int = 1) -> None:
         # get the url for cbssports.com's ncaaf schedules
-        url = gm_utils.get_url(self.source_info.name, 'schedule')
+        url = gm_utils.get_url(self.source.name, 'schedule')
         # asynchronously request the data and call parse schedule
         await gm_utils.fetch(url, self._parse_games, n_days)
 
@@ -69,9 +69,9 @@ class NCAAFScheduleCollector(gm_utils.ScheduleCollector):
                             # extract the away team and home team if they exist
                             if (away_team_name := cells[0].text) and (home_team_name := cells[1].text):
                                 # get the away team data from db
-                                if away_team := clean_team(self.source_info.name, self.source_info.league, away_team_name):
+                                if away_team := clean_team(self.source.name, self.source.league, away_team_name):
                                     # get the home team data from db
-                                    if home_team := clean_team(self.source_info.name, self.source_info.league,
+                                    if home_team := clean_team(self.source.name, self.source.league,
                                                                home_team_name):
                                         # extract the game time
                                         if game_time := extract_game_time(game_date, cells[2]):
@@ -79,7 +79,7 @@ class NCAAFScheduleCollector(gm_utils.ScheduleCollector):
                                             self.update_games({
                                                 'time_processed': str(datetime.now()),
                                                 "game_time": game_time,
-                                                "league": self.source_info.league,
+                                                "league": self.source.league,
                                                 "away_team": away_team,
                                                 "home_team": home_team
                                             })

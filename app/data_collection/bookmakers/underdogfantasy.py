@@ -175,18 +175,18 @@ def get_odds(default_odds: float, multiplier: float) -> float:
     return round(default_odds * multiplier, 3)
 
 
-class UnderdogFantasy(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class UnderdogFantasy(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get the url required to request teams data
-        url = bkm_utils.get_url(self.bookmaker_info.name, name='teams')
+        url = bkm_utils.get_url(self.source.name, name='teams')
         # get the headers required to request teams data
-        headers = bkm_utils.get_headers(self.bookmaker_info.name, name='teams')
+        headers = bkm_utils.get_headers(self.source.name, name='teams')
         # get the cookies required to get teams data
-        cookies = bkm_utils.get_cookies(self.bookmaker_info.name)
+        cookies = bkm_utils.get_cookies(self.source.name)
         # make the request for teams data
         await self.req_mngr.get(url, self._parse_teams, headers=headers, cookies=cookies)
 
@@ -196,9 +196,9 @@ class UnderdogFantasy(bkm_utils.BookmakerPlug):
             # get the teams dict from response data, if exists keep going
             if teams_dict := extract_teams_dict(json_data):
                 # get the required url to request for prop lines
-                url = bkm_utils.get_url(self.bookmaker_info.name)
+                url = bkm_utils.get_url(self.source.name)
                 # get the required headers to request for prop lines
-                headers = bkm_utils.get_headers(self.bookmaker_info.name)
+                headers = bkm_utils.get_headers(self.source.name)
                 # make the request for the prop lines
                 await self.req_mngr.get(url, self._parse_lines, teams_dict, headers=headers)
 
@@ -222,11 +222,11 @@ class UnderdogFantasy(bkm_utils.BookmakerPlug):
                     # extract the league from match data dictionary, if exists keep executing
                     if league := extract_league(a_id, game_ids_dict, games_dict, solo_games_dict):
                         # to track the leagues being collected
-                        bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+                        bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                         # get the market id from db and the market name
-                        if market := extract_market(self.bookmaker_info.name, a_data, league):
+                        if market := extract_market(self.source.name, a_data, league):
                             # get the subject id from db and extract the subject name
-                            if subject := extract_subject(self.bookmaker_info.name, a_id, league, player_ids_dict, players_dict):
+                            if subject := extract_subject(self.source.name, a_id, league, player_ids_dict, players_dict):
                                 # get the numeric over/under line, if exists keep executing
                                 if line := prop_line_data.get('stat_value'):
                                     # for each dictionary in prop_line_data's options if they exist
@@ -243,9 +243,9 @@ class UnderdogFantasy(bkm_utils.BookmakerPlug):
                                             'market': market['name'],
                                             'subject_id': subject['id'],
                                             'subject': subject['name'],
-                                            'bookmaker': self.bookmaker_info.name,
+                                            'bookmaker': self.source.name,
                                             'label': extract_label(outcome_data),
                                             'line': line,
                                             'multiplier': multiplier,
-                                            'odds': get_odds(self.bookmaker_info.default_payout.odds, multiplier)
+                                            'odds': get_odds(self.source.default_payout.odds, multiplier)
                                         })

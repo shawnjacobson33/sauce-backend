@@ -75,18 +75,18 @@ def extract_subject(bookmaker_name: str, data: dict, teams_dict: dict, league: s
         return subject
 
 
-class Payday(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class Payday(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
         # get the universal headers used to make all requests
-        self.headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        self.headers = bkm_utils.get_headers(self.source.name)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get the url required to make request for leagues data
-        url = bkm_utils.get_url(self.bookmaker_info.name, name='leagues')
+        url = bkm_utils.get_url(self.source.name, name='leagues')
         # get the params required to make the request for leagues data
-        params = bkm_utils.get_params(self.bookmaker_info.name, name='leagues')
+        params = bkm_utils.get_params(self.source.name, name='leagues')
         # make the request to get leagues data
         await self.req_mngr.get(url, self._parse_leagues, headers=self.headers, params=params)
 
@@ -96,13 +96,13 @@ class Payday(bkm_utils.BookmakerPlug):
             # initialize a structure to hold requests to be made
             tasks = []
             # get the url required to make requests for contests data
-            url = bkm_utils.get_url(self.bookmaker_info.name, name='contests')
+            url = bkm_utils.get_url(self.source.name, name='contests')
             # for each dictionary of league data in the response data if it exists
             for league_data in json_data.get('data', []):
                 # extract the league from league_data
                 if league := extract_league(league_data):
                     # get the params necessary for requesting contests data for this league
-                    params = bkm_utils.get_params(self.bookmaker_info.name, name='contests', var_1=league)
+                    params = bkm_utils.get_params(self.source.name, name='contests', var_1=league)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_contests, bkm_utils.clean_league(league), headers=self.headers, params=params))
 
@@ -115,7 +115,7 @@ class Payday(bkm_utils.BookmakerPlug):
             # get contests dictionary and the contest id from it, if both exists continue executing
             if (contests := data.get('contests')) and (contest_id := extract_contest_id(contests)):
                 # get the url required to request for prop lines using the contest id
-                url = bkm_utils.get_url(self.bookmaker_info.name).format(contest_id)
+                url = bkm_utils.get_url(self.source.name).format(contest_id)
                 # make request for prop lines
                 await self.req_mngr.get(url, self._parse_lines, league, headers=self.headers)
 
@@ -123,7 +123,7 @@ class Payday(bkm_utils.BookmakerPlug):
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('data')):
             # to track the leagues being collected
-            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
             # for each game in data's games if they exist
             for game_data in data.get('games', []):
                 # get game info from dictionary
@@ -133,11 +133,11 @@ class Payday(bkm_utils.BookmakerPlug):
                 # for each player prop data dictionary in game_data's player props if they exist
                 for player_prop_data in game_data.get('player_props', []):
                     # get the market id from the db and extract the market name
-                    if market := extract_market(self.bookmaker_info.name, player_prop_data, league):
+                    if market := extract_market(self.source.name, player_prop_data, league):
                         # get some player dictionary and the numeric over/under line, if both exist keep executing
                         if (player_data := player_prop_data.get('player')) and (line := player_prop_data.get('value')):
                             # get the subject id from the db and extract the subject name
-                            if subject := extract_subject(self.bookmaker_info.name, player_data, teams_dict, league):
+                            if subject := extract_subject(self.source.name, player_data, teams_dict, league):
                                 # for each general prop line label
                                 for label in ['Over', 'Under']:
                                     # update shared data
@@ -151,8 +151,8 @@ class Payday(bkm_utils.BookmakerPlug):
                                         'market': market['name'],
                                         'subject_id': subject['id'],
                                         'subject': subject['name'],
-                                        'bookmaker': self.bookmaker_info.name,
+                                        'bookmaker': self.source.name,
                                         'label': label,
                                         'line': line,
-                                        'odds': self.bookmaker_info.default_payout.odds
+                                        'odds': self.source.default_payout.odds
                                     })

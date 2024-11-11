@@ -65,20 +65,20 @@ def extract_line_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, Non
 
 
 # TODO: CHECK IS_BOOSTED LOGIC
-class MoneyLine(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class MoneyLine(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # gets the url to get prop lines
-        url = bkm_utils.get_url(self.bookmaker_info.name)
+        url = bkm_utils.get_url(self.source.name)
         # gets the headers to make request for prop lines
-        headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        headers = bkm_utils.get_headers(self.source.name)
         # gets the cookies to make request for prop lines
-        cookies = bkm_utils.get_cookies(self.bookmaker_info.name)
+        cookies = bkm_utils.get_cookies(self.source.name)
         # gets the params to make request for prop lines
-        params = bkm_utils.get_params(self.bookmaker_info.name)
+        params = bkm_utils.get_params(self.source.name)
         # makes request for prop lines
         await self.req_mngr.get(url, self._parse_lines, headers=headers, cookies=cookies, params=params)
 
@@ -90,11 +90,11 @@ class MoneyLine(bkm_utils.BookmakerPlug):
                 # extract the league name, keep going if it exists
                 if league := extract_league(prop_line):  # TODO: BUG - GETTING "NFL" AS LEAGUE FOR NCAAF PLAYERS
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                     # extract the market id from database and market name from dictionary
-                    if market := extract_market(self.bookmaker_info.name, prop_line, league):
+                    if market := extract_market(self.source.name, prop_line, league):
                         # extract the subject id and subject name from the database and dictionary respectively
-                        if subject := extract_subject(self.bookmaker_info.name, prop_line, league):
+                        if subject := extract_subject(self.source.name, prop_line, league):
                             # get line and label for every one that exists
                             for line, label in extract_line_and_label(prop_line):
                                 # update shared data
@@ -107,9 +107,9 @@ class MoneyLine(bkm_utils.BookmakerPlug):
                                     'market': market['name'],
                                     'subject_id': subject['id'],
                                     'subject': subject['name'],
-                                    'bookmaker': self.bookmaker_info.name,
+                                    'bookmaker': self.source.name,
                                     'label': label,
                                     'line': line,
-                                    'odds': self.bookmaker_info.default_payout.odds,
+                                    'odds': self.source.default_payout.odds,
                                     'is_boosted': 'Discount' in market['name'] # TODO: COULD BE A BUG HERE...DEFINITELY NOT GOING TO WORK
                                 })

@@ -80,18 +80,18 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> dict[str, U
                 }
 
 
-class SuperDraft(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class SuperDraft(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
         # get the headers required to request prop lines data
-        self.headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        self.headers = bkm_utils.get_headers(self.source.name)
         # update headers timestamp
         self.headers['timestamp'] = str(datetime.now())
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get the url required to request prop lines data
-        url = bkm_utils.get_url(self.bookmaker_info.name).format('0')
+        url = bkm_utils.get_url(self.source.name).format('0')
         # make the request for the prop lines
         await self.req_mngr.get(url, self._parse_leagues, headers=self.headers)
 
@@ -111,7 +111,7 @@ class SuperDraft(bkm_utils.BookmakerPlug):
                         # get the league id if exists
                         if league_id := sport_data.get('sportId'):
                             # get the url with the inserted sport id param
-                            url = bkm_utils.get_url(self.bookmaker_info.name).format(league_id)
+                            url = bkm_utils.get_url(self.source.name).format(league_id)
                             # add the request for the prop lines
                             tasks.append(self.req_mngr.get(url, self._parse_lines, headers=self.headers))
 
@@ -128,11 +128,11 @@ class SuperDraft(bkm_utils.BookmakerPlug):
                 # extract the league name from the dictionary, if exists keep going
                 if league := extract_league(prop_line_data, sports_dict):
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                     # get the market id and extract the market name from the dictionary
-                    if market := extract_market(self.bookmaker_info.name, prop_line_data, league):
+                    if market := extract_market(self.source.name, prop_line_data, league):
                         # get the subject id from the db and extract the subject name from the dictionary
-                        if subject := extract_subject(self.bookmaker_info.name, prop_line_data, league):
+                        if subject := extract_subject(self.source.name, prop_line_data, league):
                             # get the numeric over/under line from the dictionary
                             if line := prop_line_data.get('line'):
                                 # for each generic over/under label for prop lines
@@ -148,8 +148,8 @@ class SuperDraft(bkm_utils.BookmakerPlug):
                                         'market': market['name'],
                                         'subject_id': subject['subject']['id'],
                                         'subject': subject['subject']['name'],
-                                        'bookmaker': self.bookmaker_info.name,
+                                        'bookmaker': self.source.name,
                                         'label': label,
                                         'line': line,
-                                        'odds': self.bookmaker_info.default_payout.odds
+                                        'odds': self.source.default_payout.odds
                                     })

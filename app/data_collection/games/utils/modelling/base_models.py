@@ -1,22 +1,21 @@
-from collections import defaultdict
-from dataclasses import dataclass
-
 from app.data_collection.utils.shared_data import Games
+from app.data_collection.utils.modelling import Source, Retriever
 
 
-@dataclass
-class Source:
-    name: str  # ex: BasketballReference
-    league: str
+class ScheduleSource(Source):
+    def __init__(self, name: str, league: str):
+        super().__init__(name, league)
 
 
-class ScheduleCollector:
-    def __init__(self, source_info: Source):
-        self.source_info = source_info
-        self.games_collected = defaultdict(int)
+class ScheduleRetriever(Retriever):
+    def __init__(self, source: ScheduleSource):
+        super().__init__(source)
 
     def update_games(self, game: dict) -> None:
         # add the game to the shared data structure
-        Games.update_games(self.source_info.league, game)
+        Games.update_games(self.source.league, game)
         # keep track of the number of games found per league
-        self.games_collected[self.source_info.league] += 1
+        self.data_collected += 1
+
+    def __str__(self):
+        return f'{str(self.data_collected)} games'

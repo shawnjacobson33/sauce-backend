@@ -4,4 +4,4 @@ DATABASE_URL = f'mongodb+srv://username:password@{DATABASE_NAME}.hvhxg.mongodb.n
 SUBJECTS_COLLECTION_NAME = 'subjects-v4'
 MARKETS_COLLECTION_NAME = 'markets-v4'
 TEAMS_COLLECTION_NAME = 'teams-v1'
-BOOKMAKERS_COLLECTION_NAME = 'bookmakers-v1'
+SOURCES_COLLECTION_NAME = 'sources-v1'

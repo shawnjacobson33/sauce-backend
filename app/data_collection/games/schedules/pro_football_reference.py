@@ -80,9 +80,9 @@ class NFLScheduleCollector(gm_utils.ScheduleCollector):
     def __init__(self, source_info: gm_utils.Source):
         super().__init__(source_info)
 
-    async def collect(self, n_days: int = 1) -> None:
+    async def retrieve(self, n_days: int = 1) -> None:
         # get the url for pro-football-reference.com's nfl schedules
-        url = gm_utils.get_url(self.source_info.name, 'schedule')
+        url = gm_utils.get_url(self.source.name, 'schedule')
         # get the current season how it needs to be formatted
         current_season = get_current_nfl_season()
         # format the url with the dates
@@ -102,14 +102,14 @@ class NFLScheduleCollector(gm_utils.ScheduleCollector):
             # get the game time
             if game_time := extract_game_time(n_days, row):
                 # extract the away and home team
-                away_team, home_team = extract_teams(self.source_info.name, self.source_info.league, row)
+                away_team, home_team = extract_teams(self.source.name, self.source.league, row)
                 # if they exist in the database
                 if away_team and home_team:
                     # adds the game and all of its extracted data to the shared data structure
                     self.update_games({
                         'time_processed': str(datetime.now()),
                         "game_time": game_time,
-                        "league": self.source_info.name,
+                        "league": self.source.name,
                         "away_team": away_team,
                         "home_team": home_team,
                         "box_score_url": extract_box_score_url(row),

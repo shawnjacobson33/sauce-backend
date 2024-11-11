@@ -20,5 +20,5 @@ from .utils import *
 
 __all__ = ['BetOnline', 'BoomFantasy', 'Dabble', 'Drafters', 'DraftKingsPick6', 'HotStreak', 'MoneyLine', 'OwnersBox',
            'Payday', 'PrizePicks', 'ParlayPlay', 'Rebet', 'Sleeper', 'SuperDraft', 'UnderdogFantasy', 'VividPicks',
-           'OddsShopper', 'Bookmaker', 'BookmakerPlug', 'BettingLines', 'Subjects', 'Markets', 'Leagues',
+           'OddsShopper', 'LinesSource', 'LinesRetriever', 'BettingLines', 'Subjects', 'Markets', 'Leagues',
            'ODDSSHOPPER_NOVEL_BOOKMAKERS']

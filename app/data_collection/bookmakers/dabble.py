@@ -72,7 +72,7 @@ def extract_label(data: dict) -> Optional[str]:
         return label.title()
 
 
-class Dabble(bkm_utils.BookmakerPlug):
+class Dabble(bkm_utils.LinesRetriever):
     """
     A class to collect and process player prop lines from the Dabble bookmaker.
 
@@ -124,17 +124,17 @@ class Dabble(bkm_utils.BookmakerPlug):
             Standardizes the label for player props (e.g., over/under).
     """
 
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
         # gets universally used request headers
         self.headers = bkm_utils.get_headers(bookmaker_info.name)
         # gets universally used request cookies
         self.cookies = bkm_utils.get_cookies(bookmaker_info.name)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # gets the url required to request for the current competitions
-        url = bkm_utils.get_url(self.bookmaker_info.name, name='competitions')
+        url = bkm_utils.get_url(self.source.name, name='competitions')
         # will make an asynchronous request for the competitions using valid request data
         await self.req_mngr.get(url, self._parse_competitions, headers=self.headers, cookies=self.cookies)
 
@@ -148,11 +148,11 @@ class Dabble(bkm_utils.BookmakerPlug):
                 # extract the league from competition and get the competition id, if both exist then execute
                 if (league := extract_league(competition)) and (competition_id := competition.get('id')):
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                     # get the url required to request the current events for each competition and insert comp id into it
-                    url = bkm_utils.get_url(self.bookmaker_info.name, name='events').format(competition_id)
+                    url = bkm_utils.get_url(self.source.name, name='events').format(competition_id)
                     # get the params required to request the current events
-                    params = bkm_utils.get_params(self.bookmaker_info.name)
+                    params = bkm_utils.get_params(self.source.name)
                     # add the request task to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_events, league, params=params))
 
@@ -170,7 +170,7 @@ class Dabble(bkm_utils.BookmakerPlug):
                 if (event_id := event.get('id')) and event.get('isDisplayed'):
                     if game_info := event.get('name'):
                         # gets the url required to request for prop lines and inserts event id into url string
-                        url = bkm_utils.get_url(self.bookmaker_info.name).format(event_id)
+                        url = bkm_utils.get_url(self.source.name).format(event_id)
                         # add the request task to tasks
                         tasks.append(self.req_mngr.get(url, self._parse_lines, league, game_info))
 
@@ -185,9 +185,9 @@ class Dabble(bkm_utils.BookmakerPlug):
             # for each prop line in data's player props if they exist
             for player_prop_data in data.get('playerProps', []):
                 # get the market id from the db and extract the market name from the dictionary
-                if market := extract_market(self.bookmaker_info.name, player_prop_data, markets_map, league):
+                if market := extract_market(self.source.name, player_prop_data, markets_map, league):
                     # get the subject id from the db and extract the subject name from dictionary
-                    if subject := extract_subject(self.bookmaker_info.name, player_prop_data, league):
+                    if subject := extract_subject(self.source.name, player_prop_data, league):
                         # get over/under label for player prop and get numeric line, only execute if both exist
                         if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
                             # update shared data
@@ -201,8 +201,8 @@ class Dabble(bkm_utils.BookmakerPlug):
                                 'market': market['name'],
                                 'subject_id': subject['id'],
                                 'subject': subject['name'],
-                                'bookmaker': self.bookmaker_info.name,
+                                'bookmaker': self.source.name,
                                 'label': label,
                                 'line': line,
-                                'odds': self.bookmaker_info.default_payout.odds
+                                'odds': self.source.default_payout.odds
                             })

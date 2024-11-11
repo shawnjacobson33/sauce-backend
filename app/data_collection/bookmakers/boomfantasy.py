@@ -89,7 +89,7 @@ def extract_label_and_odds(data: list) -> Optional[tuple[str, float]]:
         return data[1].title(), float(data[2])
 
 
-class BoomFantasy(bkm_utils.BookmakerPlug):
+class BoomFantasy(bkm_utils.LinesRetriever):
     """
     BoomFantasy is a class that represents the process of collecting and parsing player prop lines from
     the BoomFantasy API. It inherits from the `Plug` class and utilizes asynchronous requests to gather
@@ -109,22 +109,22 @@ class BoomFantasy(bkm_utils.BookmakerPlug):
             data storage for further use.
     """
 
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # gets the url to get prop lines
-        url = bkm_utils.get_url(self.bookmaker_info.name)
+        url = bkm_utils.get_url(self.source.name)
         # get the headers that will be sent with request for prop lines
-        headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        headers = bkm_utils.get_headers(self.source.name)
         # gets params that will be sent with request for prop lines
-        params = bkm_utils.get_params(self.bookmaker_info.name)
+        params = bkm_utils.get_params(self.source.name)
         # gets valid tokens needed to access data
         tokens_data = {
-            'url': bkm_utils.get_url(self.bookmaker_info.name, name='tokens'),
-            'headers': bkm_utils.get_headers(self.bookmaker_info.name, name='tokens'),
-            'json_data': bkm_utils.get_json_data(self.bookmaker_info.name, name='tokens')
+            'url': bkm_utils.get_url(self.source.name, name='tokens'),
+            'headers': bkm_utils.get_headers(self.source.name, name='tokens'),
+            'json_data': bkm_utils.get_json_data(self.source.name, name='tokens')
         }
         # because of tokens, use a special get method to request data
         await self.req_mngr.get_bf(url, tokens_data, self._parse_lines, headers=headers, params=params)
@@ -141,19 +141,19 @@ class BoomFantasy(bkm_utils.BookmakerPlug):
                         # if they exist execute
                         if league := extract_league(section_data):
                             # to track the leagues being collected
-                            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+                            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                             # extract the game info from the dictionary
                             game_info = extract_game_info(section_data)
                             # for each section in the league's sections if they exist
                             for qg_data in section_data.get('qG', []):
                                 # extract the subject and get the subject id from the response data and database
-                                if subject := extract_subject(self.bookmaker_info.name, qg_data, league):
+                                if subject := extract_subject(self.source.name, qg_data, league):
                                     # get the period classifier from dictionary (fullGame, firstQuarter, etc.)
                                     period = extract_period(qg_data)
                                     # get more prop line info from the league's section's fullQuestions if they exist
                                     for q_data in qg_data.get('q', []):
                                         # extract the market and market id from the response data and database
-                                        if market := extract_market(self.bookmaker_info.name, q_data, league, period):
+                                        if market := extract_market(self.source.name, q_data, league, period):
                                             # for each dictionary in q_data's c field
                                             for c_data in q_data.get('c', []):
                                                 # extract the numeric line for the prop line, if exists keep going
@@ -177,7 +177,7 @@ class BoomFantasy(bkm_utils.BookmakerPlug):
                                                                 'market': market['name'],
                                                                 'subject_id': subject['id'],
                                                                 'subject': subject['name'],
-                                                                'bookmaker': self.bookmaker_info.name,
+                                                                'bookmaker': self.source.name,
                                                                 'label': label,
                                                                 'line': line,
                                                                 'odds': odds,

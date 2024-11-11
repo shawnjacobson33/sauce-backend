@@ -155,18 +155,18 @@ def extract_odds(data: dict) -> Union[tuple[Any, Any], tuple[None, None]]:
     yield None, None
 
 
-class HotStreak(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class HotStreak(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # make call to the parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
         # get the universal url to make for all requests (uses graphql)
-        self.url = bkm_utils.get_url(self.bookmaker_info.name)
+        self.url = bkm_utils.get_url(self.source.name)
         # get the universal headers to make for all requests
-        self.headers = bkm_utils.get_headers(self.bookmaker_info.name)
+        self.headers = bkm_utils.get_headers(self.source.name)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get the json data associated with requesting for session data
-        json_data = bkm_utils.get_json_data(self.bookmaker_info.name, name='tokens')
+        json_data = bkm_utils.get_json_data(self.source.name, name='tokens')
         # make the request for session data
         await self.req_mngr.post(self.url, self._parse_token, headers=self.headers, json=json_data)
 
@@ -180,13 +180,13 @@ class HotStreak(bkm_utils.BookmakerPlug):
                     # update the authorization token
                     self.headers['authorization'] = f'Bearer {token}'
                     # get the json data needed for the request for current leagues data
-                    json_data = bkm_utils.get_json_data(self.bookmaker_info.name, name='leagues')
+                    json_data = bkm_utils.get_json_data(self.source.name, name='leagues')
                     # make the request for leagues data
                     await self.req_mngr.post(self.url, self._parse_league_aliases, headers=self.headers, json=json_data)
 
     async def fetch_page(self, leagues: dict, page: int) -> None:
         # get the json_data (for post request) to get the data of a page of prop lines
-        json_data = bkm_utils.get_json_data(self.bookmaker_info.name, var=page)
+        json_data = bkm_utils.get_json_data(self.source.name, var=page)
         # make the post request for the particular (page) page of prop lines
         return await self.req_mngr.post(self.url, self._parse_lines, leagues, headers=self.headers, json=json_data)
 
@@ -222,11 +222,11 @@ class HotStreak(bkm_utils.BookmakerPlug):
                         # extract the league using an extracted dict of conn. opp. ids to league names, if exists then execute
                         if league := extract_league(participant_data, extract_opponent_ids(search, league_aliases)):
                             # to track the leagues being collected
-                            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+                            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                             # extract the market id and market name from data
-                            if market := extract_market(self.bookmaker_info.name, market_components, league):
+                            if market := extract_market(self.source.name, market_components, league):
                                 # get the subject id from db and extract subject from data
-                                if subject := extract_subject(self.bookmaker_info.name, participant_data, league):
+                                if subject := extract_subject(self.source.name, participant_data, league):
                                     # for each line and corresponding over/under odds pair
                                     for line, odds_pair in zip(extract_line(market_dict), extract_odds(market_dict)):
                                         # each (odds) and label are at corresponding indices, so for each of them...
@@ -241,7 +241,7 @@ class HotStreak(bkm_utils.BookmakerPlug):
                                                 'market': market['name'],
                                                 'subject_id': subject['id'],
                                                 'subject': subject['name'],
-                                                'bookmaker': self.bookmaker_info.name,
+                                                'bookmaker': self.source.name,
                                                 'label': label,
                                                 'line': line,
                                                 'odds': odds

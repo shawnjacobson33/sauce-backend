@@ -56,16 +56,16 @@ def extract_position(data: dict) -> Optional[str]:
         return bkm_utils.clean_position(position.strip())
 
 
-class Drafters(bkm_utils.BookmakerPlug):
-    def __init__(self, bookmaker_info: bkm_utils.Bookmaker, batch_id: str):
+class Drafters(bkm_utils.LinesRetriever):
+    def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker_info, batch_id)
+        super().__init__(bookmaker)
 
-    async def collect(self) -> None:
+    async def retrieve(self) -> None:
         # get url to make a request for leagues
-        url = bkm_utils.get_url(self.bookmaker_info.name, name='leagues')
+        url = bkm_utils.get_url(self.source.name, name='leagues')
         # get headers to make a request for prop lines
-        headers = bkm_utils.get_headers(self.bookmaker_info.name, name='leagues')
+        headers = bkm_utils.get_headers(self.source.name, name='leagues')
         # make asynchronous request for prop lines
         await self.req_mngr.get(url, self._parse_leagues, headers=headers)
 
@@ -83,9 +83,9 @@ class Drafters(bkm_utils.BookmakerPlug):
                     # if the league is valid keep going
                     if bkm_utils.is_league_valid(cleaned_league):
                         # get the url to get prop lines data and insert the league id
-                        url = bkm_utils.get_url(self.bookmaker_info.name).format(league_id)
+                        url = bkm_utils.get_url(self.source.name).format(league_id)
                         # get the headers associated with prop lines requests
-                        headers = bkm_utils.get_headers(self.bookmaker_info.name)
+                        headers = bkm_utils.get_headers(self.source.name)
                         # store some params
                         params = {
                             'page_no': '1'
@@ -100,7 +100,7 @@ class Drafters(bkm_utils.BookmakerPlug):
         # get response data, if exists execute
         if json_data := response.json():
             # to track the leagues being collected
-            bkm_utils.Leagues.update_valid_leagues(self.bookmaker_info.name, league)
+            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
             # for each event in the data's entities
             for event_data in json_data.get('entities', []):
                 # check if the event is valid before executing
@@ -108,13 +108,13 @@ class Drafters(bkm_utils.BookmakerPlug):
                     # extract the player's team and some general game info from 'event'
                     game_info = extract_game_info(event_data)
                     # extract the player's team
-                    team = extract_subject_team(self.bookmaker_info.name, league, event_data)
+                    team = extract_subject_team(self.source.name, league, event_data)
                     # for each player in event's players if they exist
                     for player_data in event_data.get('players', []):
                         # extract the subject id from db and get subject from player dict
-                        if subject := extract_subject(self.bookmaker_info.name, player_data, league, team):
+                        if subject := extract_subject(self.source.name, player_data, league, team):
                             # get market id from db and extract market from player dict
-                            if market := extract_market(self.bookmaker_info.name, player_data, league):
+                            if market := extract_market(self.source.name, player_data, league):
                                 # get numeric over/under line and execute if exists
                                 if line := player_data.get('bid_stats_value'):
                                     # for each label Over and Under update shared data
@@ -130,8 +130,8 @@ class Drafters(bkm_utils.BookmakerPlug):
                                             'market': market['name'],
                                             'subject_id': subject['id'],
                                             'subject': subject['name'],
-                                            'bookmaker': self.bookmaker_info.name,
+                                            'bookmaker': self.source.name,
                                             'label': label,
                                             'line': line,
-                                            'odds': self.bookmaker_info.default_payout.odds
+                                            'odds': self.source.default_payout.odds
                                         })
