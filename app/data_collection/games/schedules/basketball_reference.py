@@ -1,6 +1,3 @@
-import uuid
-import asyncio
-import pprint
 from datetime import datetime
 from typing import Optional
 
@@ -70,9 +67,9 @@ def extract_box_score_url(tr_elem) -> Optional[str]:
             return f'/boxscores/{box_score_identifier}.html'
 
 
-class NBAScheduleCollector(gm_utils.ScheduleCollector):
-    def __init__(self, source_info: gm_utils.Source):
-        super().__init__(source_info)
+class NBAScheduleCollector(gm_utils.ScheduleRetriever):
+    def __init__(self, source: gm_utils.ScheduleSource):
+        super().__init__(source)
 
     async def retrieve(self, n_days: int = 1):
         # generate a range of dates predicated upon n_days param
@@ -117,12 +114,3 @@ class NBAScheduleCollector(gm_utils.ScheduleCollector):
                                 "game_notes": extract_data(row, 'game_remarks')
                             })
 
-
-async def main():
-    from app.data_collection.utils.shared_data import Games
-    source = gm_utils.Source('basketball-reference', 'NBA')
-    await NBAScheduleCollector(source).collect(n_days=2)
-    pprint.pprint(Games.get_games())
-
-if __name__ == '__main__':
-    asyncio.run(main())

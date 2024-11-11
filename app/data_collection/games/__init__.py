@@ -1,4 +1,4 @@
-from schedules import *
+from .schedules import *
 from .utils import *
 
 __all__ = ['NCAAFScheduleCollector', 'NFLScheduleCollector', 'NHLScheduleCollector', 'NBAScheduleCollector',

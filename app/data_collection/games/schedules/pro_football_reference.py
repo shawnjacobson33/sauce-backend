@@ -1,5 +1,3 @@
-import asyncio
-import pprint
 from datetime import datetime
 from typing import Optional, Union
 
@@ -76,9 +74,9 @@ def extract_box_score_url(tr_elem) -> Optional[str]:
             return a_elem.get('href')
 
 
-class NFLScheduleCollector(gm_utils.ScheduleCollector):
-    def __init__(self, source_info: gm_utils.Source):
-        super().__init__(source_info)
+class NFLScheduleCollector(gm_utils.ScheduleRetriever):
+    def __init__(self, source: gm_utils.ScheduleSource):
+        super().__init__(source)
 
     async def retrieve(self, n_days: int = 1) -> None:
         # get the url for pro-football-reference.com's nfl schedules
@@ -114,13 +112,3 @@ class NFLScheduleCollector(gm_utils.ScheduleCollector):
                         "home_team": home_team,
                         "box_score_url": extract_box_score_url(row),
                     })
-
-
-async def main():
-    from app.data_collection.utils.shared_data import Games
-    source = gm_utils.Source('pro-football-reference', 'NFL')
-    await NFLScheduleCollector(source).collect(n_days=2)
-    pprint.pprint(Games.get_games())
-
-if __name__ == '__main__':
-    asyncio.run(main())

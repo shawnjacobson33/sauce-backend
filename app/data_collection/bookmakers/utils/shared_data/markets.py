@@ -4,9 +4,6 @@ from collections import defaultdict
 from app import database as db
 from app.data_collection.utils.definitions import IN_SEASON_SPORTS
 
-# some constants to interact with the database
-DB = db.Database.get()
-
 
 def get_structured_docs(docs: list[dict]) -> dict:
     # this is the default which is used by markets
@@ -15,7 +12,7 @@ def get_structured_docs(docs: list[dict]) -> dict:
 
 def structure_data() -> dict:
     # get collection being used
-    markets_cursor = DB[db.MARKETS_COLLECTION_NAME]
+    markets_cursor = db.MongoDB.fetch_collection(db.MARKETS_COLLECTION_NAME)
     # initialize a dictionary to hold all the data partitioned
     partitioned_data = dict()
     # for each partition in the partitions predicated upon the cursor name

@@ -128,9 +128,9 @@ class Dabble(bkm_utils.LinesRetriever):
         # call parent class Plug
         super().__init__(bookmaker)
         # gets universally used request headers
-        self.headers = bkm_utils.get_headers(bookmaker_info.name)
+        self.headers = bkm_utils.get_headers(bookmaker.name)
         # gets universally used request cookies
-        self.cookies = bkm_utils.get_cookies(bookmaker_info.name)
+        self.cookies = bkm_utils.get_cookies(bookmaker.name)
 
     async def retrieve(self) -> None:
         # gets the url required to request for the current competitions

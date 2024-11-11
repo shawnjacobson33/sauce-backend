@@ -18,4 +18,4 @@ class ScheduleRetriever(Retriever):
         self.data_collected += 1
 
     def __str__(self):
-        return f'{str(self.data_collected)} games'
+        return f'{str(self.data_collected)} ({self.source.league}) games'

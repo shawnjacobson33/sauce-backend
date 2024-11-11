@@ -1,5 +1,4 @@
 import asyncio
-import pprint
 from datetime import datetime
 from typing import Optional, Union
 
@@ -65,9 +64,9 @@ def extract_league(rows) -> Optional[str]:
             return 'NCAAM' if 'Men' in td_elem.text else 'NCAAW'
 
 
-class NCAABScheduleCollector(gm_utils.ScheduleCollector):
-    def __init__(self, source_info: gm_utils.Source):
-        super().__init__(source_info)
+class NCAABScheduleCollector(gm_utils.ScheduleRetriever):
+    def __init__(self, source: gm_utils.ScheduleSource):
+        super().__init__(source)
 
     async def retrieve(self, n_days: int = 1) -> None:
         # generate a range of dates predicated upon n_days param
@@ -113,13 +112,3 @@ class NCAABScheduleCollector(gm_utils.ScheduleCollector):
                                 "away_team": away_team,
                                 "home_team": home_team
                             })
-
-
-async def main():
-    from app.data_collection.utils.shared_data import Games
-    source = gm_utils.Source('sports-reference', 'NCAAB')
-    await NCAABScheduleCollector(source).collect(n_days=10)
-    pprint.pprint(Games.get_games())
-
-if __name__ == '__main__':
-    asyncio.run(main())

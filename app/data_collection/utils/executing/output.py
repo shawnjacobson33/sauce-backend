@@ -3,6 +3,7 @@ import os
 
 from app.data_collection import bookmakers as bkm
 from app.data_collection.utils.shared_data import Teams
+from app.data_collection.utils.modelling import Retriever
 
 
 def get_file_path(entity_type: str, is_pending: bool) -> str:
@@ -100,7 +101,7 @@ def save_data_to_files() -> None:
     save_betting_lines_to_file()
 
 
-def output_source_stats(retriever: dc_utils.Retriever, time_taken: float) -> None:
+def output_source_stats(retriever: Retriever, time_taken: float) -> None:
     # Because OddsShopper isn't actually a bookmaker, but a tool that holds other bookmaker's odds
     if retriever.source.name == 'OddsShopper':
         # for every bookmaker that they offer

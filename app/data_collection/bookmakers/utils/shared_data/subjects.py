@@ -6,10 +6,6 @@ from app.data_collection.utils.definitions import IN_SEASON_LEAGUES
 from app.data_collection.bookmakers.utils.cleaning import clean_subject
 
 
-# some constants to interact with the database
-DB = db.Database.get()
-
-
 def get_structured_docs(docs: list[dict]) -> dict:
     # re-format the name so it can be more easily matched with bookmaker's subject names
     return {clean_subject(doc['name']): {'name': doc['name'], 'id': doc['_id']} for doc in docs}
@@ -17,7 +13,7 @@ def get_structured_docs(docs: list[dict]) -> dict:
 
 def structure_data() -> dict:
     # get collection being used
-    subjects_cursor = DB[db.SUBJECTS_COLLECTION_NAME]
+    subjects_cursor = db.MongoDB.fetch_collection(db.SUBJECTS_COLLECTION_NAME)
     # initialize a dictionary to hold all the data partitioned
     partitioned_data = dict()
     # for each partition in the partitions predicated upon the cursor name

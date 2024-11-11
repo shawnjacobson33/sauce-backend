@@ -1,8 +1,8 @@
 import os
-from typing import Tuple, Optional
+from typing import Tuple
 from pymongo import MongoClient
 
-from app.database.utils import DATABASE_URL, DATABASE_NAME, SOURCES_COLLECTION_NAME
+from app.database.utils import DATABASE_URL, DATABASE_NAME
 
 
 def get_db_creds() -> Tuple[str, str]:
@@ -12,23 +12,20 @@ def get_db_creds() -> Tuple[str, str]:
         return data[0].strip(), data[1]
 
 
-def get_client():
+def get_db_session():
     username, password = get_db_creds()
     client = MongoClient(DATABASE_URL.replace('username', username).replace('password', password),
                          uuidRepresentation='standard')
-    return client
+
+    return client[DATABASE_NAME]
 
 
 class MongoDB:
-    _db = get_client()[DATABASE_NAME]
+    _db = get_db_session()
 
     @classmethod
-    def get_session(cls):
-        return cls._db
-
-
-def get_source(db, source_name: str) -> Optional[dict]:
-    if source := db[SOURCES_COLLECTION_NAME].find_one({'name': source_name}):
-        return source
-
-
+    def fetch_collection(cls, collection_name: str):
+        if collection_name in cls._db.list_collection_names():
+            return cls._db[collection_name]
+        else:
+            raise ValueError(f"Collection '{collection_name}' does not exist.")

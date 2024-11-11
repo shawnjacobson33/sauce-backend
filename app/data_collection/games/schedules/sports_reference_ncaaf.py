@@ -1,5 +1,3 @@
-import asyncio
-import pprint
 from datetime import datetime
 from typing import Optional
 
@@ -41,9 +39,9 @@ def extract_game_time(date_str: str, cell) -> Optional[str]:
         return get_full_game_date(date_str, a_elem.text)
 
 
-class NCAAFScheduleCollector(gm_utils.ScheduleCollector):
-    def __init__(self, source_info: gm_utils.Source):
-        super().__init__(source_info)
+class NCAAFScheduleCollector(gm_utils.ScheduleRetriever):
+    def __init__(self, source: gm_utils.ScheduleSource):
+        super().__init__(source)
 
     async def retrieve(self, n_days: int = 1) -> None:
         # get the url for cbssports.com's ncaaf schedules
@@ -83,13 +81,3 @@ class NCAAFScheduleCollector(gm_utils.ScheduleCollector):
                                                 "away_team": away_team,
                                                 "home_team": home_team
                                             })
-
-
-async def main():
-    from app.data_collection.utils.shared_data import Games
-    source = gm_utils.Source('cbssports', 'NCAAF')
-    await NCAAFScheduleCollector(source).collect(n_days=10)
-    pprint.pprint(Games.get_games())
-
-if __name__ == '__main__':
-    asyncio.run(main())

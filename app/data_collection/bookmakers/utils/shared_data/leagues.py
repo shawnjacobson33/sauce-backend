@@ -1,11 +1,6 @@
 import threading
 from collections import defaultdict
 
-from app import database as db
-
-# some constants to interact with the database
-DB = db.Database.get()
-
 
 def restructure_sets(data: dict) -> dict:
     restructured_data = dict()

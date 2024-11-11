@@ -1,8 +1,10 @@
+import asyncio
 import time
 
 from app.data_collection.utils.modelling.base_models import Retriever
-from app.data_collection.utils.executing.configure import configure_schedule_retriever
+from app.data_collection.utils.executing.output import output_source_stats
 from app.data_collection.utils.executing.definitions import SCHEDULE_RETRIEVERS, LINES_RETRIEVERS
+from app.data_collection.utils.executing.configure import configure_schedule_retriever, configure_lines_retriever
 
 
 def cleanup(retriever: Retriever):
@@ -31,10 +33,10 @@ async def launch_retriever(retriever: Retriever):
         await retriever.retrieve()
 
     # wait until the collection process is done
-    await collect()
+    await retrieve()
 
 
-def launch_schedule_retrievers(schedule_retriever_names: list[str] = None):
+def launch_schedules_retrievers(schedule_retriever_names: list[str] = None):
     # 1. First Get Schedule Classes
     schedules_retriever_classes = SCHEDULE_RETRIEVERS.items() if not schedule_retriever_names else [
         (schedule_retriever_name, SCHEDULE_RETRIEVERS[schedule_retriever_name]) for schedule_retriever_name in 
@@ -47,5 +49,24 @@ def launch_schedule_retrievers(schedule_retriever_names: list[str] = None):
         # configure a bookmaker plug to collect data
         schedule_retriever = configure_schedule_retriever(source_name, schedule_retriever_class)
         # start collecting
-        tasks.append(launch_retriever(schedule_retriever))
-        
+        tasks.append(asyncio.create_task(launch_retriever(schedule_retriever)))
+
+    return tasks
+
+
+def launch_lines_retrievers(lines_retriever_names: list[str] = None):
+    # get all the bookmaker plugs to run
+    lines_retriever_classes = LINES_RETRIEVERS.values() if not lines_retriever_names else [
+        (lines_retriever_name, LINES_RETRIEVERS[lines_retriever_name]) for lines_retriever_name in
+        lines_retriever_names]
+
+    # collect request task to run
+    tasks = list()
+    # for every bookmaker plug available
+    for line_retriever_class in lines_retriever_classes:
+        # configure a bookmaker plug to collect data
+        line_retriever = configure_lines_retriever(line_retriever_class)
+        # start collecting
+        tasks.append(asyncio.create_task(launch_retriever(line_retriever)))
+
+    return tasks

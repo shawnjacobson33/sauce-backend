@@ -1,5 +1,3 @@
-import asyncio
-import pprint
 from datetime import datetime
 from typing import Optional, Union, Any
 
@@ -66,9 +64,9 @@ def extract_team(source_name: str, league: str, row, attr_name: str) -> Optional
              return team_data
 
 
-class NHLScheduleCollector(gm_utils.ScheduleCollector):
-    def __init__(self, source_info: gm_utils.Source):
-        super().__init__(source_info)
+class NHLScheduleCollector(gm_utils.ScheduleRetriever):
+    def __init__(self, source: gm_utils.ScheduleSource):
+        super().__init__(source)
 
     async def retrieve(self, n_days: int = 1) -> None:
         # generate a range of dates predicated upon n_days param
@@ -107,13 +105,3 @@ class NHLScheduleCollector(gm_utils.ScheduleCollector):
                             "box_score_url": game_time_data['box_score_url'],
                             "game_notes": extract_data(row, 'game_remarks')  # TODO: Same as NBA
                         })
-
-
-async def main():
-    from app.data_collection.utils.shared_data import Games
-    source = gm_utils.Source('hockey-reference', 'NHL')
-    await NHLScheduleCollector(source).collect(n_days=2)
-    pprint.pprint(Games.get_games())
-
-if __name__ == '__main__':
-    asyncio.run(main())
