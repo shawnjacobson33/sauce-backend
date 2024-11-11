@@ -1,18 +1,16 @@
 import asyncio
 import pprint
 from datetime import datetime
-from typing import Optional, Union, Any
+from typing import Optional, Union
 
 from bs4 import BeautifulSoup
 
+from app.data_collection import utils as dc_utils
 from app.data_collection.games import utils as gm_utils
 
 
 # TODO: Same as NBA
-def convert_to_datetime_today(time_str):
-    # Get today's date
-    today = datetime.now()
-
+def get_game_time(date: datetime, time_str: str):
     # Append "AM" or "PM" to the time string based on "a" or "p" suffix
     if time_str[-1].lower() == 'p':
         time_str = time_str[:-1] + "PM"
@@ -21,21 +19,26 @@ def convert_to_datetime_today(time_str):
 
     # Parse the updated time string
     time_obj = datetime.strptime(time_str, "%I:%M%p")
-
     # Combine today's date with the parsed time
-    combined_datetime = today.replace(hour=time_obj.hour, minute=time_obj.minute, second=0, microsecond=0)
-
+    combined_datetime = date.replace(hour=time_obj.hour, minute=time_obj.minute, second=0, microsecond=0)
+    # return the combined date
     return combined_datetime
 
 
-def extract_away_team(rows) -> Optional[str]:
+def extract_away_team(source_name: str, league: str, rows) -> Optional[dict]:
     # extracts any text from a data cell in the row for a given attribute name
     if td_elem := rows[0].find('td'):
+        # if the link element exists
         if a_elem := td_elem.find('a'):
-            return a_elem.text
+            # get the away team name
+            away_team_name = a_elem.text
+            # get the team id and team name from the database
+            if team_data := dc_utils.get_team_id(source_name, league, away_team_name):
+                # return the team id and team name
+                return team_data
 
 
-def extract_home_team_and_game_time(rows) -> Union[tuple[Any, str], tuple[None, None]]:
+def extract_home_team_and_game_time(source_name: str, league: str, rows, date: datetime) -> Union[tuple[dict, str], tuple[None, None]]:
     # if rows as more than 1 element
     if len(rows) > 1:
         # get all the cells from the second row
@@ -44,10 +47,14 @@ def extract_home_team_and_game_time(rows) -> Union[tuple[Any, str], tuple[None, 
             if (a_elem := td_elems[0].find('a')) and (start_time := td_elems[2]):
                 # only extract if the game hasn't started yet i.e. the text has a time
                 if start_time.text[0].isdigit():
-                    # extract and convert the game time to a date and then cast to a string
-                    game_time = str(convert_to_datetime_today(start_time.text.strip()))
-                    # return the home team and game time
-                    return a_elem.text, game_time
+                    # get the home team name from the link's inner html
+                    home_team_name = a_elem.text
+                    # get the team id and team name from the database
+                    if team_data := dc_utils.get_team_id(source_name, league, home_team_name):
+                        # extract and convert the game time to a date and then cast to a string
+                        game_time = str(get_game_time(date, start_time.text.strip()))
+                        # return the home team and game time
+                        return team_data, game_time
 
     return None, None
 
@@ -62,18 +69,26 @@ class NCAABScheduleCollector(gm_utils.ScheduleCollector):
     def __init__(self, source_info: gm_utils.Source):
         super().__init__(source_info)
 
-    async def collect(self) -> None:
+    async def collect(self, n_days: int = 1) -> None:
+        # generate a range of dates predicated upon n_days param
+        date_list = gm_utils.get_date_range(n_days, to_datetime=True)
         # get the url for pro-football-reference.com's nfl schedules
-        url = gm_utils.get_url(self.source_info.name, self.source_info.league, 'schedule')
-        # get the current season how it needs to be formatted
-        c_date = datetime.now()
-        c_month, c_day, c_year = c_date.month, c_date.day, c_date.year
-        # format the url with the dates
-        formatted_url = url.format(c_month, c_day, c_year)
-        # asynchronously request the data and call parse schedule
-        await gm_utils.fetch(formatted_url, self._parse_games)
+        url = gm_utils.get_url(self.source_info.name, 'schedule')
+        # initialize a list of to store requests to make
+        tasks = list()
+        # for each date desired in the date list range
+        for date in date_list:
+            # get the current season how it needs to be formatted
+            c_month, c_day, c_year = date.month, date.day, date.year
+            # format the url with the dates
+            formatted_url = url.format(c_month, c_day, c_year)
+            # asynchronously request the data and call parse schedule
+            tasks.append(gm_utils.fetch(formatted_url, self._parse_games, date))
 
-    async def _parse_games(self, html_content) -> None:
+        # start asynchronously making requests
+        await asyncio.gather(*tasks)
+
+    async def _parse_games(self, html_content, date: datetime) -> None:
         # initializes a html parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # extracts the table element that holds schedule data
@@ -83,9 +98,9 @@ class NCAABScheduleCollector(gm_utils.ScheduleCollector):
             # get all the rows
             if rows := table.find_all('tr'):
                 # extract the away team
-                if away_team := extract_away_team(rows):
+                if away_team := extract_away_team(self.source_info.name, self.source_info.league, rows):
                     # extract both home team and game time, located on the same row
-                    home_team, game_time = extract_home_team_and_game_time(rows)
+                    home_team, game_time = extract_home_team_and_game_time(self.source_info.name, self.source_info.league, rows, date)
                     # if both exist
                     if home_team and game_time:
                         # extract the league (NCAAM or NCAAW)
@@ -101,9 +116,9 @@ class NCAABScheduleCollector(gm_utils.ScheduleCollector):
 
 
 async def main():
-    from app.data_collection.games.utils.shared_data import Games
-    source = gm_utils.Source('Reference', 'NCAAB')
-    await NCAABScheduleCollector(source).collect()
+    from app.data_collection.utils.shared_data import Games
+    source = gm_utils.Source('sports-reference', 'NCAAB')
+    await NCAABScheduleCollector(source).collect(n_days=10)
     pprint.pprint(Games.get_games())
 
 if __name__ == '__main__':

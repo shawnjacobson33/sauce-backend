@@ -5,6 +5,7 @@ from typing import Optional, Union, Any
 
 from bs4 import BeautifulSoup
 
+from app.data_collection import utils as dc_utils
 from app.data_collection.games import utils as gm_utils
 
 
@@ -56,6 +57,15 @@ def extract_game_time_and_box_score_url(row, valid_dates: list[str]) -> Optional
             }
 
 
+def extract_team(source_name: str, league: str, row, attr_name: str) -> Optional[dict[str, str]]:
+    # get the team name from the html
+     if team_name := extract_data(row, attr_name):
+         # get the team id and team name from the database
+         if team_data := dc_utils.get_team_id(source_name, league, team_name):
+             # return the team id and team name
+             return team_data
+
+
 class NHLScheduleCollector(gm_utils.ScheduleCollector):
     def __init__(self, source_info: gm_utils.Source):
         super().__init__(source_info)
@@ -64,7 +74,7 @@ class NHLScheduleCollector(gm_utils.ScheduleCollector):
         # generate a range of dates predicated upon n_days param
         date_list = gm_utils.get_date_range(n_days)
         # get the url for hockey-reference.com's nhl schedule
-        url = gm_utils.get_url(self.source_info.name, self.source_info.league, 'schedule')
+        url = gm_utils.get_url(self.source_info.name, 'schedule')
         # format the url with the season
         formatted_url = url.format(gm_utils.CURR_SEASON_1)
         # asynchronously request the data and call parse schedule
@@ -81,21 +91,27 @@ class NHLScheduleCollector(gm_utils.ScheduleCollector):
         for row in rows:
             # get both game time formatted and box score url
             if game_time_data := extract_game_time_and_box_score_url(row, date_list):
-                # adds the game and all of its extracted data to the shared data structure
-                self.update_games({
-                    'time_processed': str(datetime.now()),
-                    "league": self.source_info.league,
-                    "game_time": game_time_data['game_time'],
-                    "away_team": extract_data(row, 'visitor_team_name'),
-                    "home_team": extract_data(row, 'home_team_name'),
-                    "box_score_url": game_time_data['box_score_url'],
-                    "game_notes": extract_data(row, 'game_remarks')  # TODO: Same as NBA
-                })
+                # get the away team name and id if it exists
+                if away_team := extract_team(self.source_info.name, self.source_info.league, row,
+                                             'visitor_team_name'):
+                    # get the home team name and id if it exists
+                    if home_team := extract_team(self.source_info.name, self.source_info.league, row,
+                                                 'home_team_name'):
+                        # adds the game and all of its extracted data to the shared data structure
+                        self.update_games({
+                            'time_processed': str(datetime.now()),
+                            "league": self.source_info.league,
+                            "game_time": game_time_data['game_time'],
+                            "away_team": away_team,
+                            "home_team": home_team,
+                            "box_score_url": game_time_data['box_score_url'],
+                            "game_notes": extract_data(row, 'game_remarks')  # TODO: Same as NBA
+                        })
 
 
 async def main():
-    from app.data_collection.games.utils.shared_data import Games
-    source = gm_utils.Source('Reference', 'NHL')
+    from app.data_collection.utils.shared_data import Games
+    source = gm_utils.Source('hockey-reference', 'NHL')
     await NHLScheduleCollector(source).collect(n_days=2)
     pprint.pprint(Games.get_games())
 

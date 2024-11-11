@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
 
-from app.data_collection.games.utils.shared_data import Games
+from app.data_collection.utils.shared_data import Games
 
 
 @dataclass

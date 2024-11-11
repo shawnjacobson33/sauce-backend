@@ -11,9 +11,12 @@ PARTITIONS = [league if 'NCAA' not in league else 'NCAA' for league in IN_SEASON
 
 def get_structured_docs(docs: list[dict]) -> dict:
     # use abbreviated names as keys
-    structured_docs = {doc['abbr_name']: doc['_id'] for doc in docs}
-    # also use full names as keys
-    structured_docs.update({doc['full_name']: doc['_id'] for doc in docs})
+    structured_docs = dict()
+    # for each team
+    for doc in docs:
+        # give each team name type its id as a pair and update the dictionary
+        structured_docs[doc['abbr_name']] = structured_docs[doc['full_name']] = str(doc['_id'])
+
     # return the structured documents
     return structured_docs
 
@@ -26,7 +29,7 @@ def structure_data() -> dict:
     # for each partition in the partitions predicated upon the cursor name
     for partition in PARTITIONS:
         # filter by league or sport and don't include the batch_id
-        filtered_docs = teams_cursor.find({'league': partition})
+        filtered_docs = teams_cursor.find({'league': partition}, {'abbr_name': 1, 'full_name': 1})
         # structure the documents and data based upon whether its markets or subjects data
         partitioned_data[partition] = get_structured_docs(filtered_docs)
 

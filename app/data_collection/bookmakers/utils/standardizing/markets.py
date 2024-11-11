@@ -23,22 +23,22 @@ def get_market_id(bookmaker_name: str, league: str, market_name: str, period_typ
     # create a market object
     market = Market(market_name, league=league)
     # clean the market name
-    if cleaned_market := clean_market(market.name, market.sport, period_classifier=period_type):
-        # filter by sport partition
-        filtered_data = filter_market_data(market.sport)
-        # get the matched data if it exists
-        if matched_id := filtered_data.get(cleaned_market):
-            # cast the matched id to a string
-            matched_id = str(matched_id)
-            # update the market object attributes
-            update_market_object(market, cleaned_market, matched_id)
-            # update the shared dictionary of valid markets
-            Markets.update_valid_data(bookmaker_name, tuple(market.__dict__.items()))
-            # return the market id and cleaned name
-            return {
-                'id': matched_id,
-                'name': cleaned_market
-            }
+    cleaned_market = clean_market(market.name, market.sport, period_classifier=period_type)
+    # filter by sport partition
+    filtered_data = filter_market_data(market.sport)
+    # get the matched data if it exists
+    if matched_id := filtered_data.get(cleaned_market):
+        # cast the matched id to a string
+        matched_id = str(matched_id)
+        # update the market object attributes
+        update_market_object(market, cleaned_market, matched_id)
+        # update the shared dictionary of valid markets
+        Markets.update_valid_data(bookmaker_name, tuple(market.__dict__.items()))
+        # return the market id and cleaned name
+        return {
+            'id': matched_id,
+            'name': cleaned_market
+        }
 
     # update the shared dictionary of pending markets
     Markets.update_pending_data(bookmaker_name if not period_type else cleaned_market, tuple(market.__dict__.items()))

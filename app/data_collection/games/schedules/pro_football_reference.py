@@ -5,6 +5,7 @@ from typing import Optional, Union
 
 from bs4 import BeautifulSoup
 
+from app.data_collection import utils as dc_utils
 from app.data_collection.games import utils as gm_utils
 
 
@@ -28,10 +29,8 @@ def get_current_nfl_season():
 def convert_to_datetime(date_str, time_str):
     # Parse the date string
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-
     # Parse the time string with AM/PM format
     time_obj = datetime.strptime(time_str, "%I:%M%p")
-
     # Combine the parsed date with the parsed time
     result = date_obj.replace(hour=time_obj.hour, minute=time_obj.minute, second=0, microsecond=0)
 
@@ -44,20 +43,28 @@ def extract_data(tr_elem, attr_name: str) -> Optional[str]:
         return td_elem.text
 
 
-def extract_game_time(row) -> Optional[str]:
+def extract_game_time(n_days: int, row) -> Optional[str]:
     # get the game date and start time of the game if it exists
     if (game_date := extract_data(row, 'game_date')) and (start_time := extract_data(row, 'gametime')):
-        # convert it to a comparable datetime object and then cast to a string
-        return str(convert_to_datetime(game_date, start_time))
+        # check if the game date is in the desired date range
+        if game_date in gm_utils.get_date_range(n_days):
+            # convert it to a comparable datetime object and then cast to a string
+            return str(convert_to_datetime(game_date, start_time))
 
 
-def extract_teams(row) -> Union[tuple[Optional[str], Optional[str]], tuple[None, None]]:
+def extract_teams(source_name: str, league: str, row) -> Union[tuple[dict, dict], tuple[None, None]]:
     # gets both teams that played in the game
     if (winning_team := extract_data(row, 'winner')) and (losing_team := extract_data(row, 'loser')):
         # gets the '@' or None if winning team is home
         game_locator = extract_data(row, 'game_location')
         # returns in order of away_team, home_team depending on the locator
-        return (winning_team, losing_team) if game_locator == '@' else (losing_team, winning_team)
+        away_team_name, home_team_name = (winning_team, losing_team) if game_locator == '@' else (losing_team, winning_team)
+        # get the team id and team name from the database
+        if away_team_data := dc_utils.get_team_id(source_name, league, away_team_name):
+            # get the team id and team name from the database
+            if home_team_data := dc_utils.get_team_id(source_name, league, home_team_name):
+                # return the team id and team name
+                return away_team_data, home_team_data
 
     return None, None
 
@@ -73,17 +80,17 @@ class NFLScheduleCollector(gm_utils.ScheduleCollector):
     def __init__(self, source_info: gm_utils.Source):
         super().__init__(source_info)
 
-    async def collect(self) -> None:
+    async def collect(self, n_days: int = 1) -> None:
         # get the url for pro-football-reference.com's nfl schedules
-        url = gm_utils.get_url(self.source_info.name, self.source_info.league, 'schedule')
+        url = gm_utils.get_url(self.source_info.name, 'schedule')
         # get the current season how it needs to be formatted
         current_season = get_current_nfl_season()
         # format the url with the dates
         formatted_url = url.format(current_season)
         # asynchronously request the data and call parse schedule
-        await gm_utils.fetch(formatted_url, self._parse_schedule)
+        await gm_utils.fetch(formatted_url, self._parse_schedule, n_days)
 
-    async def _parse_schedule(self, html_content) -> None:
+    async def _parse_schedule(self, html_content, n_days: int) -> None:
         # initializes a html parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # extracts the table element that holds schedule data
@@ -92,23 +99,27 @@ class NFLScheduleCollector(gm_utils.ScheduleCollector):
         rows = table.find_all('tr')[1:]
         # for each row
         for row in rows:
-            # extract the away and home team
-            away_team, home_team = extract_teams(row)
-            # adds the game and all of its extracted data to the shared data structure
-            self.update_games({
-                'time_processed': str(datetime.now()),
-                "game_time": extract_game_time(row),
-                "league": self.source_info.name,
-                "away_team": away_team,
-                "home_team": home_team,
-                "box_score_url": extract_box_score_url(row),
-            })
+            # get the game time
+            if game_time := extract_game_time(n_days, row):
+                # extract the away and home team
+                away_team, home_team = extract_teams(self.source_info.name, self.source_info.league, row)
+                # if they exist in the database
+                if away_team and home_team:
+                    # adds the game and all of its extracted data to the shared data structure
+                    self.update_games({
+                        'time_processed': str(datetime.now()),
+                        "game_time": game_time,
+                        "league": self.source_info.name,
+                        "away_team": away_team,
+                        "home_team": home_team,
+                        "box_score_url": extract_box_score_url(row),
+                    })
 
 
 async def main():
-    from app.data_collection.games.utils.shared_data import Games
-    source = gm_utils.Source('Reference', 'NFL')
-    await NFLScheduleCollector(source).collect()
+    from app.data_collection.utils.shared_data import Games
+    source = gm_utils.Source('pro-football-reference', 'NFL')
+    await NFLScheduleCollector(source).collect(n_days=2)
     pprint.pprint(Games.get_games())
 
 if __name__ == '__main__':

@@ -9,8 +9,20 @@ a very user-friendly interface that is engaging and understandable for the casua
 bettor. 
 
 Focus:
--
+- 
+- Geared toward but certainly not limited to the 18-21 age range.
+- Offer more than a dozen different DFS/Pick'em bookmakers that many other services don't provide.
+- Creating a competitive platform where anyone, regardless of age, can see where their betting skills
+stack up against the rest of the community.
 
 
 Features:
 - 
+- Get access to the "Value Board" (Positive-EV Picks)
+- Track your bets and ROI history
+- Climb the leaderboards, earn badges, and receive prizes/opportunities for performing well.
+
+Tech-Stack:
+-
+- Backend: Python
+- Database: MongoDB Cluster

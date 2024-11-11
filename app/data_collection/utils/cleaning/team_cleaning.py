@@ -8,6 +8,8 @@ TEAMS_MAP = {
           'GS': 'GSW',  # OwnersBox, Dabble, Payday
         # WAS - Washington Wizards
           'WSH': 'WAS',  # Payday
+        # NOP - New Orleans Pelicans
+          'NO': 'NOP',  # Dabble
     },
     'NFL': {
         # JAX - Jacksonville Jaguars
@@ -28,6 +30,8 @@ TEAMS_MAP = {
           'NJD': 'NJ',  # ParlayPlay, DraftKingsPick6
         # ANA - Anaheim Ducks
           'ANH': 'ANA',  # OwnersBox
+        # SJ - San Jose Sharks
+          'SJS': 'SJ',  # ParlayPlay
     },
     'WNBA': {},
     'NCAA': {
@@ -89,13 +93,11 @@ TEAMS_MAP = {
 }
 
 
-def clean_team(team: str, league: str):
+def clean_team(team: str, league: str) -> str:
     # get the teams associated with the mapped league name
     if partitioned_team_map := TEAMS_MAP.get(league):
-        # map the team name to a standardized version in the TEAM_MAP, if it doesn't exist
-        if mapped_team := partitioned_team_map.get(team):
-            # return the standardized team name
-            return mapped_team
+        # map the team name to a standardized version in the TEAM_MAP and return
+        return partitioned_team_map.get(team, team)
 
     # otherwise return original team name
     return team

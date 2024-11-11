@@ -494,10 +494,8 @@ def clean_market(market: str, sport: str, period_classifier: str = None) -> str:
 
     # get the markets associated with the mapped sport name
     if partitioned_market_map := MARKET_MAP.get(sport):
-        # map the market name to a standardized version in the MARKET_MAP, if it doesn't exist
-        if mapped_market := partitioned_market_map.get(market):
-            # return the standardized market name
-            return mapped_market
+        # map the market name to a standardized version in the MARKET_MAP and return
+        return partitioned_market_map.get(market, market)
 
     # otherwise return original market name
     return market

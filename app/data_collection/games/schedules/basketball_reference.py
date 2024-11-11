@@ -1,3 +1,4 @@
+import uuid
 import asyncio
 import pprint
 from datetime import datetime
@@ -5,6 +6,7 @@ from typing import Optional
 
 from bs4 import BeautifulSoup
 
+from app.data_collection import utils as dc_utils
 from app.data_collection.games import utils as gm_utils
 
 
@@ -39,6 +41,15 @@ def extract_data(tr_elem, attr_name: str) -> Optional[str]:
         return td_elem.text
 
 
+def extract_team(source_name: str, league: str, row, attr_name: str) -> Optional[dict[str, str]]:
+    # get the team name from the html
+     if team_name := extract_data(row, attr_name):
+         # get the team id and team name from the database
+         if team_data := dc_utils.get_team_id(source_name, league, team_name):
+             # return the team id and team name
+             return team_data
+
+
 def extract_game_time(row, valid_dates: list[datetime]) -> Optional[str]:
     # get the start time of the game if it exists
     if (game_date := extract_game_date(row)) and (start_time := extract_data(row, 'game_start_time')):
@@ -69,7 +80,7 @@ class NBAScheduleCollector(gm_utils.ScheduleCollector):
         # Get the month and season for each date (if needed)
         target_months = [datetime.strptime(date, "%Y-%m-%d").strftime("%B").lower() for date in date_list]
         # Get the URL for the NBA schedule
-        url = gm_utils.get_url(self.source_info.name, self.source_info.league, 'schedule')
+        url = gm_utils.get_url(self.source_info.name, 'schedule')
         # Use each date’s month to format URLs and fetch data
         for month in target_months:
             # format the url with the current season (2025) and month
@@ -88,22 +99,28 @@ class NBAScheduleCollector(gm_utils.ScheduleCollector):
         for row in rows:
             # get the time and date of the game and check if it's in the right range of dates desired
             if game_time := extract_game_time(row, dates):
-                # adds the game and all of its extracted data to the shared data structure
-                self.update_games({
-                    'time_processed': str(datetime.now()),
-                    'source': f'basketball-{self.source_info.name.lower()}',
-                    "league": self.source_info.league,
-                    "game_time": game_time,
-                    "away_team": extract_data(row, 'visitor_team_name'),
-                    "home_team": extract_data(row, 'home_team_name'),
-                    "box_score_url": extract_box_score_url(row),
-                    "game_notes": extract_data(row, 'game_remarks')
-                })
+                # get the away team name and id if it exists
+                if away_team := extract_team(self.source_info.name, self.source_info.league, row,
+                                             'visitor_team_name'):
+                    # get the home team name and id if it exists
+                    if home_team := extract_team(self.source_info.name, self.source_info.league, row,
+                                                 'home_team_name'):
+                            # adds the game and all of its extracted data to the shared data structure
+                            self.update_games({
+                                'time_processed': str(datetime.now()),
+                                'source': self.source_info.name,
+                                "league": self.source_info.league,
+                                "game_time": game_time,
+                                "away_team": away_team,
+                                "home_team": home_team,
+                                "box_score_url": extract_box_score_url(row),
+                                "game_notes": extract_data(row, 'game_remarks')
+                            })
 
 
 async def main():
-    from app.data_collection.games.utils.shared_data import Games
-    source = gm_utils.Source('Reference', 'NBA')
+    from app.data_collection.utils.shared_data import Games
+    source = gm_utils.Source('basketball-reference', 'NBA')
     await NBAScheduleCollector(source).collect(n_days=2)
     pprint.pprint(Games.get_games())
 

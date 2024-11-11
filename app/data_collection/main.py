@@ -5,6 +5,7 @@ import uuid
 import asyncio
 
 from app import database as db
+from app.data_collection import games as gms
 from app.data_collection import bookmakers as bkm
 from app.data_collection import utils as dc_utils
 from app.data_collection.bookmakers import BettingLines
@@ -30,8 +31,16 @@ BOOKMAKER_PLUGS = {
     "OddsShopper": bkm.OddsShopper
 }
 
+SCHEDULE_COLLECTORS = {
+    'NBA-Schedule': gms.NBAScheduleCollector,
+    'NFL-Schedule': gms.NFLScheduleCollector,
+    'NHL-Schedule': gms.NHLScheduleCollector,
+    'NCAAB-Schedule': gms.NCAABScheduleCollector,
+    'NCAAF-Schedule': gms.NCAAFScheduleCollector,
+}
 
-def configure(bookmaker_plug) -> bkm.BookmakerPlug:
+
+def configure_bookmaker_plug(bookmaker_plug) -> bkm.BookmakerPlug:
     # get a database instance
     session = db.Database.get()
     # create a batch id for all betting lines in this run to use
@@ -152,24 +161,7 @@ def cleanup(bookmaker_plug: bkm.BookmakerPlug):
     return decorator
 
 
-async def run(plug: str, run_all: bool = False):
-    # get all the bookmaker plugs to run
-    plug_classes = BOOKMAKER_PLUGS.values() if run_all else [BOOKMAKER_PLUGS[plug]]
-    # collect request task to run
-    tasks = list()
-    # for every bookmaker plug available
-    for plug_class in plug_classes:
-        # configure a bookmaker plug to collect data
-        bookmaker_plug = configure(plug_class)
-        # start collecting
-        tasks.append(start_collecting(bookmaker_plug))
-
-    # start making requests asynchronously
-    t1 = time.time()
-    await asyncio.gather(*tasks)
-    t2 = time.time()
-    # Output total number of betting lines collected and the time it took to run entire job
-    print(f"[TOTAL]: {BettingLines.size()}, {round(t2-t1, 3)}s")
+def save_data_to_files() -> None:
     # save the valid markets,teams, leagues and subjects that were found in the database to a file to be evaluated
     save_valid_leagues_to_file()
     save_valid_markets_to_file()
@@ -181,6 +173,43 @@ async def run(plug: str, run_all: bool = False):
     save_pending_teams_to_file()
     # save the sample data of betting lines to a file for inspection
     save_betting_lines_to_file()
+
+
+async def run(schedule_collector: str, plug: str, run_all: bool = False):
+    # 1. First Get Schedules
+    schedule_classes = SCHEDULE_COLLECTORS.values() if run_all else [SCHEDULE_COLLECTORS[schedule_collector]]
+    # collect request task to run
+    tasks = list()
+    # TODO: complete
+    # for every bookmaker plug available
+    for schedule_class in schedule_classes:
+        pass
+        # # configure a bookmaker plug to collect data
+        # schedule_plug = configure(plug_class)
+        # # start collecting
+        # tasks.append(start_collecting(schedule_plug))
+
+
+
+    # get all the bookmaker plugs to run
+    plug_classes = BOOKMAKER_PLUGS.values() if run_all else [BOOKMAKER_PLUGS[plug]]
+    # collect request task to run
+    tasks = list()
+    # for every bookmaker plug available
+    for plug_class in plug_classes:
+        # configure a bookmaker plug to collect data
+        bookmaker_plug = configure_bookmaker_plug(plug_class)
+        # start collecting
+        tasks.append(start_collecting(bookmaker_plug))
+
+    # start making requests asynchronously
+    t1 = time.time()
+    await asyncio.gather(*tasks)
+    t2 = time.time()
+    # Output total number of betting lines collected and the time it took to run entire job
+    print(f"[TOTAL]: {BettingLines.size()}, {round(t2-t1, 3)}s")
+    # save all output data to json files
+    save_data_to_files()
     # output the size of the file storing the betting lines
     print(f"[FILE SIZE]: {round(os.path.getsize('utils/reports/betting_lines.json') / (1024 ** 2), 2)} MB")
 
@@ -197,4 +226,4 @@ async def start_collecting(bookmaker_plug: bkm.BookmakerPlug):
 
 
 if __name__ == '__main__':
-    asyncio.run(run("SuperDraft", run_all=False))
+    asyncio.run(run("", run_all=True))
