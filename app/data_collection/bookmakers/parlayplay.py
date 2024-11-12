@@ -13,7 +13,7 @@ def extract_position(data: dict) -> Optional[str]:
         return bkm_utils.clean_position(position)
 
 
-def extract_subject_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
     # get the dictionary holding player's team, if exists execute
     if (team_data := data.get('team')) and (team_name := team_data.get('teamAbbreviation')):
         # get the team id and team name from the database
@@ -22,11 +22,9 @@ def extract_subject_team(bookmaker_name: str, league: str, data: dict) -> Option
             return team_data
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict, position: Optional[str]) -> Optional[dict[str, str]]:
     # get a dictionary holding player attributes, if exists keep executing
-    if (player_data := data.get('player')) and (subject_name := player_data.get('fullName')):
-        # get some player attributes
-        team, position = extract_subject_team(bookmaker_name, league, player_data), extract_position(player_data)
+    if subject_name := data.get('fullName'):
         # gets the subject id or log message
         subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position)
         # return both subject id search result and cleaned subject
@@ -102,33 +100,41 @@ class ParlayPlay(bkm_utils.LinesRetriever):
             bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
             # for each player in the response data's players if they exist
             for player_data in json_data.get('players', []):
-                # get the subject id from db and extract the subject name from a dictionary
-                if subject := extract_subject(self.source.name, player_data, league):
-                    # for each stat dictionary in the player data dictionary if they exist
-                    for stat_data in player_data.get('stats', []):
-                        # get the market id from the db and extract the market
-                        if market := extract_market(self.source.name, stat_data, league):
-                            # get a dictionary of data around market, lines, and odds
-                            if alt_lines_data := stat_data.get('altLines'):
-                                # for each dictionary holding line, odds data if values exist
-                                for line_data in alt_lines_data.get('values', []):
-                                    # if the numeric over/under line exists get it and execute
-                                    if line := line_data.get('selectionPoints'):
-                                        # for each over and under label
-                                        for odds, label in extract_odds_and_label(line_data):
-                                            # update shared data
-                                            self.update_betting_lines({
-                                                'batch_id': self.batch_id,
-                                                'time_processed': str(datetime.now()),
-                                                'league': league,
-                                                'market_category': 'player_props',
-                                                'market_id': market['id'],
-                                                'market': market['name'],
-                                                'subject_id': subject['id'],
-                                                'subject': subject['name'],
-                                                'bookmaker': self.source.name,
-                                                'label': label,
-                                                'line': line,
-                                                'odds': odds,
-                                                'is_boosted': stat_data.get('isBoostedPayout')
-                                            })
+                # get a player dictionary
+                if player := player_data.get('player'):
+                    # get some player attributes
+                    team, position = extract_team(self.source.name, league, player_data), extract_position(player_data)
+                    # get some game data using the team data
+                    if game := bkm_utils.get_game_id(team):
+                        # get the subject id from db and extract the subject name from a dictionary
+                        if subject := extract_subject(self.source.name, player, league, team, position):
+                            # for each stat dictionary in the player data dictionary if they exist
+                            for stat_data in player_data.get('stats', []):
+                                # get the market id from the db and extract the market
+                                if market := extract_market(self.source.name, stat_data, league):
+                                    # get a dictionary of data around market, lines, and odds
+                                    if alt_lines_data := stat_data.get('altLines'):
+                                        # for each dictionary holding line, odds data if values exist
+                                        for line_data in alt_lines_data.get('values', []):
+                                            # if the numeric over/under line exists get it and execute
+                                            if line := line_data.get('selectionPoints'):
+                                                # for each over and under label
+                                                for odds, label in extract_odds_and_label(line_data):
+                                                    # update shared data
+                                                    self.update_betting_lines({
+                                                        'batch_id': self.batch_id,
+                                                        'time_processed': datetime.now(),
+                                                        'league': league,
+                                                        'game_id': game['id'],
+                                                        'game': game['info'],
+                                                        'market_category': 'player_props',
+                                                        'market_id': market['id'],
+                                                        'market': market['name'],
+                                                        'subject_id': subject['id'],
+                                                        'subject': subject['name'],
+                                                        'bookmaker': self.source.name,
+                                                        'label': label,
+                                                        'line': line,
+                                                        'odds': odds,
+                                                        'is_boosted': stat_data.get('isBoostedPayout')
+                                                    })

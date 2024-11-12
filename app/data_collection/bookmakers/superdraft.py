@@ -60,24 +60,22 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
             return team_data
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> dict[str, Union[Optional[dict[str, str]], Any]]:
-    # get player data dictionary, if exists keep going
-    if player_data := data.get('player'):
-        # get the first and last name of the player, if both exist keep going
-        if (first_name := player_data.get('fName')) and (first_name != 'combined') and (last_name := player_data.get('lName')):
-            # get some game info
-            game_info = player_data.get('eventName')
-            # get subject name
-            subject_name = ' '.join([first_name, last_name])
-            # get player attributes
-            team, position = extract_team(bookmaker_name, league, player_data), extract_position(player_data)
-            # gets the subject id or log message
-            if subject := bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position):
-                # return both subject id search result and cleaned subject
-                return {
-                    'subject': subject,
-                    'game_info': game_info
-                }
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> dict[str, Union[Optional[dict[str, str]], Any]]:
+    # get the first and last name of the player, if both exist keep going
+    if (first_name := data.get('fName')) and (first_name != 'combined') and (last_name := data.get('lName')):
+        # get some game info
+        game_info = data.get('eventName')
+        # get subject name
+        subject_name = ' '.join([first_name, last_name])
+        # get player attributes
+        position = extract_position(data)
+        # gets the subject id or log message
+        if subject := bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position):
+            # return both subject id search result and cleaned subject
+            return {
+                'subject': subject,
+                'game_info': game_info
+            }
 
 
 class SuperDraft(bkm_utils.LinesRetriever):
@@ -131,25 +129,32 @@ class SuperDraft(bkm_utils.LinesRetriever):
                     bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                     # get the market id and extract the market name from the dictionary
                     if market := extract_market(self.source.name, prop_line_data, league):
-                        # get the subject id from the db and extract the subject name from the dictionary
-                        if subject := extract_subject(self.source.name, prop_line_data, league):
-                            # get the numeric over/under line from the dictionary
-                            if line := prop_line_data.get('line'):
-                                # for each generic over/under label for prop lines
-                                for label in ['Over', 'Under']:
-                                    # update shared data
-                                    self.update_betting_lines({
-                                        'batch_id': self.batch_id,
-                                        'time_processed': str(datetime.now()),
-                                        'league': league,
-                                        'game_info': subject['game_info'],
-                                        'market_category': 'player_props',
-                                        'market_id': market['id'],
-                                        'market': market['name'],
-                                        'subject_id': subject['subject']['id'],
-                                        'subject': subject['subject']['name'],
-                                        'bookmaker': self.source.name,
-                                        'label': label,
-                                        'line': line,
-                                        'odds': self.source.default_payout.odds
-                                    })
+                        # get player data dictionary, if exists keep going
+                        if player_data := prop_line_data.get('player'):
+                            # get some team data
+                            team = extract_team(self.source.name, league, player_data)
+                            # get the game data from database
+                            if game := bkm_utils.get_game_id(team):
+                                # get the subject id from the db and extract the subject name from the dictionary
+                                if subject := extract_subject(self.source.name, player_data, league, team):
+                                    # get the numeric over/under line from the dictionary
+                                    if line := prop_line_data.get('line'):
+                                        # for each generic over/under label for prop lines
+                                        for label in ['Over', 'Under']:
+                                            # update shared data
+                                            self.update_betting_lines({
+                                                'batch_id': self.batch_id,
+                                                'time_processed': datetime.now(),
+                                                'league': league,
+                                                'game_id': game['id'],
+                                                'game': game['info'],
+                                                'market_category': 'player_props',
+                                                'market_id': market['id'],
+                                                'market': market['name'],
+                                                'subject_id': subject['subject']['id'],
+                                                'subject': subject['subject']['name'],
+                                                'bookmaker': self.source.name,
+                                                'label': label,
+                                                'line': line,
+                                                'odds': self.source.default_payout.odds
+                                            })

@@ -33,10 +33,8 @@ async def retrieve_and_report(schedule_retriever_names: list[str] = None, lines_
     print(f'{"*" * 22} Schedule Retrieval {"*" * 22}\n')
     # run the schedule retrieving tasks first
     schedules_retrieving_time = await run_schedules_retrieving_tasks(schedule_retriever_names)
-    # store any games retrieved so that the LinesRetrievers can use them for ids.
-    dc_utils.Games.store_games()
     # Output total number of betting lines collected and the time it took to run entire job
-    print(f"[TOTAL GAMES]: {dc_utils.Games.size()}, {schedules_retrieving_time}s\n")
+    print(f"[TOTAL GAMES]: {dc_utils.Games.size()}, {schedules_retrieving_time}s\n")  # TODO: Bug .size() is returning everything plus whats in the database
     # section header
     print(f'{"*" * 22} Lines Retrieval {"*" * 22}\n')
     # run the lines retrieving tasks second
@@ -49,8 +47,8 @@ async def retrieve_and_report(schedule_retriever_names: list[str] = None, lines_
     print(f"[FILE SIZE]: {round(os.path.getsize('utils/reports/betting_lines.json') / (1024 ** 2), 2)} MB")
 
 
-def execute():
-    asyncio.run(retrieve_and_report())
+def execute(schedule_retriever_names: list[str] = None, lines_retriever_names: list[str] = None):
+    asyncio.run(retrieve_and_report(schedule_retriever_names, lines_retriever_names))
 
 
 if __name__ == '__main__':

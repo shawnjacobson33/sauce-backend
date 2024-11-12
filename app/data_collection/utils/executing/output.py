@@ -1,6 +1,8 @@
 import json
 import os
 
+from polars.selectors import string
+
 from app.data_collection import bookmakers as bkm
 from app.data_collection.utils.shared_data import Teams
 from app.data_collection.utils.modelling import Retriever
@@ -21,7 +23,7 @@ def save_valid_leagues_to_file() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Leagues.get_valid_data(), f, indent=4)
+        json.dump(bkm.Leagues.get_valid_data(), f, indent=4, default=str)
 
 
 def save_valid_markets_to_file() -> None:
@@ -30,7 +32,7 @@ def save_valid_markets_to_file() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Markets.get_valid_data(), f, indent=4)
+        json.dump(bkm.Markets.get_valid_data(), f, indent=4, default=str)
 
 
 def save_valid_subjects_to_file() -> None:
@@ -39,7 +41,7 @@ def save_valid_subjects_to_file() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Subjects.get_valid_data(), f, indent=4)
+        json.dump(bkm.Subjects.get_valid_data(), f, indent=4, default=str)
 
 
 def save_valid_teams_to_file() -> None:
@@ -48,7 +50,7 @@ def save_valid_teams_to_file() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(Teams.get_valid_data(), f, indent=4)
+        json.dump(Teams.get_valid_data(), f, indent=4, default=str)
 
 
 def save_pending_markets_to_file() -> None:
@@ -57,7 +59,7 @@ def save_pending_markets_to_file() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Markets.get_pending_data(), f, indent=4)
+        json.dump(bkm.Markets.get_pending_data(), f, indent=4, default=str)
 
 
 def save_pending_subjects_to_file():
@@ -66,7 +68,7 @@ def save_pending_subjects_to_file():
     # open the pending subjects file
     with open(file_path, 'w') as f:
         # save the pending subjects to the file, in pretty print mode
-        json.dump(bkm.Subjects.get_pending_data(), f, indent=4)
+        json.dump(bkm.Subjects.get_pending_data(), f, indent=4, default=str)
 
 
 def save_pending_teams_to_file():
@@ -75,7 +77,7 @@ def save_pending_teams_to_file():
     # open the pending subjects file
     with open(file_path, 'w') as f:
         # save the pending subjects to the file, in pretty print mode
-        json.dump(Teams.get_pending_data(), f, indent=4)
+        json.dump(Teams.get_pending_data(), f, indent=4, default=str)
 
 
 def save_betting_lines_to_file():
@@ -84,7 +86,7 @@ def save_betting_lines_to_file():
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.BettingLines.get(), f, indent=4)
+        json.dump(bkm.BettingLines.get(), f, indent=4, default=str)
 
 
 def save_data_to_files() -> None:

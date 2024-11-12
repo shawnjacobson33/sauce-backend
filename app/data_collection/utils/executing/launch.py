@@ -39,7 +39,7 @@ async def launch_retriever(retriever: Retriever):
 def launch_schedules_retrievers(schedule_retriever_names: list[str] = None):
     # 1. First Get Schedule Classes
     schedules_retriever_classes = SCHEDULE_RETRIEVERS.items() if not schedule_retriever_names else [
-        (schedule_retriever_name, SCHEDULE_RETRIEVERS[schedule_retriever_name]) for schedule_retriever_name in 
+        (schedule_retriever_name, SCHEDULE_RETRIEVERS[schedule_retriever_name]) for schedule_retriever_name in
         schedule_retriever_names]
     
     # collect request task to run
@@ -57,7 +57,7 @@ def launch_schedules_retrievers(schedule_retriever_names: list[str] = None):
 def launch_lines_retrievers(lines_retriever_names: list[str] = None):
     # get all the bookmaker plugs to run
     lines_retriever_classes = LINES_RETRIEVERS.values() if not lines_retriever_names else [
-        (lines_retriever_name, LINES_RETRIEVERS[lines_retriever_name]) for lines_retriever_name in
+        LINES_RETRIEVERS[lines_retriever_name] for lines_retriever_name in
         lines_retriever_names]
 
     # collect request task to run

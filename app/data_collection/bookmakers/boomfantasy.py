@@ -16,19 +16,6 @@ def extract_league(data: dict) -> Optional[str]:
             return cleaned_league
 
 
-def extract_game_info(data: dict) -> Optional[str]:
-    # get a dictionary, if exists keep executing
-    if game_filters_data := data.get('gameFilters'):
-        # get the first dictionary
-        game_filter_data = game_filters_data[0]
-        # get a couple more dictionaries, if both exist keep executing
-        if (game_title_data := game_filter_data.get('title')) and (teams_data := game_title_data.get('additionalOptions')):
-            # get the away and home team names, if both exist keep executing
-            if (away_team := teams_data.get('awayAbbreviation')) and (home_team := teams_data.get('homeAbbreviation')):
-                # return game info
-                return ' @ '.join([away_team, home_team])
-
-
 def extract_player_info(bookmaker_name: str, league: str, data: dict) -> tuple[Any, dict[str, Any]]:
     # get a dictionary, if exists keep going
     if player_image_data := data.get('playerImage'):
@@ -40,15 +27,14 @@ def extract_player_info(bookmaker_name: str, league: str, data: dict) -> tuple[A
             return player_image_data.get('jerseyNumber'), team_data
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict, jersey_number: str) -> Optional[dict[str, str]]:
     # gets the league section's title and options from that title, executes if they both exist
     if (title := data.get('title')) and (options := title.get('o')):
         # gets the first and last name of the player, executes if both exist
         if (first_name := options.get('firstName')) and (last_name := options.get('lastName')):
             # get subject name
             subject_name = ' '.join([first_name, last_name])
-            # get some player attributes
-            jersey_number, team = extract_player_info(bookmaker_name, league, data)
+
             # gets the subject id and subject name
             subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, jersey_number=jersey_number)
             # return both subject id search result and cleaned subject
@@ -142,44 +128,47 @@ class BoomFantasy(bkm_utils.LinesRetriever):
                         if league := extract_league(section_data):
                             # to track the leagues being collected
                             bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
-                            # extract the game info from the dictionary
-                            game_info = extract_game_info(section_data)
                             # for each section in the league's sections if they exist
                             for qg_data in section_data.get('qG', []):
-                                # extract the subject and get the subject id from the response data and database
-                                if subject := extract_subject(self.source.name, qg_data, league):
-                                    # get the period classifier from dictionary (fullGame, firstQuarter, etc.)
-                                    period = extract_period(qg_data)
-                                    # get more prop line info from the league's section's fullQuestions if they exist
-                                    for q_data in qg_data.get('q', []):
-                                        # extract the market and market id from the response data and database
-                                        if market := extract_market(self.source.name, q_data, league, period):
-                                            # for each dictionary in q_data's c field
-                                            for c_data in q_data.get('c', []):
-                                                # extract the numeric line for the prop line, if exists keep going
-                                                if line := c_data.get('l'):
-                                                    # for each over or under side to the prop line if they exist.
-                                                    for more_c_data in c_data.get('c', []):
-                                                        # extract the label and multiplier from the list
-                                                        label, odds = extract_label_and_odds(more_c_data)
-                                                        # calculate the implied probability
-                                                        implied_prob = 1 / odds
-                                                        # if both exist the keep going
-                                                        if label and odds:
-                                                            # update shared data
-                                                            self.update_betting_lines({
-                                                                'batch_id': self.batch_id,
-                                                                'time_processed': str(datetime.now()),
-                                                                'league': league,
-                                                                'game_info': game_info,
-                                                                'market_category': 'player_props',
-                                                                'market_id': market['id'],
-                                                                'market': market['name'],
-                                                                'subject_id': subject['id'],
-                                                                'subject': subject['name'],
-                                                                'bookmaker': self.source.name,
-                                                                'label': label,
-                                                                'line': line,
-                                                                'odds': odds,
-                                                                'implied_prob': implied_prob
-                                                            })
+                                # get some player attributes
+                                jersey_number, team = extract_player_info(self.source.name, league, qg_data)
+                                # get the game data from database
+                                if game := bkm_utils.get_game_id(team):
+                                    # extract the subject and get the subject id from the response data and database
+                                    if subject := extract_subject(self.source.name, qg_data, league, team, jersey_number):
+                                        # get the period classifier from dictionary (fullGame, firstQuarter, etc.)
+                                        period = extract_period(qg_data)
+                                        # get more prop line info from the league's section's fullQuestions if they exist
+                                        for q_data in qg_data.get('q', []):
+                                            # extract the market and market id from the response data and database
+                                            if market := extract_market(self.source.name, q_data, league, period):
+                                                # for each dictionary in q_data's c field
+                                                for c_data in q_data.get('c', []):
+                                                    # extract the numeric line for the prop line, if exists keep going
+                                                    if line := c_data.get('l'):
+                                                        # for each over or under side to the prop line if they exist.
+                                                        for more_c_data in c_data.get('c', []):
+                                                            # extract the label and multiplier from the list
+                                                            label, odds = extract_label_and_odds(more_c_data)
+                                                            # calculate the implied probability
+                                                            implied_prob = 1 / odds
+                                                            # if both exist the keep going
+                                                            if label and odds:
+                                                                # update shared data
+                                                                self.update_betting_lines({
+                                                                    'batch_id': self.batch_id,
+                                                                    'time_processed': datetime.now(),
+                                                                    'league': league,
+                                                                    'game_id': game['id'],
+                                                                    'game': game['info'],
+                                                                    'market_category': 'player_props',
+                                                                    'market_id': market['id'],
+                                                                    'market': market['name'],
+                                                                    'subject_id': subject['id'],
+                                                                    'subject': subject['name'],
+                                                                    'bookmaker': self.source.name,
+                                                                    'label': label,
+                                                                    'line': line,
+                                                                    'odds': odds,
+                                                                    'implied_prob': implied_prob
+                                                                })

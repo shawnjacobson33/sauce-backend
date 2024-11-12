@@ -24,14 +24,14 @@ def get_current_nfl_season():
 
 
 # TODO: Same as NHL
-def convert_to_datetime(date_str, time_str):
+def convert_to_datetime(date_str, time_str) -> datetime:
     # Parse the date string
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
     # Parse the time string with AM/PM format
     time_obj = datetime.strptime(time_str, "%I:%M%p")
     # Combine the parsed date with the parsed time
     result = date_obj.replace(hour=time_obj.hour, minute=time_obj.minute, second=0, microsecond=0)
-
+    # return the datetime object
     return result
 
 
@@ -41,13 +41,13 @@ def extract_data(tr_elem, attr_name: str) -> Optional[str]:
         return td_elem.text
 
 
-def extract_game_time(n_days: int, row) -> Optional[str]:
+def extract_game_time(n_days: int, row) -> Optional[datetime]:
     # get the game date and start time of the game if it exists
     if (game_date := extract_data(row, 'game_date')) and (start_time := extract_data(row, 'gametime')):
         # check if the game date is in the desired date range
         if game_date in gm_utils.get_date_range(n_days):
             # convert it to a comparable datetime object and then cast to a string
-            return str(convert_to_datetime(game_date, start_time))
+            return convert_to_datetime(game_date, start_time)
 
 
 def extract_teams(source_name: str, league: str, row) -> Union[tuple[dict, dict], tuple[None, None]]:
@@ -105,7 +105,7 @@ class NFLScheduleCollector(gm_utils.ScheduleRetriever):
                 if away_team and home_team:
                     # adds the game and all of its extracted data to the shared data structure
                     self.update_games({
-                        'time_processed': str(datetime.now()),
+                        'time_processed': datetime.now(),
                         "game_time": game_time,
                         "league": self.source.name,
                         "away_team": away_team,

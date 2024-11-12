@@ -222,7 +222,7 @@ class BetOnline(bkm_utils.LinesRetriever):
                                             # update shared data
                                             self.update_betting_lines({
                                                 'batch_id': self.batch_id,
-                                                'time_processed': str(datetime.now()),
+                                                'time_processed': datetime.now(),
                                                 'league': league,
                                                 'market_category': 'player_props',
                                                 'market_id': market['id'],

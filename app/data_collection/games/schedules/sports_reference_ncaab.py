@@ -9,7 +9,7 @@ from app.data_collection.games import utils as gm_utils
 
 
 # TODO: Same as NBA
-def get_game_time(date: datetime, time_str: str):
+def get_game_time(date: datetime, time_str: str) -> datetime:
     # Append "AM" or "PM" to the time string based on "a" or "p" suffix
     if time_str[-1].lower() == 'p':
         time_str = time_str[:-1] + "PM"
@@ -37,7 +37,7 @@ def extract_away_team(source_name: str, league: str, rows) -> Optional[dict]:
                 return team_data
 
 
-def extract_home_team_and_game_time(source_name: str, league: str, rows, date: datetime) -> Union[tuple[dict, str], tuple[None, None]]:
+def extract_home_team_and_game_time(source_name: str, league: str, rows, date: datetime) -> Union[tuple[dict, datetime], tuple[None, None]]:
     # if rows as more than 1 element
     if len(rows) > 1:
         # get all the cells from the second row
@@ -51,7 +51,7 @@ def extract_home_team_and_game_time(source_name: str, league: str, rows, date: d
                     # get the team id and team name from the database
                     if team_data := dc_utils.get_team_id(source_name, league, home_team_name):
                         # extract and convert the game time to a date and then cast to a string
-                        game_time = str(get_game_time(date, start_time.text.strip()))
+                        game_time = get_game_time(date, start_time.text.strip())
                         # return the home team and game time
                         return team_data, game_time
 
@@ -106,7 +106,7 @@ class NCAABScheduleCollector(gm_utils.ScheduleRetriever):
                         if league := extract_league(rows):
                             # adds the game and all of its extracted data to the shared data structure
                             self.update_games({
-                                'time_processed': str(datetime.now()),
+                                'time_processed': datetime.now(),
                                 "game_time": game_time,
                                 "league": league,
                                 "away_team": away_team,

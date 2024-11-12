@@ -108,6 +108,12 @@ TEAMS_MAP = {
         # OSU - Ohio State
           'OHIOST': 'Ohio State',  # Dabble
           'OHIO STATE': 'Ohio State',  # Payday
+        # CMU - Central Michigan
+          'C. Michigan': 'Central Michigan',  # cbssports
+        # BALL - Ball State
+          'Ball St.': 'Ball State',  # cbssports
+        # WMU - Western Michigan
+          'W. Michigan': 'Western Michigan',  # cbssports
 
     }
 }

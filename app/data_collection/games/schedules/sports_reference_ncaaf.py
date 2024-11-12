@@ -29,12 +29,12 @@ def clean_team(source_name: str, league: str, team_name: str) -> Optional[dict]:
         return team_data
 
 
-def get_full_game_date(date_str: str, time_str: str) -> str:
+def get_full_game_date(date_str: str, time_str: str) -> datetime:
     # Combine today's date with the time string
-    return str(datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %I:%M %p"))
+    return datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %I:%M %p")
 
 
-def extract_game_time(date_str: str, cell) -> Optional[str]:
+def extract_game_time(date_str: str, cell) -> Optional[datetime]:
     if a_elem := cell.find('a'):
         return get_full_game_date(date_str, a_elem.text)
 
@@ -75,7 +75,7 @@ class NCAAFScheduleCollector(gm_utils.ScheduleRetriever):
                                         if game_time := extract_game_time(game_date, cells[2]):
                                             # adds the game and all of its extracted data to the shared data structure
                                             self.update_games({
-                                                'time_processed': str(datetime.now()),
+                                                'time_processed': datetime.now(),
                                                 "game_time": game_time,
                                                 "league": self.source.league,
                                                 "away_team": away_team,

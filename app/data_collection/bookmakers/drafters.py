@@ -11,14 +11,7 @@ def is_event_valid(data: dict) -> bool:
     return 'Season' not in data.get('_id')
 
 
-def extract_game_info(data: dict) -> Optional[str]:
-    # get the home team and away team from data, if they both exist then execute
-    if (home_team := data.get('home')) and (away_team := data.get('away')):
-        # returning game information
-        return ' @ '.join([away_team, home_team])
-
-
-def extract_subject_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
     # get the team the player is on and only return if it exists and doesn't equal MMA
     if (subject_team := data.get('own')) and (subject_team != 'MMA'):
         # get the team id and team name from the database
@@ -105,33 +98,34 @@ class Drafters(bkm_utils.LinesRetriever):
             for event_data in json_data.get('entities', []):
                 # check if the event is valid before executing
                 if is_event_valid(event_data):
-                    # extract the player's team and some general game info from 'event'
-                    game_info = extract_game_info(event_data)
                     # extract the player's team
-                    team = extract_subject_team(self.source.name, league, event_data)
-                    # for each player in event's players if they exist
-                    for player_data in event_data.get('players', []):
-                        # extract the subject id from db and get subject from player dict
-                        if subject := extract_subject(self.source.name, player_data, league, team):
-                            # get market id from db and extract market from player dict
-                            if market := extract_market(self.source.name, player_data, league):
-                                # get numeric over/under line and execute if exists
-                                if line := player_data.get('bid_stats_value'):
-                                    # for each label Over and Under update shared data
-                                    for label in ['Over', 'Under']:
-                                        # update shared data
-                                        self.update_betting_lines({
-                                            'batch_id': self.batch_id,
-                                            'time_processed': str(datetime.now()),
-                                            'league': league,
-                                            'game_info': game_info,
-                                            'market_category': 'player_props',
-                                            'market_id': market['id'],
-                                            'market': market['name'],
-                                            'subject_id': subject['id'],
-                                            'subject': subject['name'],
-                                            'bookmaker': self.source.name,
-                                            'label': label,
-                                            'line': line,
-                                            'odds': self.source.default_payout.odds
-                                        })
+                    team = extract_team(self.source.name, league, event_data)
+                    # use the team data to get game data
+                    if game := bkm_utils.get_game_id(team):
+                        # for each player in event's players if they exist
+                        for player_data in event_data.get('players', []):
+                            # extract the subject id from db and get subject from player dict
+                            if subject := extract_subject(self.source.name, player_data, league, team):
+                                # get market id from db and extract market from player dict
+                                if market := extract_market(self.source.name, player_data, league):
+                                    # get numeric over/under line and execute if exists
+                                    if line := player_data.get('bid_stats_value'):
+                                        # for each label Over and Under update shared data
+                                        for label in ['Over', 'Under']:
+                                            # update shared data
+                                            self.update_betting_lines({
+                                                'batch_id': self.batch_id,
+                                                'time_processed': datetime.now(),
+                                                'league': league,
+                                                'game_id': game['id'],
+                                                'game': game['info'],
+                                                'market_category': 'player_props',
+                                                'market_id': market['id'],
+                                                'market': market['name'],
+                                                'subject_id': subject['id'],
+                                                'subject': subject['name'],
+                                                'bookmaker': self.source.name,
+                                                'label': label,
+                                                'line': line,
+                                                'odds': self.source.default_payout.odds
+                                            })

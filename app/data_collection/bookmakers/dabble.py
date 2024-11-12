@@ -54,11 +54,11 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
             return team_data
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
     # get subject name from the data, if exists then execute
     if subject_name := data.get('playerName'):
         # extract player attributes
-        team, position = extract_team(bookmaker_name, league, data), extract_position(data)
+        position = extract_position(data)
         # gets the subject id or log message
         subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position)
         # return both subject id search result and cleaned subject
@@ -168,16 +168,15 @@ class Dabble(bkm_utils.LinesRetriever):
             for event in json_data.get('data', []):
                 # gets the event id, game information, and checks whether this event is displayed, if all exist execute
                 if (event_id := event.get('id')) and event.get('isDisplayed'):
-                    if game_info := event.get('name'):
-                        # gets the url required to request for prop lines and inserts event id into url string
-                        url = bkm_utils.get_url(self.source.name).format(event_id)
-                        # add the request task to tasks
-                        tasks.append(self.req_mngr.get(url, self._parse_lines, league, game_info))
+                    # gets the url required to request for prop lines and inserts event id into url string
+                    url = bkm_utils.get_url(self.source.name).format(event_id)
+                    # add the request task to tasks
+                    tasks.append(self.req_mngr.get(url, self._parse_lines, league))
 
             # complete requests asynchronously
             await asyncio.gather(*tasks)
 
-    async def _parse_lines(self, response, league: str, game_info: str) -> None:
+    async def _parse_lines(self, response, league: str) -> None:
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('data')):
             # get market groups
@@ -186,23 +185,28 @@ class Dabble(bkm_utils.LinesRetriever):
             for player_prop_data in data.get('playerProps', []):
                 # get the market id from the db and extract the market name from the dictionary
                 if market := extract_market(self.source.name, player_prop_data, markets_map, league):
-                    # get the subject id from the db and extract the subject name from dictionary
-                    if subject := extract_subject(self.source.name, player_prop_data, league):
-                        # get over/under label for player prop and get numeric line, only execute if both exist
-                        if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
-                            # update shared data
-                            self.update_betting_lines({
-                                'batch_id': self.batch_id,
-                                'time_processed': str(datetime.now()),
-                                'league': league,
-                                'game_info': game_info,
-                                'market_category': 'player_props',
-                                'market_id': market['id'],
-                                'market': market['name'],
-                                'subject_id': subject['id'],
-                                'subject': subject['name'],
-                                'bookmaker': self.source.name,
-                                'label': label,
-                                'line': line,
-                                'odds': self.source.default_payout.odds
-                            })
+                    # extract the player's team data
+                    team = extract_team(self.source.name, league, player_prop_data)
+                    # use the team data to get game data
+                    if game := bkm_utils.get_game_id(team):
+                        # get the subject id from the db and extract the subject name from dictionary
+                        if subject := extract_subject(self.source.name, player_prop_data, league, team):
+                            # get over/under label for player prop and get numeric line, only execute if both exist
+                            if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
+                                # update shared data
+                                self.update_betting_lines({
+                                    'batch_id': self.batch_id,
+                                    'time_processed': datetime.now(),
+                                    'league': league,
+                                    'game_id': game['id'],
+                                    'game': game['info'],
+                                    'market_category': 'player_props',
+                                    'market_id': market['id'],
+                                    'market': market['name'],
+                                    'subject_id': subject['id'],
+                                    'subject': subject['name'],
+                                    'bookmaker': self.source.name,
+                                    'label': label,
+                                    'line': line,
+                                    'odds': self.source.default_payout.odds
+                                })

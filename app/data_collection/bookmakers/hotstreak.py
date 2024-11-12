@@ -225,6 +225,7 @@ class HotStreak(bkm_utils.LinesRetriever):
                             bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
                             # extract the market id and market name from data
                             if market := extract_market(self.source.name, market_components, league):
+                                # TODO: For Subjects Shared Data make sure to store a team id so that it can be used to get a game
                                 # get the subject id from db and extract subject from data
                                 if subject := extract_subject(self.source.name, participant_data, league):
                                     # for each line and corresponding over/under odds pair
@@ -234,7 +235,7 @@ class HotStreak(bkm_utils.LinesRetriever):
                                             # update shared data
                                             self.update_betting_lines({
                                                 'batch_id': self.batch_id,
-                                                'time_processed': str(datetime.now()),
+                                                'time_processed': datetime.now(),
                                                 'league': league,
                                                 'market_category': 'player_props',
                                                 'market_id': market['id'],

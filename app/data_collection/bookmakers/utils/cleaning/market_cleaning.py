@@ -417,6 +417,7 @@ MARKET_MAP = {
           'Blocked Shots': 'Blocked Shots',
           'BLKS': 'Blocked Shots',  # Payday
           'Blocks': 'Blocked Shots',  # DraftKingsPick6
+          'blocked_shots': 'Blocked Shots',  # Sleeper
         # Goalie Saves
           'Goalie Saves': 'Goalie Saves',
           'Saves': 'Goalie Saves',  # Drafters

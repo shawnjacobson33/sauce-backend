@@ -21,7 +21,7 @@ def get_structured_docs(docs: list[dict]) -> dict:
 
 def structure_data() -> dict:
     # get collection being used
-    teams_cursor = db.MongoDB.fetch_collection.fetch_collection(db.TEAMS_COLLECTION_NAME)
+    teams_cursor = db.MongoDB.fetch_collection(db.TEAMS_COLLECTION_NAME)
     # initialize a dictionary to hold all the data partitioned
     partitioned_data = dict()
     # for each partition in the partitions predicated upon the cursor name

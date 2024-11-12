@@ -13,7 +13,7 @@ class Source:
 
 @dataclass
 class Team:
-    league: str
+    league: Optional[str] = None
     abbr_name: Optional[str] = None
     full_name: Optional[str] = None
 

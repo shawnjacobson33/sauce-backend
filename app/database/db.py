@@ -1,8 +1,9 @@
 import os
+from datetime import datetime
 from typing import Tuple, Optional
 from pymongo import MongoClient
 
-from app.database.utils import DATABASE_URL, DATABASE_NAME, SOURCES_COLLECTION_NAME
+from app.database.utils import DATABASE_URL, DATABASE_NAME, SOURCES_COLLECTION_NAME, GAMES_COLLECTION_NAME
 
 
 def get_db_creds() -> Tuple[str, str]:
@@ -34,3 +35,10 @@ class MongoDB:
     def fetch_source(cls, source_name: str) -> Optional[dict]:
         if source := cls.fetch_collection(SOURCES_COLLECTION_NAME).find_one({'name': source_name}):
             return source
+
+    @classmethod
+    def evict_completed_games(cls):
+        # get the games collection
+        games = cls.fetch_collection(GAMES_COLLECTION_NAME)
+        # delete any games that already occurred
+        games.delete_many({'game_time': {'$lt': datetime.now()}})

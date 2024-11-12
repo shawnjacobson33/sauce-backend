@@ -131,6 +131,7 @@ class OddsShopper(bkm_utils.LinesRetriever):
                 game_info = event.get('eventName')
                 # get the market id from db and extract market from the data
                 if market := extract_market(self.source.name, event, league):
+                    # TODO: For Subjects Shared Data make sure to store a team id so that it can be used to get a game
                     # get the subject id from the db and extract the subject from outcome
                     if subject := extract_subject(self.source.name, event, league):
                         # iterate through each side or bookmaker for the prop line
@@ -146,7 +147,7 @@ class OddsShopper(bkm_utils.LinesRetriever):
                                         # update shared data
                                         self.update_betting_lines({
                                             'batch_id': self.batch_id,
-                                            'time_processed': str(datetime.now()),
+                                            'time_processed': datetime.now(),
                                             'league': league,
                                             'game_info': game_info,
                                             'market_category': 'player_props',

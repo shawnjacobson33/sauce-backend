@@ -120,6 +120,7 @@ class Rebet(bkm_utils.LinesRetriever):
                     for market_data in odds_data.get('market', []):
                         # get the market id from the db and extract the market name from dictionary
                         if market := extract_market(self.source.name, market_data, league):
+                            # TODO: For Subjects Shared Data make sure to store a team id so that it can be used to get a game
                             # get the subject id from db, and extract the subject name from dictionary
                             if subject := extract_subject(self.source.name, market_data, league):
                                 # get dictionary that holds data on odds, label, line, if exists then execute
@@ -137,7 +138,7 @@ class Rebet(bkm_utils.LinesRetriever):
                                                 # update shared data
                                                 self.update_betting_lines({
                                                     'batch_id': self.batch_id,
-                                                    'time_processed': str(datetime.now()),
+                                                    'time_processed': datetime.now(),
                                                     'league': league,
                                                     'market_category': 'player_props',
                                                     'market_id': market['id'],

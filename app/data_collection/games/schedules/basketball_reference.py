@@ -47,7 +47,7 @@ def extract_team(source_name: str, league: str, row, attr_name: str) -> Optional
              return team_data
 
 
-def extract_game_time(row, valid_dates: list[datetime]) -> Optional[str]:
+def extract_game_time(row, valid_dates: list[datetime]) -> Optional[datetime]:
     # get the start time of the game if it exists
     if (game_date := extract_game_date(row)) and (start_time := extract_data(row, 'game_start_time')):
         # convert it to a comparable datetime object
@@ -55,7 +55,7 @@ def extract_game_time(row, valid_dates: list[datetime]) -> Optional[str]:
         # make sure that this game is in the desired date range
         if game_datetime.strftime("%Y-%m-%d") in valid_dates:
             # cast to a string and return
-            return str(game_datetime)
+            return game_datetime
 
 
 def extract_box_score_url(tr_elem) -> Optional[str]:
@@ -104,7 +104,7 @@ class NBAScheduleCollector(gm_utils.ScheduleRetriever):
                                                  'home_team_name'):
                             # adds the game and all of its extracted data to the shared data structure
                             self.update_games({
-                                'time_processed': str(datetime.now()),
+                                'time_processed': datetime.now(),
                                 'source': self.source.name,
                                 "league": self.source.league,
                                 "game_time": game_time,

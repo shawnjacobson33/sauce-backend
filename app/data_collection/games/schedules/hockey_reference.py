@@ -50,7 +50,7 @@ def extract_game_time_and_box_score_url(row, valid_dates: list[str]) -> Optional
         if game_datetime.strftime("%Y-%m-%d") in valid_dates:
             # convert it to a comparable datetime object and then cast to a string, also return box score url
             return {
-                'game_time': str(game_datetime),
+                'game_time': game_datetime,
                 'box_score_url': box_score_url
             }
 
@@ -97,7 +97,7 @@ class NHLScheduleCollector(gm_utils.ScheduleRetriever):
                                                  'home_team_name'):
                         # adds the game and all of its extracted data to the shared data structure
                         self.update_games({
-                            'time_processed': str(datetime.now()),
+                            'time_processed': datetime.now(),
                             "league": self.source.league,
                             "game_time": game_time_data['game_time'],
                             "away_team": away_team,

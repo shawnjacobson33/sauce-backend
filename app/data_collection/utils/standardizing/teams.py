@@ -47,7 +47,7 @@ def get_team_id(bookmaker_name: str, league: str, team_name: str) -> Optional[di
         update_team_object(team, cleaned_team, matched_id)
         # update the shared dictionary of valid teams
         Teams.update_valid_data(bookmaker_name, tuple(team.__dict__.items()))
-        # return a dictionary representing the team object for existing values
+        # return a dictionary representing the team object for existing values...exclude league as it will be stored elsewhere in the games object
         return {key: value for key, value in team.__dict__.items() if value is not None}
 
     # update the shared dictionary of pending teams

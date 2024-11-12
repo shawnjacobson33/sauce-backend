@@ -32,11 +32,9 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
             return team_data
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
     # get the player's name, if it exists keep going
     if subject_name := data.get('name'):
-        # get player attributes
-        team = extract_team(bookmaker_name, league, data)
         # gets the subject id or log message
         subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team)
         # return both subject id search result and cleaned subject
@@ -86,7 +84,7 @@ def get_odds(default_odds: float, multiplier: Optional[float]) -> float:
     # otherwise the default-best odds available will just be used
     return default_odds
 
-# TODO: DIFFERENT FORMAT FOR game_info?
+
 class VividPicks(bkm_utils.LinesRetriever):
     def __init__(self, bookmaker: bkm_utils.LinesSource):
         # call parent class Plug
@@ -107,16 +105,18 @@ class VividPicks(bkm_utils.LinesRetriever):
         if json_data := response.json():
             # for each dictionary in the response data's gret if it exists
             for event_data in json_data.get('gret', []):
-                # extract the game info from the dictionary, if it exists keep going
-                if game_info := extract_game_info(event_data):
-                    # extract the league name from dictionary, if it exists keep going
-                    if league := extract_league(event_data):
-                        # to track the leagues being collected
-                        bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
-                        # for each dictionary in event data's activePlayers if they exist
-                        for player_data in event_data.get('activePlayers', []):
+                # extract the league name from dictionary, if it exists keep going
+                if league := extract_league(event_data):
+                    # to track the leagues being collected
+                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+                    # for each dictionary in event data's activePlayers if they exist
+                    for player_data in event_data.get('activePlayers', []):
+                        # get player attributes
+                        team = extract_team(self.source.name, league, player_data)
+                        # get the game data from database
+                        if game := bkm_utils.get_game_id(team):
                             # get the subject id from db and extract the subject name from dictionary
-                            if subject := extract_subject(self.source.name, player_data, league):
+                            if subject := extract_subject(self.source.name, player_data, league, team):
                                 # for each dictionary in player data's visiblePlayerProps if they exist
                                 for prop_line_data in player_data.get('visiblePlayerProps', []):
                                     # get the market id from the db and extract the market name from the dictionary
@@ -130,9 +130,10 @@ class VividPicks(bkm_utils.LinesRetriever):
                                                 # update shared data
                                                 self.update_betting_lines({
                                                     'batch_id': self.batch_id,
-                                                    'time_processed': str(datetime.now()),
+                                                    'time_processed': datetime.now(),
                                                     'league': league,
-                                                    'game_info': game_info,
+                                                    'game_id': game['id'],
+                                                    'game': game['info'],
                                                     'market_category': 'player_props',
                                                     'market_id': market['id'],
                                                     'market': market['name'],
