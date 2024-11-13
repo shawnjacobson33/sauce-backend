@@ -1,28 +1,30 @@
-# SauceEm
+# Sauce
 
-A sports betting platform designed to give you a guaranteed long-term mathematically
-profitable edge over DFS sites like "PrizePicks", "Underdog Fantasy", and traditional
-sports betting sites like "DraftKings", "FanDuel" to name a few.
-
-Focused on providing the best value in the market via our AI model, coupled with
-a very user-friendly interface that is engaging and understandable for the casual
-bettor. 
-
-Focus:
-- 
-- Geared toward but certainly not limited to the 18-21 age range.
-- Offer more than a dozen different DFS/Pick'em bookmakers that many other services don't provide.
-- Creating a competitive platform where anyone, regardless of age, can see where their betting skills
-stack up against the rest of the community.
-
-
-Features:
-- 
-- Get access to the "Value Board" (Positive-EV Picks)
-- Track your bets and ROI history
-- Climb the leaderboards, earn badges, and receive prizes/opportunities for performing well.
-
-Tech-Stack:
+Goals:
 -
-- Backend: Python
-- Database: MongoDB Cluster
+- Build internal automated systems to extract betting lines from a wide array of traditional sportsbooks and pickem/dfs sites for 
+every market and league available, I will never pay for an API to get betting lines like most other
+sports betting tools do.
+- Train an ML model to learn complex patterns using features within the domain of a top-down strategy (finding
+the bookmakers who have the sharpest odds, historical line movement, etc.), which results in
+calculating an "expected value" for each betting line. 
+- Create an engaging, attention-grasping, attractive user-interface that enables even the most
+casual bettor to understand and enjoy gaining an edge over all bookmakers.
+- Allow users to track performance, rank up a leaderboard, compete for prizes, earn emblems/badges.
+BE KNOWN AS A COMPETITIVE PLATFORM.
+- DFS or "social betting" is a rapidly expanding sub-sector of sports betting, that allows people
+aged 18-20 to bet on sports. Traditional sportsbooks are not allowed to do this. I want to capitalize
+on that age range (college students), by capturing value across dfs/social bookmakers that
+other sports betting tools don't focus on, providing my service at an incredibly more affordable
+price, relative to the value gained in return, than the market average (impart because my methods
+of data collection will not come from an API).
+
+Design:
+-
+- Leaderboards:
+  - Should feel like "Clash Royale"
+- Value Board:
+  - Should feel like "Leetcode/Oddsjam"
+- Theme Song:
+  - Should feel like "Wolf of Wall Street Humming"
+
