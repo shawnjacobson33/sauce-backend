@@ -12,7 +12,7 @@ def filter_subject_data(league: str) -> dict:
     return structured_data_store[league]
 
 
-def get_subject_id(bookmaker_name: str, league: str, subject_name: str, **kwargs) -> Optional[dict[str, str]]:
+def get_subject_id(source_name: str, league: str, subject_name: str, **kwargs) -> Optional[dict[str, str]]:
     # create a subject object
     subject = Subject(subject_name, league, **kwargs)
     # clean the subject name
@@ -24,7 +24,7 @@ def get_subject_id(bookmaker_name: str, league: str, subject_name: str, **kwargs
             # cast the matched id to a string
             matched_data['id'] = str(matched_data['id'])
             # update the shared dictionary of valid subjects
-            Subjects.update_valid_data(bookmaker_name, tuple(matched_data.items()))
+            Subjects.update_relevant_subjects(source_name, tuple(matched_data.items()))
             # return the matched subject id and the actual name of the subject stored in the database
             return {
                 'id': matched_data['id'],
@@ -32,7 +32,7 @@ def get_subject_id(bookmaker_name: str, league: str, subject_name: str, **kwargs
             }
 
     # update the shared dictionary of pending subjects
-    Subjects.update_pending_data(bookmaker_name, tuple(subject.__dict__.items()))
+    Subjects.update_pending_data(source_name, tuple(subject.__dict__.items()))
 
 
 

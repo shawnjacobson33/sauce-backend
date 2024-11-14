@@ -3,8 +3,9 @@ import time
 
 from app.backend.data_collection.utils.modelling.base_models import Retriever
 from app.backend.data_collection.utils.executing.output import output_source_stats
-from app.backend.data_collection.utils.executing.definitions import SCHEDULE_RETRIEVERS, LINES_RETRIEVERS
-from app.backend.data_collection.utils.executing.configure import configure_schedule_retriever, configure_lines_retriever
+from app.backend.data_collection.utils.executing.configure import configure_game_retriever, configure_lines_retriever
+from app.backend.data_collection.utils.executing.definitions import BOX_SCORE_RETRIEVERS, SCHEDULE_RETRIEVERS, \
+    LINES_RETRIEVERS
 
 
 def cleanup(retriever: Retriever):
@@ -36,6 +37,24 @@ async def launch_retriever(retriever: Retriever):
     await retrieve()
 
 
+def launch_box_score_retrievers(box_score_retriever_names: list[str] = None):
+    # 1. First Get Schedule Classes
+    box_score_retriever_classes = BOX_SCORE_RETRIEVERS.items() if not box_score_retriever_names else [
+        (box_score_retriever_name, BOX_SCORE_RETRIEVERS[box_score_retriever_name]) for box_score_retriever_name in
+        box_score_retriever_names]
+
+    # collect request task to run
+    tasks = list()
+    # for every bookmaker plug available
+    for source_name, box_score_retriever_class in box_score_retriever_classes:
+        # configure a bookmaker plug to collect data
+        box_score_retriever = configure_game_retriever(source_name, box_score_retriever_class)
+        # start collecting
+        tasks.append(asyncio.create_task(launch_retriever(box_score_retriever)))
+
+    return tasks
+
+
 def launch_schedules_retrievers(schedule_retriever_names: list[str] = None):
     # 1. First Get Schedule Classes
     schedules_retriever_classes = SCHEDULE_RETRIEVERS.items() if not schedule_retriever_names else [
@@ -47,7 +66,7 @@ def launch_schedules_retrievers(schedule_retriever_names: list[str] = None):
     # for every bookmaker plug available
     for source_name, schedule_retriever_class in schedules_retriever_classes:
         # configure a bookmaker plug to collect data
-        schedule_retriever = configure_schedule_retriever(source_name, schedule_retriever_class)
+        schedule_retriever = configure_game_retriever(source_name, schedule_retriever_class)
         # start collecting
         tasks.append(asyncio.create_task(launch_retriever(schedule_retriever)))
 

@@ -70,17 +70,17 @@ def insert_team(team_data: dict = None, insert_all: bool = False, exclude: list[
 
 # insert_subject()
 # market = {
-#     'name': '2H Kicking Points',
-#     'sport': 'Football'
+#     'name': 'Plus Minus',
+#     'sport': 'Ice Hockey'
 # }
 # insert_market(
 #     market_data=market
 # )
-team = {
-    'abbr_name': 'UTA',
-    'full_name': "Utah Hockey Club",
-    'league': 'NHL'
-}
-insert_team(
-    team_data=team
-)
+# team = {
+#     'abbr_name': 'UTA',
+#     'full_name': "Utah Hockey Club",
+#     'league': 'NHL'
+# }
+# insert_team(
+#     team_data=team
+# )

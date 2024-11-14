@@ -3,7 +3,8 @@ from typing import Optional
 
 URL_MAP = {
     'cbssports-nba': {
-        'schedule': 'https://www.cbssports.com/nba/schedule/{}/'  # 20241112
+        'schedule': 'https://www.cbssports.com/nba/schedule/{}/',  # 20241112
+        'box_scores': 'https://www.cbssports.com/nba/gametracker/boxscore/{}/',  # NBA_20241113_BOS@BKN
     }, 'cbssports-nfl': {
         'schedule': 'https://www.cbssports.com/nfl/schedule/'
     }, 'cbssports-ncaam': {

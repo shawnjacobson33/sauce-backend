@@ -45,7 +45,7 @@ def restructure_sets(data: dict) -> dict:
 
 class Subjects:
     _stored_data: dict = structure_data()  # Unique to Subjects
-    _valid_data: dict = defaultdict(set)
+    _relevant_subjects: dict = defaultdict(set)
     _pending_data: dict = defaultdict(set)  # Hold data that needs to be evaluated manually before db insertion
     _lock1 = threading.Lock()
     _lock2 = threading.Lock()
@@ -60,8 +60,8 @@ class Subjects:
         return restructure_sets(cls._pending_data)
 
     @classmethod
-    def get_valid_data(cls) -> dict:
-        return restructure_sets(cls._valid_data)
+    def get_relevant_subjects(cls) -> dict:
+        return restructure_sets(cls._relevant_subjects)
 
     @classmethod
     def update_stored_data(cls, key, value):
@@ -74,6 +74,6 @@ class Subjects:
             cls._pending_data[key].add(data)
 
     @classmethod
-    def update_valid_data(cls, key: str, data: tuple):
+    def update_relevant_subjects(cls, key: str, data: tuple):
         with cls._lock3:
-            cls._valid_data[key].add(data)
+            cls._relevant_subjects[key].add(data)

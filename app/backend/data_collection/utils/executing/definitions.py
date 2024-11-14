@@ -2,6 +2,11 @@ from app.backend.data_collection import games as gms
 from app.backend.data_collection import bookmakers as bkm
 
 
+BOX_SCORE_RETRIEVERS = {
+    'cbssports-nba': gms.NBABoxScoreRetriever
+}
+
+
 SCHEDULE_RETRIEVERS = {
     'cbssports-nba': gms.NBAScheduleRetriever,
     'cbssports-nfl': gms.NFLScheduleRetriever,

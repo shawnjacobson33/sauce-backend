@@ -1,5 +1,5 @@
 from .requesting import *
-from .modelling import *
 from .definitions import *
+from .modelling import *
 
-__all__ = ['fetch', 'get_url', 'Source', 'ScheduleSource','ScheduleRetriever', 'CURR_SEASON_1', 'get_date_range']
+__all__ = ['fetch', 'get_url', 'CURR_SEASON_1', 'get_date_range', 'GameSource']

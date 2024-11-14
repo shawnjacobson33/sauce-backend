@@ -64,8 +64,8 @@ def extract_league(rows) -> Optional[str]:
             return 'NCAAM' if 'Men' in td_elem.text else 'NCAAW'
 
 
-class NCAABScheduleCollector(gm_utils.ScheduleRetriever):
-    def __init__(self, source: gm_utils.ScheduleSource):
+class NCAABScheduleCollector(sc_utils.ScheduleRetriever):
+    def __init__(self, source: sc_utils.ScheduleSource):
         super().__init__(source)
 
     async def retrieve(self, n_days: int = 1) -> None:

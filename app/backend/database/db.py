@@ -37,8 +37,13 @@ class MongoDB:
             return source
 
     @classmethod
-    def evict_completed_games(cls):
+    def fetch_started_games(cls):
         # get the games collection
         games = cls.fetch_collection(GAMES_COLLECTION_NAME)
-        # delete any games that already occurred
-        games.delete_many({'game_time': {'$lt': datetime.now()}})
+        # Step 1: Find the games that will be deleted
+        if started_games := list(games.find({'game_time': {'$lt': datetime.now()}}, {'_id': 1, ''})):
+            # delete any games that already occurred
+            games.delete_many({'game_time': {'$lt': datetime.now()}})
+            # return the started games data
+            return started_games
+        # TODO: get the ids and url pieces from the finished games and start box score extraction process

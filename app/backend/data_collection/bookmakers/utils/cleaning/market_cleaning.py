@@ -470,6 +470,8 @@ MARKET_MAP = {
           'Fantasy Score': 'Fantasy Points',  # Ice Hockey
         # Shutouts
           'Total Shutouts': 'Shutouts',  # OddsShopper
+        # Plus Minus
+          'Plus Minus': 'Plus Minus',  # Underdog Fantasy
     }
 }
 PERIOD_CLASSIFIER_MAP = {

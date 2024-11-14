@@ -39,8 +39,8 @@ def extract_game_time(date_str: str, cell) -> Optional[datetime]:
         return get_full_game_date(date_str, a_elem.text)
 
 
-class NCAAFScheduleCollector(gm_utils.ScheduleRetriever):
-    def __init__(self, source: gm_utils.ScheduleSource):
+class NCAAFScheduleCollector(sc_utils.ScheduleRetriever):
+    def __init__(self, source: sc_utils.ScheduleSource):
         super().__init__(source)
 
     async def retrieve(self, n_days: int = 1) -> None:

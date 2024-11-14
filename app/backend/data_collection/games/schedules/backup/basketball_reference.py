@@ -67,8 +67,8 @@ def extract_box_score_url(tr_elem) -> Optional[str]:
             return f'/boxscores/{box_score_identifier}.html'
 
 
-class NBAScheduleRetriever(gm_utils.ScheduleRetriever):
-    def __init__(self, source: gm_utils.ScheduleSource):
+class NBAScheduleRetriever(sc_utils.ScheduleRetriever):
+    def __init__(self, source: sc_utils.ScheduleSource):
         super().__init__(source)
 
     async def retrieve(self, n_days: int = 1):

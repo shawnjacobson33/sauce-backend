@@ -64,8 +64,8 @@ def extract_team(source_name: str, league: str, row, attr_name: str) -> Optional
              return team_data
 
 
-class NHLScheduleCollector(gm_utils.ScheduleRetriever):
-    def __init__(self, source: gm_utils.ScheduleSource):
+class NHLScheduleCollector(sc_utils.ScheduleRetriever):
+    def __init__(self, source: sc_utils.ScheduleSource):
         super().__init__(source)
 
     async def retrieve(self, n_days: int = 1) -> None:

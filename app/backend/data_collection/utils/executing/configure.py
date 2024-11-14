@@ -3,15 +3,16 @@ from typing import Type
 from app.backend import database as db
 from app.backend.data_collection import games as gms
 from app.backend.data_collection import bookmakers as bkm
+from app.backend.data_collection.utils.modelling import Retriever
 
 
-def configure_schedule_retriever(source_name: str, schedule_retriever: Type[gms.ScheduleRetriever]) -> gms.ScheduleRetriever:
+def configure_game_retriever(source_name: str, game_retriever: Type[Retriever]) -> Retriever:
     # get some source info
     if source := db.MongoDB.fetch_source(source_name):
         # create a source object
-        schedule_source = gms.ScheduleSource(source['name'], source['league'], source.get('league-specific'))
+        game_source = gms.GameSource(source['name'], source['league'], source.get('league-specific'))
         # return a new schedule retriever instance
-        return schedule_retriever(schedule_source)
+        return game_retriever(game_source)
 
 
 def configure_lines_retriever(lines_retriever: Type[bkm.LinesRetriever]) -> bkm.LinesRetriever:
