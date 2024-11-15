@@ -1,4 +1,6 @@
+import json
 import os
+from collections import defaultdict
 from datetime import datetime
 from typing import Tuple, Optional
 from pymongo import MongoClient
@@ -33,6 +35,7 @@ class MongoDB:
 
     @classmethod
     def fetch_source(cls, source_name: str) -> Optional[dict]:
+        # get a data source by name
         if source := cls.fetch_collection(SOURCES_COLLECTION_NAME).find_one({'name': source_name}):
             return source
 
@@ -41,9 +44,12 @@ class MongoDB:
         # get the games collection
         games = cls.fetch_collection(GAMES_COLLECTION_NAME)
         # Step 1: Find the games that will be deleted
-        if started_games := list(games.find({'game_time': {'$lt': datetime.now()}}, {'_id': 1, ''})):
+        if started_games := list(games.find({'game_time': {'$lt': datetime.now()}})):
             # delete any games that already occurred
             games.delete_many({'game_time': {'$lt': datetime.now()}})
+
+            with open('del_games.json', 'w') as f:
+                json.dump(started_games, f, indent=4, default=str)
+
             # return the started games data
             return started_games
-        # TODO: get the ids and url pieces from the finished games and start box score extraction process

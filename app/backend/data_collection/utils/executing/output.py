@@ -2,7 +2,8 @@ import json
 import os
 
 from app.backend.data_collection import bookmakers as bkm
-from app.backend.data_collection.utils.shared_data import Teams, Games
+from app.backend.data_collection.utils import BoxScores
+from app.backend.data_collection.utils.shared_data import Teams, AllGames
 from app.backend.data_collection.utils.modelling import Retriever
 
 
@@ -39,7 +40,7 @@ def save_valid_subjects_to_file() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Subjects.get_valid_data(), f, indent=4, default=str)
+        json.dump(bkm.Subjects.get_stored_subjects(), f, indent=4, default=str)
 
 
 def save_valid_teams_to_file() -> None:
@@ -93,7 +94,16 @@ def save_games_to_file():
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(Games.get_games(), f, indent=4, default=str)
+        json.dump(AllGames.get_games(), f, indent=4, default=str)
+
+
+def save_box_scores_to_file():
+    # create a custom file path to store the betting lines sample
+    file_path = 'utils/reports/box_scores.json'
+    # open the pending markets file
+    with open(file_path, 'w') as f:
+        # save the betting lines to the file, in pretty print mode
+        json.dump(BoxScores.get_box_scores(), f, indent=4, default=str)
 
 
 def save_data_to_files() -> None:
@@ -109,6 +119,7 @@ def save_data_to_files() -> None:
     # save the sample data of betting lines to a file for inspection
     save_betting_lines_to_file()
     save_games_to_file()
+    save_box_scores_to_file()
 
 
 def output_source_stats(retriever: Retriever, time_taken: float) -> None:

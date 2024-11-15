@@ -87,33 +87,19 @@ class AllGames:
         ...
     }
 
-    _relevant_games: {
-        'NBA': {
-            '123kxd90' ( game id ): {
-                'info': 'BOS @ BKN',
-                'box_score_url': 'NBA_20241113_BOS@BKN'
-                ...
-            }
-            ...
-        }
-        ...
-    }
-
     """
     _all_games: dict[str, dict] = get_games()  # Gets the data stored in the database
-    _relevant_games: defaultdict[str, dict] = dict()
-    _active_games: defaultdict[str, dict] = dict()
     _lock1: threading.Lock = threading.Lock()
 
     @classmethod
-    def get_all_games(cls, league: Optional[str] = None) -> dict:
+    def get_games(cls, league: Optional[str] = None) -> dict:
         # gets the data for the inputted partition
         return cls._all_games.get(league) if league else cls._all_games
 
     @classmethod
-    def get_active_games(cls, league: Optional[str] = None) -> dict:
-        # gets the data for the inputted partition
-        return cls._active_games.get(league) if league else cls._active_games
+    def get_game(cls, league: str, team_id: str) -> Optional[dict]:
+        # returns a game associated with the team id passed
+        return AllGames.get_games(league).get(team_id)
 
     @classmethod
     def update_games(cls, game: dict):
@@ -144,11 +130,6 @@ class AllGames:
                 }
                 # update the games data structure by partition with the inputted game
                 update_games_dictionary(filtered_all_games, game_data)
-
-            # find a corresponding match in the games data structure
-            game_match = filtered_all_games[game[away_team['id']]]
-            # update the relevant games data structure so that BoxScoreRetrievers will know what to request
-            cls._active_games[game['league']][game_match['id']] = {key: val for key, val in game_match.items() if key != 'id'}
 
     @classmethod
     def size(cls, source_name: str = None) -> int:

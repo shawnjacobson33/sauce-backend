@@ -7,10 +7,11 @@ from app.backend.data_collection import utils as dc_utils
 from app.backend.data_collection.bookmakers import BettingLines
 
 
-async def run_box_score_retrieving_tasks(game_retriever_names: list[str] = None):
+async def run_box_score_retrieving_tasks(game_retriever_names: list[str] = None) -> float:
     # This will run logic to delete any games that finished (no longer need game ids after they are done)
     if started_games := db.MongoDB.fetch_started_games():
-        dc_utils.Games.
+        # store any currently running games in the data structure
+        dc_utils.ActiveGames.update_games(started_games)
         # get the coroutines
         box_score_retrieving_tasks = dc_utils.launch_box_score_retrievers(game_retriever_names)
         # start making requests asynchronously
@@ -20,6 +21,7 @@ async def run_box_score_retrieving_tasks(game_retriever_names: list[str] = None)
         # return time taken to complete retrieving tasks
         return round(t2 - t1, 3)
 
+    return 0
 
 async def run_schedules_retrieving_tasks(schedule_retriever_names: list[str] = None) -> float:
     # get the coroutines
@@ -49,13 +51,13 @@ async def retrieve_and_report(game_retriever_names: list[str] = None, lines_retr
     # run the box score retrieving tasks
     box_score_retrieving_time = await run_box_score_retrieving_tasks(game_retriever_names)
     # Output total number of betting lines collected and the time it took to run entire job
-    print(f"[TOTAL GAMES]: {dc_utils.Games.size()}, {box_score_retrieving_time}s\n")
+    print(f"[TOTAL GAMES]: {dc_utils.BoxScores.size()}, {box_score_retrieving_time}s\n")
     # # section header
     # print(f'{"*" * 22} Schedule Retrieval {"*" * 22}\n')
     # # run the schedule retrieving tasks
     # schedules_retrieving_time = await run_schedules_retrieving_tasks(game_retriever_names)
     # # Output total number of betting lines collected and the time it took to run entire job
-    # print(f"[TOTAL GAMES]: {dc_utils.Games.size()}, {schedules_retrieving_time}s\n")  # TODO: Bug .size() is returning everything plus whats in the database
+    # print(f"[TOTAL GAMES]: {dc_utils.AllGames.size()}, {schedules_retrieving_time}s\n")  # TODO: Bug .size() is returning everything plus whats in the database
     # # section header
     # print(f'{"*" * 22} Lines Retrieval {"*" * 22}\n')
     # # run the lines retrieving tasks second
@@ -63,7 +65,7 @@ async def retrieve_and_report(game_retriever_names: list[str] = None, lines_retr
     # # Output total number of betting lines collected and the time it took to run entire job
     # print(f"[TOTAL LINES]: {BettingLines.size()}, {lines_retrieving_time}s")
     # # save all output data to json files
-    # dc_utils.save_data_to_files()
+    dc_utils.save_data_to_files()
     # # output the size of the file storing the betting lines
     # print(f"[FILE SIZE]: {round(os.path.getsize('utils/reports/betting_lines.json') / (1024 ** 2), 2)} MB")
 

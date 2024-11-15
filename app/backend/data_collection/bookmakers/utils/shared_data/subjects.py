@@ -52,7 +52,7 @@ class Subjects:
     _lock3 = threading.Lock()
 
     @classmethod
-    def get_stored_data(cls):
+    def get_stored_subjects(cls):
         return cls._stored_data
 
     @classmethod

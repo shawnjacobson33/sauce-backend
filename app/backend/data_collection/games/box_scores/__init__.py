@@ -1,3 +1,3 @@
-from .cbssports_nba import *
+from .cbssports_basketball import *
 
 __all__ = ['NBABoxScoreRetriever']

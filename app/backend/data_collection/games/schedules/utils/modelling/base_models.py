@@ -1,4 +1,4 @@
-from app.backend.data_collection.utils.shared_data import Games
+from app.backend.data_collection.utils.shared_data import AllGames
 from app.backend.data_collection.utils.modelling import Retriever
 from app.backend.data_collection.games.utils import GameSource
 
@@ -9,7 +9,7 @@ class ScheduleRetriever(Retriever):
 
     def update_games(self, game: dict) -> None:
         # add the game to the shared data structure
-        Games.update_games(game)
+        AllGames.update_games(game)
         # keep track of the number of games found per league
         self.data_collected += 1
 

@@ -7,7 +7,7 @@ from app.backend.data_collection.games.schedules import utils as sc_utils
 
 
 class NCAAFScheduleRetriever(sc_utils.ScheduleRetriever):
-    def __init__(self, source: sc_utils.ScheduleSource):
+    def __init__(self, source: gm_utils.GameSource):
         super().__init__(source)
 
     async def retrieve(self, n_days: int = 1) -> None:
