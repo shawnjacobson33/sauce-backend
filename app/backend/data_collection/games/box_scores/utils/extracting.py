@@ -47,7 +47,10 @@ def extract_football_stats(cells, extraction_info: dict) -> dict:
 
 def extract_passing_stats(cells) -> dict:
     # TODO: Can't get Longest Passing Completion unless you go to the player's game log...extra request
-    data = (cell_comp for cell in cells for cell_comp in cell.split('/'))
+    data = (cell_comp for cell in cells
+            for slash_cell_comp in cell.text.split('/')
+            for cell_comp in slash_cell_comp.split(':'))
+
     return {
                 'Completions': int(next(data)),
                 'Passing Attempts': int(next(data)),

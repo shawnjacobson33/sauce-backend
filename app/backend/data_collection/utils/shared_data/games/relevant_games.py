@@ -2,8 +2,6 @@ import threading
 from collections import defaultdict
 from typing import Optional
 
-from app.backend.data_collection.utils.shared_data.games.all_games import AllGames
-
 
 class RelevantGames:
     """
@@ -19,7 +17,7 @@ class RelevantGames:
         )
     }
     """
-    _relevant_games: defaultdict[str, set] = defaultdict(set)
+    _relevant_games: defaultdict[str, dict] = defaultdict(dict)
     _lock1: threading.Lock = threading.Lock()
 
     @classmethod
@@ -28,8 +26,6 @@ class RelevantGames:
         return cls._relevant_games.get(league) if league else cls._relevant_games
 
     @classmethod
-    def update_games(cls, game: dict):
-        # filter the games data structure
-        stored_game = AllGames.get_game(game['league'], game['away_team']['id'])
-        cls._relevant_games[game['league']].add(stored_game)
+    def update_games(cls, game: dict, league: str) -> None:
+        cls._relevant_games[league][game['id']] = {key: value for key, value in game.items() if key != 'id'}
 

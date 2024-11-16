@@ -76,11 +76,11 @@ def insert_team(team_data: dict = None, insert_all: bool = False, exclude: list[
 # insert_market(
 #     market_data=market
 # )
-# team = {
-#     'abbr_name': 'UTA',
-#     'full_name': "Utah Hockey Club",
-#     'league': 'NHL'
-# }
-# insert_team(
-#     team_data=team
-# )
+team = {
+    'abbr_name': 'RUTG',
+    'full_name': "Rutgers",
+    'league': 'NCAA'
+}
+insert_team(
+    team_data=team
+)

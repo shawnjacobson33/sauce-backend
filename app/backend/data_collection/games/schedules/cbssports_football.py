@@ -6,7 +6,7 @@ from app.backend.data_collection.games import utils as gm_utils
 from app.backend.data_collection.games.schedules import utils as sc_utils
 
 
-class NCAAFScheduleRetriever(sc_utils.ScheduleRetriever):
+class FootballScheduleRetriever(sc_utils.ScheduleRetriever):
     def __init__(self, source: gm_utils.GameSource):
         super().__init__(source)
 
@@ -25,15 +25,15 @@ class NCAAFScheduleRetriever(sc_utils.ScheduleRetriever):
             # extracts the table element that holds schedule data
             for game_date, table in zip(game_dates, tables):
                 # Parse the date part
-                formatted_date = datetime.strptime(game_date, "%A, %B %d, %Y")
+                game_date = datetime.strptime(game_date, "%A, %B %d, %Y")
                 # only want tables of games that are present and future
-                if formatted_date.strftime('%Y-%m-%d') in gm_utils.get_date_range(n_days):
+                if game_date.strftime('%Y-%m-%d') not in gm_utils.get_date_range(n_days):
                     # extracts all rows except for the header row from the table
                     rows = table.find_all('tr')[1:]
                     # for each row
                     for row in rows:
                         # get the time and date of the game and check if it's in the right range of dates desired
-                        game_time, box_score_url = sc_utils.extract_game_time_and_box_score_url(row, formatted_date)
+                        game_time, box_score_url = sc_utils.extract_game_time_and_box_score_url(row, game_date)
                         # if the game time and box score url exist
                         if game_time and box_score_url:
                             # get the elements where team names lie

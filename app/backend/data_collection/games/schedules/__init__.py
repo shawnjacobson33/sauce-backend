@@ -1,9 +1,5 @@
-from .cbssports_nba import *
-from .cbssports_nfl import *
-from .cbssports_ncaam import *
-from .cbssports_ncaaf import *
-from .cbssports_ncaaw import *
-from .cbssports_nhl import *
+from .cbssports_basketball import *
+from .cbssports_football import *
+from .cbssports_ice_hockey import *
 
-__all__ = ['NBAScheduleRetriever', 'NFLScheduleRetriever', 'NCAAFScheduleRetriever', 'NCAAWScheduleRetriever',
-           'NCAAMScheduleRetriever', 'NHLScheduleRetriever']
+__all__ = ['BasketballScheduleRetriever', 'FootballScheduleRetriever', 'IceHockeyScheduleRetriever']

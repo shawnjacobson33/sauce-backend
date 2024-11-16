@@ -132,7 +132,7 @@ class AllGames:
                 update_games_dictionary(filtered_all_games, game_data)
 
     @classmethod
-    def size(cls, source_name: str = None) -> int:
+    def size(cls, source_name: str = None) -> float:
         # if bookmaker is inputted
         if source_name:
             # get the lines associated with that bookmaker
@@ -141,7 +141,7 @@ class AllGames:
             return len(lines)
 
         # gets the total amount of betting lines stored
-        return sum(len(value) for value in cls._all_games.values())
+        return sum(len(value) for value in cls._all_games.values()) / 2
 
     @classmethod
     def store_games(cls) -> None:

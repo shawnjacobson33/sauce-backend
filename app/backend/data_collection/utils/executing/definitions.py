@@ -3,17 +3,20 @@ from app.backend.data_collection import bookmakers as bkm
 
 
 BOX_SCORE_RETRIEVERS = {
-    'cbssports-nba': gms.NBABoxScoreRetriever
+    'cbssports-nba': gms.BasketballBoxScoreRetriever,
+    'cbssports-ncaam': gms.BasketballBoxScoreRetriever,
+    'cbssports-nfl': gms.BasketballBoxScoreRetriever,
+    'cbssports-ncaaf': gms.BasketballBoxScoreRetriever,
+    'cbssports-nhl': gms.BasketballBoxScoreRetriever,
 }
 
 
 SCHEDULE_RETRIEVERS = {
-    'cbssports-nba': gms.NBAScheduleRetriever,
-    'cbssports-nfl': gms.NFLScheduleRetriever,
-    'cbssports-ncaam': gms.NCAAMScheduleRetriever,
-    'cbssports-ncaaf': gms.NCAAFScheduleRetriever,
-    'cbssports-ncaaw': gms.NCAAWScheduleRetriever,
-    'cbssports-nhl': gms.NHLScheduleRetriever
+    'cbssports-nba': gms.BasketballScheduleRetriever,
+    'cbssports-ncaam': gms.BasketballScheduleRetriever,
+    'cbssports-nfl': gms.BasketballScheduleRetriever,
+    'cbssports-ncaaf': gms.BasketballScheduleRetriever,
+    'cbssports-nhl': gms.BasketballScheduleRetriever,
 }
 
 

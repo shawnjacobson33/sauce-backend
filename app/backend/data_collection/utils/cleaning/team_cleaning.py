@@ -61,6 +61,7 @@ TEAMS_MAP = {
         # WASH - Washington
           'WASH': 'WASH', # ParlayPlay, VividPicks, PrizePicks, Underdog Fantasy, Sleeper, Dabble
           'WSH': 'WASH',  # BoomFantasy, Payday
+          'WAS': 'WASH',  # VividPicks
         # AFA - Air Force
           'AFA': 'AFA',  # ParlayPlay
           'AF': 'AFA',  # VividPicks
@@ -142,6 +143,32 @@ TEAMS_MAP = {
           'NILL': 'NIU',  # cbssports
         # MEM - Memphis
           'MEMP': 'MEM',  # cbssports
+        # ARK - Arkansas
+          'ARKA': 'ARK',  # Drafters
+        # CAL - Cal
+          'CALI': 'CAL',  # Drafters
+        # LOU - Louisville
+          'LOUI': 'LOU',  # Drafters
+        # NEB - Nebraska
+          'NEBRA': 'Nebraska',  # Drafters
+        # WIS - Wisconsin
+          'WISCO': 'WIS',  # Drafters
+        # COLO - Colorado
+          'COLOR': 'COLO',  # Drafters
+        # TEX - Texas
+          'TEXAS': 'TEX',  # Drafters
+        # TENN - Tennessee
+          'TEN': 'TENN',  # VividPicks
+        # NW - Northwestern
+          'NU': 'NW',  # Drafters
+        # TULN - Tulane
+          'TUL': 'TULN',  # VividPicks
+        # KSU - Kansas State
+          'KST': 'KSU',  # VividPicks
+        # RUTG - Rutgers
+          'RUT': 'RUTG',  # VividPicks
+        # WAKE - Wake Forest
+          'WF': 'WAKE',  # VividPicks
     }
 }
 

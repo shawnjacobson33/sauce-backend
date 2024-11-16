@@ -6,7 +6,7 @@ from app.backend.data_collection.games import utils as gm_utils
 from app.backend.data_collection.games.schedules import utils as sc_utils
 
 
-class NCAAMScheduleRetriever(sc_utils.ScheduleRetriever):
+class IceHockeyScheduleRetriever(sc_utils.ScheduleRetriever):
     def __init__(self, source: gm_utils.GameSource):
         super().__init__(source)
 
@@ -24,12 +24,7 @@ class NCAAMScheduleRetriever(sc_utils.ScheduleRetriever):
         # initializes a html parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # extracts the table element that holds schedule data
-        table = soup.find_all('table')
-        # CBS Sports stores completed games in a separate table
-        if len(table) > 1:
-            # get the last table found
-            table = table[-1]
-
+        table = soup.find('table')
         # extracts all rows except for the header row from the table
         rows = table.find_all('tr')[1:]
         # for each row

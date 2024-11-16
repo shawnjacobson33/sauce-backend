@@ -7,7 +7,7 @@ from app.backend.data_collection.bookmakers.utils.cleaning import clean_subject
 
 def filter_subject_data(league: str) -> dict:
     # get the data structured as dictionary or a dataframe based upon the input
-    structured_data_store = Subjects.get_stored_data()
+    structured_data_store = Subjects.get_stored_subjects()
     # filter it by partition
     return structured_data_store[league]
 

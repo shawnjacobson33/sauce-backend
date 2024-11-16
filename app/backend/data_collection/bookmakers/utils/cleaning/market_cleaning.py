@@ -319,6 +319,7 @@ MARKET_MAP = {
           'Total Touchdowns': 'Total Touchdowns',  # OddsShopper
           'TOTAL_TOUCHDOWNS': 'Total Touchdowns',  # BoomFantasy
           'Total Passing + Rushing + Receiving TDs': 'Total Touchdowns',  # OddsShopper
+          'Pass+Rush+Rec TDs': 'Total Touchdowns',  # PrizePicks
           'anytime_touchdowns': 'Total Touchdowns',  # Sleeper
           'Anytime TD Scored': 'Total Touchdowns',  # Vivid Picks
         # Fantasy Points
@@ -418,16 +419,16 @@ MARKET_MAP = {
           'BLKS': 'Blocked Shots',  # Payday
           'Blocks': 'Blocked Shots',  # DraftKingsPick6
           'blocked_shots': 'Blocked Shots',  # Sleeper
-        # Goalie Saves
-          'Goalie Saves': 'Goalie Saves',
-          'Saves': 'Goalie Saves',  # Drafters
-          'Total Saves': 'Goalie Saves',  # OddsShopper
-          'GoaltendingSaves': 'Goalie Saves',  # VividPicks
-          'saves': 'Goalie Saves',  # Sleeper
-          'SAV': 'Goalie Saves',  # Payday
-          'SAVES': 'Goalie Saves',  # BoomFantasy
+        # Saves
+          'Goalie Saves': 'Saves',
+          'Saves': 'Saves',  # Drafters
+          'Total Saves': 'Saves',  # OddsShopper
+          'GoaltendingSaves': 'Saves',  # VividPicks
+          'saves': 'Saves',  # Sleeper
+          'SAV': 'Saves',  # Payday
+          'SAVES': 'Saves',  # BoomFantasy
         # 1st Period Goalie Saves
-          '1st Period Saves': '1st Period Goalie Saves',  # Underdog Fantasy
+          '1st Period Saves': '1st Period Saves',  # Underdog Fantasy
         # Goals Against
           'Goals Against': 'Goals Against',
           'Total Goals Against': 'Goals Against',  # OddsShopper
@@ -440,13 +441,13 @@ MARKET_MAP = {
           'assists': 'Assists',  # Sleeper
           'Player assists (incl. overtime)': 'Assists',  # Rebet
           'ASSISTS': 'Assists',  # BoomFantasy
-        # Goals Scored
-          'Total Player Goals': 'Goals Scored',  # OddsShopper
-          'Goals': 'Goals Scored',  # OwnersBox
-          'goals': 'Goals Scored',  # Sleeper
-          'GOL': 'Goals Scored',  # Payday
-          'Player goals (incl. overtime)': 'Goals Scored',  # Rebet
-          'GOALS': 'Goals Scored',  # BoomFantasy
+        # Goals
+          'Total Player Goals': 'Goals',  # OddsShopper
+          'Goals': 'Goals',  # OwnersBox
+          'goals': 'Goals',  # Sleeper
+          'GOL': 'Goals',  # Payday
+          'Player goals (incl. overtime)': 'Goals',  # Rebet
+          'GOALS': 'Goals',  # BoomFantasy
         # Power Play Points
           'Power Play Points': 'Power Play Points',  # OddsShopper
           'powerplay_points': 'Power Play Points',  # Sleeper

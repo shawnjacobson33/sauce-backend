@@ -19,7 +19,7 @@ class ActiveGames:
         ...
     }
     """
-    _active_games: defaultdict[str, set] = defaultdict(set)
+    _active_games: defaultdict[str, dict] = defaultdict(dict)
     _lock1: threading.Lock = threading.Lock()
 
     @classmethod
@@ -29,8 +29,9 @@ class ActiveGames:
 
     @classmethod
     def update_games(cls, games: list[dict]):
+        # for each active game
         for game in games:
             # get game info stored in a structured way
             stored_game = AllGames.get_game(game['league'], game['away_team']['id'])
             # add the game to the set under its league
-            cls._active_games[game['league']].add(stored_game)
+            cls._active_games[game['league']][stored_game['id']] = stored_game

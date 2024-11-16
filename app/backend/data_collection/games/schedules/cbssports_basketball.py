@@ -6,7 +6,7 @@ from app.backend.data_collection.games import utils as gm_utils
 from app.backend.data_collection.games.schedules import utils as sc_utils
 
 
-class NBAScheduleRetriever(sc_utils.ScheduleRetriever):
+class BasketballScheduleRetriever(sc_utils.ScheduleRetriever):
     def __init__(self, source: gm_utils.GameSource):
         super().__init__(source)
 
@@ -24,9 +24,14 @@ class NBAScheduleRetriever(sc_utils.ScheduleRetriever):
         # initializes a html parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # extracts the table element that holds schedule data
-        table = soup.find('table')
+        div = soup.find_all('table', {'class': 'TableBaseWrapper'})
+        # CBS Sports stores completed games in a separate table -- only applicable for college sports
+        if (len(table) > 1) and (self.source.name in {'cbssports-ncaam', 'cbssports-ncaaw'}):
+            # get the last table found
+            table = table[-1]
+
         # extracts all rows except for the header row from the table
-        rows = table.find_all('tr')[1:]
+        rows = table[0].find_all('tr')[1:]
         # for each row
         for row in rows:
             # get the time and date of the game and check if it's in the right range of dates desired
