@@ -1,6 +1,4 @@
-from .schedules import *
-from .box_scores import *
 from .utils import *
+from .definitions import *
 
-__all__ = ['GameSource', 'BasketballScheduleRetriever', 'FootballScheduleRetriever', 'IceHockeyScheduleRetriever',
-           'BasketballBoxScoreRetriever', 'FootballBoxScoreRetriever', 'IceHockeyBoxScoreRetriever']
+__all__ = ['GameSource', 'BOX_SCORE_RETRIEVERS', 'SCHEDULE_RETRIEVERS']

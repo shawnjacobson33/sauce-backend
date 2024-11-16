@@ -1,11 +1,12 @@
 import asyncio
 import time
 
+from app.backend.data_collection.bookmakers import LINES_RETRIEVERS
+from app.backend.data_collection.games import BOX_SCORE_RETRIEVERS, SCHEDULE_RETRIEVERS
+
 from app.backend.data_collection.utils.modelling.base_models import Retriever
 from app.backend.data_collection.utils.executing.output import output_source_stats
 from app.backend.data_collection.utils.executing.configure import configure_game_retriever, configure_lines_retriever
-from app.backend.data_collection.utils.executing.definitions import BOX_SCORE_RETRIEVERS, SCHEDULE_RETRIEVERS, \
-    LINES_RETRIEVERS
 
 
 def cleanup(retriever: Retriever):

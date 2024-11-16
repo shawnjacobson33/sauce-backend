@@ -57,7 +57,7 @@ async def retrieve_and_report(game_retriever_names: list[str] = None, lines_retr
     # run the schedule retrieving tasks
     schedules_retrieving_time = await run_schedules_retrieving_tasks(game_retriever_names)
     # Output total number of betting lines collected and the time it took to run entire job
-    print(f"[TOTAL GAMES]: {dc_utils.AllGames.size()}, {schedules_retrieving_time}s\n")  # TODO: Bug .size() is returning everything plus whats in the database
+    print(f"[TOTAL GAMES]: {dc_utils.AllGames.size()}, {schedules_retrieving_time}s\n")
     # section header
     print(f'{"*" * 22} Lines Retrieval {"*" * 22}\n')
     # run the lines retrieving tasks second

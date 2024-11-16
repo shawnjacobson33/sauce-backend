@@ -24,38 +24,33 @@ class BasketballScheduleRetriever(sc_utils.ScheduleRetriever):
         # initializes a html parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # extracts the table element that holds schedule data
-        div = soup.find_all('table', {'class': 'TableBaseWrapper'})
-        # CBS Sports stores completed games in a separate table -- only applicable for college sports
-        if (len(table) > 1) and (self.source.name in {'cbssports-ncaam', 'cbssports-ncaaw'}):
-            # get the last table found
-            table = table[-1]
-
-        # extracts all rows except for the header row from the table
-        rows = table[0].find_all('tr')[1:]
-        # for each row
-        for row in rows:
-            # get the time and date of the game and check if it's in the right range of dates desired
-            game_time, box_score_url = sc_utils.extract_game_time_and_box_score_url(row, date)
-            # if the game time and box score url exist
-            if game_time and box_score_url:
-                # get the elements where team names lie
-                span_elems = row.find_all('span', {'class': 'TeamName'})
-                # make sure 2 teams exist
-                if len(span_elems) > 1:
-                    # get the away team name and id if it exists
-                    if away_team := sc_utils.extract_team(span_elems[0], self.source.name, self.source.league):
-                        # get the home team name and id if it exists
-                        if home_team := sc_utils.extract_team(span_elems[1], self.source.name, self.source.league):
-                            # create a game object storing related data
-                            game = {
-                                'time_processed': datetime.now(),
-                                'source': self.source.name,
-                                "league": self.source.league,
-                                "game_time": game_time,
-                                "away_team": away_team,
-                                "home_team": home_team,
-                            }
-                            # checks if box scores are available for this game and updates accordingly
-                            sc_utils.is_box_score_url_valid(game, box_score_url)
-                            # adds the game and all of its extracted data to the shared data structure
-                            self.update_games(game)
+        if divs := soup.find_all('div', {'class': 'TableBaseWrapper'}):
+            # the last table found will always contain active or yet to occur games
+            if table := divs[-1].find('table', {'class', 'TableBase-table'}):
+                # extracts all rows
+                if (rows := table.find_all('tr')) and len(rows) > 1:
+                    # for each row excluding the headers
+                    for row in rows[1:]:
+                        # get the time and date of the game and check if it's in the right range of dates desired
+                        game_time, box_score_url = sc_utils.extract_game_time_and_box_score_url(row, date)
+                        # if the game time and box score url exist
+                        if game_time and box_score_url:
+                            # get the elements where team names lie
+                            if (span_elems := row.find_all('span', {'class': 'TeamName'})) and len(span_elems) > 1:
+                                # get the away team name and id if it exists
+                                if away_team := sc_utils.extract_team(span_elems[0], self.source.name, self.source.league):
+                                    # get the home team name and id if it exists
+                                    if home_team := sc_utils.extract_team(span_elems[1], self.source.name, self.source.league):
+                                        # create a game object storing related data
+                                        game = {
+                                            'time_processed': datetime.now(),
+                                            'source': self.source.name,
+                                            "league": self.source.league,
+                                            "game_time": game_time,
+                                            "away_team": away_team,
+                                            "home_team": home_team,
+                                        }
+                                        # checks if box scores are available for this game and updates accordingly
+                                        sc_utils.is_box_score_url_valid(game, box_score_url)
+                                        # adds the game and all of its extracted data to the shared data structure
+                                        self.update_games(game)

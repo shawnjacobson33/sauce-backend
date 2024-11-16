@@ -126,7 +126,7 @@ class AllGames:
                         'home_team_id': home_team['id']
                     },
                     'info': get_game_info(away_team, home_team),
-                    'box_score_url': game['box_score_url']
+                    'box_score_url': game.get('box_score_url')
                 }
                 # update the games data structure by partition with the inputted game
                 update_games_dictionary(filtered_all_games, game_data)
@@ -141,7 +141,7 @@ class AllGames:
             return len(lines)
 
         # gets the total amount of betting lines stored
-        return sum(len(value) for value in cls._all_games.values()) / 2
+        return db.MongoDB.fetch_collection(GAMES_COLLECTION_NAME).count_documents({})
 
     @classmethod
     def store_games(cls) -> None:

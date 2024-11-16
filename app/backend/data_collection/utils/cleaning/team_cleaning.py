@@ -10,6 +10,10 @@ TEAMS_MAP = {
           'WSH': 'WAS',  # Payday
         # NOP - New Orleans Pelicans
           'NO': 'NOP',  # Dabble
+        # SA - San Antonio Spurs
+          'SAS': 'SA',  # Underdog
+        # UTA - Utah Jazz
+          'UTAH': 'UTA',  # Payday
     },
     'NFL': {
         # JAX - Jacksonville Jaguars
@@ -18,6 +22,8 @@ TEAMS_MAP = {
           'WSH': 'WAS',  # BoomFantasy, Payday
         # LAR - Los Angeles Rams
           'LA': 'LAR',  # VividPicks
+        # LV - Las Vegas Raiders
+          'OAK': 'LV',  # OwnersBox
     },
     'MLB': {},
     'NHL': {
@@ -39,6 +45,10 @@ TEAMS_MAP = {
           'LV': 'VGK',  # cbssports
         # WSH - Washington Capitals
           'WAS': 'WSH',  # cbssports
+        # TB - Tampa Bay Lightning
+          'TBL': 'TB',  # ParlayPlay
+        # WPG - Winnipeg Jets
+          'WPJ': 'WPG',  # ParlayPlay
     },
     'WNBA': {},
     'NCAA': {
@@ -48,6 +58,7 @@ TEAMS_MAP = {
         # USU - Utah State
           'USU': 'USU',  # ParlayPlay,
           'UTS': 'USU',  # VividPicks
+          'UTAHST': 'USU',  # cbssports
         # PEPP - Pepperdine
           'PEPP': 'PEPP',  # ParlayPlay, VividPicks, PrizePicks
           'PEPPERDINE': 'Pepperdine',  # Payday
@@ -76,6 +87,7 @@ TEAMS_MAP = {
         # BSU - Boise State
           'BSU': 'BSU',
           'BOISE': 'Boise State',  # ParlayPlay
+          'BOIS': 'BSU',  # Payday
         # HAW - Hawaii
           'HAW': 'HAW',  # VividPicks
           'HAWAII': 'Hawaii',  # ParlayPlay
@@ -88,8 +100,10 @@ TEAMS_MAP = {
           'OKL': 'OKLA',  # VividPicks
         # MIZZ - Missouri
           'MIZ': 'MIZZ',  # VividPicks
+          'MIZZOU': 'MIZZ',  # Dabble
         # BAMA - Alabama
           'BAMA': 'BAMA',  # VividPicks
+          'ALA': 'BAMA',  # ParlayPlay
         # IND - Indiana
           'IND': 'IND',  # VividPicks
           'INDIANA': 'Indiana',  # Payday
@@ -149,12 +163,14 @@ TEAMS_MAP = {
           'CALI': 'CAL',  # Drafters
         # LOU - Louisville
           'LOUI': 'LOU',  # Drafters
+          'LVILLE': 'LOU',  # cbssports
         # NEB - Nebraska
           'NEBRA': 'Nebraska',  # Drafters
         # WIS - Wisconsin
           'WISCO': 'WIS',  # Drafters
         # COLO - Colorado
           'COLOR': 'COLO',  # Drafters
+          'COL': 'COLO',  # Underdog
         # TEX - Texas
           'TEXAS': 'TEX',  # Drafters
         # TENN - Tennessee
@@ -163,12 +179,86 @@ TEAMS_MAP = {
           'NU': 'NW',  # Drafters
         # TULN - Tulane
           'TUL': 'TULN',  # VividPicks
+          'TULANE': 'TULN',  # cbssports-ncaaf
         # KSU - Kansas State
           'KST': 'KSU',  # VividPicks
+          'KANST': 'KSU',  # ParlayPlay
         # RUTG - Rutgers
           'RUT': 'RUTG',  # VividPicks
         # WAKE - Wake Forest
           'WF': 'WAKE',  # VividPicks
+        # UNC - North Carolina
+          'NC': 'UNC',  # Underdog
+        # CLEM - Clemson
+          'CLE': 'CLEM',  # Underdog
+        # KU - Kansas
+          'KAN': 'KU',  # Underdog
+          'KANSAS': 'KU',  # Dabble
+        # SC - South Carolina
+          'SCAR': 'SC',  # Underdog
+          'SOUTH CAROLINA': 'SC',  # Payday
+        # PITT - Pittsburgh
+          'PIT': 'PITT',  # Underdog
+        # STAN - Stanford
+          'STA': 'STAN',  # Underdog
+        # SJSU - San Jose State
+          'SJS': 'SJSU',  # Underdog
+        # MARQ - Marquette
+          'MAR': 'MARQ',  # Underdog
+        # ORST - Oregon State
+          'ORS': 'ORST',  # Underdog
+          'OREGST': 'ORST',  # cbssports-ncaaf
+        # WKU - Western Kentucky
+          'WKY': 'WKU',  # VividPicks
+          'WKENT': 'WKU',  # ParlayPlay
+        # NAVY - Navy
+          'NAV': 'NAVY',  # VividPicks
+        # ISU - Iowa State
+          'IOWAST': 'ISU',  # ParlayPlay
+          'IAST': 'ISU',  # Dabble
+        # ASU - Arizona State
+          'ARZST': 'ASU',  # ParlayPlay
+          'ARIZST': 'ASU',  # cbssports
+        # SYR - Syracuse
+          'SYRA': 'SYR',  # ParlayPlay
+        # LT - Louisiana Tech
+          'LOUTCH': 'LT',  # ParlayPlay
+        # XAV - Xavier
+          'XAVIER': 'XAV',  # Dabble
+        # USD - San Diego
+          'SD': 'USD',  # Dabble
+          'SAN DIEGO': 'USD', # Payday
+        # ORE - Oregon
+          'OREGON': 'ORE',  # Dabble
+          'OREG': 'ORE',  # cbssports
+        # CREI - Creighton
+          'CRE': 'CREI',  # Dabble
+        # POR - Portland
+          'PORT': 'POR',  # Underdog
+        # AUB - Auburn
+          'AUBURN': 'AUB',  # Dabble
+        # BAY - Baylor
+          'BAYLOR': 'BAY',  # Dabble
+        # MD - Maryland
+          'UMD': 'MD',  # BoomFantasy
+        # MINN - Minnesota
+          'MINNESOTA': 'MINN',  # Payday
+        # ND - Notre Dame
+          'NOTRE DAME': 'ND',  # Payday
+        # GTOWN - Georgetown
+          'GEORGETOWN': 'GTOWN',  # Payday
+        # MSU - Michigan State
+          'MICHST': 'MSU',  # cbssports
+        # GAST - Georgia State
+          'GAS': 'GAST',  # cbssports
+        # NMSU - New Mexico State
+          'NMEXST': 'NMSU',  # cbssports
+        # NMU - New Mexico
+          'NMEX': 'NMU',  # cbssports
+        # USF - South Florida
+          'SFLA': 'USF',  # cbssports
+        # SHSU - Sam Houston
+          'SAMST': 'SHSU',  # cbssports
     }
 }
 

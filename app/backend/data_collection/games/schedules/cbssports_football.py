@@ -27,7 +27,7 @@ class FootballScheduleRetriever(sc_utils.ScheduleRetriever):
                 # Parse the date part
                 game_date = datetime.strptime(game_date, "%A, %B %d, %Y")
                 # only want tables of games that are present and future
-                if game_date.strftime('%Y-%m-%d') not in gm_utils.get_date_range(n_days):
+                if game_date.strftime('%Y-%m-%d') in gm_utils.get_date_range(n_days):
                     # extracts all rows except for the header row from the table
                     rows = table.find_all('tr')[1:]
                     # for each row

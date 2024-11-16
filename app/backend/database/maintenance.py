@@ -1,7 +1,9 @@
 import json
 from collections import defaultdict
+from datetime import datetime
 from typing import Union
 
+from app.backend.database import GAMES_COLLECTION_NAME
 from app.backend.database.db import get_db_session
 from app.backend.database.utils.definitions import SUBJECTS_COLLECTION_NAME, MARKETS_COLLECTION_NAME, TEAMS_COLLECTION_NAME
 
@@ -65,6 +67,20 @@ def insert_team(team_data: dict = None, insert_all: bool = False, exclude: list[
     delete_duplicates(collection, 'abbr_name', 'league')
 
 
+def insert_game(game_data: dict = None, insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
+    collection = MongoDB[GAMES_COLLECTION_NAME]
+    if insert_all:
+        with open('../../data_collection/utils/reports/pending_teams.json') as file:
+            pending_teams = json.load(file)
+            pending_teams = [team_obj for bookmaker, teams in pending_teams.items() for team_obj in teams if
+                             (bookmaker not in exclude) and ((team_obj['league'], team_obj['abbr_name'],) not in exclude)]
+            collection.insert_many(pending_teams)
+    else:
+        game_data['game_time'] = datetime.strptime(game_data['game_time'], "%Y-%m-%d %H:%M:%S.%f")
+        collection.insert_one(game_data)
+
+    delete_duplicates(collection, 'time_processed', 'league')
+
 
 
 
@@ -76,11 +92,32 @@ def insert_team(team_data: dict = None, insert_all: bool = False, exclude: list[
 # insert_market(
 #     market_data=market
 # )
-team = {
-    'abbr_name': 'RUTG',
-    'full_name': "Rutgers",
-    'league': 'NCAA'
-}
-insert_team(
-    team_data=team
+# team = {
+#     'abbr_name': 'USF',
+#     'full_name': "South Florida",
+#     'league': 'NCAA'
+# }
+# insert_team(
+#     team_data=team
+# )
+game = {
+        "away_team": {
+            "league": "NBA",
+            "abbr_name": "MEM",
+            "id": "672e0516e3b845de5fe88748"
+        },
+        "game_time": "2024-11-15 22:00:48.845000",
+        "home_team": {
+            "league": "NBA",
+            "abbr_name": "GSW",
+            "id": "672e0516e3b845de5fe88741"
+        },
+        "box_score_url": "NBA_20241115_MEM@GS",
+        "league": "NBA",
+        "source": "cbssports-nba",
+        "time_processed": "2024-11-15 20:09:50.423000"
+    }
+
+insert_game(
+    game_data=game
 )

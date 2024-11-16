@@ -4,7 +4,6 @@ from typing import Optional, Any, Union
 
 from app.backend.data_collection import utils as dc_utils
 from app.backend.data_collection.bookmakers import utils as bkm_utils
-from app.backend.data_collection.bookmakers.to_do.unabated import headers
 
 
 def extract_sports_dict(data: dict) -> dict:

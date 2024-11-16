@@ -52,14 +52,16 @@ class IceHockeyBoxScoreRetriever(bs_utils.BoxScoreRetriever):
     async def retrieve(self) -> None:
         # initialize a list of requests to make
         tasks = list()
-        # for every game
-        for game in self.get_games_to_retrieve():
-            # Get the URL for the NBA schedule
-            url = gm_utils.get_url(self.source.name, 'box_scores')
-            # format the url with the unique url piece stored in the game dictionary
-            formatted_url = url.format(game['box_score_url'])
-            # Asynchronously request the data and call parse schedule for each formatted URL
-            tasks.append(gm_utils.fetch(formatted_url, self._parse_box_score, game['id']))
+        # get the games to retrieve box scores from if there are any
+        if games_to_retrieve := self.get_games_to_retrieve():
+            # for every game
+            for game_id, game_data in games_to_retrieve.items():
+                # Get the URL for the NBA schedule
+                url = gm_utils.get_url(self.source.name, 'box_scores')
+                # format the url with the unique url piece stored in the game dictionary
+                formatted_url = url.format(game_data['box_score_url'])
+                # Asynchronously request the data and call parse schedule for each formatted URL
+                tasks.append(gm_utils.fetch(formatted_url, self._parse_box_score, game_id))
 
         # gather all requests asynchronously
         await asyncio.gather(*tasks)
