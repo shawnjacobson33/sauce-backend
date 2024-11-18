@@ -1,11 +1,11 @@
 from typing import Optional
 
-from app.backend.data_collection.utils.shared_data.games import AllGames, RelevantGames
+from app.backend.data_collection.utils.shared_data.games import Games, RelevantGames
 
 
 def get_game_id(team: Optional[dict]) -> Optional[dict[str, str]]:
     # get the games associated with the desired league
-    if team and (stored_games := AllGames.get_games(team['league'])):
+    if team and (stored_games := Games.get_games(team['league'])):
         # get the game associated with this team
         if matched_game := stored_games.get(team['id']):
             # update relevant games data structure because it is used by a bookmaker

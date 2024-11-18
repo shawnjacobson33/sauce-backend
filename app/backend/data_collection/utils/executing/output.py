@@ -2,8 +2,8 @@ import json
 import os
 
 from app.backend.data_collection import bookmakers as bkm
-from app.backend.data_collection.utils import BoxScores
-from app.backend.data_collection.utils.shared_data import Teams, AllGames
+from app.backend.data_collection.utils import BoxScores, RelevantGames
+from app.backend.data_collection.utils.shared_data import RelevantData, ProblemData
 from app.backend.data_collection.utils.modelling import Retriever
 
 
@@ -16,7 +16,7 @@ def get_file_path(entity_type: str, is_pending: bool) -> str:
     return file_path
 
 
-def save_valid_leagues_to_file() -> None:
+def save_relevant_leagues_to_file() -> None:
     # create a custom file path to store the betting lines sample
     file_path = get_file_path(entity_type='leagues', is_pending=False)
     # open the pending markets file
@@ -25,7 +25,7 @@ def save_valid_leagues_to_file() -> None:
         json.dump(bkm.Leagues.get_valid_data(), f, indent=4, default=str)
 
 
-def save_valid_markets_to_file() -> None:
+def save_relevant_markets_to_file() -> None:
     # create a custom file path to store the betting lines sample
     file_path = get_file_path(entity_type='markets', is_pending=False)
     # open the pending markets file
@@ -34,25 +34,25 @@ def save_valid_markets_to_file() -> None:
         json.dump(bkm.Markets.get_valid_data(), f, indent=4, default=str)
 
 
-def save_valid_subjects_to_file() -> None:
+def save_relevant_subjects_to_file() -> None:
     # create a custom file path to store the betting lines sample
     file_path = get_file_path(entity_type='subjects', is_pending=False)
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(bkm.Subjects.get_stored_subjects(), f, indent=4, default=str)
+        json.dump(RelevantData.get_relevant_subjects(), f, indent=4, default=str)
 
 
-def save_valid_teams_to_file() -> None:
+def save_relevant_teams_to_file() -> None:
     # create a custom file path to store the betting lines sample
     file_path = get_file_path(entity_type='teams', is_pending=False)
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(Teams.get_valid_data(), f, indent=4, default=str)
+        json.dump(RelevantData.get_relevant_teams(), f, indent=4, default=str)
 
 
-def save_pending_markets_to_file() -> None:
+def save_problem_markets_to_file() -> None:
     # create a custom file path to store the betting lines sample
     file_path = get_file_path(entity_type='markets', is_pending=True)
     # open the pending markets file
@@ -61,22 +61,22 @@ def save_pending_markets_to_file() -> None:
         json.dump(bkm.Markets.get_pending_data(), f, indent=4, default=str)
 
 
-def save_pending_subjects_to_file():
+def save_problem_subjects_to_file():
     # create a custom file path to store the betting lines sample
     file_path = get_file_path(entity_type='subjects', is_pending=True)
     # open the pending subjects file
     with open(file_path, 'w') as f:
         # save the pending subjects to the file, in pretty print mode
-        json.dump(bkm.Subjects.get_pending_data(), f, indent=4, default=str)
+        json.dump(ProblemData.get_problem_subjects(), f, indent=4, default=str)
 
 
-def save_pending_teams_to_file():
+def save_problem_teams_to_file():
     # create a custom file path to store the betting lines sample
     file_path = get_file_path(entity_type='teams', is_pending=True)
     # open the pending subjects file
     with open(file_path, 'w') as f:
         # save the pending subjects to the file, in pretty print mode
-        json.dump(Teams.get_pending_data(), f, indent=4, default=str)
+        json.dump(ProblemData.get_problem_teams(), f, indent=4, default=str)
 
 
 def save_betting_lines_to_file():
@@ -94,7 +94,7 @@ def save_games_to_file():
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
-        json.dump(AllGames.get_games(), f, indent=4, default=str)
+        json.dump(RelevantGames.get_relevant_games(), f, indent=4, default=str)
 
 
 def save_box_scores_to_file():
@@ -108,14 +108,14 @@ def save_box_scores_to_file():
 
 def save_data_to_files() -> None:
     # save the valid markets,teams, leagues and subjects that were found in the database to a file to be evaluated
-    save_valid_leagues_to_file()
-    save_valid_markets_to_file()
-    save_valid_subjects_to_file()
-    save_valid_teams_to_file()
+    save_relevant_leagues_to_file()
+    save_relevant_markets_to_file()
+    save_relevant_subjects_to_file()
+    save_relevant_teams_to_file()
     # save the pending markets, teams and subjects that were not found in the database to a file to be evaluated
-    save_pending_markets_to_file()
-    save_pending_subjects_to_file()
-    save_pending_teams_to_file()
+    save_problem_markets_to_file()
+    save_problem_subjects_to_file()
+    save_problem_teams_to_file()
     # save the sample data of betting lines to a file for inspection
     save_betting_lines_to_file()
     save_games_to_file()

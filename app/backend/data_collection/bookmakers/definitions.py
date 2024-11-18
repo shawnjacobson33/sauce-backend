@@ -12,7 +12,7 @@ LINES_RETRIEVERS = {
     "OwnersBox": prm.OwnersBox,
     "ParlayPlay": prm.ParlayPlay,
     "Payday": prm.Payday,
-    "PrizePicks": prm.PrizePicks,
+    # "PrizePicks": prm.PrizePicks,
     "Rebet": prm.Rebet,
     "Sleeper": prm.Sleeper,
     "SuperDraft": prm.SuperDraft,

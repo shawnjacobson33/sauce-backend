@@ -2,7 +2,7 @@ import threading
 from collections import defaultdict
 from typing import Optional
 
-from app.backend.data_collection.utils.shared_data.games.all_games import AllGames
+from app.backend.data_collection.utils.shared_data.games.games import Games
 
 
 class ActiveGames:
@@ -32,6 +32,6 @@ class ActiveGames:
         # for each active game
         for game in games:
             # get game info stored in a structured way
-            stored_game = AllGames.get_game(game['league'], game['away_team']['id'])
+            stored_game = Games.get_game(game['league'], game['away_team']['id'])
             # add the game to the set under its league
             cls._active_games[game['league']][stored_game['id']] = stored_game

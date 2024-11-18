@@ -2,7 +2,7 @@ import asyncio
 import time
 
 from app.backend.data_collection.bookmakers import LINES_RETRIEVERS
-from app.backend.data_collection.games import BOX_SCORE_RETRIEVERS, SCHEDULE_RETRIEVERS
+from app.backend.data_collection.logistics import BOX_SCORE_RETRIEVERS, SCHEDULE_RETRIEVERS, ROSTER_RETRIEVERS
 
 from app.backend.data_collection.utils.modelling.base_models import Retriever
 from app.backend.data_collection.utils.executing.output import output_source_stats
@@ -36,6 +36,24 @@ async def launch_retriever(retriever: Retriever):
 
     # wait until the collection process is done
     await retrieve()
+
+
+def launch_roster_retrievers(roster_retriever_names: list[str] = None):
+    # 1. First Get Schedule Classes
+    roster_retriever_classes = ROSTER_RETRIEVERS.items() if not roster_retriever_names else [
+        (roster_retriever_name, ROSTER_RETRIEVERS[roster_retriever_name]) for roster_retriever_name in
+        roster_retriever_names]
+
+    # collect request task to run
+    tasks = list()
+    # for every bookmaker plug available
+    for source_name, roster_retriever_class in roster_retriever_classes:
+        # configure a bookmaker plug to collect data
+        roster_retriever = configure_game_retriever(source_name, roster_retriever_class)
+        # start collecting
+        tasks.append(asyncio.create_task(launch_retriever(roster_retriever)))
+
+    return tasks
 
 
 def launch_box_score_retrievers(box_score_retriever_names: list[str] = None):

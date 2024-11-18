@@ -24,11 +24,14 @@ TEAMS_MAP = {
           'LA': 'LAR',  # VividPicks
         # LV - Las Vegas Raiders
           'OAK': 'LV',  # OwnersBox
+        # LAC - Los Angeles Chargers
+          'SD': 'LAC',  # OwnersBox
     },
     'MLB': {},
     'NHL': {
         # CBJ - Columbus Blue Jackets
           'CLS': 'CBJ',  # OwnersBox, SuperDraft
+          'CLB': 'CBJ',  # cbssports
         # LA - Los Angeles Kings
           'LA': 'LA',  # MoneyLine, SuperDraft, VividPicks, PrizePicks, OwnersBox
           'LAK': 'LA',  # ParlayPlay, DraftKingsPick6
@@ -177,12 +180,14 @@ TEAMS_MAP = {
           'TEN': 'TENN',  # VividPicks
         # NW - Northwestern
           'NU': 'NW',  # Drafters
+          'NWEST': 'NW',  # cbssports
         # TULN - Tulane
           'TUL': 'TULN',  # VividPicks
           'TULANE': 'TULN',  # cbssports-ncaaf
         # KSU - Kansas State
           'KST': 'KSU',  # VividPicks
           'KANST': 'KSU',  # ParlayPlay
+          'KSTATE': 'KSU',  # cbssports
         # RUTG - Rutgers
           'RUT': 'RUTG',  # VividPicks
         # WAKE - Wake Forest
@@ -201,8 +206,10 @@ TEAMS_MAP = {
           'PIT': 'PITT',  # Underdog
         # STAN - Stanford
           'STA': 'STAN',  # Underdog
+          'STNFRD': 'STAN',  # cbssports
         # SJSU - San Jose State
           'SJS': 'SJSU',  # Underdog
+          'SJST': 'SJSU',  # cbssports
         # MARQ - Marquette
           'MAR': 'MARQ',  # Underdog
         # ORST - Oregon State
@@ -219,8 +226,10 @@ TEAMS_MAP = {
         # ASU - Arizona State
           'ARZST': 'ASU',  # ParlayPlay
           'ARIZST': 'ASU',  # cbssports
+          'ARIST': 'ASU',  # Dabble
         # SYR - Syracuse
           'SYRA': 'SYR',  # ParlayPlay
+          'CUSE': 'SYR',  # cbssports
         # LT - Louisiana Tech
           'LOUTCH': 'LT',  # ParlayPlay
         # XAV - Xavier
@@ -233,6 +242,7 @@ TEAMS_MAP = {
           'OREG': 'ORE',  # cbssports
         # CREI - Creighton
           'CRE': 'CREI',  # Dabble
+          'CREIGHTON': 'CREI',  # Payday
         # POR - Portland
           'PORT': 'POR',  # Underdog
         # AUB - Auburn
@@ -259,6 +269,45 @@ TEAMS_MAP = {
           'SFLA': 'USF',  # cbssports
         # SHSU - Sam Houston
           'SAMST': 'SHSU',  # cbssports
+        # ARST - Arkansas State
+          'ARKST': 'ARST',  # cbssports
+        # USA - South Alabama
+          'SALA': 'USA',  # cbssports
+        # KENN - Kennesaw State
+          'KENSAW': 'KENN',  # cbssports
+        # JMU - James Madison
+          'JMAD': 'JMU',  # cbssports
+        # JVST - Jacksonville State
+          'JAXST': 'JVST',  # cbssports
+        # MURR - Murray State
+          'MURYST': 'MURR',  # cbssports
+        # MER - Mercer
+          'MERCER': 'MER',  # cbssports
+        # ULM - Louisiana Monroe
+          'LAMON': 'ULM',  # cbssports
+        # CIN - Cincinnati
+          'CINCY': 'CIN',  # cbssports
+        # SNDSU - San Diego State
+          'SDGST': 'SNDSU',  # cbssports
+        # CHAR - Charlotte
+          'CHARLO': 'CHAR',  # cbssports
+        # MRSH - Marshall
+          'MRSHL': 'MRSH',  # cbssports
+        # TTU - Texas Tech
+          'UTTCH': 'TTU',  # cbssports
+        # WOF - Wofford
+          'WOFF': 'WOF',  # cbssports
+        # STET - Stetson
+          'STETSON': 'STET',  # cbssports
+        # ULL - Louisiana Lafayette
+          'LAFAY': 'ULL',  # cbssports
+        # HOF - Hofstra
+          'HOFSTRA': 'HOF',  # cbssports
+        # CSU - Colorado State
+          'COLOST': 'CSU',  # cbssports
+        # FAU - FAU
+          'FLAATL': 'FAU',  # Dabble
+
     }
 }
 

@@ -1,7 +1,8 @@
 from typing import Optional
 
+from app.backend.data_collection.utils import ProblemData
 from app.backend.data_collection.utils.modelling import Team
-from app.backend.data_collection.utils.shared_data import Teams
+from app.backend.data_collection.utils.shared_data import RelevantData
 from app.backend.data_collection.utils.cleaning import clean_team
 
 
@@ -42,9 +43,9 @@ def get_team_id(source_name: str, league: str, team_name: tuple[str, str]) -> Op
         # update the team object with new data
         update_team_object(team, cleaned_team_name, matched_id)
         # update the shared dictionary of valid teams
-        Teams.update_valid_data(source_name, tuple(team.__dict__.items()))
+        RelevantData.update_relevant_teams(team.__dict__, source_name, league)
         # return a dictionary representing the team object for existing values...exclude league as it will be stored elsewhere in the games object
         return {key: value for key, value in team.__dict__.items() if value is not None}
 
     # update the shared dictionary of pending teams
-    Teams.update_pending_data(source_name, tuple(team.__dict__.items()))
+    ProblemData.update_problem_teams(team.__dict__, source_name, league)

@@ -1,8 +1,8 @@
 from typing import Type
 
 from app.backend import database as db
-from app.backend.data_collection import games as gms
 from app.backend.data_collection import bookmakers as bkm
+from app.backend.data_collection.logistics import games as gms
 from app.backend.data_collection.utils.modelling import Retriever
 
 
