@@ -9,7 +9,7 @@ from app.backend.data_collection.utils.modelling import Retriever
 
 def get_file_path(entity_type: str, is_pending: bool) -> str:
     # get a customizable file path
-    file_path = f'utils/reports/{"pending" if is_pending else "valid"}_{entity_type}.json'
+    file_path = f'utils/reports/{"problem" if is_pending else "relevant"}/{entity_type}.json'
     # make any directories that don't already exist
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     # return file path

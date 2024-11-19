@@ -9,13 +9,11 @@ class BasketballRosterRetriever(rs_utils.RosterRetriever):
     def __init__(self, source: gm_utils.GameSource):
         super().__init__(source)
 
-    def _parse_subjects(self, html_content, abbr_name: str, full_name: str) -> None:
+    async def _parse_roster(self, html_content, team_id: str) -> None:
         # initialize a parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # finds the table that holds the roster
-        table = soup.find('table')
-        # get the team from the database
-        if team := dc_utils.get_team_id(self.source.name, self.source.league, (abbr_name, full_name)):
+        if table := soup.find('table'):
             # get all the rows in the table
             if (rows := table.find_all('tr')) and (len(rows) > 1):
                 # for each row excluding the headers
@@ -27,10 +25,10 @@ class BasketballRosterRetriever(rs_utils.RosterRetriever):
                             # get the link element that holds the subject's name
                             if a_elem := span_elem.find('a'):
                                 # create a subject object
-                                dc_utils.Subjects.update_subjects({
+                                self.update_subjects({
                                     'jersey_number': cells[0].text.strip(),
                                     'name': a_elem.text.strip(),
                                     'position': cells[2].text.strip(),
                                     'league': self.source.league_specific if self.source.league_specific else self.source.league,
-                                    'team_id': team['id']
+                                    'team_id': team_id
                                 })

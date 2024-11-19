@@ -3,8 +3,8 @@ from collections import defaultdict
 
 
 class ProblemData:
-    _problem_subjects: defaultdict[str, dict] = defaultdict(dict)
-    _problem_teams: defaultdict[str, dict] = defaultdict(dict)
+    _problem_subjects: defaultdict[str, dict] = defaultdict(lambda: defaultdict(dict))
+    _problem_teams: defaultdict[str, dict] = defaultdict(lambda: defaultdict(dict))
     _lock1: threading.Lock = threading.Lock()
     _lock2: threading.Lock = threading.Lock()
 
@@ -19,10 +19,10 @@ class ProblemData:
     @classmethod
     def update_problem_subjects(cls, subject: dict, source_name: str, league: str):
         with cls._lock1:
-            cls._problem_subjects[source_name][league][subject['id']] = {key: value for key, value in subject.items() if key != 'id'}
+            cls._problem_subjects[source_name][league][(subject['league'], subject['name'])] = {key: value for key, value in subject.items() if key != 'id'}
 
     @classmethod
     def update_problem_teams(cls, team: dict, source_name: str, league: str):
-        with cls._lock1:
-            cls._problem_teams[source_name][league][team['id']] = {key: value for key, value in team.items() if
+        with cls._lock2:
+            cls._problem_teams[source_name][league][team['abbr_name']] = {key: value for key, value in team.items() if
                                                                          key != 'id'}

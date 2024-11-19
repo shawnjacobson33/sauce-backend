@@ -50,8 +50,10 @@ def launch_roster_retrievers(roster_retriever_names: list[str] = None):
     for source_name, roster_retriever_class in roster_retriever_classes:
         # configure a bookmaker plug to collect data
         roster_retriever = configure_game_retriever(source_name, roster_retriever_class)
+        # get the retrieve task
+        task = launch_retriever(roster_retriever)
         # start collecting
-        tasks.append(asyncio.create_task(launch_retriever(roster_retriever)))
+        tasks.append(asyncio.create_task(task))
 
     return tasks
 

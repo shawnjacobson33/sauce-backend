@@ -22,7 +22,7 @@ class FootballScheduleRetriever(sc_utils.ScheduleRetriever):
         # Get the URL for the NBA schedule
         url = lg_utils.get_url(self.source, 'schedule')
         # Asynchronously request the data and call parse schedule for each formatted URL
-        await lg_utils.fetch(url, self._parse_schedule, DATE_RANGE_MAP[self.source.league])
+        await lg_utils.fetch(url, self._parse_schedule, DATE_RANGE_MAP[self.source.league_specific])
 
     async def _parse_schedule(self, html_content, n_days: int) -> None:
         # initializes a html parser

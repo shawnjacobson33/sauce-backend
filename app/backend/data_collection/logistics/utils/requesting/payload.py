@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 from app.backend.data_collection.utils import Source
 
@@ -18,7 +18,7 @@ URL_MAP = {
     'cbssports': {
         'ALL': {
             'box_scores': 'https://www.cbssports.com/{}/gametracker/boxscore/{}/',  # NBA_20241113_BOS@BKN
-            'subjects': 'https://www.cbssports.com/{}/teams/{}/{}/roster/',
+            'rosters': 'https://www.cbssports.com/{}/teams/{}/{}/roster/',
             'teams': 'https://www.cbssports.com/{}/teams/'
         }, 'NBA': {
             'schedule': 'https://www.cbssports.com/nba/schedule/{}/'
@@ -35,13 +35,21 @@ URL_MAP = {
 }
 
 
-def get_url(source: Source, content: str) -> Optional[str]:
+def get_url(source: Source, content: str) -> Optional[Union[dict, str]]:
     # get the data specific to source
     if source_urls := URL_MAP.get(source.name.split('-')[0]):
+        # check if a general url is mapped for the desired content
         if gen_url := source_urls.get('ALL').get(content):
-            if formatted_league := CBSSPORTS_LEAGUE_MAP.get(source.league):
-                return gen_url.format(formatted_league)
+            # format the league tailored for the url address
+            formatted_league = CBSSPORTS_LEAGUE_MAP.get(source.league_specific, source.league_specific)
+            # return data found
+            return {
+                'url': gen_url,
+                'league': formatted_league
+            }
 
-        if league_urls := source_urls.get(source.league):
+        # get the all the urls specific to this league
+        if league_urls := source_urls.get(source.league_specific):
+            # get the desired content for the league specific urls
             if spec_url := league_urls.get(content):
                 return spec_url

@@ -10,7 +10,7 @@ def configure_game_retriever(source_name: str, game_retriever: Type[Retriever]) 
     # get some source info
     if source := db.MongoDB.fetch_source(source_name):
         # create a source object
-        game_source = gms.GameSource(source['name'], source['league'], source.get('league-specific'))
+        game_source = gms.GameSource(source['name'], source['league'], source.get('league_specific'))
         # return a new schedule retriever instance
         return game_retriever(game_source)
 

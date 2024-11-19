@@ -65,7 +65,7 @@ def get_games() -> dict:
     # for each partition in the partitions predicated upon the cursor name
     for partition in IN_SEASON_LEAGUES:
         # filter by league or sport and don't include the batch_id
-        filtered_docs = games_cursor.find({'league': partition if 'NCAA' not in partition else 'NCAA'})
+        filtered_docs = games_cursor.find({'league': partition})
         # structure the documents and data based upon whether its markets or subjects data
         partitioned_data[partition] = get_structured_docs(filtered_docs)
 
@@ -75,7 +75,7 @@ def get_games() -> dict:
 
 class Games:
     """
-    _all_games: {
+    _games: {
         'NBA': {
             '1239asd09' ( team id ): {
                 'id': 123123,
@@ -88,13 +88,13 @@ class Games:
     }
 
     """
-    _all_games: dict[str, dict] = get_games()  # Gets the data stored in the database
+    _games: dict[str, dict] = get_games()  # Gets the data stored in the database
     _lock1: threading.Lock = threading.Lock()
 
     @classmethod
     def get_games(cls, league: Optional[str] = None) -> dict:
         # gets the data for the inputted partition
-        return cls._all_games.get(league) if league else cls._all_games
+        return cls._games.get(league) if league else cls._games
 
     @classmethod
     def get_game(cls, league: str, team_id: str) -> Optional[dict]:
@@ -104,8 +104,6 @@ class Games:
     @classmethod
     def update_games(cls, game: dict) -> int:
         with cls._lock1:
-            # filter the games data structure
-            filtered_all_games = cls._all_games[game['league']]
             # get the home and away team objects
             away_team, home_team = game['away_team'], game['home_team']
             # create a unique identifier (primary key) to filter on
@@ -128,8 +126,10 @@ class Games:
                     'info': get_game_info(away_team, home_team),
                     'box_score_url': game.get('box_score_url')
                 }
+                # filter the games data structure
+                league_filtered_games = cls._games[game['league']]
                 # update the games data structure by partition with the inputted game
-                update_games_dictionary(filtered_all_games, game_data)
+                update_games_dictionary(league_filtered_games, game_data)
                 # this represents a count for new games
                 return 1
 
@@ -141,7 +141,7 @@ class Games:
         # if bookmaker is inputted
         if source_name:
             # get the lines associated with that bookmaker
-            lines = cls._all_games.get(source_name, "")
+            lines = cls._games.get(source_name, "")
             # return the number of lines they have
             return len(lines)
 
@@ -150,5 +150,5 @@ class Games:
 
     @classmethod
     def store_games(cls) -> None:
-        list_of_games_objs = [game for games in cls._all_games.values() for game in games]
+        list_of_games_objs = [game for games in cls._games.values() for game in games]
         games_cursor.insert_many(list_of_games_objs)

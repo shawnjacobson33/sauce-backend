@@ -31,7 +31,6 @@ TEAMS_MAP = {
     'NHL': {
         # CBJ - Columbus Blue Jackets
           'CLS': 'CBJ',  # OwnersBox, SuperDraft
-          'CLB': 'CBJ',  # cbssports
         # LA - Los Angeles Kings
           'LA': 'LA',  # MoneyLine, SuperDraft, VividPicks, PrizePicks, OwnersBox
           'LAK': 'LA',  # ParlayPlay, DraftKingsPick6
@@ -45,9 +44,6 @@ TEAMS_MAP = {
           'MON': 'MTL',  # SuperDraft, OwnersBox
         # VGK - Vegas Golden Knights
           'VGS': 'VGK',  # Payday
-          'LV': 'VGK',  # cbssports
-        # WSH - Washington Capitals
-          'WAS': 'WSH',  # cbssports
         # TB - Tampa Bay Lightning
           'TBL': 'TB',  # ParlayPlay
         # WPG - Winnipeg Jets
@@ -61,7 +57,6 @@ TEAMS_MAP = {
         # USU - Utah State
           'USU': 'USU',  # ParlayPlay,
           'UTS': 'USU',  # VividPicks
-          'UTAHST': 'USU',  # cbssports
         # PEPP - Pepperdine
           'PEPP': 'PEPP',  # ParlayPlay, VividPicks, PrizePicks
           'PEPPERDINE': 'Pepperdine',  # Payday
@@ -82,7 +77,6 @@ TEAMS_MAP = {
         # FRES - Fresno State
           'FRES': 'FRES',  # ParlayPlay
           'FRE': 'FRES',  # VividPicks
-          'FRESNO': 'FRES',  # cbssports
         # NEV - Nevada
           'NEV': 'NEV',  # ParlayPlay, VividPicks, PrizePicks, Underdog Fantasy, Sleeper
         # HOU - Houston
@@ -121,8 +115,6 @@ TEAMS_MAP = {
           'MARQUETTE': 'Marquette',  # Payday
         # PUR - Purdue
           'PURDUE': 'Purdue',  # Payday, Dabble
-        # GRAM - Grambling State
-          'Grambling': 'Grambling State',  # sports-reference
         # BALL - Ball State
           'BALLST': 'Ball State',  # ParlayPlay
         # BUFF - Buffalo
@@ -130,43 +122,12 @@ TEAMS_MAP = {
         # OSU - Ohio State
           'OHIOST': 'Ohio State',  # Dabble
           'OHIO STATE': 'Ohio State',  # Payday
-        # CMU - Central Michigan
-          'C. Michigan': 'Central Michigan',  # cbssports
-        # BALL - Ball State
-          'Ball St.': 'Ball State',  # cbssports
-        # WMU - Western Michigan
-          'W. Michigan': 'Western Michigan',  # cbssports
-        # ALBY - Albany
-          'ALBANY': 'ALBY',  # cbssports
-        # NDSU - North Dakota State
-          'NDAKST': 'NDSU',  # cbssports
-        # MONT - Montana
-          'MNTNA': 'MONT',  # cbssports
-        # CCAR - Coastal Carolina
-          'CSTCAR': 'CCAR',  # cbssports
-        # LT - Louisiana Tech
-          'LATECH': 'LT',  # cbssports
-        # WEB - Weber State
-          'WEBER': 'WEB',  # cbssports
-        # EMU - Eastern Michigan
-          'EMICH': 'EMU',  # cbssports
-        # KENT - Kent State
-          'KENTST': 'KENT',  # cbssports
-        # AKR - Akron
-          'AKRON': 'AKR',  # cbssports
-        # M-OH - Miami (OH)
-          'MIAOH': 'M-OH',  # cbssports
-        # NIU - Northern Illinois
-          'NILL': 'NIU',  # cbssports
-        # MEM - Memphis
-          'MEMP': 'MEM',  # cbssports
         # ARK - Arkansas
           'ARKA': 'ARK',  # Drafters
         # CAL - Cal
           'CALI': 'CAL',  # Drafters
         # LOU - Louisville
           'LOUI': 'LOU',  # Drafters
-          'LVILLE': 'LOU',  # cbssports
         # NEB - Nebraska
           'NEBRA': 'Nebraska',  # Drafters
         # WIS - Wisconsin
@@ -180,14 +141,11 @@ TEAMS_MAP = {
           'TEN': 'TENN',  # VividPicks
         # NW - Northwestern
           'NU': 'NW',  # Drafters
-          'NWEST': 'NW',  # cbssports
         # TULN - Tulane
           'TUL': 'TULN',  # VividPicks
-          'TULANE': 'TULN',  # cbssports-ncaaf
         # KSU - Kansas State
           'KST': 'KSU',  # VividPicks
           'KANST': 'KSU',  # ParlayPlay
-          'KSTATE': 'KSU',  # cbssports
         # RUTG - Rutgers
           'RUT': 'RUTG',  # VividPicks
         # WAKE - Wake Forest
@@ -206,15 +164,12 @@ TEAMS_MAP = {
           'PIT': 'PITT',  # Underdog
         # STAN - Stanford
           'STA': 'STAN',  # Underdog
-          'STNFRD': 'STAN',  # cbssports
         # SJSU - San Jose State
           'SJS': 'SJSU',  # Underdog
-          'SJST': 'SJSU',  # cbssports
         # MARQ - Marquette
           'MAR': 'MARQ',  # Underdog
         # ORST - Oregon State
           'ORS': 'ORST',  # Underdog
-          'OREGST': 'ORST',  # cbssports-ncaaf
         # WKU - Western Kentucky
           'WKY': 'WKU',  # VividPicks
           'WKENT': 'WKU',  # ParlayPlay
@@ -225,11 +180,9 @@ TEAMS_MAP = {
           'IAST': 'ISU',  # Dabble
         # ASU - Arizona State
           'ARZST': 'ASU',  # ParlayPlay
-          'ARIZST': 'ASU',  # cbssports
           'ARIST': 'ASU',  # Dabble
         # SYR - Syracuse
           'SYRA': 'SYR',  # ParlayPlay
-          'CUSE': 'SYR',  # cbssports
         # LT - Louisiana Tech
           'LOUTCH': 'LT',  # ParlayPlay
         # XAV - Xavier
@@ -239,7 +192,6 @@ TEAMS_MAP = {
           'SAN DIEGO': 'USD', # Payday
         # ORE - Oregon
           'OREGON': 'ORE',  # Dabble
-          'OREG': 'ORE',  # cbssports
         # CREI - Creighton
           'CRE': 'CREI',  # Dabble
           'CREIGHTON': 'CREI',  # Payday
@@ -257,54 +209,6 @@ TEAMS_MAP = {
           'NOTRE DAME': 'ND',  # Payday
         # GTOWN - Georgetown
           'GEORGETOWN': 'GTOWN',  # Payday
-        # MSU - Michigan State
-          'MICHST': 'MSU',  # cbssports
-        # GAST - Georgia State
-          'GAS': 'GAST',  # cbssports
-        # NMSU - New Mexico State
-          'NMEXST': 'NMSU',  # cbssports
-        # NMU - New Mexico
-          'NMEX': 'NMU',  # cbssports
-        # USF - South Florida
-          'SFLA': 'USF',  # cbssports
-        # SHSU - Sam Houston
-          'SAMST': 'SHSU',  # cbssports
-        # ARST - Arkansas State
-          'ARKST': 'ARST',  # cbssports
-        # USA - South Alabama
-          'SALA': 'USA',  # cbssports
-        # KENN - Kennesaw State
-          'KENSAW': 'KENN',  # cbssports
-        # JMU - James Madison
-          'JMAD': 'JMU',  # cbssports
-        # JVST - Jacksonville State
-          'JAXST': 'JVST',  # cbssports
-        # MURR - Murray State
-          'MURYST': 'MURR',  # cbssports
-        # MER - Mercer
-          'MERCER': 'MER',  # cbssports
-        # ULM - Louisiana Monroe
-          'LAMON': 'ULM',  # cbssports
-        # CIN - Cincinnati
-          'CINCY': 'CIN',  # cbssports
-        # SNDSU - San Diego State
-          'SDGST': 'SNDSU',  # cbssports
-        # CHAR - Charlotte
-          'CHARLO': 'CHAR',  # cbssports
-        # MRSH - Marshall
-          'MRSHL': 'MRSH',  # cbssports
-        # TTU - Texas Tech
-          'UTTCH': 'TTU',  # cbssports
-        # WOF - Wofford
-          'WOFF': 'WOF',  # cbssports
-        # STET - Stetson
-          'STETSON': 'STET',  # cbssports
-        # ULL - Louisiana Lafayette
-          'LAFAY': 'ULL',  # cbssports
-        # HOF - Hofstra
-          'HOFSTRA': 'HOF',  # cbssports
-        # CSU - Colorado State
-          'COLOST': 'CSU',  # cbssports
         # FAU - FAU
           'FLAATL': 'FAU',  # Dabble
 

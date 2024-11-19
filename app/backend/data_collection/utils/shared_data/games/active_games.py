@@ -10,6 +10,7 @@ class ActiveGames:
     _active_games: {
         'NBA': {
             '123kxd90' ( game id ): {
+                'id': '123kxd90',
                 'info': 'BOS @ BKN',
                 'box_score_url': 'NBA_20241113_BOS@BKN'
                 ...
@@ -19,7 +20,7 @@ class ActiveGames:
         ...
     }
     """
-    _active_games: defaultdict[str, dict] = defaultdict(dict)
+    _active_games: defaultdict[str, dict] = defaultdict(lambda: defaultdict(dict))
     _lock1: threading.Lock = threading.Lock()
 
     @classmethod

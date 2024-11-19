@@ -6,9 +6,46 @@ from pymongo import ReturnDocument
 
 from app.backend import database as db
 from app.backend.database import SUBJECTS_COLLECTION_NAME
+from app.backend.data_collection.utils.definitions import IN_SEASON_LEAGUES
 
 # get the pointer to the subjects collection
 subjects_cursor = db.MongoDB.fetch_collection(SUBJECTS_COLLECTION_NAME)
+# get league partitions
+PARTITIONS = [league if 'NCAA' not in league else 'NCAA' for league in IN_SEASON_LEAGUES]  # Because all college team names are stored under 'NCAA' umbrella
+
+
+def update_docs(docs: dict, doc: dict, key: tuple[str, str, str]):
+    # give each team name type its id as a pair and update the dictionary
+    docs[key] = {
+        'id': str(doc['_id']),
+        'team_id': doc['team_id'],
+    }
+
+
+def structure_pair(docs: list[dict]) -> dict:
+    # use abbreviated names as keys
+    structured_docs = dict()
+    # for each team
+    for doc in docs:
+        # update the structured documents for each type of name
+        update_docs(structured_docs, doc, (doc['league'], doc['name'], doc['position']))
+
+    # return the structured documents
+    return structured_docs
+
+
+def get_subjects():
+    # initialize a dictionary to hold all the data partitioned
+    partitioned_leagues = dict()
+    # for each partition in the partitions predicated upon the cursor name
+    for league in PARTITIONS:
+        # filter by league or sport and don't include the batch_id
+        filtered_subjects = subjects_cursor.find({'league': league})
+        # structure the documents and data based upon whether its markets or subjects data
+        partitioned_leagues[league] = structure_pair(filtered_subjects)
+
+    # return the fully structured and partitioned data
+    return partitioned_leagues
 
 
 def delete_batch_id(subject_doc: dict):
@@ -39,8 +76,10 @@ def attempt_to_update(filter_condition: dict, subject: dict, batch_id: str) -> d
 
 
 def update_subjects_store(data_store: dict, subject: dict, new_subject: dict):
+    # create a unique identifier for a subject
+    key_identifier = (subject['league'], subject['name'], subject['position'])
     # update the games data structure by partition with the inputted game
-    data_store[subject['league']][subject['name']] = {
+    data_store[subject['league']][key_identifier] = {
         'id': str(new_subject['_id']),
         'team_id': subject['team_id']
     }
@@ -54,8 +93,10 @@ def check_for_updates(data_store: dict, original_subject: dict, updated_subject:
     for key in original_subject:
         # if any of the original subject's values don't match the returned subject from update
         if original_subject[key] != updated_subject[key]:
+            # create a unique identifier for a subject
+            key_identifier = (original_subject['league'], original_subject['name'], original_subject['position'])
             # track any updates to subjects
-            data_store[original_subject['league']][original_subject['name']] = {
+            data_store[original_subject['league']][key_identifier] = {
                 'orig_subject': original_subject,
                 'updated_subject': updated_subject
             }
@@ -64,7 +105,7 @@ def check_for_updates(data_store: dict, original_subject: dict, updated_subject:
 
 
 class Subjects:
-    _subjects: defaultdict[str, dict] = defaultdict(dict)
+    _subjects: dict[str, dict] = get_subjects()
     _new_subjects: defaultdict[str, dict] = defaultdict(dict)
     _updated_subjects: defaultdict[str, dict] = defaultdict(dict)
     _lock1 = threading.Lock()

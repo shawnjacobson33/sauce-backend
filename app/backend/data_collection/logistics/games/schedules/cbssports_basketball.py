@@ -31,7 +31,9 @@ class BasketballScheduleRetriever(sc_utils.ScheduleRetriever):
                 # extracts all rows
                 if (rows := table.find_all('tr')) and len(rows) > 1:
                     # for each row excluding the headers
-                    for row in rows[1:]:
+                    for i, row in enumerate(rows[1:]):
+                        if i == 50 and self.source.league_specific == 'NCAAM':
+                            asd = 123
                         # get the time and date of the game and check if it's in the right range of dates desired
                         game_time, box_score_url = sc_utils.extract_game_time_and_box_score_url(row, date)
                         # if the game time and box score url exist

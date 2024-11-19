@@ -12,4 +12,4 @@ class ScheduleRetriever(Retriever):
         self.data_collected += Games.update_games(game)
 
     def __str__(self):
-        return f'{str(self.data_collected)} ({self.source.league_specific}) games'
+        return f'{str(self.data_collected)} ({self.source.league_specific}) new/updated games'

@@ -19,9 +19,9 @@ class BasketballBoxScoreRetriever(bs_utils.BoxScoreRetriever):
             # for every game
             for game_id, game_data in games_to_retrieve.items():
                 # Get the URL for the NBA schedule
-                url = lg_utils.get_url(self.source, 'box_scores')
+                url_data = lg_utils.get_url(self.source, 'box_scores')
                 # format the url with the unique url piece stored in the game dictionary
-                formatted_url = url.format(game_data['box_score_url'])
+                formatted_url = url_data['url'].format(url_data['league'], game_data['box_score_url'])
                 # Asynchronously request the data and call parse schedule for each formatted URL
                 tasks.append(lg_utils.fetch(formatted_url, self._parse_box_score, game_id))
 
