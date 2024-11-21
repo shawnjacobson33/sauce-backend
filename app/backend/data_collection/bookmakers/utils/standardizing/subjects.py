@@ -2,7 +2,6 @@ from typing import Optional
 
 from app.backend.data_collection import utils as dc_utils
 from app.backend.data_collection.bookmakers.utils.modelling import Subject
-from app.backend.data_collection.bookmakers.utils.cleaning import clean_subject
 
 
 def filter_subject_data(league: str) -> dict:
@@ -12,26 +11,33 @@ def filter_subject_data(league: str) -> dict:
     return structured_data_store[league]
 
 
-def get_subject_id(source_name: str, league: str, subject_name: str, **kwargs) -> Optional[dict[str, str]]:
-    # create a subject object
-    subject = Subject(subject_name, league, **kwargs)
-    # clean the subject name
-    if cleaned_subject := clean_subject(subject.name):
-        # filter by league partition
-        filtered_subjects = filter_subject_data(subject.league)
-        # get the matched data if it exists
-        if matched_subject := filtered_subjects.get(cleaned_subject):
-            # add the mapped name to the matched data dictionary
-            matched_subject['name'] = cleaned_subject
-            # update the shared dictionary of valid subjects
-            dc_utils.RelevantData.update_relevant_subjects(matched_subject, source_name, league)
-            # return the matched subject id and the actual name of the subject stored in the database
-            return matched_subject
+def update_subject(subject: dict, matched_subject: dict):
+    # update the subject with its id and optionally the team id stored if 'positions' was used to index
+    subject['id'] = matched_subject['id']
+    subject['name'] = matched_subject['name']
+    subject['team_id'] = matched_subject.get('team_id', subject.get('team_id'))
 
-    # get all the attributes of the subject not found in the database that are not null
-    subject_dict = {key: value for key, value in subject.__dict__.items() if value}
+
+def get_subject(source_name: str, league: str, subject_name: str, attribute: dict) -> Optional[dict[str, str]]:
+    # create a dictionary representation of the subject
+    subject = {key: value for key, value in Subject(subject_name, league, **attribute).__dict__.items() if value}
+    # filter by league partition
+    if subjects := dc_utils.Subjects.get_subjects(league):
+        # create an identifier based upon the attributes available
+        if subjects := subjects.get(subject.get('position', subject.get('team_id'))):
+            # get the matched data if it exists
+            if matched_subject := subjects.get(dc_utils.clean_subject(subject['name'])):
+                # update the subject's data
+                update_subject(subject, matched_subject)
+                # update the shared dictionary of relevant subjects only for bookmakers
+                if 'cbssports' not in source_name:
+                    dc_utils.RelevantData.update_relevant_subjects(subject, source_name, league)
+
+                # return the matched subject id and the actual name of the subject stored in the database
+                return subject
+
     # update the shared dictionary of problem subjects
-    dc_utils.ProblemData.update_problem_subjects(subject_dict, source_name, league)
+    dc_utils.ProblemData.update_problem_subjects(subject, source_name, league)
 
 
 

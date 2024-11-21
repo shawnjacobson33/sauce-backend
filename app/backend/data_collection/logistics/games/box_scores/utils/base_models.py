@@ -10,9 +10,9 @@ class BoxScoreRetriever(dc_utils.Retriever):
 
     def get_games_to_retrieve(self) -> Optional[dict]:
         # get games that are actively going on
-        if active_games := dc_utils.ActiveGames.get_active_games(self.source.league):
+        if active_games := dc_utils.ActiveGames.get_active_games(self.source.league_specific):
             # get games that have players in them that have prop lines with bookmakers
-            if relevant_games := dc_utils.RelevantGames.get_relevant_games(self.source.league):
+            if relevant_games := dc_utils.RelevantGames.get_relevant_games(self.source.league_specific):
                 # only want games that are going on that are relevant
                 return active_games.intersection(relevant_games)
 
@@ -25,4 +25,4 @@ class BoxScoreRetriever(dc_utils.Retriever):
         self.data_collected += 1
 
     def __str__(self):
-        return f'{str(self.data_collected)} ({self.source.league_specific}) new games'
+        return f'{str(self.data_collected)} ({self.source.league_specific}) player stat lines collected'

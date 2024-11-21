@@ -5,13 +5,15 @@ from app.backend.data_collection import utils as dc_utils
 from app.backend.data_collection.bookmakers import utils as bkm_utils
 
 
-def extract_league(data: dict) -> Optional[str]:
+def extract_league(data: dict, source_name: str) -> Optional[str]:
     # get the league from data, if exists then keep going
     if league := data.get('league'):
         # clean the league
         cleaned_league = bkm_utils.clean_league(league)
         # check if league is valid
-        if bkm_utils.is_league_valid(league):
+        if bkm_utils.is_league_valid(cleaned_league):
+            # to track the leagues being collected
+            bkm_utils.Leagues.update_valid_leagues(source_name, league)
             # return valid and clean league
             return cleaned_league
 
@@ -31,7 +33,7 @@ def extract_team(bookmaker_name: str, league: str, data: list) -> Optional[dict[
     # extract the subject team
     abbr_team_name = data[-1][1:-1].replace('r.(', '')
     # get the team id and team name from the database
-    if team_data := dc_utils.get_team_id(bookmaker_name, league, ('abbr_name', abbr_team_name)):
+    if team_data := dc_utils.get_team_id(bookmaker_name, league if 'NCAA' not in league else 'NCAA', abbr_team_name):
         # return the team id and team name
         return team_data
 
@@ -39,10 +41,8 @@ def extract_team(bookmaker_name: str, league: str, data: list) -> Optional[dict[
 def extract_subject(bookmaker_name: str, data: list, league: str, team: dict) -> Optional[dict[str, str]]:
     # get subject name
     subject_name = ' '.join(data[:-1])
-    # gets the subject id or log message
-    subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team)
     # return both subject id search result and cleaned subject
-    return subject
+    return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_line_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, None]]:
@@ -82,38 +82,38 @@ class MoneyLine(bkm_utils.LinesRetriever):
             # for each prop line in the data, if they exist
             for prop_line in data:
                 # extract the league name, keep going if it exists
-                if league := extract_league(prop_line):  # TODO: BUG - GETTING "NFL" AS LEAGUE FOR NCAAF PLAYERS
-                    # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+                if league := extract_league(prop_line, self.source.name):  # TODO: BUG - GETTING "NFL" AS LEAGUE FOR NCAAF PLAYERS
                     # extract the market id from database and market name from dictionary
                     if market := extract_market(self.source.name, prop_line, league):
                         # get the subject data from data, if exists keep going
                         if subject_data := prop_line.get('title'):
                             # splits the data into sub components containing individual attributes
                             subject_components = subject_data.split()
-                            # get the player's team
-                            team = extract_team(self.source.name, league, subject_components)
-                            # get the game data using the team data
-                            if game := bkm_utils.get_game_id(team):
-                                # extract the subject id and subject name from the database and dictionary respectively
-                                if subject := extract_subject(self.source.name, subject_components, league, team):
-                                    # get line and label for every one that exists
-                                    for line, label in extract_line_and_label(prop_line):
-                                        # update shared data
-                                        self.update_betting_lines({
-                                            'batch_id': self.batch_id,
-                                            'time_processed': datetime.now(),
-                                            'league': league,
-                                            'game_id': game['id'],
-                                            'game': game['info'],
-                                            'market_category': 'player_props',
-                                            'market_id': market['id'],
-                                            'market': market['name'],
-                                            'subject_id': subject['id'],
-                                            'subject': subject['name'],
-                                            'bookmaker': self.source.name,
-                                            'label': label,
-                                            'line': line,
-                                            'odds': self.source.default_payout.odds,
-                                            'is_boosted': 'Discount' in market['name'] # TODO: COULD BE A BUG HERE...DEFINITELY NOT GOING TO WORK
-                                        })
+                            # Make sure subject components meets an expected format
+                            if '(' in subject_components[-1]:
+                                # get the player's team
+                                if team := extract_team(self.source.name, league, subject_components):
+                                    # get the game data using the team data
+                                    if game := bkm_utils.get_game_id(league, team):
+                                        # extract the subject id and subject name from the database and dictionary respectively
+                                        if subject := extract_subject(self.source.name, subject_components, league, team):
+                                            # get line and label for every one that exists
+                                            for line, label in extract_line_and_label(prop_line):
+                                                # update shared data
+                                                self.update_betting_lines({
+                                                    'batch_id': self.batch_id,
+                                                    'time_processed': datetime.now(),
+                                                    'league': league,
+                                                    'game_id': game['id'],
+                                                    'game': game['info'],
+                                                    'market_category': 'player_props',
+                                                    'market_id': market['id'],
+                                                    'market': market['name'],
+                                                    'subject_id': subject['id'],
+                                                    'subject': subject['name'],
+                                                    'bookmaker': self.source.name,
+                                                    'label': label,
+                                                    'line': line,
+                                                    'odds': self.source.default_payout.odds,
+                                                    'is_boosted': 'Discount' in market['name'] # TODO: COULD BE A BUG HERE...DEFINITELY NOT GOING TO WORK
+                                                })

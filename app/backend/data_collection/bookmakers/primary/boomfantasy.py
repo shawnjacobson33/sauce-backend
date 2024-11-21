@@ -35,7 +35,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict, je
             # get subject name
             subject_name = ' '.join([first_name, last_name])
             # gets the subject id and subject name
-            subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, jersey_number=jersey_number)
+            subject = bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team, jersey_number=jersey_number)
             # return both subject id search result and cleaned subject
             return subject
 

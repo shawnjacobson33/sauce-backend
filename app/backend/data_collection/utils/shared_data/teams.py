@@ -20,7 +20,7 @@ def structure_pair(docs: list[dict]) -> dict:
     return structured_docs
 
 
-def get_structured_teams() -> dict:
+def get_teams() -> dict:
     # get collection being used
     teams_cursor = db.MongoDB.fetch_collection(db.TEAMS_COLLECTION_NAME)
     # initialize a dictionary to hold all the data partitioned
@@ -46,7 +46,7 @@ class Teams:
         ...
     }
     """
-    _teams: defaultdict[str, dict[str, dict]] = get_structured_teams()
+    _teams: defaultdict[str, dict[str, dict]] = get_teams()
 
     @classmethod
     def get_teams(cls, league: str = None) -> dict[str, dict]:

@@ -46,7 +46,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         # get some player attributes
         position = extract_position(data)
         # gets the subject id or log message
-        subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position)
+        subject = bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team, position=position)
         # return both subject id search result and cleaned subject
         return subject
 

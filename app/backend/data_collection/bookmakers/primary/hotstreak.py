@@ -117,7 +117,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
         # get subject attributes
         position, jersey_number = extract_position(data), extract_jersey_number(data)
         # gets the subject id or log message
-        subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, position=position, jersey_number=jersey_number)
+        subject = bkm_utils.get_subject(bookmaker_name, league, subject_name, position=position, jersey_number=jersey_number)
         # return both subject id search result and cleaned subject
         return subject
 

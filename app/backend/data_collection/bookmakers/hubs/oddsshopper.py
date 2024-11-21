@@ -44,7 +44,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
         # get the subject's name from the dictionary, if exists keep going
         if subject_name := first_participants_data.get('name'):
             # gets the subject id or log message
-            subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name)
+            subject = bkm_utils.get_subject(bookmaker_name, league, subject_name)
             # return both subject id search result and cleaned subject
             return subject
 

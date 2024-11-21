@@ -19,7 +19,8 @@ class RelevantData:
     @classmethod
     def update_relevant_subjects(cls, subject: dict, source_name: str, league: str) -> None:
         with cls._lock1:
-            cls._relevant_subjects[source_name][league][subject['id']] = {key: value for key, value in subject.items() if
+            partitioned_subjects = cls._relevant_subjects[source_name][league]
+            partitioned_subjects[subject['id']] = {key: value for key, value in subject.items() if
                                                              key != 'id'}
 
     @classmethod

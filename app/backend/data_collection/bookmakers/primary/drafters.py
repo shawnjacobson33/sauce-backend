@@ -17,7 +17,7 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
         # get the team the player is on and only return if it exists and doesn't equal MMA
         if (abbr_team_name := event_data.get('own')) and (abbr_team_name != 'MMA'):
             # get the team id and team name from the database
-            if team_data := dc_utils.get_team_id(bookmaker_name, league, ('abbr_name', abbr_team_name)):
+            if team_data := dc_utils.get_team_id(bookmaker_name, league, abbr_team_name):
                 # return the team id and team name
                 return team_data
 
@@ -28,7 +28,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: Optional
         # get player attributes
         position = extract_position(data)
         # gets the subject id or log message
-        subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team, position=position)
+        subject = bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team, position=position)
         # return both subject id search result and cleaned subject
         return subject
 

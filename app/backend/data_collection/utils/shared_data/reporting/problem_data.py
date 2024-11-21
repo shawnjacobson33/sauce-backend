@@ -19,7 +19,8 @@ class ProblemData:
     @classmethod
     def update_problem_subjects(cls, subject: dict, source_name: str, league: str):
         with cls._lock1:
-            cls._problem_subjects[source_name][league][(subject['league'], subject['name'])] = {key: value for key, value in subject.items() if key != 'id'}
+            partitioned_subjects = cls._problem_subjects[source_name][league]
+            partitioned_subjects[subject['name']] = {key: value for key, value in subject.items() if key != 'id'}
 
     @classmethod
     def update_problem_teams(cls, team: dict, source_name: str, league: str):

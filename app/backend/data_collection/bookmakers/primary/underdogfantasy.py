@@ -138,7 +138,7 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
     # get the player's team name from the dictionary
     if abbr_team_name := data.get('subject_team'):
         # get the team id and team name from the database
-        if team_data := dc_utils.get_team_id(bookmaker_name, league, ('abbr_name', abbr_team_name)):
+        if team_data := dc_utils.get_team_id(bookmaker_name, league, abbr_team_name):
             # return the team id and team name
             return team_data
 
@@ -147,7 +147,7 @@ def extract_subject(bookmaker_name: str, league: str, data: dict, team: dict) ->
     # get the player name, if exists keep executing
     if subject_name := data.get('subject'):
         # gets the subject id or log message
-        subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team)
+        subject = bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
         # return both subject id search result and cleaned subject
         return subject
 

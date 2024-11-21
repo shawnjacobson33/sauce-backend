@@ -23,7 +23,7 @@ class BoxScores:
 
             # if the subject doesn't have a box score yet, create one
             filtered_box_scores[subject['id']] = {
-                'subject': subject['name'],
+                'name': subject['name'],
                 'stats': {
                     stat_type: box_score
                 }

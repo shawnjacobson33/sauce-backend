@@ -28,10 +28,12 @@ async def run_box_score_retrieving_tasks(logistic_retriever_names: list[str] = N
     print(f'{"*" * 22} Box Score Retrieval {"*" * 22}\n')
     # initialize a time of zero
     box_score_retrieving_time = 0
+    # TODO: figure out way to fetch started games from Games
     # This will run logic to delete any games that finished (no longer need game ids after they are done)
     if started_games := db.MongoDB.fetch_started_games():
         # store any currently running games in the data structure
-        dc_utils.ActiveGames.update_games(started_games)
+        dc_utils.ActiveGames.update_active_games(started_games)
+        # TODO: need to remove games from Games class
         # get the coroutines
         box_score_retrieving_tasks = dc_utils.launch_box_score_retrievers(logistic_retriever_names)
         # start making requests asynchronously
@@ -44,7 +46,7 @@ async def run_box_score_retrieving_tasks(logistic_retriever_names: list[str] = N
     print(f"[ACTIVE GAMES]: {dc_utils.BoxScores.size()}, {box_score_retrieving_time}s\n")
 
 
-async def run_schedules_retrieving_tasks(schedule_retriever_names: list[str] = None) -> None:
+async def run_schedule_retrieving_tasks(schedule_retriever_names: list[str] = None) -> None:
     # section header
     print(f'{"*" * 22} Schedule Retrieval {"*" * 22}\n')
     # get the coroutines
@@ -59,7 +61,7 @@ async def run_schedules_retrieving_tasks(schedule_retriever_names: list[str] = N
     print(f"[SCHEDULED GAMES]: {dc_utils.Games.size()}, {schedules_retrieving_time}s\n")
 
 
-async def run_lines_retrieving_tasks(lines_retriever_names: list[str] = None) -> None:
+async def run_betting_lines_retrieving_tasks(lines_retriever_names: list[str] = None) -> None:
     # section header
     print(f'{"*" * 22} Lines Retrieval {"*" * 22}\n')
     # get the coroutines
@@ -77,12 +79,12 @@ async def run_lines_retrieving_tasks(lines_retriever_names: list[str] = None) ->
 async def retrieve_and_report(logistic_retriever_names: list[str] = None, lines_retriever_names: list[str] = None) -> None:
     # # run the roster retrieving tasks
     # await run_roster_retrieving_tasks(logistic_retriever_names)
+    # # run the schedule retrieving tasks
+    # await run_schedule_retrieving_tasks(logistic_retriever_names)
     # run the box score retrieving tasks
     await run_box_score_retrieving_tasks(logistic_retriever_names)
-    # run the schedule retrieving tasks
-    await run_schedules_retrieving_tasks(logistic_retriever_names)
     # # run the lines retrieving tasks second
-    # await run_lines_retrieving_tasks(lines_retriever_names)
+    # await run_betting_lines_retrieving_tasks(lines_retriever_names)
     # save all output data to json files
     dc_utils.save_data_to_files()
     # output the size of the file storing the betting lines

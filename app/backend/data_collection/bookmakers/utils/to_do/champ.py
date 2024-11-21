@@ -5,7 +5,7 @@ from app.backend.data_collection.bookmakers.base import BookmakerPlug
 from app.backend.data_collection.bkm_utils.requesting import RequestManager
 from app.backend.data_collection.bkm_utils.constants import IN_SEASON_LEAGUES, LEAGUE_SPORT_MAP
 from app.backend.data_collection.bkm_utils.objects import Subject, Market, Bookmaker
-from app.backend.data_collection.bkm_utils.standardizing import get_subject_id, get_market_id
+from app.backend.data_collection.bkm_utils.standardizing import get_subject, get_market_id
 from app.backend.data_collection.bookmakers.utils import clean_market, clean_subject, clean_position
 
 
@@ -53,7 +53,7 @@ class Champ(bkm_utils.LinesRetriever):
                             subject = clean_subject(subject)
                             subject_id = subject_ids.get(f'{subject}{subject_team}')
                             if not subject_id:
-                                subject_id = self.ds.get_subject_id(Subject(subject, league, subject_team))
+                                subject_id = self.ds.get_subject(Subject(subject, league, subject_team))
                                 subject_ids[f'{subject}{subject_team}'] = subject_id
                         else:
                             continue

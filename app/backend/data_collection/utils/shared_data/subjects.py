@@ -6,6 +6,7 @@ from pymongo import ReturnDocument
 
 from app.backend import database as db
 from app.backend.database import SUBJECTS_COLLECTION_NAME
+from app.backend.data_collection.utils.cleaning import clean_subject
 from app.backend.data_collection.utils.definitions import IN_SEASON_LEAGUES
 
 # get the pointer to the subjects collection
@@ -14,21 +15,28 @@ subjects_cursor = db.MongoDB.fetch_collection(SUBJECTS_COLLECTION_NAME)
 PARTITIONS = [league if 'NCAA' not in league else 'NCAA' for league in IN_SEASON_LEAGUES]  # Because all college team names are stored under 'NCAA' umbrella
 
 
-def update_docs(docs: dict, doc: dict, key: tuple[str, str, str]):
-    # give each team name type its id as a pair and update the dictionary
-    docs[key] = {
-        'id': str(doc['_id']),
-        'team_id': doc['team_id'],
+def update_subjects_store(data_store: dict, subject: dict):
+    # helps to standardize names across different sources
+    cleaned_subject_name = clean_subject(subject['name'])
+    # add key value pair...one with position identifier and one with team identifier because of varying available data for bookmakers
+    data_store[subject['position']][cleaned_subject_name] = {
+        'id': str(subject['_id']),
+        'name': subject['name'],
+        'team_id': subject['team_id'],
+    }
+    data_store[subject['team_id']][cleaned_subject_name] = {
+        'id': str(subject['_id']),
+        'name': subject['name']
     }
 
 
-def structure_pair(docs: list[dict]) -> dict:
+def store_subjects(docs: list[dict]) -> dict:
     # use abbreviated names as keys
-    structured_docs = dict()
+    structured_docs = defaultdict(lambda: defaultdict(dict))
     # for each team
     for doc in docs:
-        # update the structured documents for each type of name
-        update_docs(structured_docs, doc, (doc['league'], doc['name'], doc['position']))
+        # update the structured docs with the subject
+        update_subjects_store(structured_docs, doc)
 
     # return the structured documents
     return structured_docs
@@ -42,7 +50,7 @@ def get_subjects():
         # filter by league or sport and don't include the batch_id
         filtered_subjects = subjects_cursor.find({'league': league})
         # structure the documents and data based upon whether its markets or subjects data
-        partitioned_leagues[league] = structure_pair(filtered_subjects)
+        partitioned_leagues[league] = store_subjects(filtered_subjects)
 
     # return the fully structured and partitioned data
     return partitioned_leagues
@@ -75,16 +83,6 @@ def attempt_to_update(filter_condition: dict, subject: dict, batch_id: str) -> d
     )
 
 
-def update_subjects_store(data_store: dict, subject: dict, new_subject: dict):
-    # create a unique identifier for a subject
-    key_identifier = (subject['league'], subject['name'], subject['position'])
-    # update the games data structure by partition with the inputted game
-    data_store[subject['league']][key_identifier] = {
-        'id': str(new_subject['_id']),
-        'team_id': subject['team_id']
-    }
-
-
 def check_for_updates(data_store: dict, original_subject: dict, updated_subject: dict):
     # don't need the batch id when comparing player attributes
     delete_batch_id(original_subject)
@@ -93,10 +91,8 @@ def check_for_updates(data_store: dict, original_subject: dict, updated_subject:
     for key in original_subject:
         # if any of the original subject's values don't match the returned subject from update
         if original_subject[key] != updated_subject[key]:
-            # create a unique identifier for a subject
-            key_identifier = (original_subject['league'], original_subject['name'], original_subject['position'])
             # track any updates to subjects
-            data_store[original_subject['league']][key_identifier] = {
+            data_store[original_subject['league']][original_subject['position']][original_subject['name']] = {
                 'orig_subject': original_subject,
                 'updated_subject': updated_subject
             }
@@ -105,7 +101,23 @@ def check_for_updates(data_store: dict, original_subject: dict, updated_subject:
 
 
 class Subjects:
-    _subjects: dict[str, dict] = get_subjects()
+    """
+    {
+        'NBA': {
+            ('Jayson Tatum', 'SF'): {
+                'id': '123314asd',
+                'team_id': '-0iasd132',
+            },
+            ('Jayson Tatum', 'asdiooi124' <-- team id): {
+                ''id': '123314asd',
+                'team_id': '-0iasd132',
+            },
+            ...
+        },
+        ...
+    }
+    """
+    _subjects: dict[str, dict[tuple[str, str], dict]] = get_subjects()
     _new_subjects: defaultdict[str, dict] = defaultdict(dict)
     _updated_subjects: defaultdict[str, dict] = defaultdict(dict)
     _lock1 = threading.Lock()
@@ -113,12 +125,21 @@ class Subjects:
     _lock3 = threading.Lock()
 
     @classmethod
-    def get_subjects(cls):
-        return cls._subjects
+    def get_subjects(cls, league: str = None) -> dict:
+        return cls._subjects.get(league, cls._subjects)
 
     @classmethod
-    def get_new_subjects(cls):
-        return cls._subjects
+    def get_subject(cls, subject: dict):
+        # gets the subjects associated with the league
+        if league_filtered_subjects := cls._subjects.get(subject['league']):
+            # gets the subject based upon whether the bookmaker gives out position or team data
+            if attribute_filtered_subjects := league_filtered_subjects.get(subject.get('position', subject.get('team_id'))):
+                # finally get the data where there is a name match
+                return attribute_filtered_subjects.get(subject.get('name'))
+
+    @classmethod
+    def get_new_subjects(cls, league: str = None) -> dict:
+        return cls._subjects.get(league, cls._subjects)
 
     @classmethod
     def get_updated_subjects(cls):
@@ -126,6 +147,7 @@ class Subjects:
 
     @classmethod
     def update_subjects(cls, subject: dict):
+        """ONLY USED FOR ROSTER COLLECTION"""
         with cls._lock1:
             # create a new batch id to identify if a subject was inserted or not
             batch_id = str(uuid.uuid4())
@@ -141,9 +163,11 @@ class Subjects:
             returned_subject = attempt_to_update(filter_condition, subject, batch_id)
             # if the returned subject document now has the batch id just created...then it was inserted
             if returned_subject.get('batch_id') == batch_id:
+                # update the subject with return id
+                subject['id'] = str(returned_subject['_id'])
                 # update both data stores with the new subject
-                update_subjects_store(cls._subjects, subject, returned_subject)
-                update_subjects_store(cls._new_subjects, subject, returned_subject)
+                update_subjects_store(cls.get_subjects(subject['league']), subject)
+                update_subjects_store(cls.get_new_subjects(subject['league']), subject)
                 # this represents a count for new subjects
                 return 1
 

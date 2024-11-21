@@ -2,6 +2,8 @@ import threading
 from collections import defaultdict
 from typing import Optional
 
+from watchfiles import awatch
+
 from app.backend.data_collection.utils.shared_data.games.games import Games
 
 
@@ -29,10 +31,15 @@ class ActiveGames:
         return cls._active_games.get(league) if league else cls._active_games
 
     @classmethod
-    def update_games(cls, games: list[dict]):
+    def update_active_games(cls, games: list[dict]):
         # for each active game
         for game in games:
-            # get game info stored in a structured way
-            stored_game = Games.get_game(game['league'], game['away_team']['id'])
+            # restructure the data dictionary
+            game['id'] = str(game['_id'])
+            away_team, home_team = game.pop('away_team'), game.pop('home_team')
+            game[away_team['abbr_name']], game[home_team['abbr_name']] = away_team, home_team
             # add the game to the set under its league
-            cls._active_games[game['league']][stored_game['id']] = stored_game
+            cls._active_games[game['league']][game['id']] = {
+                key: value for key, value in game.items() if key not in {'time_processed', 'game_time', 'league',
+                                                                         'source'}
+            }

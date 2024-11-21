@@ -59,9 +59,9 @@ def get_structured_docs(docs: list[dict]) -> dict:
     return games
 
 
-def get_games() -> dict:
+def get_games() -> defaultdict:
     # initialize a dictionary to hold all the data partitioned
-    partitioned_data = dict()
+    partitioned_data = defaultdict(dict)
     # for each partition in the partitions predicated upon the cursor name
     for partition in IN_SEASON_LEAGUES:
         # filter by league or sport and don't include the batch_id
@@ -88,7 +88,7 @@ class Games:
     }
 
     """
-    _games: dict[str, dict] = get_games()  # Gets the data stored in the database
+    _games: defaultdict[str, dict] = get_games()  # Gets the data stored in the database
     _lock1: threading.Lock = threading.Lock()
 
     @classmethod
@@ -99,7 +99,8 @@ class Games:
     @classmethod
     def get_game(cls, league: str, team_id: str) -> Optional[dict]:
         # returns a game associated with the team id passed
-        return Games.get_games(league).get(team_id)
+        if games := Games.get_games(league):
+            return games.get(team_id)
 
     @classmethod
     def update_games(cls, game: dict) -> int:
@@ -125,6 +126,7 @@ class Games:
                     },
                     'info': get_game_info(away_team, home_team),
                     'box_score_url': game.get('box_score_url')
+                    # TODO: Store game time and move the storage of any active games into this class again?
                 }
                 # filter the games data structure
                 league_filtered_games = cls._games[game['league']]

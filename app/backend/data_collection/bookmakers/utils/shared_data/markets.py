@@ -43,6 +43,7 @@ def restructure_sets(data: dict) -> dict:
 
 
 class Markets:
+    # TODO: transfer any storage of valid or pending data to separate files
     _stored_data: dict = structure_data()  # Unique to Markets
     _valid_data: dict = defaultdict(set)
     _pending_data: dict = defaultdict(set)  # Hold data that needs to be evaluated manually before db insertion

@@ -33,9 +33,9 @@ def clean_subject(subject_name: str) -> str:
     # remove any suffixes
     cleaned_subject_name = remove_suffixes(cleaned_subject_name)
     # remove any punctuation (T.J., Wan'Dale, Ray-Ray)
-    cleaned_subject_name = cleaned_subject_name.replace('.', '').replace("'", '').replace('-', '')
+    cleaned_subject_name = cleaned_subject_name.replace('.', '').replace("'", '').replace('-', ' ')
     # remove any digits or extra spaces
     cleaned_subject_name = re.sub(r'\s+', ' ', cleaned_subject_name)  # Replace any double or more spaces with singles
     cleaned_subject_name = re.sub(r'\d', '', cleaned_subject_name).strip()  # Remove digits and extra whitespace
     # return the cleaned subject name, uppercased
-    return cleaned_subject_name.upper()
+    return cleaned_subject_name.title()

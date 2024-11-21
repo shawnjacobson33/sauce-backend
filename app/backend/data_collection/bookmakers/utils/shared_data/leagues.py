@@ -20,6 +20,7 @@ def restructure_sets(data: dict) -> dict:
 
 class Leagues:
     _stored_data: dict  # Dictionary is much faster than any other data structure.
+    # TODO: transfer any storage of valid or pending data to separate files
     _valid_data: dict = defaultdict(set)
     _pending_data: dict = defaultdict(set)  # Hold data that needs to be evaluated manually before db insertion
     _lock1 = threading.Lock()

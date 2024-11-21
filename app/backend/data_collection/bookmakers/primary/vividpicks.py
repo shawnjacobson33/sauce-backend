@@ -27,7 +27,7 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
     # get the team name from the dictionary
     if abbr_team_name := data.get('abvTeamName'):
         # store an abbreviated team name tuple
-        team_name = ('abbr_name', abbr_team_name)
+        team_name = abbr_team_name
         # if it doesn't exist and there is a full team name available
         if not abbr_team_name and (full_team_name := data.get('teamName')):
             # update the team name tuple with the full team name
@@ -42,10 +42,8 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
 def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
     # get the player's name, if it exists keep going
     if subject_name := data.get('name'):
-        # gets the subject id or log message
-        subject = bkm_utils.get_subject_id(bookmaker_name, league, subject_name, team=team)
         # return both subject id search result and cleaned subject
-        return subject
+        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_multiplier(data: dict, market: str) -> Optional[float]:

@@ -41,7 +41,7 @@ def extract_goalie_stats(cells) -> dict[str, int]:
         'Shots Against': int(next(data)),
         'Goals Against': int(next(data)),
         'Saves': int(next(data)),
-        'Save Percentage': int(next(data)),
+        'Save Percentage': float(next(data)),
         'Time On Ice': extract_time_on_ice(data)
     }
 
@@ -70,33 +70,39 @@ class IceHockeyBoxScoreRetriever(bs_utils.BoxScoreRetriever):
     async def _parse_box_score(self, html_content, game_id: str) -> None:
         # initializes a html parser
         soup = BeautifulSoup(html_content, 'html.parser')
-        # get all the divs that contain the desired tables for both teams -- 2 for non-goalie, 2 for goalie
-        if (divs := soup.find_all('div', {'class': 'gametracker-scrollable-table__content'})) and (len(divs) == 4):
-            # for each div
-            for div in divs:
-                # get the table within that div
-                table = div.find('table')
-                # get all rows in the table
-                if (rows := table.find_all('tr')) and len(rows) > 1:
-                    # for each row not including the headers and totals
-                    for row in rows[1:-1]:
-                        # gets all data cells in the row and make sure expected length matches
-                        if cells := row.find_all('td'):
-                            # extracts subject data from shared data structure
-                            if subject := bs_utils.extract_subject(cells[0], self.source.league, self.source.name):
-                                # get everything but the player name
-                                stats = cells[1:]
-                                # this means that it is a non-goalie box score
-                                if len(stats) == 8:
-                                    # get the non goalie box score data
-                                    if non_goalie_box_score := extract_non_goalie_stats(stats):
-                                        # update the shared box score data class
-                                        self.update_box_scores(game_id, subject, non_goalie_box_score, stat_type='all')
-                                # this means it is a goalie box score
-                                elif len(stats) == 5:
-                                    # get the goalie box score
-                                    if goalie_box_score := extract_goalie_stats(stats):
-                                        # update the shared box score data class
-                                        self.update_box_scores(game_id, subject, goalie_box_score, stat_type='all')
+        # get the div containing all box scores tables
+        if div := soup.find('div', {'class': 'gametracker-table--boxscore-player-stats'}):
+            # get all the divs containing box score tables
+            if box_score_divs := div.find_all('div', {'class': 'gametracker-app__table-row gametracker-app__table-row--split'}):
+                # for each div
+                for box_score_div in box_score_divs:
+                    # get all divs inside box score type div
+                    if team_spec_divs := box_score_div.contents:
+                        # for each individual team's box score type div
+                        for team_spec_div in team_spec_divs:
+                            # get the table body that stores the box score data
+                            if tbody := team_spec_div.find('tbody', {'class': 'gametracker-table__tbody'}):
+                                # get all rows in the table
+                                if rows := tbody.find_all('tr'):
+                                    # for each row not including the totals
+                                    for row in [row for row in rows if 'gametracker-table__tr' in row.get('class')]:
+                                        # gets all data cells in the row and make sure expected length matches
+                                        if cells := row.find_all('td'):
+                                            # extracts subject data from shared data structure
+                                            if subject := bs_utils.extract_subject(cells[0], self.source.league, self.source.name):
+                                                # get everything but the player name
+                                                stats = cells[1:]
+                                                # this means that it is a non-goalie box score
+                                                if len(stats) == 8:
+                                                    # get the non goalie box score data
+                                                    if non_goalie_box_score := extract_non_goalie_stats(stats):
+                                                        # update the shared box score data class
+                                                        self.update_box_scores(game_id, subject, non_goalie_box_score, stat_type='all')
+                                                # this means it is a goalie box score
+                                                elif len(stats) == 5:
+                                                    # get the goalie box score
+                                                    if goalie_box_score := extract_goalie_stats(stats):
+                                                        # update the shared box score data class
+                                                        self.update_box_scores(game_id, subject, goalie_box_score, stat_type='all')
 
 
