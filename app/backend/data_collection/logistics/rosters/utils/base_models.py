@@ -4,6 +4,10 @@ from app.backend.data_collection import utils as dc_utils
 from app.backend.data_collection.logistics import utils as lg_utils
 from app.backend.data_collection.logistics.games import utils as gm_utils
 
+
+# TODO: DUPLICATES FOUND
+# NCAAM : Jordan Williams
+
 NCAA_TEAM_NAME_URL_MAP = {
     'NCAAM': {
         'abbr_name': {
@@ -23,7 +27,7 @@ NCAA_TEAM_NAME_URL_MAP = {
             'new-mexico-state-aggies': 'new-mexico-st-aggies',
             'hawaii-rainbow-warriors': 'hawaii-warriors',
             'utep-miners': 'texasel-paso-miners',
-            'miami-(oh)-redhawks': 'miami-ohio-redhawks',
+            'miami-oh-redhawks': 'miami-ohio-redhawks',
             'appalachian-state-mountaineers': 'app-state-mountaineers',
             'texas-state-bobcats': 'texas-statesan-marcos-bobcats',
         }
@@ -56,9 +60,12 @@ def get_full_team_name_formatted(team: dict, source: dc_utils.Source) -> str:
     return full_name_formatted
 
 
-def get_abbr_team_name_formatted(abbr_name: str) -> str:
+def get_abbr_team_name_formatted(league: str, abbr_name: str) -> str:
     # get the abbr team name formatted for the url
-    return NCAA_TEAM_NAME_URL_MAP['abbr_name'].get(abbr_name, abbr_name)
+    if ncaa_team_map := NCAA_TEAM_NAME_URL_MAP.get(league):
+        return ncaa_team_map['abbr_name'].get(abbr_name, abbr_name)
+
+    return abbr_name
 
 
 class RosterRetriever(dc_utils.Retriever):
@@ -73,24 +80,28 @@ class RosterRetriever(dc_utils.Retriever):
             # initialize a list to hold requests to make
             tasks = list()
             # for each abbreviated and full name for each team
-            for team in teams.values():
+            for abbr_name, team_data in teams.items():
                 # get the full team name prepared
-                full_team_name = get_full_team_name_formatted(team, self.source)
+                f_full_team_name = get_full_team_name_formatted(team_data, self.source)
                 # get the abbreviated team name prepared
-                abbr_name = get_abbr_team_name_formatted(team['abbr_name']) if self.source.league_specific == 'NCAAM' else team['abbr_name']
+                f_abbr_name = get_abbr_team_name_formatted(self.source.league_specific, abbr_name)
                 # format the url with the names
-                formatted_url = url_data['url'].format(url_data['league'], abbr_name, full_team_name)
+                formatted_url = url_data['url'].format(url_data['league'], f_abbr_name, f_full_team_name)
+                # update team with its abbreviated name for outputting purposes
+                team_data['abbr_name'] = abbr_name
                 # add the request to tasks
-                tasks.append(lg_utils.fetch(formatted_url, self._parse_roster, team['id']))
+                tasks.append(lg_utils.fetch(formatted_url, self._parse_roster, team_data))
 
             await asyncio.gather(*tasks)
 
     def _parse_roster(self, html_content, team_id: str):
         pass
 
-    def update_subjects(self, subject: dict):
-        dc_utils.Subjects.update_subjects(subject)
-        self.data_collected += 1
+    def update_subjects(self, subject: dict) -> None:
+        self.data_collected += dc_utils.Subjects.update_store(subject)
+
+    def log_team(self, abbr_name: str) -> None:
+        print(f"[{self.source.league_specific}]: {abbr_name}")
 
     def __str__(self):
-        return f'{str(self.data_collected)} ({self.source.league_specific}) new/updated subjects'
+        return f'{str(self.data_collected)} ({self.source.league_specific}) Updated/Added subjects'

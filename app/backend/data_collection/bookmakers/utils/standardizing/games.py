@@ -1,6 +1,6 @@
 from typing import Optional
 
-from app.backend.data_collection.utils.shared_data.games import Games, RelevantGames
+from app.backend.data_collection.utils.shared_data.storing import Games, RelevantGames
 
 
 def get_game_id(league: str, team: dict) -> Optional[dict[str, str]]:

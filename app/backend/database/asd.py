@@ -12,11 +12,11 @@ def delete_duplicates(collection: Collection, name: str, attribute: str):
     count = 0
     for doc in collection.find():
         count += 1
-        if counter_dict[(doc[attribute], doc[name], doc['position'])] > 0:
+        if counter_dict[(doc[attribute], doc[name], doc['team_id'])] > 0:
             print(doc)
 
-        counter_dict[(doc[attribute], doc[name], doc['position'])] += 1
+        counter_dict[(doc[attribute], doc[name], doc['team_id'])] += 1
 
-delete_duplicates(MongoDB.get_collection(SUBJECTS_COLLECTION_NAME), 'name', 'league')
+# delete_duplicates(MongoDB.get_collection(SUBJECTS_COLLECTION_NAME), 'name', 'league')
 
-# MongoDB.get_collection(SUBJECTS_COLLECTION_NAME).delete_many({'team_id': '672e0707ff7950d37b61e30c'})
+# MongoDB.get_collection(SUBJECTS_COLLECTION_NAME).delete_many({'league': 'NCAAM'})

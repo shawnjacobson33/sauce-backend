@@ -11,7 +11,7 @@ def get_team_id(source_name: str, league: str, abbr_team_name: str) -> Optional[
     # clean the team name if the source isn't cbssports
     cleaned_team_name = clean_team(abbr_team_name, league) if 'cbssports' not in source_name else abbr_team_name
     # get the matched data if it exists
-    if team_id := Teams.get_team(league, cleaned_team_name):
+    if team_id := Teams.get_team(league, cleaned_team_name, content='id'):
         # update the team object with new data
         team.id, team.abbr_name = team_id, cleaned_team_name
         # teams that come from schedule parsers are not necessarily relevant

@@ -2,10 +2,6 @@ import threading
 from collections import defaultdict
 from typing import Optional
 
-from watchfiles import awatch
-
-from app.backend.data_collection.utils.shared_data.games.games import Games
-
 
 class ActiveGames:
     """

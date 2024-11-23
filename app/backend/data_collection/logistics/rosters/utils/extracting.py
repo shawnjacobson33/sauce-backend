@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 
 from app.backend.data_collection.logistics import utils as lg_utils
 from app.backend.data_collection.utils import Source
-from app.backend.database import TEAMS_COLLECTION_NAME
+
 
 CONFERENCE_MAP = {
     'NCAA': {
@@ -64,18 +64,18 @@ def parse_teams(html_content, conferences, league: str) -> Optional[list[tuple[s
                 return teams
 
 
-import requests
-from app.backend import database as db
-
-source = Source('cbssports-ncaaf', 'NCAAF')
-# get the url to retrieve teams
-url = lg_utils.get_url(source, 'teams')
-# get the conferences for the particular league if not NCAA then just get every conference
-conferences = CONFERENCE_MAP.get(source.league, 'all')
-# make the request
-response = requests.get(url)
-
-teams = parse_teams(response.text, conferences, source.league)
-
-db.MongoDB.fetch_collection(TEAMS_COLLECTION_NAME).insert_many(teams)
+# import requests
+# from app.backend import database as db
+#
+# source = Source('cbssports-ncaaf', 'NCAAF')
+# # get the url to retrieve teams
+# url = lg_utils.get_url(source, 'teams')
+# # get the conferences for the particular league if not NCAA then just get every conference
+# conferences = CONFERENCE_MAP.get(source.league, 'all')
+# # make the request
+# response = requests.get(url)
+#
+# teams = parse_teams(response.text, conferences, source.league)
+#
+# db.MongoDB.fetch_collection(TEAMS_COLLECTION_NAME).insert_many(teams)
 

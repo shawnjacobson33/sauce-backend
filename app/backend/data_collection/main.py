@@ -20,7 +20,7 @@ async def run_roster_retrieving_tasks(logistic_retriever_names: list[str] = None
     # return time taken to complete retrieving tasks
     roster_retrieving_time = round(t2 - t1, 3)
     # Output total number of betting lines collected and the time it took to run entire job
-    print(f"[TOTAL SUBJECTS]: {dc_utils.Subjects.size()}, {roster_retrieving_time}s\n")
+    print(f"[TOTAL SUBJECTS]: {dc_utils.Subjects.count_unique_subjects()}, {roster_retrieving_time}s\n")
     
 
 async def run_box_score_retrieving_tasks(logistic_retriever_names: list[str] = None) -> None:
@@ -77,12 +77,12 @@ async def run_betting_lines_retrieving_tasks(lines_retriever_names: list[str] = 
 
 
 async def retrieve_and_report(logistic_retriever_names: list[str] = None, lines_retriever_names: list[str] = None) -> None:
-    # # run the roster retrieving tasks
-    # await run_roster_retrieving_tasks(logistic_retriever_names)
+    # run the roster retrieving tasks
+    await run_roster_retrieving_tasks(logistic_retriever_names)
     # # run the schedule retrieving tasks
     # await run_schedule_retrieving_tasks(logistic_retriever_names)
     # run the box score retrieving tasks
-    await run_box_score_retrieving_tasks(logistic_retriever_names)
+    # await run_box_score_retrieving_tasks(logistic_retriever_names)
     # # run the lines retrieving tasks second
     # await run_betting_lines_retrieving_tasks(lines_retriever_names)
     # save all output data to json files
@@ -96,4 +96,4 @@ def execute(logistic_retriever_names: list[str] = None, lines_retriever_names: l
 
 
 if __name__ == '__main__':
-    execute()
+    execute(['cbssports-ncaam'])

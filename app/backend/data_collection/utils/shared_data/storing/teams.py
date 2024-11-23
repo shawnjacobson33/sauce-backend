@@ -14,7 +14,13 @@ def structure_pair(docs: list[dict]) -> dict:
     # for each team
     for doc in docs:
         # give each team name type its id as a pair and update the dictionary
-        structured_docs[doc['abbr_name']] = str(doc['_id'])
+        structured_docs[doc['abbr_name']] = {
+            'full_name': doc['full_name'],
+            'id': str(doc['_id']),
+        }
+        # structured_docs[doc['abbr_name']] = structured_docs[doc['full_name']] = str(doc['_id'])
+        # TODO: remove the full name when done
+        # TODO: think about for rosters you need full names
 
     # return the structured documents
     return structured_docs
@@ -53,8 +59,10 @@ class Teams:
         return cls._teams[league] if league else cls._teams
 
     @classmethod
-    def get_team(cls, league: str, abbr_team_name: str) -> Optional[str]:
+    def get_team(cls, league: str, abbr_name: str, content: str = None) -> Optional[str]:
         # gets the teams filtered down by league
         if league_filtered_teams := cls._teams.get(league):
             # gets the id for the abbreviated team name
-            return league_filtered_teams.get(abbr_team_name)
+            if team := league_filtered_teams.get(abbr_name):
+                # return the attribute predicated upon the content wanted
+                return team['full_name'] if content == 'full_name' else team['id']

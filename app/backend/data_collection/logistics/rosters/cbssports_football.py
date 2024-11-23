@@ -9,7 +9,7 @@ class FootballRosterRetriever(rs_utils.RosterRetriever):
     def __init__(self, source: gm_utils.GameSource):
         super().__init__(source)
 
-    async def _parse_roster(self, html_content, team_id: str) -> None:
+    async def _parse_roster(self, html_content, team: dict) -> None:
         # initialize a parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # finds the table that holds the roster
@@ -35,6 +35,9 @@ class FootballRosterRetriever(rs_utils.RosterRetriever):
                                             'jersey_number': cells[0].text.strip(),
                                             'name': a_elem.text.strip(),
                                             'position': position,
-                                            'league': self.source.league_specific if self.source.league_specific else self.source.league,
-                                            'team_id': team_id
+                                            'league': self.source.league_specific,
+                                            'team_id': team['id'],
+                                            'location_from': cells[-1].text.strip()
                                         })
+
+            self.log_team(team['abbr_name'])
