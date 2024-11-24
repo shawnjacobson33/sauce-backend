@@ -48,21 +48,17 @@ def extract_position(data: dict) -> Optional[str]:
 def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
     # get the subject team name abbreviated, if exists keep going
     if abbr_team_name := data.get('teamAbbreviation'):
-        # get the team id and team name from the database
-        if team_data := dc_utils.get_team_id(bookmaker_name, league, ('abbr_name', abbr_team_name.upper())):
-            # return the team id and team name
-            return team_data
+        # return the team id and team name
+        return dc_utils.get_team(bookmaker_name, league, abbr_team_name.upper())
 
 
 def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
     # get subject name from the data, if exists then execute
     if subject_name := data.get('playerName'):
-        # extract player attributes
-        position = extract_position(data)
+        # # extract player attributes
+        # position = extract_position(data)
         # gets the subject id or log message
-        subject = bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team, position=position)
-        # return both subject id search result and cleaned subject
-        return subject
+        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_label(data: dict) -> Optional[str]:
@@ -186,27 +182,27 @@ class Dabble(bkm_utils.LinesRetriever):
                 # get the market id from the db and extract the market name from the dictionary
                 if market := extract_market(self.source.name, player_prop_data, markets_map, league):
                     # extract the player's team data
-                    team = extract_team(self.source.name, league, player_prop_data)
-                    # use the team data to get game data
-                    if game := bkm_utils.get_game_id(team):
-                        # get the subject id from the db and extract the subject name from dictionary
-                        if subject := extract_subject(self.source.name, player_prop_data, league, team):
-                            # get over/under label for player prop and get numeric line, only execute if both exist
-                            if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
-                                # update shared data
-                                self.update_betting_lines({
-                                    'batch_id': self.batch_id,
-                                    'time_processed': datetime.now(),
-                                    'league': league,
-                                    'game_id': game['id'],
-                                    'game': game['info'],
-                                    'market_category': 'player_props',
-                                    'market_id': market['id'],
-                                    'market': market['name'],
-                                    'subject_id': subject['id'],
-                                    'subject': subject['name'],
-                                    'bookmaker': self.source.name,
-                                    'label': label,
-                                    'line': line,
-                                    'odds': self.source.default_payout.odds
-                                })
+                    if team := extract_team(self.source.name, league, player_prop_data):
+                        # use the team data to get game data
+                        if game := bkm_utils.get_game_id(league, team['id']):
+                            # get the subject id from the db and extract the subject name from dictionary
+                            if subject := extract_subject(self.source.name, player_prop_data, league, team):
+                                # get over/under label for player prop and get numeric line, only execute if both exist
+                                if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
+                                    # update shared data
+                                    self.update_betting_lines({
+                                        'batch_id': self.batch_id,
+                                        'time_processed': datetime.now(),
+                                        'bookmaker': self.source.name,
+                                        'league': league,
+                                        'game_id': game['id'],
+                                        'game': game['info'],
+                                        'market_category': 'player_props',
+                                        'market_id': market['id'],
+                                        'market': market['name'],
+                                        'subject_id': subject['id'],
+                                        'subject': subject['name'],
+                                        'label': label,
+                                        'line': line,
+                                        'odds': self.source.default_payout.odds
+                                    })

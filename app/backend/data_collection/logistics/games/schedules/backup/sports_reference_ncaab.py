@@ -32,7 +32,7 @@ def extract_away_team(source_name: str, league: str, rows) -> Optional[dict]:
             # get the away team name
             away_team_name = a_elem.text
             # get the team id and team name from the database
-            if team_data := dc_utils.get_team_id(source_name, league, away_team_name):
+            if team_data := dc_utils.get_team(source_name, league, away_team_name):
                 # return the team id and team name
                 return team_data
 
@@ -49,7 +49,7 @@ def extract_home_team_and_game_time(source_name: str, league: str, rows, date: d
                     # get the home team name from the link's inner html
                     home_team_name = a_elem.text
                     # get the team id and team name from the database
-                    if team_data := dc_utils.get_team_id(source_name, league, home_team_name):
+                    if team_data := dc_utils.get_team(source_name, league, home_team_name):
                         # extract and convert the game time to a date and then cast to a string
                         game_time = get_game_time(date, start_time.text.strip())
                         # return the home team and game time

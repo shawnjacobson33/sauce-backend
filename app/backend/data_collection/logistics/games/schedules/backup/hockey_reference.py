@@ -59,7 +59,7 @@ def extract_team(source_name: str, league: str, row, attr_name: str) -> Optional
     # get the team name from the html
      if team_name := extract_data(row, attr_name):
          # get the team id and team name from the database
-         if team_data := dc_utils.get_team_id(source_name, league, team_name):
+         if team_data := dc_utils.get_team(source_name, league, team_name):
              # return the team id and team name
              return team_data
 

@@ -33,10 +33,8 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
             # update the team name tuple with the full team name
             team_name = ('full_name', full_team_name)
 
-        # get the team id and team name from the database
-        if team_data := dc_utils.get_team_id(bookmaker_name, league, team_name):
-            # return the team id and team name
-            return team_data
+        # return the team id and team name
+        return dc_utils.get_team(bookmaker_name, league, team_name)
 
 
 def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
@@ -51,6 +49,8 @@ def extract_multiplier(data: dict, market: str) -> Optional[float]:
     if (m_player_props_data := data.get('configPlayerProps')) and (m_market_data := m_player_props_data.get(market)):
         # return the multiplier cast from a str to float
         return float(m_market_data.get('multiplier', 1.0))
+
+    return 1.0
 
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
@@ -117,36 +117,36 @@ class VividPicks(bkm_utils.LinesRetriever):
                     # for each dictionary in event data's activePlayers if they exist
                     for player_data in event_data.get('activePlayers', []):
                         # get player attributes
-                        team = extract_team(self.source.name, league, player_data)
-                        # get the game data from database
-                        if game := bkm_utils.get_game_id(team):
-                            # get the subject id from db and extract the subject name from dictionary
-                            if subject := extract_subject(self.source.name, player_data, league, team):
-                                # for each dictionary in player data's visiblePlayerProps if they exist
-                                for prop_line_data in player_data.get('visiblePlayerProps', []):
-                                    # get the market id from the db and extract the market name from the dictionary
-                                    if market := extract_market(self.source.name, prop_line_data, league):
-                                        # get the numeric over/under line from the dictionary, keep going if exists
-                                        if line := prop_line_data.get('val'):
-                                            # extract the multiplier from the dictionary
-                                            multiplier = extract_multiplier(player_data, market['name'])
-                                            # for each label (depending on the value of the multiplier)
-                                            for label in get_labels(multiplier):
-                                                # update shared data
-                                                self.update_betting_lines({
-                                                    'batch_id': self.batch_id,
-                                                    'time_processed': datetime.now(),
-                                                    'league': league,
-                                                    'game_id': game['id'],
-                                                    'game': game['info'],
-                                                    'market_category': 'player_props',
-                                                    'market_id': market['id'],
-                                                    'market': market['name'],
-                                                    'subject_id': subject['id'],
-                                                    'subject': subject['name'],
-                                                    'bookmaker': self.source.name,
-                                                    'label': label,
-                                                    'line': line,
-                                                    'multiplier': multiplier,
-                                                    'odds': get_odds(self.source.default_payout.odds, multiplier)
-                                                })
+                        if team := extract_team(self.source.name, league, player_data):
+                            # get the game data from database
+                            if game := bkm_utils.get_game_id(league, team['id']):
+                                # get the subject id from db and extract the subject name from dictionary
+                                if subject := extract_subject(self.source.name, player_data, league, team):
+                                    # for each dictionary in player data's visiblePlayerProps if they exist
+                                    for prop_line_data in player_data.get('visiblePlayerProps', []):
+                                        # get the market id from the db and extract the market name from the dictionary
+                                        if market := extract_market(self.source.name, prop_line_data, league):
+                                            # get the numeric over/under line from the dictionary, keep going if exists
+                                            if line := prop_line_data.get('val'):
+                                                # extract the multiplier from the dictionary
+                                                multiplier = extract_multiplier(player_data, market['name'])
+                                                # for each label (depending on the value of the multiplier)
+                                                for label in get_labels(multiplier):
+                                                    # update shared data
+                                                    self.update_betting_lines({
+                                                        'batch_id': self.batch_id,
+                                                        'time_processed': datetime.now(),
+                                                        'bookmaker': self.source.name,
+                                                        'league': league,
+                                                        'game_id': game['id'],
+                                                        'game': game['info'],
+                                                        'market_category': 'player_props',
+                                                        'market_id': market['id'],
+                                                        'market': market['name'],
+                                                        'subject_id': subject['id'],
+                                                        'subject': subject['name'],
+                                                        'label': label,
+                                                        'line': line,
+                                                        'multiplier': multiplier,
+                                                        'odds': get_odds(self.source.default_payout.odds, multiplier)
+                                                    })

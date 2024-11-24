@@ -1,5 +1,8 @@
 import threading
 from collections import defaultdict
+from typing import Union
+
+import pandas as pd
 
 from app.backend import database as db
 from app.backend.database import SUBJECTS_COLLECTION_NAME
@@ -12,61 +15,48 @@ collection = db.MongoDB.fetch_collection(SUBJECTS_COLLECTION_NAME)
 class Subjects:
     """
     {
-        'NBA': {
-            'SF': {
-                'Jayson Tatum': {
-                    'id': '123314asd',
-                    'name': 'Jayson Tatum',
-                    'team_id': '-0iasd132',
-                }
-                ...
-            },
-            '-0iasd132' (team_id): {
-                'Jayson Tatum': {
-                    'id': '123314asd',
-                    'name': 'Jayson Tatum',
-                },
-                ...
-            },
-            ...
+        ('NBA', 'SG', 'Jayson Tatum'): {
+            'id': 123asd,
+            'name': 'Jayson Tatum',
+            'team_id': 'jpij[jasd'
         },
+        ('NBA', 'asdjhasd', 'Jayson Tatum'): {
+            'id': 123asd,
+            'name': 'Jayson Tatum',
+        }
         ...
     }
     """
-    _subjects: dict[str, dict[tuple[str, str], dict]] = get_subjects(collection)
+    _subjects: defaultdict = get_subjects(collection)
     _lock1 = threading.Lock()
 
     @classmethod
-    def get_store(cls, league: str = None) -> dict:
-        return cls._subjects.get(league) if league else cls._subjects
+    def get_store(cls, dtype: str = None) -> Union[dict, pd.DataFrame]:
+        if dtype == 'df':
+            return pd.DataFrame(
+                [[league, subject_data['id'], name, subject_data['team_id']]
+                for league, league_data in cls._subjects.items()
+                for attr, attr_data in league_data.items() if len(attr) < 5  # only want one attribute (pos in this case)
+                for name, subject_data in attr_data.items()],
+                columns=['league', 'id', 'name', 'team_id']
+            )
 
-    @classmethod
-    def get_subject(cls, subject: dict) -> dict:
-        # gets the subjects associated with the league
-        if league_filtered_subjects := cls._subjects.get(subject['league']):
-            # gets the subject based upon whether the bookmaker gives out position or team data
-            if attribute_filtered_subjects := league_filtered_subjects.get(subject.get('position', subject.get('team_id'))):
-                # finally get the data where there is a name match
-                return attribute_filtered_subjects.get(subject.get('name'))
+        return cls._subjects
 
     @classmethod
     def update_store(cls, subject: dict) -> int:
         """ONLY USED FOR ROSTER Retrieving"""
         with cls._lock1:
             # update the data stores and database if needed
-            return update_subjects(collection, cls.get_store(subject['league']), subject)
+            return update_subjects(collection, cls._subjects, subject)
 
     @classmethod
-    def count_unique_subjects(cls):
-        # TODO: This is wrong somehow
+    def count_unique_subjects(cls) -> int:
         count = 0
-        subject_tracker = defaultdict(int)
-        for league_name, leagues in cls.get_store().items():
-            for subj_attr, subject in leagues.items():
-                for subject_name in subject:
-                    if subject_tracker[(league_name, subj_attr, subject_name)] == 0:
+        for league, league_data in cls._subjects.items():
+            for attr, attr_data in league_data.items():
+                if len(attr) < 5:  # only want one attribute (pos in this case)
+                    for subject in attr_data:
                         count += 1
-
-                    subject_tracker[(league_name, subj_attr, subject_name)] += 1
 
         return count

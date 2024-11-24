@@ -281,6 +281,7 @@ MARKET_MAP = {
           'RECEIVING_TOUCHDOWNS': 'Receiving Touchdowns',  # BoomFantasy
           'Total Receiving Touchdowns': 'Receiving Touchdowns',  # OddsShopper
           'receiving_touchdowns': 'Receiving Touchdowns',  # Sleeper
+          'Receiving TDs': 'Receiving Touchdowns',  # UnderdogFantasy
         # Longest Reception
           'Longest Reception': 'Longest Reception',  # OddsShopper, OwnersBox, ParlayPlay
           'Longest Reception (Yards)': 'Longest Reception',  # Dabble
@@ -395,6 +396,8 @@ MARKET_MAP = {
           'Avg Yards Per Punt': 'Average Yards Per Punt',  # Underdog Fantasy
         # Punts
           'Total Punts': 'Punts',  # Underdog Fantasy
+        # Punts Inside 20
+          'Punts Inside 20': 'Punts Inside 20',  # PrizePicks
     },
     'Ice Hockey': {
         # Points
@@ -414,6 +417,8 @@ MARKET_MAP = {
           'ShotsOnGoal': 'Shots On Goal',  # Vivid Picks
           'Player shots on goal (incl. overtime)': 'Shots On Goal',  # Rebet
           'Total Shots On Goal': 'Shots On Goal',  # Rebet
+        # 1st Period Shots On Goal
+          '1st Period Shots': '1st Period Shots On Goal',  # UnderdogFantasy
         # Blocked Shots
           'Blocked Shots': 'Blocked Shots',
           'BLKS': 'Blocked Shots',  # Payday

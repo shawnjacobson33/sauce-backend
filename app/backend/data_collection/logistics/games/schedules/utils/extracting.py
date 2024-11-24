@@ -29,7 +29,7 @@ def extract_team(span_elem, source_name: str, league: str) -> Optional[dict[str,
         # if the link has expected number of components
         if len(link_components) > 3:
             # get the team id and team name from the database
-            if team := dc_utils.get_team_id(source_name, league, link_components[3]):
+            if team := dc_utils.get_team(source_name, league, link_components[3]):
                 # don't need redundant data
                 del team['league']
                 # return the team id and team name

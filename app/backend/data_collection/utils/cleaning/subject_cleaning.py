@@ -3,10 +3,30 @@ import unicodedata
 
 
 SUBJECT_MAP = {
-    'Basketball': {
-        ''
+    'NBA': {
+        'Cameron Thomas': 'Cam Thomas',
+        'Cam Johnson': 'Cameron Johnson',
+        'Alex Sarr': 'Alexandre Sarr',
+        'Carlton Carrington': 'Bub Carrington'
+    },
+    'NFL': {
+        'Chigoziem Okonkwo': 'Chig Okonkwo',
+        'Josh Palmer': 'Joshua Palmer',
+        'Christopher Brooks': 'Chris Brooks',
+        'Andrew Ogletree': 'Drew Ogletree',
+        'Joshua Metellus': 'Josh Metellus',
+        'Jartavius Martin': 'Quan Martin',
+        'Patrick Surtain II': 'Pat Surtain II',
+        'Tariq Woolen': 'Riq Woolen',
+        'Kamren Curl': 'Kam Curl',
+        'Decobie Durant': 'Cobie Durant'
+    },
+    'NHL': {
+        'Mitchell Marner': 'Mitch Marner',
+        'Christopher Tanev': 'Chris Tanev'
     }
 }
+
 SUFFIXES = [
     'Jr.', 'jr.', 'jr', 'Jr', 'Sr.', 'sr.', 'sr', 'Sr', 'III', 'II', 'IV', 'V'
 ]
@@ -27,15 +47,19 @@ def remove_suffixes(subject_name: str):
     return subject_name
 
 
-def clean_subject(subject_name: str) -> str:
+def clean_subject(subject_name: str, league: str) -> str:
+    if f_subject_map := SUBJECT_MAP.get(league):
+        return f_subject_map.get(subject_name, subject_name)
+
     # map any accented letters to their nearest ASCII equivalent
-    cleaned_subject_name = normalize_accented_letters(subject_name)
+    c_name = normalize_accented_letters(subject_name)
     # remove any suffixes
-    cleaned_subject_name = remove_suffixes(cleaned_subject_name)
+    c_name = remove_suffixes(c_name)
     # remove any punctuation (T.J., Wan'Dale, Ray-Ray)
-    cleaned_subject_name = cleaned_subject_name.replace('.', '').replace("'", '').replace('-', ' ')
+    c_name = c_name.replace('.', '').replace("'", '').replace('-', ' ')
     # remove any digits or extra spaces
-    cleaned_subject_name = re.sub(r'\s+', ' ', cleaned_subject_name)  # Replace any double or more spaces with singles
-    cleaned_subject_name = re.sub(r'\d', '', cleaned_subject_name).strip()  # Remove digits and extra whitespace
+    c_name = re.sub(r'\s+', ' ', c_name)  # Replace any double or more spaces with singles
+    c_name = re.sub(r'\d', '', c_name).strip()  # Remove digits and extra whitespace
     # return the cleaned subject name, uppercased
-    return cleaned_subject_name.title()
+    # TODO: Map to the correct format
+    return c_name.title()

@@ -1,3 +1,3 @@
 from .teams import *
 
-__all__ = ['get_team_id']
+__all__ = ['get_team']

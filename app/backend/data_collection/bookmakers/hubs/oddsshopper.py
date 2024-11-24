@@ -43,10 +43,8 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
     if (participants_data := data.get('participants')) and (first_participants_data := participants_data[0]):
         # get the subject's name from the dictionary, if exists keep going
         if subject_name := first_participants_data.get('name'):
-            # gets the subject id or log message
-            subject = bkm_utils.get_subject(bookmaker_name, league, subject_name)
             # return both subject id search result and cleaned subject
-            return subject
+            return bkm_utils.get_subject(bookmaker_name, league, subject_name)
 
 
 def extract_bookmaker(data: dict) -> Optional[str]:
@@ -127,41 +125,42 @@ class OddsShopper(bkm_utils.LinesRetriever):
             bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
             # for each event/game in the response data
             for event in json_data:
-                # gets the game info from the dictionary
-                game_info = event.get('eventName')
                 # get the market id from db and extract market from the data
                 if market := extract_market(self.source.name, event, league):
                     # TODO: For Subjects Shared Data make sure to store a team id so that it can be used to get a game
                     # get the subject id from the db and extract the subject from outcome
                     if subject := extract_subject(self.source.name, event, league):
-                        # iterate through each side or bookmaker for the prop line
-                        for side in event.get('sides', []):
-                            # get the label from the side dictionary, only keep going if it exists
-                            if label := side.get('label'):
-                                # iterate through each outcome for each side
-                                for outcome in side.get('outcomes', []):
-                                    # get the bookmaker from outcome dictionary, if exists keep executing
-                                    if bookmaker_name := extract_bookmaker(outcome):
-                                        # extract odds, implied probability, true win probability, and expected value if they exist
-                                        odds, impl_prob, tw_prob, ev = extract_odds_and_other_stats(outcome)
-                                        # update shared data
-                                        self.update_betting_lines({
-                                            'batch_id': self.batch_id,
-                                            'time_processed': datetime.now(),
-                                            'league': league,
-                                            'game_info': game_info,
-                                            'market_category': 'player_props',
-                                            'market_id': market['id'],
-                                            'market': market['name'],
-                                            'subject_id': subject['id'],
-                                            'subject': subject['name'],
-                                            'bookmaker': bookmaker_name,
-                                            'label': label,
-                                            'line': outcome.get('line', '0.5'),
-                                            'odds': odds,
-                                            'implied_prob': impl_prob,
-                                            'other_stats': {
-                                                'true_win_prob': tw_prob,
-                                                'ev': ev
-                                            }
-                                        }, lines_source_name=bookmaker_name)
+                        # use team data to get some game data
+                        if game := bkm_utils.get_game_id(league, subject['team_id']):
+                            # iterate through each side or bookmaker for the prop line
+                            for side in event.get('sides', []):
+                                # get the label from the side dictionary, only keep going if it exists
+                                if label := side.get('label'):
+                                    # iterate through each outcome for each side
+                                    for outcome in side.get('outcomes', []):
+                                        # get the bookmaker from outcome dictionary, if exists keep executing
+                                        if bookmaker_name := extract_bookmaker(outcome):
+                                            # extract odds, implied probability, true win probability, and expected value if they exist
+                                            odds, impl_prob, tw_prob, ev = extract_odds_and_other_stats(outcome)
+                                            # update shared data
+                                            self.update_betting_lines({
+                                                'batch_id': self.batch_id,
+                                                'time_processed': datetime.now(),
+                                                'bookmaker': bookmaker_name,
+                                                'league': league,
+                                                'game_id': game['id'],
+                                                'game': game['info'],
+                                                'market_category': 'player_props',
+                                                'market_id': market['id'],
+                                                'market': market['name'],
+                                                'subject_id': subject['id'],
+                                                'subject': subject['name'],
+                                                'label': label,
+                                                'line': float(outcome.get('line', 0.5)),
+                                                'odds': odds,
+                                                'implied_prob': impl_prob,
+                                                'other_stats': {
+                                                    'true_win_prob': tw_prob,
+                                                    'ev': ev
+                                                }
+                                            }, lines_source_name=bookmaker_name)

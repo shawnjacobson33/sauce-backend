@@ -33,7 +33,7 @@ def extract_team(bookmaker_name: str, league: str, data: list) -> Optional[dict[
     # extract the subject team
     abbr_team_name = data[-1][1:-1].replace('r.(', '')
     # get the team id and team name from the database
-    if team_data := dc_utils.get_team_id(bookmaker_name, league if 'NCAA' not in league else 'NCAA', abbr_team_name):
+    if team_data := dc_utils.get_team(bookmaker_name, league if 'NCAA' not in league else 'NCAA', abbr_team_name):
         # return the team id and team name
         return team_data
 
@@ -94,7 +94,7 @@ class MoneyLine(bkm_utils.LinesRetriever):
                                 # get the player's team
                                 if team := extract_team(self.source.name, league, subject_components):
                                     # get the game data using the team data
-                                    if game := bkm_utils.get_game_id(league, team):
+                                    if game := bkm_utils.get_game_id(league, team['id']):
                                         # extract the subject id and subject name from the database and dictionary respectively
                                         if subject := extract_subject(self.source.name, subject_components, league, team):
                                             # get line and label for every one that exists
@@ -103,6 +103,7 @@ class MoneyLine(bkm_utils.LinesRetriever):
                                                 self.update_betting_lines({
                                                     'batch_id': self.batch_id,
                                                     'time_processed': datetime.now(),
+                                                    'bookmaker': self.source.name,
                                                     'league': league,
                                                     'game_id': game['id'],
                                                     'game': game['info'],
@@ -111,9 +112,8 @@ class MoneyLine(bkm_utils.LinesRetriever):
                                                     'market': market['name'],
                                                     'subject_id': subject['id'],
                                                     'subject': subject['name'],
-                                                    'bookmaker': self.source.name,
                                                     'label': label,
-                                                    'line': line,
+                                                    'line': float(line),
                                                     'odds': self.source.default_payout.odds,
                                                     'is_boosted': 'Discount' in market['name'] # TODO: COULD BE A BUG HERE...DEFINITELY NOT GOING TO WORK
                                                 })

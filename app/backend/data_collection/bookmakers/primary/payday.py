@@ -59,7 +59,7 @@ def extract_team(bookmaker_name: str, league: str, data: dict, teams_dict: dict)
     # get the subject's team id, if exists keep executing
     if (team_id := data.get('team_id')) and (abbr_team_name := teams_dict.get(team_id)):
         # get the team id and team name from the database
-        if team_data := dc_utils.get_team_id(bookmaker_name, league, abbr_team_name):
+        if team_data := dc_utils.get_team(bookmaker_name, league, abbr_team_name):
             # return the team id and team name
             return team_data
 
@@ -67,12 +67,10 @@ def extract_team(bookmaker_name: str, league: str, data: dict, teams_dict: dict)
 def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
     # get the subject's name, if it exists keep executing
     if subject_name := data.get('name'):
-        # get player attributes
-        position, jersey_number = extract_position(data), data.get('number')
-        # gets the subject id or log message
-        subject = bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team, position=position, jersey_number=jersey_number)
-        # return both subject id search result and cleaned subject
-        return subject
+        # # get player attributes
+        # position, jersey_number = extract_position(data), data.get('number')
+        # gets the subject id and subject
+        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 class Payday(bkm_utils.LinesRetriever):
@@ -135,27 +133,27 @@ class Payday(bkm_utils.LinesRetriever):
                         # get some player dictionary and the numeric over/under line, if both exist keep executing
                         if (player_data := player_prop_data.get('player')) and (line := player_prop_data.get('value')):
                             # get some team data
-                            team = extract_team(self.source.name, league, player_data, teams_dict)
-                            # get the game data from database
-                            if game := bkm_utils.get_game_id(team):
-                                # get the subject id from the db and extract the subject name
-                                if subject := extract_subject(self.source.name, player_data, league, team):
-                                    # for each general prop line label
-                                    for label in ['Over', 'Under']:
-                                        # update shared data
-                                        self.update_betting_lines({
-                                            'batch_id': self.batch_id,
-                                            'time_processed': datetime.now(),
-                                            'league': league,
-                                            'game_id': game['id'],
-                                            'game': game['info'],
-                                            'market_category': 'player_props',
-                                            'market_id': market['id'],
-                                            'market': market['name'],
-                                            'subject_id': subject['id'],
-                                            'subject': subject['name'],
-                                            'bookmaker': self.source.name,
-                                            'label': label,
-                                            'line': line,
-                                            'odds': self.source.default_payout.odds
-                                        })
+                            if team := extract_team(self.source.name, league, player_data, teams_dict):
+                                # get the game data from database
+                                if game := bkm_utils.get_game_id(league, team['id']):
+                                    # get the subject id from the db and extract the subject name
+                                    if subject := extract_subject(self.source.name, player_data, league, team):
+                                        # for each general prop line label
+                                        for label in ['Over', 'Under']:
+                                            # update shared data
+                                            self.update_betting_lines({
+                                                'batch_id': self.batch_id,
+                                                'time_processed': datetime.now(),
+                                                'bookmaker': self.source.name,
+                                                'league': league,
+                                                'game_id': game['id'],
+                                                'game': game['info'],
+                                                'market_category': 'player_props',
+                                                'market_id': market['id'],
+                                                'market': market['name'],
+                                                'subject_id': subject['id'],
+                                                'subject': subject['name'],
+                                                'label': label,
+                                                'line': line,
+                                                'odds': self.source.default_payout.odds
+                                            })

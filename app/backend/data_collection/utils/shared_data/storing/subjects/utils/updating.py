@@ -1,11 +1,15 @@
 import uuid
+from collections import defaultdict
 from typing import Optional
 
 from pymongo import ReturnDocument
 
 from app.backend.data_collection.utils.shared_data.storing.subjects.updated_subjects import UpdatedSubjects
 from app.backend.data_collection.utils.shared_data.storing.subjects.new_subjects import NewSubjects
-from app.backend.data_collection.utils.shared_data.storing.subjects.utils.structuring import update_store
+from app.backend.data_collection.utils.shared_data.storing.subjects.utils.structuring import store_subject
+
+
+visited_subjects = defaultdict(int)
 
 
 def add_to_report(subject: dict, differences: dict) -> None:
@@ -53,11 +57,11 @@ def check_for_attr_differences(original_subject: Optional[dict], updated_subject
         print(f"[{updated_subject['league']}]: inserted {updated_subject['name']}")
 
 
-def add_to_stores(in_mem_store: dict, subject: dict, new_subject: dict) -> None:
+def add_to_stores(in_mem_store: defaultdict, subject: dict, new_subject: dict) -> None:
     # update the subject with return id
     subject['_id'] = str(new_subject['_id'])
     # update both data stores with the new subject
-    update_store(in_mem_store, subject)
+    store_subject(in_mem_store, subject)
     # update new subjects for reporting reasons
     NewSubjects.update_store(subject)
 
@@ -80,29 +84,40 @@ def get_original_subject_doc(collection, filter_condition: dict) -> dict:
     return collection.find_one(filter_condition)
 
 
-def update_subjects(collection, in_mem_store: dict, subject: dict) -> int:
-    # create a new batch id to identify if a subject was inserted or not
-    batch_id = str(uuid.uuid4())
-    # create a unique identifier (primary key) to filter on
-    filter_condition = {
-        'name': subject['name'],
-        'position': subject['position'],
-        'league': subject['league']
+def prep_work(subject: tuple) -> tuple[str, dict]:
+    global visited_subjects
+    # add one for this subject's identifier
+    visited_subjects[subject] += 1
+    # create a new batch id to identify if a subject was inserted or not, create a unique identifier (primary key) to filter on
+    return str(uuid.uuid4()), {
+        'name': subject[2],
+        'position': subject[1],
+        'league': subject[0]
     }
-    # get the original subject document
-    original_subject = get_original_subject_doc(collection, filter_condition)
-    # update a subject if a subject changes teams, jersey number, etc.
-    returned_subject = attempt_to_update(collection, filter_condition, subject, batch_id)
-    # if the returned subject document now has the batch id just created...then it was inserted
-    if returned_subject.get('batch_id') == batch_id:
-        # add the new subject to Subjects and NewSubjects data stores
-        add_to_stores(in_mem_store, subject, returned_subject)
+
+
+def update_subjects(collection, in_mem_store: defaultdict, subject: dict) -> int:
+    """ONLY USED BY ROSTER RETRIEVERS"""
+    unique_identifier = (subject['league'], subject['position'], subject['name'])
+    # if there is no other subject already looped over that has the same identifier
+    if not visited_subjects[unique_identifier]:
+        # do prep work to get batch id and filter condition, along with updating visited subjects
+        batch_id, filter_condition = prep_work(unique_identifier)
+        # get the original subject document
+        original_subject = get_original_subject_doc(collection, filter_condition)
+        # update a subject if a subject changes teams, jersey number, etc.
+        returned_subject = attempt_to_update(collection, filter_condition, subject, batch_id)
+        # if the returned subject document now has the batch id just created...then it was inserted
+        if returned_subject.get('batch_id') == batch_id:
+            # add the new subject to Subjects and NewSubjects data stores
+            add_to_stores(in_mem_store, subject, returned_subject)
+            # check to see if the subject had any new and then update the data store if so
+            check_for_attr_differences(original_subject, returned_subject)
+            # this represents a count for new subjects
+            return 1
+
         # check to see if the subject had any new and then update the data store if so
         check_for_attr_differences(original_subject, returned_subject)
-        # this represents a count for new subjects
-        return 1
 
-    # check to see if the subject had any new and then update the data store if so
-    check_for_attr_differences(original_subject, returned_subject)
     # no new subjects
     return 0

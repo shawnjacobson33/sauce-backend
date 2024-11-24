@@ -41,7 +41,7 @@ class NewSubjects:
             # get the filtered subjects by league
             filtered_subjects = cls.get_store(subject['league'])
             # helps to standardize names across different sources
-            cleaned_subject_name = clean_subject(subject['name'])
+            cleaned_subject_name = clean_subject(subject['name'], subject['league'])
             # add key value pair...one with position identifier and one with team identifier because of varying available data for bookmakers
             filtered_subjects[subject['position']][cleaned_subject_name] = {
                 'id': str(subject['_id']),

@@ -58,9 +58,9 @@ def extract_teams(source_name: str, league: str, row) -> Union[tuple[dict, dict]
         # returns in order of away_team, home_team depending on the locator
         away_team_name, home_team_name = (winning_team, losing_team) if game_locator == '@' else (losing_team, winning_team)
         # get the team id and team name from the database
-        if away_team_data := dc_utils.get_team_id(source_name, league, away_team_name):
+        if away_team_data := dc_utils.get_team(source_name, league, away_team_name):
             # get the team id and team name from the database
-            if home_team_data := dc_utils.get_team_id(source_name, league, home_team_name):
+            if home_team_data := dc_utils.get_team(source_name, league, home_team_name):
                 # return the team id and team name
                 return away_team_data, home_team_data
 

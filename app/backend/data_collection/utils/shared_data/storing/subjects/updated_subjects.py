@@ -1,8 +1,6 @@
 import threading
 from collections import defaultdict
 
-from app.backend.data_collection.utils.cleaning import clean_subject
-
 
 class UpdatedSubjects:
     """

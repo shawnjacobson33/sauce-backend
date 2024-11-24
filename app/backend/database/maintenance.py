@@ -83,11 +83,12 @@ def insert_game(game_data: dict = None, insert_all: bool = False, exclude: list[
     delete_duplicates(collection, 'time_processed', 'league')
 
 
-
-
+# subject = {
+#     'name'
+# }
 # insert_subject()
 # market = {
-#     'name': 'Plus Minus',
+#     'name': '1st Period Shots On Goal',
 #     'sport': 'Ice Hockey'
 # }
 # insert_market(
@@ -134,22 +135,22 @@ def insert_game(game_data: dict = None, insert_all: bool = False, exclude: list[
 #         "time_processed": "2024-11-19 08:58:13.284000"
 #     }
 # NFL
-game = {
-        "home_team": {
-            "abbr_name": "ILL",
-            "id": "673a28ddee7309a8917b7a26"
-        },
-        "away_team": {
-            "abbr_name": "BAMA",
-            "id": "673a28ddee7309a8917b7a23"
-        },
-        "game_time": "2024-11-20 19:00:00.00",
-        "box_score_url": "NCAAB_20241120_ILL@BAMA",
-        "league": "NCAAM",
-        "source": "cbssports-ncaam",
-        "time_processed": "2024-11-19 08:58:13.284000"
-    }
-
-insert_game(
-    game_data=game
-)
+# game = {
+#         "home_team": {
+#             "abbr_name": "ILL",
+#             "id": "673a28ddee7309a8917b7a26"
+#         },
+#         "away_team": {
+#             "abbr_name": "BAMA",
+#             "id": "673a28ddee7309a8917b7a23"
+#         },
+#         "game_time": "2024-11-20 19:00:00.00",
+#         "box_score_url": "NCAAB_20241120_ILL@BAMA",
+#         "league": "NCAAM",
+#         "source": "cbssports-ncaam",
+#         "time_processed": "2024-11-19 08:58:13.284000"
+#     }
+#
+# insert_game(
+#     game_data=game
+# )

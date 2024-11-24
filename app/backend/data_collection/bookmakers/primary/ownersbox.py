@@ -33,7 +33,7 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
     # get the subject team, if exists then keep executing
     if abbr_team_name := data.get('teamAlias'):
         # get the team id and team name from the database
-        if team_data := dc_utils.get_team_id(bookmaker_name, league, ('abbr_name', abbr_team_name.upper())):
+        if team_data := dc_utils.get_team(bookmaker_name, league, abbr_team_name.upper()):
             # return the team id and team name
             return team_data
 
@@ -43,12 +43,8 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
     if (first_name := data.get('firstName')) and (last_name := data.get('lastName')):
         # get subject name
         subject_name = ' '.join([first_name, last_name])
-        # get some player attributes
-        position = extract_position(data)
-        # gets the subject id or log message
-        subject = bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team, position=position)
         # return both subject id search result and cleaned subject
-        return subject
+        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_line(data: dict) -> Optional[str]:
@@ -154,29 +150,29 @@ class OwnersBox(bkm_utils.LinesRetriever):
                         # get the player data, if it exists then keep executing
                         if player_data := prop_line_data.get('player'):
                             # extract team data from the dictionary
-                            team = extract_team(self.source.name, league, player_data)
-                            # get game data using the team data
-                            if game := bkm_utils.get_game_id(team):
-                                # get the subject id from db and extract the subject name from the dictionary
-                                if subject := extract_subject(self.source.name, player_data, league, team):
-                                    # get the numeric over/under line, execute if exists
-                                    if line := extract_line(prop_line_data):
-                                        # for each label that the prop line has
-                                        for label in get_label(prop_line_data):
-                                            # update the shared data
-                                            self.update_betting_lines({
-                                                'batch_id': self.batch_id,
-                                                'time_processed': datetime.now(),
-                                                'league': league,
-                                                'game_id': game['id'],
-                                                'game': game['info'],
-                                                'market_category': 'player_props',
-                                                'market_id': market['id'],
-                                                'market': market['name'],
-                                                'subject_id': subject['id'],
-                                                'subject': subject['name'],
-                                                'bookmaker': self.source.name,
-                                                'label': label,
-                                                'line': line,
-                                                'odds': self.source.default_payout.odds
-                                            })
+                            if team := extract_team(self.source.name, league, player_data):
+                                # get game data using the team data
+                                if game := bkm_utils.get_game_id(league, team['id']):
+                                    # get the subject id from db and extract the subject name from the dictionary
+                                    if subject := extract_subject(self.source.name, player_data, league, team):
+                                        # get the numeric over/under line, execute if exists
+                                        if line := extract_line(prop_line_data):
+                                            # for each label that the prop line has
+                                            for label in get_label(prop_line_data):
+                                                # update the shared data
+                                                self.update_betting_lines({
+                                                    'batch_id': self.batch_id,
+                                                    'time_processed': datetime.now(),
+                                                    'bookmaker': self.source.name,
+                                                    'league': league,
+                                                    'game_id': game['id'],
+                                                    'game': game['info'],
+                                                    'market_category': 'player_props',
+                                                    'market_id': market['id'],
+                                                    'market': market['name'],
+                                                    'subject_id': subject['id'],
+                                                    'subject': subject['name'],
+                                                    'label': label,
+                                                    'line': float(line),
+                                                    'odds': self.source.default_payout.odds
+                                                })

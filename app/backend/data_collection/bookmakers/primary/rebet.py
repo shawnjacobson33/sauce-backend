@@ -1,6 +1,6 @@
 from datetime import datetime
 import asyncio
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, Dict
 
 from app.backend.data_collection.bookmakers import utils as bkm_utils
 
@@ -42,19 +42,17 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
             # get the subject name
             subject_name = f'{subject_name_components[1]} {subject_name_components[0]}'
             # gets the subject id or log message
-            subject = bkm_utils.get_subject(bookmaker_name, league, subject_name)
-            # return both subject id search result and cleaned subject
-            return subject
+            return bkm_utils.get_subject(bookmaker_name, league, subject_name)
 
 
-def extract_odds(data: dict) -> Optional[str]:
+def extract_odds(data: dict) -> Optional[float]:
     # get the odds for the prop line and check if doesn't equal an invalid value, if exists then execute
     if (odds := data.get('odds')) and (odds != '1.001'):
         # return the odds for the prop line
-        return odds
+        return float(odds)
 
 
-def extract_line_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, None]]:
+def extract_line_and_label(data: dict) -> Union[dict[str, Any], dict[str, Union[str, Any]]]:
     # get some info that holds label and numeric over/under line data, if exists then execute
     if outcome_info := data.get('name'):
         # split the info into components to extract each individual piece of data
@@ -62,13 +60,17 @@ def extract_line_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, Non
         # condition to check if over or under are in the info and check for valid indexing
         if ('over' in outcome_info) or ('under' in outcome_info) and (len(outcome_info_components) > 1):
             # return the label and line from components
-            return outcome_info_components[0].title(), outcome_info_components[1]
+            return {
+                'label': outcome_info_components[0].title(),
+                'line': float(outcome_info_components[1])
+            }
         # condition to check for a way to format an 'over' prop line
         elif '+' in outcome_info:
             # return the label as 'Over' and the line from components
-            return 'Over', outcome_info_components[-1][:-1]
-
-    return None, None
+            return {
+                'label': 'Over',
+                'line': float(outcome_info_components[-1][:-1])
+            }
 
 
 class Rebet(bkm_utils.LinesRetriever):
@@ -123,30 +125,32 @@ class Rebet(bkm_utils.LinesRetriever):
                             # TODO: For Subjects Shared Data make sure to store a team id so that it can be used to get a game
                             # get the subject id from db, and extract the subject name from dictionary
                             if subject := extract_subject(self.source.name, market_data, league):
-                                # get dictionary that holds data on odds, label, line, if exists then execute
-                                if outcomes_data := market_data.get('outcome', []):
-                                    # convert to list if outcomes data only returns a dictionary
-                                    outcomes_data = [outcomes_data] if not isinstance(outcomes_data, list) else outcomes_data
-                                    # for each dictionary in the list of dictionaries
-                                    for outcome_data in outcomes_data:
-                                        # extract the decimal odds from the dictionary, if exists then execute
-                                        if odds := extract_odds(outcome_data):
-                                            # extract the label and numeric over/under line
-                                            label, line = extract_line_and_label(outcome_data)
-                                            # if both exist then execute
-                                            if label and line:
-                                                # update shared data
-                                                self.update_betting_lines({
-                                                    'batch_id': self.batch_id,
-                                                    'time_processed': datetime.now(),
-                                                    'league': league,
-                                                    'market_category': 'player_props',
-                                                    'market_id': market['id'],
-                                                    'market': market['name'],
-                                                    'subject_id': subject['id'],
-                                                    'subject': subject['name'],
-                                                    'bookmaker': self.source.name,
-                                                    'label': label,
-                                                    'line': line,
-                                                    'odds': odds,
-                                                })
+                                # use team data to get some game data
+                                if game := bkm_utils.get_game_id(league, subject['team_id']):
+                                    # get dictionary that holds data on odds, label, line, if exists then execute
+                                    if outcomes_data := market_data.get('outcome', []):
+                                        # convert to list if outcomes data only returns a dictionary
+                                        outcomes_data = [outcomes_data] if not isinstance(outcomes_data, list) else outcomes_data
+                                        # for each dictionary in the list of dictionaries
+                                        for outcome_data in outcomes_data:
+                                            # extract the decimal odds from the dictionary, if exists then execute
+                                            if odds := extract_odds(outcome_data):
+                                                # if both exist then execute
+                                                if bet_details := extract_line_and_label(outcome_data):
+                                                    # update shared data
+                                                    self.update_betting_lines({
+                                                        'batch_id': self.batch_id,
+                                                        'time_processed': datetime.now(),
+                                                        'bookmaker': self.source.name,
+                                                        'league': league,
+                                                        'game_id': game['id'],
+                                                        'game': game['info'],
+                                                        'market_category': 'player_props',
+                                                        'market_id': market['id'],
+                                                        'market': market['name'],
+                                                        'subject_id': subject['id'],
+                                                        'subject': subject['name'],
+                                                        'label': bet_details['label'],
+                                                        'line': bet_details['line'],
+                                                        'odds': odds,
+                                                    })

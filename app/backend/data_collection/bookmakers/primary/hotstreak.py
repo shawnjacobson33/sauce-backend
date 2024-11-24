@@ -115,11 +115,9 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
     # get the subject name from the data, if it exists then execute
     if subject_name := data.get('subject'):
         # get subject attributes
-        position, jersey_number = extract_position(data), extract_jersey_number(data)
-        # gets the subject id or log message
-        subject = bkm_utils.get_subject(bookmaker_name, league, subject_name, position=position, jersey_number=jersey_number)
-        # return both subject id search result and cleaned subject
-        return subject
+        position = extract_position(data)
+        # gets the subject id and subject
+        return bkm_utils.get_subject(bookmaker_name, league, subject_name, position=position)
 
 
 def extract_market(bookmaker_name: str, data: list, league: str) -> Optional[dict[str, str]]:
@@ -228,22 +226,26 @@ class HotStreak(bkm_utils.LinesRetriever):
                                 # TODO: For Subjects Shared Data make sure to store a team id so that it can be used to get a game
                                 # get the subject id from db and extract subject from data
                                 if subject := extract_subject(self.source.name, participant_data, league):
-                                    # for each line and corresponding over/under odds pair
-                                    for line, odds_pair in zip(extract_line(market_dict), extract_odds(market_dict)):
-                                        # each (odds) and label are at corresponding indices, so for each of them...
-                                        for odds, label in zip(odds_pair, ['Under', 'Over']):
-                                            # update shared data
-                                            self.update_betting_lines({
-                                                'batch_id': self.batch_id,
-                                                'time_processed': datetime.now(),
-                                                'league': league,
-                                                'market_category': 'player_props',
-                                                'market_id': market['id'],
-                                                'market': market['name'],
-                                                'subject_id': subject['id'],
-                                                'subject': subject['name'],
-                                                'bookmaker': self.source.name,
-                                                'label': label,
-                                                'line': line,
-                                                'odds': odds
-                                            })
+                                    # use team data to get some game data
+                                    if game := bkm_utils.get_game_id(league, subject['team_id']):
+                                        # for each line and corresponding over/under odds pair
+                                        for line, odds_pair in zip(extract_line(market_dict), extract_odds(market_dict)):
+                                            # each (odds) and label are at corresponding indices, so for each of them...
+                                            for odds, label in zip(odds_pair, ['Under', 'Over']):
+                                                # update shared data
+                                                self.update_betting_lines({
+                                                    'batch_id': self.batch_id,
+                                                    'time_processed': datetime.now(),
+                                                    'bookmaker': self.source.name,
+                                                    'league': league,
+                                                    'game_id': game['id'],
+                                                    'game': game['info'],
+                                                    'market_category': 'player_props',
+                                                    'market_id': market['id'],
+                                                    'market': market['name'],
+                                                    'subject_id': subject['id'],
+                                                    'subject': subject['name'],
+                                                    'label': label,
+                                                    'line': line,
+                                                    'odds': odds
+                                                })

@@ -30,7 +30,6 @@ class BasketballRosterRetriever(rs_utils.RosterRetriever):
                                     'position': cells[2].text.strip(),
                                     'league': self.source.league_specific,
                                     'team_id': team['id'],
-                                    'location_from': cells[-1].text.strip()
                                 })
 
                 self.log_team(team['abbr_name'])

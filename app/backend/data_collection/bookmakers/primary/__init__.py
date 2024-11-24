@@ -1,4 +1,3 @@
-from .betonline import BetOnline
 from .boomfantasy import BoomFantasy
 from .dabble import Dabble
 from .drafters import Drafters
@@ -15,5 +14,5 @@ from .superdraft import SuperDraft
 from .underdogfantasy import UnderdogFantasy
 from .vividpicks import VividPicks
 
-__all__ = ['BetOnline', 'BoomFantasy', 'Dabble', 'Drafters', 'DraftKingsPick6', 'HotStreak', 'MoneyLine', 'OwnersBox',
+__all__ = ['BoomFantasy', 'Dabble', 'Drafters', 'DraftKingsPick6', 'HotStreak', 'MoneyLine', 'OwnersBox',
            'Payday', 'PrizePicks', 'ParlayPlay', 'Rebet', 'Sleeper', 'SuperDraft', 'UnderdogFantasy', 'VividPicks']

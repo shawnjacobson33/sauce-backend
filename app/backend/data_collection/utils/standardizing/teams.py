@@ -5,7 +5,7 @@ from app.backend.data_collection.utils.shared_data import Teams, RelevantData, P
 from app.backend.data_collection.utils.cleaning import clean_team
 
 
-def get_team_id(source_name: str, league: str, abbr_team_name: str) -> Optional[dict]:
+def get_team(source_name: str, league: str, abbr_team_name: str) -> Optional[dict]:
     # create the team object
     team = Team(league=league, abbr_name=abbr_team_name)
     # clean the team name if the source isn't cbssports

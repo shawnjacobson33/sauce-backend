@@ -24,7 +24,7 @@ def clean_team(source_name: str, league: str, team_name: str) -> Optional[dict]:
     # return the cleaned team name
     cleaned_team_name = team_name[first_letter_index:]
     # get the team id and team name from the database
-    if team_data := dc_utils.get_team_id(source_name, league, cleaned_team_name):
+    if team_data := dc_utils.get_team(source_name, league, cleaned_team_name):
         # return the team id and team name
         return team_data
 
