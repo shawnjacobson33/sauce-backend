@@ -128,7 +128,7 @@ class BoomFantasy(bkm_utils.LinesRetriever):
                                 # get some player attributes
                                 if team := extract_team(self.source.name, league, qg_data):
                                     # get the game data from database
-                                    if game := bkm_utils.get_game_id(league, team['id']):
+                                    if game := bkm_utils.get_game_id(league, team['id']):  # TODO: Consider dropping game ids, you can just index by (league, game_info)
                                         # extract the subject and get the subject id from the response data and database
                                         if subject := extract_subject(self.source.name, qg_data, league, team):
                                             # get the period classifier from dictionary (fullGame, firstQuarter, etc.)
@@ -136,7 +136,7 @@ class BoomFantasy(bkm_utils.LinesRetriever):
                                             # get more prop line info from the league's section's fullQuestions if they exist
                                             for q_data in qg_data.get('q', []):
                                                 # extract the market and market id from the response data and database
-                                                if market := extract_market(self.source.name, q_data, league, period):
+                                                if market := extract_market(self.source.name, q_data, league, period):   # TODO: Consider dropping market ids, you can just index by (sport, market)
                                                     # for each dictionary in q_data's c field
                                                     for c_data in q_data.get('c', []):
                                                         # extract the numeric line for the prop line, if exists keep going
@@ -151,19 +151,15 @@ class BoomFantasy(bkm_utils.LinesRetriever):
                                                                 if label and odds:
                                                                     # update shared data
                                                                     self.update_betting_lines({
-                                                                        'batch_id': self.batch_id,
-                                                                        'time_processed': datetime.now(),
+                                                                        's_tstamp': datetime.now(),
                                                                         'bookmaker': self.source.name,
                                                                         'league': league,
-                                                                        'game_id': game['id'],
                                                                         'game': game['info'],
-                                                                        'market_category': 'player_props',
-                                                                        'market_id': market['id'],
                                                                         'market': market['name'],
                                                                         'subject_id': subject['id'],
                                                                         'subject': subject['name'],
                                                                         'label': label,
                                                                         'line': line,
                                                                         'odds': odds,
-                                                                        'implied_prob': implied_prob
+                                                                        'im_prb': implied_prob
                                                                     })

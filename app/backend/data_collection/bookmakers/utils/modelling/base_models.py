@@ -55,9 +55,9 @@ class LinesRetriever(Retriever):
         super().__init__(lines_source)
         self.req_mngr = RequestManager(use_requests=(lines_source.name == 'BetOnline'))  # BetOnline doesn't work with 'cloudscraper'
 
-    def update_betting_lines(self, betting_line: dict, lines_source_name: str = None) -> None:
+    def update_betting_lines(self, betting_line: dict) -> None:
         # update shared data...formatting bookmaker name for OddsShopper's contrasting formats...OddShopper will use bookmaker param
-        BettingLines.update(self.source.name if not lines_source_name else lines_source_name, betting_line)
+        BettingLines.update(betting_line)
         # add one to the prop line count
         self.data_collected += 1
 

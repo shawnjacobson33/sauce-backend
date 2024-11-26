@@ -39,7 +39,7 @@ def extract_subject(cell, league: str, source_name: str, team: dict = None) -> O
         # extract the player's name from the url link
         player_name = ' '.join(href.split('/')[-2].split('-')).title()
         # get subject data from the shared data structure
-        subject = bkm_utils.get_subject(source_name, league, player_name, attribute)
+        subject = bkm_utils.get_subject(source_name, league, player_name, **attribute)
         # return the subject data
         return subject
 
