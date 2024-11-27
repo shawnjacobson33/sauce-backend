@@ -28,7 +28,7 @@ def extract_league(data: dict, sports_dict: dict) -> Optional[str]:
             # check if league name is valid
             if bkm_utils.is_league_valid(league):
                 # return the cleaned league name
-                return bkm_utils.clean_league(league)
+                return dc_utils.clean_league(league)
 
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
@@ -38,7 +38,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
             # get the market name from the dictionary, if exists keep going
             if market_name := requirements[0].get('name'):
                 # gets the market id or log message
-                market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+                market = dc_utils.get_market(bookmaker_name, league, market_name)
                 # return both market id search result and cleaned market
                 return market
 
@@ -47,7 +47,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get the abbreviated player's position, if exists keep going
     if position := data.get('posAbbr'):
         # return the cleaned player's position
-        return bkm_utils.clean_position(position)
+        return dc_utils.clean_position(position)
 
 
 def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
@@ -63,7 +63,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         # get subject name
         subject_name = ' '.join([first_name, last_name])
         # gets the subject id or log message
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 class SuperDraft(bkm_utils.LinesRetriever):
@@ -91,7 +91,7 @@ class SuperDraft(bkm_utils.LinesRetriever):
                 # get the league name
                 if league_name := sport_data.get('sName'):
                     # clean the league name
-                    cleaned_league = bkm_utils.clean_league(league_name)
+                    cleaned_league = dc_utils.clean_league(league_name)
                     # if it is a valid league and has props available
                     if bkm_utils.is_league_valid(cleaned_league) and sport_data.get('hasProps'):
                         # get the league id if exists
@@ -114,7 +114,7 @@ class SuperDraft(bkm_utils.LinesRetriever):
                 # extract the league name from the dictionary, if exists keep going
                 if league := extract_league(prop_line_data, sports_dict):
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+                    dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
                     # get the market id and extract the market name from the dictionary
                     if market := extract_market(self.source.name, prop_line_data, league):
                         # get player data dictionary, if exists keep going
@@ -122,7 +122,7 @@ class SuperDraft(bkm_utils.LinesRetriever):
                             # get some team data
                             if team := extract_team(self.source.name, league, player_data):
                                 # get the game data from database
-                                if game := bkm_utils.get_game_id(league, team['id']):
+                                if game := dc_utils.get_game(league, team['id']):
                                     # get the subject id from the db and extract the subject name from the dictionary
                                     if subject := extract_subject(self.source.name, player_data, league, team):
                                         # get the numeric over/under line from the dictionary

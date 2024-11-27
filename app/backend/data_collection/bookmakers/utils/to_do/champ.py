@@ -39,7 +39,7 @@ class Champ(bkm_utils.LinesRetriever):
         if data:
             data = data.get('data', {}).get('readPicks', {})
 
-        league = bkm_utils.clean_league(league)
+        league = dc_utils.clean_league(league)
         subject_ids = dict()
         for event in data.get('items', []):
             game_info = event.get('title')

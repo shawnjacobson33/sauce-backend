@@ -2,13 +2,12 @@ from typing import Optional
 
 import Levenshtein
 
-from app.backend.data_collection import utils as dc_utils
-from app.backend.data_collection.bookmakers.utils.modelling import Subject
-from app.backend.data_collection.utils import clean_subject
+from app.backend.data_collection.utils.cleaning import clean_subject
+from app.backend.data_collection.utils.shared_data import Subjects, ProblemData, RelevantData
+from app.backend.data_collection.bookmakers.utils import Subject
 
 
-subjects = dc_utils.Subjects.get_store()
-subjects_df = dc_utils.Subjects.get_store(dtype='df')
+subjects_df = Subjects.get_subjects(dtype='df')
 
 
 def update_subject(subject: dict, matched_subject: dict):
@@ -29,23 +28,22 @@ def find_match_using_distances(subject: dict) -> Optional[dict]:
             'team_id': closest_subject['team_id']
         }
 
-
+# TODO: create a way to clean position for subjects where position data mismatches between bookmakers and cbs
 def find_match(subject: dict) -> Optional[dict]:
-    # get subjects for a league
-    if league_data := subjects.get(subject['league']):
-        # get subjects for an attribute, if source gave an attribute
-        if (attr := subject.get('position', subject.get('team_id'))) and (attr_data := league_data.get(attr)):
-            # TODO: create a way to clean position for subjects where position data mismatches between bookmakers and cbs
-            # return the attempted match
-            return attr_data.get(clean_subject(subject['name'], subject['league']))
+    # attempt to find a stored subject
+    if matched_subject := Subjects.get_subject(subject):
+        # return if exists
+        return matched_subject
 
-        # otherwise use levehnstein distances
-        return find_match_using_distances(subject)
+    # otherwise use levehnstein distances
+    return find_match_using_distances(subject)
 
 
 def get_subject(source_name: str, league: str, name: str, **kwargs) -> Optional[dict[str, str]]:
+    # clean the subject name
+    c_subject_name = clean_subject(name, league)
     # create a dictionary representation of the subject
-    subject = {key: value for key, value in Subject(name, league, **kwargs).__dict__.items() if value}
+    subject = {key: value for key, value in Subject(c_subject_name, league, **kwargs).__dict__.items() if value}
     # get the matched data if it exists
     if matched_subject := find_match(subject):
         # update the subject's data
@@ -53,13 +51,13 @@ def get_subject(source_name: str, league: str, name: str, **kwargs) -> Optional[
         # update the shared dictionary of relevant subjects only for bookmakers
         if 'cbssports' not in source_name:
             # update reporting data structure
-            dc_utils.RelevantData.update_relevant_subjects(subject, source_name, league)
+            RelevantData.update_relevant_subjects(subject, source_name)
 
         # return the matched subject id and the actual name of the subject stored in the database
         return subject
 
     # update the shared dictionary of problem subjects
-    dc_utils.ProblemData.update_problem_subjects(subject, source_name, league)
+    ProblemData.update_problem_subjects(subject, source_name)
 
 
 

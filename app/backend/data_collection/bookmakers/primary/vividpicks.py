@@ -16,7 +16,7 @@ def extract_league(data: dict) -> Optional[str]:
     # get the league name from dictionary, if it exists keep executing
     if league := data.get('league'):
         # clean the league name
-        cleaned_league = bkm_utils.clean_league(league)
+        cleaned_league = dc_utils.clean_league(league)
         # check if the league name is valid
         if bkm_utils.is_league_valid(cleaned_league):
             # return the cleaned and valid league name
@@ -41,7 +41,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
     # get the player's name, if it exists keep going
     if subject_name := data.get('name'):
         # return both subject id search result and cleaned subject
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_multiplier(data: dict, market: str) -> Optional[float]:
@@ -57,7 +57,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
     # get the market name from the dictionary, if exists keep going
     if market_name := data.get('p'):
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = dc_utils.get_market(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -113,13 +113,13 @@ class VividPicks(bkm_utils.LinesRetriever):
                 # extract the league name from dictionary, if it exists keep going
                 if league := extract_league(event_data):
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+                    dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
                     # for each dictionary in event data's activePlayers if they exist
                     for player_data in event_data.get('activePlayers', []):
                         # get player attributes
                         if team := extract_team(self.source.name, league, player_data):
                             # get the game data from database
-                            if game := bkm_utils.get_game_id(league, team['id']):
+                            if game := dc_utils.get_game(league, team['id']):
                                 # get the subject id from db and extract the subject name from dictionary
                                 if subject := extract_subject(self.source.name, player_data, league, team):
                                     # for each dictionary in player data's visiblePlayerProps if they exist

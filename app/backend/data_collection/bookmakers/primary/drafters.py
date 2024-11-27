@@ -26,7 +26,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         # # get player attributes
         # position = extract_position(data)
         # gets the subject id or log message
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
@@ -35,7 +35,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
         # check if the market is valid...watching out for MMA markets
         if bkm_utils.is_market_valid(market_name):
             # gets the market id or log message
-            market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+            market = dc_utils.get_market(bookmaker_name, league, market_name)
             # return both market id search result and cleaned market
             return market
 
@@ -44,7 +44,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get position from data if it exists and doesn't equal 'G'
     if (position := data.get('player_position')) and (position != 'G'):
         # return the position cleaned
-        return bkm_utils.clean_position(position.strip())
+        return dc_utils.clean_position(position.strip())
 
 
 class Drafters(bkm_utils.LinesRetriever):
@@ -70,7 +70,7 @@ class Drafters(bkm_utils.LinesRetriever):
                 # get the league name and id
                 if (league_name := entity_data.get('name')) and (league_id := entity_data.get('id')):
                     # clean the league name
-                    cleaned_league = bkm_utils.clean_league(league_name)
+                    cleaned_league = dc_utils.clean_league(league_name)
                     # if the league is valid keep going
                     if bkm_utils.is_league_valid(cleaned_league):
                         # get the url to get prop lines data and insert the league id
@@ -91,7 +91,7 @@ class Drafters(bkm_utils.LinesRetriever):
         # get response data, if exists execute
         if json_data := response.json():
             # to track the leagues being collected
-            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
             # for each event in the data's entities
             for event_data in json_data.get('entities', []):
                 # check if the event is valid before executing
@@ -101,7 +101,7 @@ class Drafters(bkm_utils.LinesRetriever):
                         # extract the player's team
                         if team := extract_team(self.source.name, league, player_data):
                             # use the team data to get game data
-                            if game := bkm_utils.get_game_id(league, team['id']):
+                            if game := dc_utils.get_game(league, team['id']):
                                 # extract the subject id from db and get subject from player dict
                                 if subject := extract_subject(self.source.name, player_data, league, team):
                                     # get market id from db and extract market from player dict

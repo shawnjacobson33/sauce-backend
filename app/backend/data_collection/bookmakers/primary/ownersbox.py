@@ -10,14 +10,14 @@ def extract_league(data: dict) -> Optional[str]:
     # get the league, if exists then execute
     if league := data.get('sport'):
         # return the cleaned league name
-        return bkm_utils.clean_league(league)
+        return dc_utils.clean_league(league)
 
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get some market dictionary and then the market name from it, if both exist keep going
     if (market_type := data.get('marketType')) and (market_name := market_type.get('name')):
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = dc_utils.get_market(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -26,7 +26,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get the player's position, if exists keep executing
     if position := data.get('position'):
         # return the cleaned position string
-        return bkm_utils.clean_position(position)
+        return dc_utils.clean_position(position)
 
 
 def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
@@ -44,7 +44,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         # get subject name
         subject_name = ' '.join([first_name, last_name])
         # return both subject id search result and cleaned subject
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_line(data: dict) -> Optional[str]:
@@ -108,7 +108,7 @@ class OwnersBox(bkm_utils.LinesRetriever):
             # for each league in the response data dictionary
             for league in json_data:
                 # only execute if the league is valid...also clean the league before checking
-                if bkm_utils.is_league_valid(bkm_utils.clean_league(league)):
+                if bkm_utils.is_league_valid(dc_utils.clean_league(league)):
                     # if valid get the params to make the request required to get markets data for this league
                     params = bkm_utils.get_params(self.source.name, name='markets', var_1=league)
                     # add the request to tasks
@@ -144,7 +144,7 @@ class OwnersBox(bkm_utils.LinesRetriever):
                 # get the league name, if exists then keep executing
                 if league := extract_league(prop_line_data):
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+                    dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
                     # get the market id from db and extract the market name
                     if market := extract_market(self.source.name, prop_line_data, league):
                         # get the player data, if it exists then keep executing
@@ -152,7 +152,7 @@ class OwnersBox(bkm_utils.LinesRetriever):
                             # extract team data from the dictionary
                             if team := extract_team(self.source.name, league, player_data):
                                 # get game data using the team data
-                                if game := bkm_utils.get_game_id(league, team['id']):
+                                if game := dc_utils.get_game(league, team['id']):
                                     # get the subject id from db and extract the subject name from the dictionary
                                     if subject := extract_subject(self.source.name, player_data, league, team):
                                         # get the numeric over/under line, execute if exists

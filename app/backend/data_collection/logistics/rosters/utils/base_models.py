@@ -98,7 +98,7 @@ class RosterRetriever(dc_utils.Retriever):
         pass
 
     def update_subjects(self, subject: dict) -> None:
-        self.data_collected += dc_utils.Subjects.update_store(subject)
+        self.data_collected += dc_utils.Subjects.update_subjects(subject)
 
     def log_team(self, abbr_name: str) -> None:
         print(f"[{self.source.league_specific}]: {abbr_name}")

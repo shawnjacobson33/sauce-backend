@@ -17,9 +17,9 @@ def get_team(source_name: str, league: str, abbr_team_name: str) -> Optional[dic
         # teams that come from schedule parsers are not necessarily relevant
         if 'cbssports' not in source_name:
             # update the shared dictionary of valid teams
-            RelevantData.update_relevant_teams(team.__dict__, source_name, league)
+            RelevantData.update_relevant_teams(team.__dict__, source_name)
         # return a dictionary representing the team object for existing values
         return {key: value for key, value in team.__dict__.items() if value is not None}
 
     # update the shared dictionary of pending teams
-    ProblemData.update_problem_teams(team.__dict__, source_name, league)
+    ProblemData.update_problem_teams(team.__dict__, source_name)

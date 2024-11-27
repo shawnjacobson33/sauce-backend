@@ -4,12 +4,12 @@ from typing import Union
 
 import pandas as pd
 
-from app.backend import database as db
-from app.backend.database import SUBJECTS_COLLECTION_NAME
-from app.backend.data_collection.utils.shared_data.storing.subjects.utils import get_subjects, update_subjects
+from app.backend.database import MongoDB, SUBJECTS_COLLECTION_NAME
+from app.backend.data_collection.utils.shared_data.storing.utils import get_entities
+from app.backend.data_collection.utils.shared_data.storing.subjects.utils import update_subjects
 
 # get the pointer to the subjects collection
-collection = db.MongoDB.fetch_collection(SUBJECTS_COLLECTION_NAME)
+subjects_c = MongoDB.fetch_collection(SUBJECTS_COLLECTION_NAME)
 
 
 class Subjects:
@@ -27,36 +27,39 @@ class Subjects:
         ...
     }
     """
-    _subjects: defaultdict = get_subjects(collection)
+    _subjects: defaultdict = get_entities(subjects_c)
     _lock1 = threading.Lock()
 
     @classmethod
-    def get_store(cls, dtype: str = None) -> Union[dict, pd.DataFrame]:
+    def get_subjects(cls, dtype: str = None) -> Union[dict, pd.DataFrame]:
         if dtype == 'df':
             return pd.DataFrame(
-                [[league, subject_data['id'], name, subject_data['team_id']]
-                for league, league_data in cls._subjects.items()
-                for attr, attr_data in league_data.items() if len(attr) < 5  # only want one attribute (pos in this case)
-                for name, subject_data in attr_data.items()],
+                [[key[0], subject_data['id'], key[2], subject_data['team_id']]
+                for key, subject_data in cls._subjects.items() if len(key[1]) < 5], # only want one attribute (pos in this case)
                 columns=['league', 'id', 'name', 'team_id']
             )
 
         return cls._subjects
 
     @classmethod
-    def update_store(cls, subject: dict) -> int:
+    def get_subject(cls, subject: dict):
+        if spec_attr := subject.get('position', subject.get('team_id')):
+            return cls._subjects.get((subject['league'], spec_attr, subject['name']))
+
+        raise ValueError("Position or Team Id attribute not found!")
+
+    @classmethod
+    def update_subjects(cls, subject: dict) -> int:
         """ONLY USED FOR ROSTER Retrieving"""
         with cls._lock1:
             # update the data stores and database if needed
-            return update_subjects(collection, cls._subjects, subject)
+            return update_subjects(subjects_c, cls._subjects, subject)
 
     @classmethod
     def count_unique_subjects(cls) -> int:
         count = 0
-        for league, league_data in cls._subjects.items():
-            for attr, attr_data in league_data.items():
-                if len(attr) < 5:  # only want one attribute (pos in this case)
-                    for subject in attr_data:
-                        count += 1
+        for key, subject_data in cls._subjects.items():
+            if len(key[1]) < 5:
+                count += 1
 
         return count

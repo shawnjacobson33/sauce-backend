@@ -2,9 +2,9 @@ import os
 import time
 import asyncio
 
-from app.backend.database import db
+from app.backend.database import MongoDB
+from app.backend.data_collection import executing as ex
 from app.backend.data_collection import utils as dc_utils
-from app.backend.data_collection.bookmakers import BettingLines
 
 
 async def run_roster_retrieving_tasks(logistic_retriever_names: list[str] = None) -> None:
@@ -12,7 +12,7 @@ async def run_roster_retrieving_tasks(logistic_retriever_names: list[str] = None
     print(f'{"*" * 22} Roster Retrieval {"*" * 22}\n')
     # TODO: Realistically these retrievers should only run once a day
     # get the coroutines
-    roster_retrieving_tasks = dc_utils.launch_roster_retrievers(logistic_retriever_names)
+    roster_retrieving_tasks = ex.launch_roster_retrievers(logistic_retriever_names)
     # start making requests asynchronously
     t1 = time.time()
     await asyncio.gather(*roster_retrieving_tasks)
@@ -30,12 +30,12 @@ async def run_box_score_retrieving_tasks(logistic_retriever_names: list[str] = N
     box_score_retrieving_time = 0
     # TODO: figure out way to fetch started games from Games
     # This will run logic to delete any games that finished (no longer need game ids after they are done)
-    if started_games := db.MongoDB.fetch_started_games():
+    if started_games := MongoDB.fetch_started_games():
         # store any currently running games in the data structure
         dc_utils.ActiveGames.update_active_games(started_games)
         # TODO: need to remove games from Games class
         # get the coroutines
-        box_score_retrieving_tasks = dc_utils.launch_box_score_retrievers(logistic_retriever_names)
+        box_score_retrieving_tasks = ex.launch_box_score_retrievers(logistic_retriever_names)
         # start making requests asynchronously
         t1 = time.time()
         await asyncio.gather(*box_score_retrieving_tasks)
@@ -50,7 +50,7 @@ async def run_schedule_retrieving_tasks(schedule_retriever_names: list[str] = No
     # section header
     print(f'{"*" * 22} Schedule Retrieval {"*" * 22}\n')
     # get the coroutines
-    schedule_retrieving_tasks = dc_utils.launch_schedules_retrievers(schedule_retriever_names)
+    schedule_retrieving_tasks = ex.launch_schedules_retrievers(schedule_retriever_names)
     # start making requests asynchronously
     t1 = time.time()
     await asyncio.gather(*schedule_retrieving_tasks)
@@ -65,7 +65,7 @@ async def run_betting_lines_retrieving_tasks(lines_retriever_names: list[str] = 
     # section header
     print(f'{"*" * 22} Lines Retrieval {"*" * 22}\n')
     # get the coroutines
-    lines_retrieving_tasks = dc_utils.launch_lines_retrievers(lines_retriever_names)
+    lines_retrieving_tasks = ex.launch_lines_retrievers(lines_retriever_names)
     # start making requests asynchronously
     t1 = time.time()
     await asyncio.gather(*lines_retrieving_tasks)
@@ -73,7 +73,7 @@ async def run_betting_lines_retrieving_tasks(lines_retriever_names: list[str] = 
     # return time taken to complete retrieving tasks
     lines_retrieving_time = round(t2-t1, 3)
     # Output total number of betting lines collected and the time it took to run entire job
-    print(f"[TOTAL LINES]: {BettingLines.size()}, {lines_retrieving_time}s")
+    print(f"[TOTAL LINES]: {dc_utils.BettingLines.size()}, {lines_retrieving_time}s")
 
 
 async def retrieve_and_report(logistic_retriever_names: list[str] = None, lines_retriever_names: list[str] = None) -> None:
@@ -86,7 +86,7 @@ async def retrieve_and_report(logistic_retriever_names: list[str] = None, lines_
     # # run the lines retrieving tasks second
     await run_betting_lines_retrieving_tasks(lines_retriever_names)
     # save all output data to json files
-    dc_utils.save_data_to_files()
+    ex.save_data_to_files()
     # output the size of the file storing the betting lines
     print(f"[FILE SIZE]: {round(os.path.getsize('utils/reports/betting_lines.json') / (1024 ** 2), 2)} MB")
 

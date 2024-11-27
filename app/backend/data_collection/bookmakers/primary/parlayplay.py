@@ -10,7 +10,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get the player's position, if exists then execute
     if position := data.get('position'):
         # return the cleaned position
-        return bkm_utils.clean_position(position)
+        return dc_utils.clean_position(position)
 
 
 def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
@@ -26,14 +26,14 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
     # get a dictionary holding player attributes, if exists keep executing
     if subject_name := data.get('fullName'):
         # gets the subject id or log message
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get the dictionary that holds market data and get market name, if both exist then execute
     if market_name := data.get('challengeName'):
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = dc_utils.get_market(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -73,7 +73,7 @@ class ParlayPlay(bkm_utils.LinesRetriever):
                         # get the league name, if it exists keep going
                         if league_name := league_data.get('leagueNameShort'):
                             # clean the league
-                            cleaned_league = bkm_utils.clean_league(league_name)
+                            cleaned_league = dc_utils.clean_league(league_name)
                             # check if the league is valid
                             if bkm_utils.is_league_valid(cleaned_league):
                                 # get the prop lines url
@@ -95,7 +95,7 @@ class ParlayPlay(bkm_utils.LinesRetriever):
         # get the response data, if exists then keep executing
         if json_data := response.json():
             # to track the leagues being collected
-            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
             # for each player in the response data's players if they exist
             for player_data in json_data.get('players', []):
                 # get a player dictionary
@@ -103,7 +103,7 @@ class ParlayPlay(bkm_utils.LinesRetriever):
                     # get some player attributes
                     if team := extract_team(self.source.name, league, player):
                         # get some game data using the team data
-                        if game := bkm_utils.get_game_id(league, team['id']):
+                        if game := dc_utils.get_game(league, team['id']):
                             # get the subject id from db and extract the subject name from a dictionary
                             if subject := extract_subject(self.source.name, player, league, team):
                                 # for each stat dictionary in the player data dictionary if they exist

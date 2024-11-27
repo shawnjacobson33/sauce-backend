@@ -3,6 +3,7 @@ from datetime import datetime
 import asyncio
 from typing import Optional, Union, Any
 
+from app.backend.data_collection import utils as dc_utils
 from app.backend.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -90,7 +91,7 @@ def extract_league(data: dict, opponent_ids: dict) -> Optional[str]:
     # get opponent id and then league from opponent ids dict, if both exist then execute
     if (opponent_id := data.get('opponent_id')) and (league := opponent_ids.get(opponent_id)):
         # clean the league name
-        cleaned_league = bkm_utils.clean_league(league)
+        cleaned_league = dc_utils.clean_league(league)
         # check the validity of the league and if so then return the league name
         if bkm_utils.is_league_valid(cleaned_league):
             # return the cleaned and valid league name
@@ -101,7 +102,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get position from data, if exists then execute
     if position := data.get('position'):
         # return the cleaned up position
-        return bkm_utils.clean_position(position)
+        return dc_utils.clean_position(position)
 
 
 def extract_jersey_number(data: dict) -> Optional[str]:
@@ -117,7 +118,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
         # get subject attributes
         position = extract_position(data)
         # gets the subject id and subject
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, position=position)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, position=position)
 
 
 def extract_market(bookmaker_name: str, data: list, league: str) -> Optional[dict[str, str]]:
@@ -126,7 +127,7 @@ def extract_market(bookmaker_name: str, data: list, league: str) -> Optional[dic
         # get the market name from the data list
         market_name = data[1]
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = dc_utils.get_market(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -220,14 +221,14 @@ class HotStreak(bkm_utils.LinesRetriever):
                         # extract the league using an extracted dict of conn. opp. ids to league names, if exists then execute
                         if league := extract_league(participant_data, extract_opponent_ids(search, league_aliases)):
                             # to track the leagues being collected
-                            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+                            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
                             # extract the market id and market name from data
                             if market := extract_market(self.source.name, market_components, league):
                                 # TODO: For Subjects Shared Data make sure to store a team id so that it can be used to get a game
                                 # get the subject id from db and extract subject from data
                                 if subject := extract_subject(self.source.name, participant_data, league):
                                     # use team data to get some game data
-                                    if game := bkm_utils.get_game_id(league, subject['team_id']):
+                                    if game := dc_utils.get_game(league, subject['team_id']):
                                         # for each line and corresponding over/under odds pair
                                         for line, odds_pair in zip(extract_line(market_dict), extract_odds(market_dict)):
                                             # each (odds) and label are at corresponding indices, so for each of them...

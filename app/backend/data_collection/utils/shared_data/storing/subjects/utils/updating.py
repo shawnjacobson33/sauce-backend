@@ -6,7 +6,7 @@ from pymongo import ReturnDocument
 
 from app.backend.data_collection.utils.shared_data.storing.subjects.updated_subjects import UpdatedSubjects
 from app.backend.data_collection.utils.shared_data.storing.subjects.new_subjects import NewSubjects
-from app.backend.data_collection.utils.shared_data.storing.subjects.utils.structuring import store_subject
+from app.backend.data_collection.utils.shared_data.storing.utils.structuring import store_subject
 
 
 visited_subjects = defaultdict(int)

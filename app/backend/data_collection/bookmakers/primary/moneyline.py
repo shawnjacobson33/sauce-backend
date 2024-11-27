@@ -9,11 +9,11 @@ def extract_league(data: dict, source_name: str) -> Optional[str]:
     # get the league from data, if exists then keep going
     if league := data.get('league'):
         # clean the league
-        cleaned_league = bkm_utils.clean_league(league)
+        cleaned_league = dc_utils.clean_league(league)
         # check if league is valid
         if bkm_utils.is_league_valid(cleaned_league):
             # to track the leagues being collected
-            bkm_utils.Leagues.update_valid_leagues(source_name, league)
+            dc_utils.RelevantData.update_relevant_leagues(source_name, league)
             # return valid and clean league
             return cleaned_league
 
@@ -24,7 +24,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
         # get the market name
         market_name = market_data.split(' (')[0]
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = dc_utils.get_market(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -42,7 +42,7 @@ def extract_subject(bookmaker_name: str, data: list, league: str, team: dict) ->
     # get subject name
     subject_name = ' '.join(data[:-1])
     # return both subject id search result and cleaned subject
-    return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+    return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_line_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, None]]:
@@ -94,7 +94,7 @@ class MoneyLine(bkm_utils.LinesRetriever):
                                 # get the player's team
                                 if team := extract_team(self.source.name, league, subject_components):
                                     # get the game data using the team data
-                                    if game := bkm_utils.get_game_id(league, team['id']):
+                                    if game := dc_utils.get_game(league, team['id']):
                                         # extract the subject id and subject name from the database and dictionary respectively
                                         if subject := extract_subject(self.source.name, subject_components, league, team):
                                             # get line and label for every one that exists

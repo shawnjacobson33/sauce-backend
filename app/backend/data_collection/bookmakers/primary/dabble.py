@@ -10,7 +10,7 @@ def extract_league(data: dict) -> Optional[str]:
     # get league name and the competition id, if both exist then execute
     if league := data.get('displayName'):
         # clean the league name
-        cleaned_league = bkm_utils.clean_league(league)
+        cleaned_league = dc_utils.clean_league(league)
         # if league is not valid then skip
         if bkm_utils.is_league_valid(cleaned_league):
             # return league name
@@ -33,7 +33,7 @@ def extract_market(bookmaker_name: str, data: dict, data_map: dict, league: str)
         # check if the market is valid
         if bkm_utils.is_market_valid(market_name):
             # gets the market id or log message
-            market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+            market = dc_utils.get_market(bookmaker_name, league, market_name)
             # return both market id search result and cleaned market
             return market
 
@@ -42,7 +42,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get the player's position, if exists keep going
     if position := data.get('position'):
         # return the cleaned position
-        return bkm_utils.clean_position(position)
+        return dc_utils.clean_position(position)
 
 
 def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
@@ -58,7 +58,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         # # extract player attributes
         # position = extract_position(data)
         # gets the subject id or log message
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_label(data: dict) -> Optional[str]:
@@ -144,7 +144,7 @@ class Dabble(bkm_utils.LinesRetriever):
                 # extract the league from competition and get the competition id, if both exist then execute
                 if (league := extract_league(competition)) and (competition_id := competition.get('id')):
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+                    dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
                     # get the url required to request the current events for each competition and insert comp id into it
                     url = bkm_utils.get_url(self.source.name, name='events').format(competition_id)
                     # get the params required to request the current events
@@ -184,7 +184,7 @@ class Dabble(bkm_utils.LinesRetriever):
                     # extract the player's team data
                     if team := extract_team(self.source.name, league, player_prop_data):
                         # use the team data to get game data
-                        if game := bkm_utils.get_game_id(league, team['id']):
+                        if game := dc_utils.get_game(league, team['id']):
                             # get the subject id from the db and extract the subject name from dictionary
                             if subject := extract_subject(self.source.name, player_prop_data, league, team):
                                 # get over/under label for player prop and get numeric line, only execute if both exist

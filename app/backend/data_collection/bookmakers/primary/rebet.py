@@ -1,7 +1,8 @@
 from datetime import datetime
 import asyncio
-from typing import Optional, Union, Any, Dict
+from typing import Optional, Union, Any
 
+from app.backend.data_collection import utils as dc_utils
 from app.backend.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -9,7 +10,7 @@ def extract_league(data: dict) -> Optional[str]:
     # get the league name if it exists then execute
     if league := data.get('league_name'):
         # clean the league
-        cleaned_league = bkm_utils.clean_league(league)
+        cleaned_league = dc_utils.clean_league(league)
         # check for validity of the league
         if bkm_utils.is_league_valid(league):
             # return the cleaned league name
@@ -27,7 +28,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
                 market_name = ' '.join(market_name.split(' (')[0].split()[1:]).title()
 
             # gets the market id or log message
-            market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+            market = dc_utils.get_market(bookmaker_name, league, market_name)
             # return both market id search result and cleaned market
             return market
 
@@ -42,7 +43,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
             # get the subject name
             subject_name = f'{subject_name_components[1]} {subject_name_components[0]}'
             # gets the subject id or log message
-            return bkm_utils.get_subject(bookmaker_name, league, subject_name)
+            return dc_utils.get_subject(bookmaker_name, league, subject_name)
 
 
 def extract_odds(data: dict) -> Optional[float]:
@@ -117,7 +118,7 @@ class Rebet(bkm_utils.LinesRetriever):
                 # extract league name from the dictionary and get data dic, if both exists keep executing
                 if (league := extract_league(event_data)) and (odds_data := event_data.get('odds')):
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+                    dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
                     # for each market dictionary in the odds data dictionary's market if they exist
                     for market_data in odds_data.get('market', []):
                         # get the market id from the db and extract the market name from dictionary
@@ -126,7 +127,7 @@ class Rebet(bkm_utils.LinesRetriever):
                             # get the subject id from db, and extract the subject name from dictionary
                             if subject := extract_subject(self.source.name, market_data, league):
                                 # use team data to get some game data
-                                if game := bkm_utils.get_game_id(league, subject['team_id']):
+                                if game := dc_utils.get_game(league, subject['team_id']):
                                     # get dictionary that holds data on odds, label, line, if exists then execute
                                     if outcomes_data := market_data.get('outcome', []):
                                         # convert to list if outcomes data only returns a dictionary

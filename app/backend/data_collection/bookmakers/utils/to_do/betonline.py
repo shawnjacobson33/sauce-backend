@@ -86,7 +86,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
     # gets and cleans the market if it exists
     if market_name := data.get('statistic'):
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = dc_utils.get_market(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -95,7 +95,7 @@ def extract_position(data: dict) -> Optional[str]:
     # gets the position of a player if it exists and the cleans it.
     if (position_data := data.get('position')) and (position := position_data.get('title')):
         # return the cleaned player's position
-        return bkm_utils.clean_position(position)
+        return dc_utils.clean_position(position)
 
 
 def extract_subject_team(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
@@ -115,7 +115,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
         # extract some player attributes
         position = extract_position(data)
         # gets the subject id and subject name
-        subject = bkm_utils.get_subject(bookmaker_name, league, subject_name, {'team': team, 'position': position})
+        subject = dc_utils.get_subject(bookmaker_name, league, subject_name, {'team': team, 'position': position})
         # return both subject id search result and cleaned subject
         return subject
 
@@ -166,7 +166,7 @@ class BetOnline(bkm_utils.LinesRetriever):
             # get params for request to get games
             params = bkm_utils.get_params(self.source.name, name='games', var_1=league)
             # clean the league name after setting params
-            cleaned_league = bkm_utils.clean_league(league)
+            cleaned_league = dc_utils.clean_league(league)
             # add the request task for this market to tasks
             tasks.append(self.req_mngr.get(url, self._parse_games, cleaned_league, headers=headers, params=params))
 
@@ -200,7 +200,7 @@ class BetOnline(bkm_utils.LinesRetriever):
         # get the response data as json, if exists keep going
         if json_data := response.json():
             # update shared leagues data
-            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
             # for each prop line in the response data
             for prop_line_data in json_data:
                 # get the market id from the db and extract the market name from the dictionary

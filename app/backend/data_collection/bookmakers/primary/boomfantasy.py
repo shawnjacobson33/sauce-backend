@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any, Dict, Union
+from typing import Optional, Any, Union
 
 from app.backend.data_collection import utils as dc_utils
 from app.backend.data_collection.bookmakers import utils as bkm_utils
@@ -9,7 +9,7 @@ def extract_league(data: dict) -> Optional[str]:
     # get name of league, executes if exists
     if league := data.get('league'):
         # clean the league name
-        cleaned_league = bkm_utils.clean_league(league.upper())
+        cleaned_league = dc_utils.clean_league(league.upper())
         # checks if the league is valid
         if bkm_utils.is_league_valid(cleaned_league):
             # cleans the league name
@@ -33,7 +33,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
             # get subject name
             subject_name = ' '.join([first_name, last_name])
             # gets the subject id and subject name
-            return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+            return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_line(data: dict) -> Optional[tuple[str, str]]:
@@ -58,7 +58,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str, period_type: Op
     # get the market name, if exists keep going
     if market_name := data.get("statistic"):
         # gets the market id
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name, period_type=period_type)
+        market = dc_utils.get_market(bookmaker_name, league, market_name, period_type=period_type)
         # return both market id and cleaned market
         return market
 
@@ -122,13 +122,13 @@ class BoomFantasy(bkm_utils.LinesRetriever):
                         # if they exist execute
                         if league := extract_league(section_data):
                             # to track the leagues being collected
-                            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+                            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
                             # for each section in the league's sections if they exist
                             for qg_data in section_data.get('qG', []):
                                 # get some player attributes
                                 if team := extract_team(self.source.name, league, qg_data):
                                     # get the game data from database
-                                    if game := bkm_utils.get_game_id(league, team['id']):  # TODO: Consider dropping game ids, you can just index by (league, game_info)
+                                    if game := dc_utils.get_game(league, team['id']):
                                         # extract the subject and get the subject id from the response data and database
                                         if subject := extract_subject(self.source.name, qg_data, league, team):
                                             # get the period classifier from dictionary (fullGame, firstQuarter, etc.)
@@ -145,10 +145,10 @@ class BoomFantasy(bkm_utils.LinesRetriever):
                                                             for more_c_data in c_data.get('c', []):
                                                                 # extract the label and multiplier from the list
                                                                 label, odds = extract_label_and_odds(more_c_data)
-                                                                # calculate the implied probability
-                                                                implied_prob = 1 / odds
                                                                 # if both exist the keep going
                                                                 if label and odds:
+                                                                    # calculate the implied probability
+                                                                    implied_prob = round(1 / odds, 4)
                                                                     # update shared data
                                                                     self.update_betting_lines({
                                                                         's_tstamp': datetime.now(),

@@ -1,8 +1,5 @@
-import asyncio
-
 from bs4 import BeautifulSoup
 
-from app.backend.data_collection.logistics import utils as lg_utils
 from app.backend.data_collection.logistics.games import utils as gm_utils
 from app.backend.data_collection.logistics.games.box_scores import utils as bs_utils
 
@@ -10,23 +7,6 @@ from app.backend.data_collection.logistics.games.box_scores import utils as bs_u
 class BasketballBoxScoreRetriever(bs_utils.BoxScoreRetriever):
     def __init__(self, source: gm_utils.GameSource):
         super().__init__(source)
-
-    async def retrieve(self) -> None:
-        # initialize a list of requests to make
-        tasks = list()
-        # get the games to retrieve box scores from if there are any
-        if games_to_retrieve := self.get_games_to_retrieve():
-            # for every game
-            for game_id, game_data in games_to_retrieve.items():
-                # Get the URL for the NBA schedule
-                url_data = lg_utils.get_url(self.source, 'box_scores')
-                # format the url with the unique url piece stored in the game dictionary
-                formatted_url = url_data['url'].format(url_data['league'], game_data['box_score_url'])
-                # Asynchronously request the data and call parse schedule for each formatted URL
-                tasks.append(lg_utils.fetch(formatted_url, self._parse_box_score, game_data))
-
-            # gather all requests asynchronously
-            await asyncio.gather(*tasks)
 
     async def _parse_box_score(self, html_content, game: dict) -> None:
         # initializes a html parser

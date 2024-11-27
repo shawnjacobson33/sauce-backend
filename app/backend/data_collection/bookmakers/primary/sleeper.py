@@ -20,7 +20,7 @@ def extract_league(data: dict) -> Optional[str]:
     # get the league from the data, if exists keep executing
     if league := data.get('sport'):
         # clean the league name
-        cleaned_league = bkm_utils.clean_league(league)
+        cleaned_league = dc_utils.clean_league(league)
         # check if the league name is valid
         if bkm_utils.is_league_valid(cleaned_league):
             # return the clean league name
@@ -31,7 +31,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get the player's position from the dictionary, if exists keep going
     if position := data.get('position'):
         # return the clean player position
-        return bkm_utils.clean_position(position)
+        return dc_utils.clean_position(position)
 
 
 def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
@@ -56,14 +56,14 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         # # get player attributes
         # position = extract_position(data)
         # return both subject id search result and cleaned subject
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
     # get the market name from the dictionary, if exists keep going
     if market_name := data.get('wager_type'):
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = dc_utils.get_market(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -103,7 +103,7 @@ class Sleeper(bkm_utils.LinesRetriever):
                     if (first_name := player_data.get('first_name')) and (last_name := player_data.get('last_name')):
                         # get the subject's sport, if exists then keep executing
                         if subject_sport := player_data.get('sport'):
-                            cleaned_league = bkm_utils.clean_league(subject_sport)
+                            cleaned_league = dc_utils.clean_league(subject_sport)
                             if bkm_utils.is_league_valid(cleaned_league):
                                 # store data about the subject, corresponding to their sport and id
                                 players_dict[cleaned_league][player_id] = {
@@ -146,13 +146,13 @@ class Sleeper(bkm_utils.LinesRetriever):
                 # extract the league name from dictionary
                 if league := extract_league(prop_line_data):
                     # to track the leagues being collected
-                    bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+                    dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
                     # get the nested player data
                     if player_data := extract_player_data(prop_line_data, league, players):
                         # get the team from the player data
                         if team := extract_team(self.source.name, league, player_data):
                             # get the game data from database
-                            if game := bkm_utils.get_game_id(league, team['id']):
+                            if game := dc_utils.get_game(league, team['id']):
                                 # get the subject id from db and extract player name from dictionary
                                 if subject := extract_subject(self.source.name, player_data, league, team):
                                     # get the market id from db and extract the market name from dictionary

@@ -2,6 +2,7 @@ from datetime import datetime
 
 from bs4 import BeautifulSoup
 
+from app.backend.data_collection.utils.shared_data import Games
 from app.backend.data_collection.logistics import utils as lg_utils
 from app.backend.data_collection.logistics.games import utils as gm_utils
 from app.backend.data_collection.logistics.games.schedules import utils as sc_utils
@@ -54,15 +55,11 @@ class FootballScheduleRetriever(sc_utils.ScheduleRetriever):
                                     if home_team := sc_utils.extract_team(span_elems[1], self.source.name, self.source.league):
                                         # checks if box scores are available for this game and updates accordingly
                                         if sc_utils.is_box_score_url_valid(box_score_url):
-                                            # create a game object storing related data
-                                            game = {
-                                                'time_processed': datetime.now(),
-                                                'source': self.source.name,
-                                                "league": self.source.league,
+                                            # adds the game and all of its extracted data to the shared data structure
+                                            Games.update_games({
+                                                "league": self.source.league_specific,
                                                 "game_time": game_time,
                                                 "away_team": away_team,
                                                 "home_team": home_team,
                                                 "box_score_url": box_score_url
-                                            }
-                                            # adds the game and all of its extracted data to the shared data structure
-                                            self.update_games(game)
+                                            })

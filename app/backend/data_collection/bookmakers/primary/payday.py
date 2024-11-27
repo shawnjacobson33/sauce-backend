@@ -10,7 +10,7 @@ def extract_league(data: dict) -> Optional[str]:
     # get the league name, if it exists keep going
     if league := data.get('slug'):
         # check if the cleaned league is valid...still need originally formatted league for params
-        if bkm_utils.is_league_valid(bkm_utils.clean_league(league)):
+        if bkm_utils.is_league_valid(dc_utils.clean_league(league)):
             # return the valid league name
             return league
 
@@ -43,7 +43,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
     # get the market name, if exists keep going
     if market_name := data.get('name'):
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = dc_utils.get_market(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -52,7 +52,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get the player's position, if exists keep executing
     if position := data.get('position'):
         # return the cleaned position
-        return bkm_utils.clean_position(position)
+        return dc_utils.clean_position(position)
 
 
 def extract_team(bookmaker_name: str, league: str, data: dict, teams_dict: dict) -> Optional[dict[str, str]]:
@@ -70,7 +70,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         # # get player attributes
         # position, jersey_number = extract_position(data), data.get('number')
         # gets the subject id and subject
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 class Payday(bkm_utils.LinesRetriever):
@@ -102,7 +102,7 @@ class Payday(bkm_utils.LinesRetriever):
                     # get the params necessary for requesting contests data for this league
                     params = bkm_utils.get_params(self.source.name, name='contests', var_1=league)
                     # add the request to tasks
-                    tasks.append(self.req_mngr.get(url, self._parse_contests, bkm_utils.clean_league(league), headers=self.headers, params=params))
+                    tasks.append(self.req_mngr.get(url, self._parse_contests, dc_utils.clean_league(league), headers=self.headers, params=params))
 
             # start making requests asynchronously
             await asyncio.gather(*tasks)
@@ -121,7 +121,7 @@ class Payday(bkm_utils.LinesRetriever):
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('data')):
             # to track the leagues being collected
-            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
             # for each game in data's games if they exist
             for game_data in data.get('games', []):
                 # get the teams dictionary holding team info
@@ -135,7 +135,7 @@ class Payday(bkm_utils.LinesRetriever):
                             # get some team data
                             if team := extract_team(self.source.name, league, player_data, teams_dict):
                                 # get the game data from database
-                                if game := bkm_utils.get_game_id(league, team['id']):
+                                if game := dc_utils.get_game(league, team['id']):
                                     # get the subject id from the db and extract the subject name
                                     if subject := extract_subject(self.source.name, player_data, league, team):
                                         # for each general prop line label

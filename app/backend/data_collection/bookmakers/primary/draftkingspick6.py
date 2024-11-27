@@ -12,7 +12,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
     # get market name, if exists then execute
     if market_name := data.get('marketName'):
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = dc_utils.get_market(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -35,14 +35,14 @@ def extract_position(data: list[dict]) -> Optional[str]:
     # get the position, execute if it exists
     if position := data[0].get('positionName'):
         # clean the position, conditional is for when secondary positions are also given
-        return bkm_utils.clean_position(position.split('/')[0] if '/' in position else position)
+        return dc_utils.clean_position(position.split('/')[0] if '/' in position else position)
 
 
 def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
     # get the subject name and the competitions dict, if both exist then execute
     if subject_name := data.get('displayName'):
         # gets the subject id or log message
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 class DraftKingsPick6(bkm_utils.LinesRetriever):
@@ -70,7 +70,7 @@ class DraftKingsPick6(bkm_utils.LinesRetriever):
                 # only execute if league exists and the league is valid
                 if league and bkm_utils.is_league_valid(league):
                     # clean the league name
-                    league = bkm_utils.clean_league(league)
+                    league = dc_utils.clean_league(league)
                     # create an url based and insert a league param for prop lines request
                     url = response.url + f"?sport={league}&_data=routes%2F_index"
                     # add the request for prop lines to tasks
@@ -83,7 +83,7 @@ class DraftKingsPick6(bkm_utils.LinesRetriever):
         # gets the json data from the response and then the redundant data from pickableIdToPickableMap field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('pickableIdToPickableMap')):
             # to track the leagues being collected
-            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
             # for every prop line in the data
             for prop_line_data in data.values():
                 # get pickable data and market_category data, if both exist then execute
@@ -99,7 +99,7 @@ class DraftKingsPick6(bkm_utils.LinesRetriever):
                                     # get player attributes
                                     if team := extract_team(self.source.name, league, competitions):
                                         # use team data to get some game data
-                                        if game := bkm_utils.get_game_id(league, team['id']):
+                                        if game := dc_utils.get_game(league, team['id']):
                                             # get the subject id from the db and extract the subject from data
                                             if subject := extract_subject(self.source.name, entity, league, team):
                                                 # for each label Over and Under update shared data prop lines

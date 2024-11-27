@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import asyncio
 from typing import Optional
 
+from app.backend.data_collection import utils as dc_utils
 from app.backend.data_collection.bookmakers import utils as bkm_utils
 
 
@@ -15,7 +16,7 @@ def extract_league(data: dict) -> Optional[str]:
     # get league and only execute if exists
     if league := data.get('leagueCode'):
         # clean the league name
-        cleaned_league = bkm_utils.clean_league(league)
+        cleaned_league = dc_utils.clean_league(league)
         # league must be valid
         if bkm_utils.is_league_valid(league):
             # return the valid and clean league name
@@ -33,7 +34,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
     # get the market name, if it exists keep executing
     if market_name := data.get('offerName'):
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = dc_utils.get_market(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -44,7 +45,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
         # get the subject's name from the dictionary, if exists keep going
         if subject_name := first_participants_data.get('name'):
             # return both subject id search result and cleaned subject
-            return bkm_utils.get_subject(bookmaker_name, league, subject_name)
+            return dc_utils.get_subject(bookmaker_name, league, subject_name)
 
 
 def extract_bookmaker(data: dict) -> Optional[str]:
@@ -122,7 +123,7 @@ class OddsShopper(bkm_utils.LinesRetriever):
         # get json data from response and check its existence
         if json_data := response.json():
             # to track the leagues being collected
-            bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
             # for each event/game in the response data
             for event in json_data:
                 # get the market id from db and extract market from the data
@@ -131,7 +132,7 @@ class OddsShopper(bkm_utils.LinesRetriever):
                     # get the subject id from the db and extract the subject from outcome
                     if subject := extract_subject(self.source.name, event, league):
                         # use team data to get some game data
-                        if game := bkm_utils.get_game_id(league, subject['team_id']):
+                        if game := dc_utils.get_game(league, subject['team_id']):
                             # iterate through each side or bookmaker for the prop line
                             for side in event.get('sides', []):
                                 # get the label from the side dictionary, only keep going if it exists
@@ -163,4 +164,4 @@ class OddsShopper(bkm_utils.LinesRetriever):
                                                     'true_win_prob': tw_prob,
                                                     'ev': ev
                                                 }
-                                            }, lines_source_name=bookmaker_name)
+                                            })

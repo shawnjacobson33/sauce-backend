@@ -4,12 +4,12 @@ from datetime import datetime
 from typing import Tuple, Optional
 from pymongo import MongoClient
 
-from app.backend.database.utils import DATABASE_URL, DATABASE_NAME, SOURCES_COLLECTION_NAME, GAMES_COLLECTION_NAME
+from app.backend.database.configs import DATABASE_URL, DATABASE_NAME, SOURCES_COLLECTION_NAME, GAMES_COLLECTION_NAME
 
 
 def get_db_creds() -> Tuple[str, str]:
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.abspath(os.path.join(current_dir, 'security/db_creds.txt')), 'r') as f:
+    with open(os.path.abspath(os.path.join(current_dir, '../configs/db_creds.txt')), 'r') as f:
         data = f.readlines()
         return data[0].strip(), data[1]
 

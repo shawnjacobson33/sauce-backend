@@ -65,7 +65,7 @@ def parse_teams(html_content, conferences, league: str) -> Optional[list[tuple[s
 
 
 # import requests
-# from app.backend import database as db
+# from app.backend.database import MongoDB
 #
 # source = Source('cbssports-ncaaf', 'NCAAF')
 # # get the url to retrieve teams
@@ -77,5 +77,5 @@ def parse_teams(html_content, conferences, league: str) -> Optional[list[tuple[s
 #
 # teams = parse_teams(response.text, conferences, source.league)
 #
-# db.MongoDB.fetch_collection(TEAMS_COLLECTION_NAME).insert_many(teams)
+# MongoDB.fetch_collection(TEAMS_COLLECTION_NAME).insert_many(teams)
 

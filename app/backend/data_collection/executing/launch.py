@@ -5,8 +5,8 @@ from app.backend.data_collection.bookmakers import LINES_RETRIEVERS
 from app.backend.data_collection.logistics import BOX_SCORE_RETRIEVERS, SCHEDULE_RETRIEVERS, ROSTER_RETRIEVERS
 
 from app.backend.data_collection.utils.modelling.base_models import Retriever
-from app.backend.data_collection.utils.executing.output import output_source_stats
-from app.backend.data_collection.utils.executing.configure import configure_game_retriever, configure_lines_retriever
+from app.backend.data_collection.executing.output import output_source_stats
+from app.backend.data_collection.executing.configure import configure_game_retriever, configure_lines_retriever
 
 
 def cleanup(retriever: Retriever):

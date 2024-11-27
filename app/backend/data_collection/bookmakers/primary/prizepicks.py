@@ -45,7 +45,7 @@ def get_league(data: dict, leagues: dict) -> Optional[dict[str, str]]:
             # the league id must exist in the leagues data store and also get the league name from the store
             if league_name := leagues.get(league_id):
                 # clean league after extracting quarter or half info from it if it exists.
-                cleaned_league = bkm_utils.clean_league(league_name[:-2] if re.match(r'^.+[1-4]([QH])$', league_name) else league_name)
+                cleaned_league = dc_utils.clean_league(league_name[:-2] if re.match(r'^.+[1-4]([QH])$', league_name) else league_name)
                 # only want valid leagues
                 if bkm_utils.is_league_valid(cleaned_league):
                     # return the valid and cleaned league, and the original league name format without cleaning it (needed for market)
@@ -64,7 +64,7 @@ def extract_market(bookmaker_name: str, data: dict, league: dict) -> Optional[di
             market_name = f'{league["uncleaned"][-2:]} {market_name}'
 
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league['cleaned'], market_name)
+        market = dc_utils.get_market(bookmaker_name, league['cleaned'], market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -73,7 +73,7 @@ def extract_position(data: dict) -> Optional[str]:
     # get the player's position, if exists then execute
     if position := data.get('position'):
         # return the cleaned position, with some logic for when a secondary position is included (ex: PG-SG)
-        return bkm_utils.clean_position(position.split('-')[0] if '-' in position else position)
+        return dc_utils.clean_position(position.split('-')[0] if '-' in position else position)
 
 
 def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
@@ -99,7 +99,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         # # get player attributes
         # position = extract_position(data)
         # gets the subject id or log message
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 class PrizePicks(bkm_utils.LinesRetriever):
@@ -146,13 +146,13 @@ class PrizePicks(bkm_utils.LinesRetriever):
                             # get the market id from db and extract market and league name from data, pass a generator to get the league
                             if market := extract_market(self.source.name, prop_line_attrs, league):
                                 # to track the leagues being collected
-                                bkm_utils.Leagues.update_valid_leagues(self.source.name, league['cleaned'])
+                                dc_utils.RelevantData.update_relevant_leagues(self.source.name, league['cleaned'])
                                 # extract a nested dictionary of subjects data
                                 if subject_data := extract_subject_data(relationships_data, subjects_dict):
                                     # extract some player's team data
                                     if team := extract_team(self.source.name, league['cleaned'], subject_data):
                                         # get the game data from database
-                                        if game := bkm_utils.get_game_id(league['cleaned'], team['id']):
+                                        if game := dc_utils.get_game(league['cleaned'], team['id']):
                                             # get the subject id from the db and extract the subject name
                                             if subject := extract_subject(self.source.name, subject_data, league['cleaned'], team):
                                                 # get numeric over/under line and check for existence

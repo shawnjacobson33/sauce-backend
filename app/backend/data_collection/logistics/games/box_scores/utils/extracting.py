@@ -1,6 +1,6 @@
 from typing import Optional
 
-from app.backend.data_collection.bookmakers import utils as bkm_utils
+from app.backend.data_collection.utils import get_subject
 
 
 def extract_team(div, game: dict) -> Optional[dict[str, str]]:
@@ -39,9 +39,7 @@ def extract_subject(cell, league: str, source_name: str, team: dict = None) -> O
         # extract the player's name from the url link
         player_name = ' '.join(href.split('/')[-2].split('-')).title()
         # get subject data from the shared data structure
-        subject = bkm_utils.get_subject(source_name, league, player_name, **attribute)
-        # return the subject data
-        return subject
+        return get_subject(source_name, league, player_name, **attribute)
 
 
 def extract_basketball_stats(cells, league: str) -> Optional[dict]:

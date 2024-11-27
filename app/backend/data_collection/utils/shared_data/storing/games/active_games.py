@@ -1,41 +1,29 @@
 import threading
 from collections import defaultdict
-from typing import Optional
+from typing import Any, Union
 
 
 class ActiveGames:
     """
     _active_games: {
-        'NBA': {
-            '123kxd90' ( game id ): {
-                'id': '123kxd90',
-                'info': 'BOS @ BKN',
-                'box_score_url': 'NBA_20241113_BOS@BKN'
-                ...
-            }
-            ...
-        }
+        '('NBA', 'BOS @ ATL'): 'NBA_20241113_BOS@BKN'
         ...
     }
     """
-    _active_games: defaultdict[str, dict] = defaultdict(lambda: defaultdict(dict))
+    _active_games: defaultdict[tuple[str, str], dict[str, Any]] = defaultdict(dict)
     _lock1: threading.Lock = threading.Lock()
 
     @classmethod
-    def get_active_games(cls, league: Optional[str]):
-        # gets the data for the inputted partition
-        return cls._active_games.get(league) if league else cls._active_games
+    def get_active_games(cls, league: str = None):
+        if league:
+            league_spec_active_games_dict = {game_id: url for game_id, url in cls._active_games.items() if game_id[0] == league}
+            league_spec_active_games_set = set(league_spec_active_games_dict.keys())
+            return league_spec_active_games_set, league_spec_active_games_dict
+
+        return cls._active_games
 
     @classmethod
     def update_active_games(cls, games: list[dict]):
         # for each active game
         for game in games:
-            # restructure the data dictionary
-            game['id'] = str(game['_id'])
-            away_team, home_team = game.pop('away_team'), game.pop('home_team')
-            game[away_team['abbr_name']], game[home_team['abbr_name']] = away_team, home_team
-            # add the game to the set under its league
-            cls._active_games[game['league']][game['id']] = {
-                key: value for key, value in game.items() if key not in {'time_processed', 'game_time', 'league',
-                                                                         'source'}
-            }
+            cls._active_games[(game['league'], game['info'])] = game['box_score_url']

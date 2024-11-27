@@ -1,30 +1,53 @@
 import threading
-from collections import defaultdict
+from collections import defaultdict, deque
 
 
 class RelevantData:
+    _relevant_leagues: defaultdict[str, deque] = defaultdict(deque)
     _relevant_subjects: defaultdict[str, dict] = defaultdict(lambda: defaultdict(dict))
     _relevant_teams: defaultdict[str, dict] = defaultdict(lambda: defaultdict(dict))
+    _relevant_markets: defaultdict[str, dict] = defaultdict(lambda: defaultdict(dict))
     _lock1: threading.Lock = threading.Lock()
     _lock2: threading.Lock = threading.Lock()
+    _lock3: threading.Lock = threading.Lock()
+    _lock4: threading.Lock = threading.Lock()
 
     @classmethod
-    def get_relevant_subjects(cls, league: str = None, source_name: str = None) -> dict:
-        return cls._relevant_subjects.get(league) if league and source_name else cls._relevant_subjects
+    def get_relevant_subjects(cls, source_name: str = None, league: str = None) -> dict:
+        return cls._relevant_subjects[source_name] if source_name else cls._relevant_subjects
 
     @classmethod
-    def get_relevant_teams(cls, league: str = None, source_name: str = None) -> dict:
-        return cls._relevant_teams.get(league) if league and source_name else cls._relevant_teams
+    def get_relevant_teams(cls, source_name: str = None, league: str = None) -> dict:
+        return cls._relevant_teams[source_name] if source_name else cls._relevant_teams
 
     @classmethod
-    def update_relevant_subjects(cls, subject: dict, source_name: str, league: str) -> None:
+    def get_relevant_markets(cls, source_name: str = None, league: str = None) -> dict:
+        return cls._relevant_markets[source_name] if source_name else cls._relevant_markets
+
+    @classmethod
+    def get_relevant_leagues(cls, source_name: str = None) -> dict:
+        return cls._relevant_leagues[source_name] if source_name else cls._relevant_leagues
+
+    @classmethod
+    def update_relevant_subjects(cls, subject: dict, source_name: str) -> None:
         with cls._lock1:
-            partitioned_subjects = cls._relevant_subjects[source_name][league]
-            partitioned_subjects[subject['id']] = {key: value for key, value in subject.items() if
-                                                             key != 'id'}
+            source_spec_subjects = cls._relevant_subjects[source_name]
+            spec_subject_attr = [val for attr, val in subject.__dict__.items() if attr not in {'name', 'league'}][0]
+            source_spec_subjects[(subject['league'], subject[spec_subject_attr], subject['name'])] = subject
 
     @classmethod
-    def update_relevant_teams(cls, team: dict, source_name: str, league: str) -> None:
-        with cls._lock1:
-            cls._relevant_teams[source_name][league][team['id']] = {key: value for key, value in team.items() if
-                                                             key != 'id'}
+    def update_relevant_teams(cls, team: dict, source_name: str) -> None:
+        with cls._lock2:
+            source_spec_teams = cls._relevant_teams[source_name]
+            source_spec_teams[(team['league'], team['abbr_name'])] = team
+
+    @classmethod
+    def update_relevant_markets(cls, market: dict, source_name: str) -> None:
+        with cls._lock3:
+            source_spec_markets = cls._relevant_markets[source_name]
+            source_spec_markets[(market['sport'], market['name'])] = market
+
+    @classmethod
+    def update_relevant_leagues(cls, league: str, source_name: str) -> None:
+        with cls._lock4:
+            cls._relevant_leagues[source_name].append(league)

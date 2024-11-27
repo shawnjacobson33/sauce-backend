@@ -1,7 +1,10 @@
+import asyncio
 from typing import Optional
 
 from app.backend.data_collection import utils as dc_utils
+from app.backend.data_collection.logistics import utils as lg_utils
 from app.backend.data_collection.logistics.games.utils import GameSource
+
 
 
 class BoxScoreRetriever(dc_utils.Retriever):
@@ -17,6 +20,26 @@ class BoxScoreRetriever(dc_utils.Retriever):
                 return active_games.intersection(relevant_games)
 
         return active_games # TODO: change later
+
+    async def retrieve(self) -> None:
+        # initialize a list of requests to make
+        tasks = list()
+        # get the games to retrieve box scores from if there are any
+        if games_to_retrieve := self.get_games_to_retrieve():
+            # for every game
+            for game_id, game_data in games_to_retrieve.items():
+                # Get the URL for the NBA schedule
+                url_data = lg_utils.get_url(self.source, 'box_scores')
+                # format the url with the unique url piece stored in the game dictionary
+                formatted_url = url_data['url'].format(url_data['league'], game_data['box_score_url'])
+                # Asynchronously request the data and call parse schedule for each formatted URL
+                tasks.append(lg_utils.fetch(formatted_url, self._parse_box_score, game_id))
+
+            # gather all requests asynchronously
+            await asyncio.gather(*tasks)
+
+    async def _parse_box_score(self, html_content: str, game_id: str) -> None:
+        pass
 
     def update_box_scores(self, game_id: str, subject: dict, box_score: dict, stat_type: str) -> None:
         # add the game to the shared data structure

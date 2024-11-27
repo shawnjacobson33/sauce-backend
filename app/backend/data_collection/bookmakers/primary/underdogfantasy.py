@@ -118,7 +118,7 @@ def extract_league(a_id: str, game_ids_dict: dict, games_dict: dict, solo_games_
         # get the league name, if exists then keep executing
         if league := match_data.get('sport_id'):
             # clean the league name
-            cleaned_league = bkm_utils.clean_league(league)
+            cleaned_league = dc_utils.clean_league(league)
             # check if the cleaned league name is valid
             if bkm_utils.is_league_valid(cleaned_league):
                 # return the cleaned and valid league name
@@ -129,7 +129,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
     # get market and market id
     if market_name := data.get('display_stat'):
         # gets the market id or log message
-        market = bkm_utils.get_market_id(bookmaker_name, league, market_name)
+        market = dc_utils.get_market(bookmaker_name, league, market_name)
         # return both market id search result and cleaned market
         return market
 
@@ -145,7 +145,7 @@ def extract_subject(bookmaker_name: str, league: str, data: dict, team: dict) ->
     # get the player name, if exists keep executing
     if subject_name := data.get('subject'):
         # return both subject id search result and cleaned subject
-        return bkm_utils.get_subject(bookmaker_name, league, subject_name, team=team)
+        return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
 def extract_label(data: dict) -> Optional[str]:
@@ -214,7 +214,7 @@ class UnderdogFantasy(bkm_utils.LinesRetriever):
                     # extract the league from match data dictionary, if exists keep executing
                     if league := extract_league(a_id, game_ids_dict, games_dict, solo_games_dict):
                         # to track the leagues being collected
-                        bkm_utils.Leagues.update_valid_leagues(self.source.name, league)
+                        dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
                         # get the market id from db and the market name
                         if market := extract_market(self.source.name, a_data, league):
                             # get player id and dictionary, if both exist keep executing
@@ -223,7 +223,7 @@ class UnderdogFantasy(bkm_utils.LinesRetriever):
                                 # get player attributes
                                 if team := extract_team(self.source.name, league, player_data):
                                     # get the game data from database
-                                    if game := bkm_utils.get_game_id(league, team['id']):
+                                    if game := dc_utils.get_game(league, team['id']):
                                         # get the subject id from db and extract the subject name
                                         if subject := extract_subject(self.source.name, league, player_data, team):
                                             # get the numeric over/under line, if exists keep executing
