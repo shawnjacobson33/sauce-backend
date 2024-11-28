@@ -90,14 +90,14 @@ class NHLScheduleCollector(sc_utils.ScheduleRetriever):
             # get both game time formatted and box score url
             if game_time_data := extract_game_time_and_box_score_url(row, date_list):
                 # get the away team name and id if it exists
-                if away_team := extract_team(self.source.name, self.source.league, row,
+                if away_team := extract_team(self.name, self.source.league, row,
                                              'visitor_team_name'):
                     # get the home team name and id if it exists
-                    if home_team := extract_team(self.source.name, self.source.league, row,
+                    if home_team := extract_team(self.name, self.source.league, row,
                                                  'home_team_name'):
                         # adds the game and all of its extracted data to the shared data structure
                         self.update_games({
-                            'time_processed': datetime.now(),
+                            's_tstamp': str(datetime.now()),
                             "league": self.source.league,
                             "game_time": game_time_data['game_time'],
                             "away_team": away_team,

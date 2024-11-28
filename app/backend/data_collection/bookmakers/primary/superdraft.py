@@ -71,13 +71,13 @@ class SuperDraft(bkm_utils.LinesRetriever):
         # call parent class Plug
         super().__init__(bookmaker)
         # get the headers required to request prop lines data
-        self.headers = bkm_utils.get_headers(self.source.name)
+        self.headers = bkm_utils.get_headers(self.name)
         # update headers timestamp
         self.headers['timestamp'] = str(datetime.now())
 
     async def retrieve(self) -> None:
         # get the url required to request prop lines data
-        url = bkm_utils.get_url(self.source.name).format('0')
+        url = bkm_utils.get_url(self.name).format('0')
         # make the request for the prop lines
         await self.req_mngr.get(url, self._parse_leagues, headers=self.headers)
 
@@ -97,7 +97,7 @@ class SuperDraft(bkm_utils.LinesRetriever):
                         # get the league id if exists
                         if league_id := sport_data.get('sportId'):
                             # get the url with the inserted sport id param
-                            url = bkm_utils.get_url(self.source.name).format(league_id)
+                            url = bkm_utils.get_url(self.name).format(league_id)
                             # add the request for the prop lines
                             tasks.append(self.req_mngr.get(url, self._parse_lines, headers=self.headers))
 
@@ -113,36 +113,37 @@ class SuperDraft(bkm_utils.LinesRetriever):
             for prop_line_data in json_data.get('props', []):
                 # extract the league name from the dictionary, if exists keep going
                 if league := extract_league(prop_line_data, sports_dict):
+                    # get the sport for this league
+                    sport = dc_utils.LEAGUE_SPORT_MAP[league]
                     # to track the leagues being collected
-                    dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+                    dc_utils.RelevantData.update_relevant_leagues(league, self.name)
                     # get the market id and extract the market name from the dictionary
-                    if market := extract_market(self.source.name, prop_line_data, league):
+                    if market := extract_market(self.name, prop_line_data, league):
                         # get player data dictionary, if exists keep going
                         if player_data := prop_line_data.get('player'):
                             # get some team data
-                            if team := extract_team(self.source.name, league, player_data):
+                            if team := extract_team(self.name, league, player_data):
                                 # get the game data from database
-                                if game := dc_utils.get_game(league, team['id']):
+                                if game := dc_utils.get_game(league, team['abbr_name']):
                                     # get the subject id from the db and extract the subject name from the dictionary
-                                    if subject := extract_subject(self.source.name, player_data, league, team):
+                                    if subject := extract_subject(self.name, player_data, league, team):
                                         # get the numeric over/under line from the dictionary
                                         if line := prop_line_data.get('line'):
                                             # for each generic over/under label for prop lines
                                             for label in ['Over', 'Under']:
                                                 # update shared data
                                                 self.update_betting_lines({
-                                                    'batch_id': self.batch_id,
-                                                    'time_processed': datetime.now(),
-                                                    'bookmaker': self.source.name,
+                                                    's_tstamp': str(datetime.now()),
+                                                    'bookmaker': self.name,
+                                                    'sport': sport,
                                                     'league': league,
-                                                    'game_id': game['id'],
                                                     'game': game['info'],
-                                                    'market_category': 'player_props',
                                                     'market_id': market['id'],
                                                     'market': market['name'],
                                                     'subject_id': subject['id'],
                                                     'subject': subject['name'],
                                                     'label': label,
                                                     'line': line,
-                                                    'odds': self.source.default_payout.odds
+                                                    'dflt_odds': self.dflt_odds,
+                                                    'dflt_im_prb': self.dflt_im_prb
                                                 })

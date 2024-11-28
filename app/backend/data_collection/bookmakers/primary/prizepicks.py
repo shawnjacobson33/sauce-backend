@@ -109,7 +109,7 @@ class PrizePicks(bkm_utils.LinesRetriever):
 
     async def retrieve(self) -> None:
         # get the url required to make request for leagues data
-        url = bkm_utils.get_url(self.source.name, name='leagues')
+        url = bkm_utils.get_url(self.name, name='leagues')
         # make request for leagues data
         await self.req_mngr.get(url, self._parse_leagues)
 
@@ -126,7 +126,7 @@ class PrizePicks(bkm_utils.LinesRetriever):
                     leagues[league_id] = league
 
             # get the url required to make request for prop lines
-            url = bkm_utils.get_url(self.source.name)
+            url = bkm_utils.get_url(self.name)
             # make the request for prop lines
             await self.req_mngr.get(url, self._parse_lines, leagues)
 
@@ -143,36 +143,37 @@ class PrizePicks(bkm_utils.LinesRetriever):
                     if (prop_line_attrs := prop_line_data.get('attributes')) and (prop_line_attrs.get('odds_type') == 'standard'):
                         # get league data for prop lines
                         if league := get_league(relationships_data, leagues):
+                            # get the sport for this league
+                            sport = dc_utils.LEAGUE_SPORT_MAP[league['cleaned']]
                             # get the market id from db and extract market and league name from data, pass a generator to get the league
-                            if market := extract_market(self.source.name, prop_line_attrs, league):
+                            if market := extract_market(self.name, prop_line_attrs, league):
                                 # to track the leagues being collected
-                                dc_utils.RelevantData.update_relevant_leagues(self.source.name, league['cleaned'])
+                                dc_utils.RelevantData.update_relevant_leagues(self.name, league['cleaned'])
                                 # extract a nested dictionary of subjects data
                                 if subject_data := extract_subject_data(relationships_data, subjects_dict):
                                     # extract some player's team data
-                                    if team := extract_team(self.source.name, league['cleaned'], subject_data):
+                                    if team := extract_team(self.name, league['cleaned'], subject_data):
                                         # get the game data from database
                                         if game := dc_utils.get_game(league['cleaned'], team['id']):
                                             # get the subject id from the db and extract the subject name
-                                            if subject := extract_subject(self.source.name, subject_data, league['cleaned'], team):
+                                            if subject := extract_subject(self.name, subject_data, league['cleaned'], team):
                                                 # get numeric over/under line and check for existence
                                                 if line := prop_line_attrs.get('line_score'):
                                                     # for each generic label for an over/under line
                                                     for label in ['Over', 'Under']:
                                                         # update shared data
                                                         self.update_betting_lines({
-                                                            'batch_id': self.batch_id,
-                                                            'time_processed': datetime.now(),
-                                                            'bookmaker': self.source.name,
+                                                            's_tstamp': str(datetime.now()),
+                                                            'bookmaker': self.name,
+                                                            'sport': sport,
                                                             'league': league['cleaned'],
-                                                            'game_id': game['id'],
                                                             'game': game['info'],
-                                                            'market_category': 'player_props',
                                                             'market_id': market['id'],
                                                             'market': market['name'],
                                                             'subject_id': subject['id'],
                                                             'subject': subject['name'],
                                                             'label': label,
                                                             'line': line,
-                                                            'odds': self.source.default_payout.odds
+                                                            'dflt_odds': self.dflt_odds,
+                                                            'dflt_im_prb': self.dflt_im_prb
                                                         })

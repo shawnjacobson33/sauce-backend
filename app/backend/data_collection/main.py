@@ -73,17 +73,17 @@ async def run_betting_lines_retrieving_tasks(lines_retriever_names: list[str] = 
     # return time taken to complete retrieving tasks
     lines_retrieving_time = round(t2-t1, 3)
     # Output total number of betting lines collected and the time it took to run entire job
-    print(f"[TOTAL LINES]: {dc_utils.BettingLines.size()}, {lines_retrieving_time}s")
+    # print(f"[TOTAL LINES]: {dc_utils.BettingLines.size()}, {lines_retrieving_time}s")
 
 
 async def retrieve_and_report(logistic_retriever_names: list[str] = None, lines_retriever_names: list[str] = None) -> None:
     # run the roster retrieving tasks
     # await run_roster_retrieving_tasks(logistic_retriever_names)
     # run the schedule retrieving tasks
-    await run_schedule_retrieving_tasks(logistic_retriever_names)
+    # await run_schedule_retrieving_tasks(logistic_retriever_names)
     # run the box score retrieving tasks
-    await run_box_score_retrieving_tasks(logistic_retriever_names)
-    # # run the lines retrieving tasks second
+    # await run_box_score_retrieving_tasks(logistic_retriever_names)
+    # # # run the lines retrieving tasks second
     await run_betting_lines_retrieving_tasks(lines_retriever_names)
     # save all output data to json files
     ex.save_data_to_files()
@@ -94,6 +94,5 @@ async def retrieve_and_report(logistic_retriever_names: list[str] = None, lines_
 def execute(logistic_retriever_names: list[str] = None, lines_retriever_names: list[str] = None):
     asyncio.run(retrieve_and_report(logistic_retriever_names, lines_retriever_names))
 
-
 if __name__ == '__main__':
-    execute()
+    execute(None, ['HotStreak'])

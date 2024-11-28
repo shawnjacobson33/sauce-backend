@@ -80,13 +80,13 @@ class Sleeper(bkm_utils.LinesRetriever):
         # call parent class Plug
         super().__init__(bookmaker)
         # get universally used headers to make requests
-        self.headers = bkm_utils.get_headers(self.source.name)
+        self.headers = bkm_utils.get_headers(self.name)
 
     async def retrieve(self) -> None:
         # get the url required to request player data
-        url = bkm_utils.get_url(self.source.name, name='players')
+        url = bkm_utils.get_url(self.name, name='players')
         # get params required to request player data
-        params = bkm_utils.get_params(self.source.name)
+        params = bkm_utils.get_params(self.name)
         # make the request for player data
         await self.req_mngr.get(url, self._parse_players, headers=self.headers, params=params)
 
@@ -117,7 +117,7 @@ class Sleeper(bkm_utils.LinesRetriever):
             # for each in season league mapped towards sleeper's format
             for league_name in LEAGUES:
                 # get the url required to make request for prop lines
-                url = bkm_utils.get_url(self.source.name)
+                url = bkm_utils.get_url(self.name)
                 # create a dictionary of params specific to a particular league
                 params = {
                     'sports%5B%5D': league_name,
@@ -145,18 +145,20 @@ class Sleeper(bkm_utils.LinesRetriever):
             for prop_line_data in json_data:
                 # extract the league name from dictionary
                 if league := extract_league(prop_line_data):
+                    # get the sport for this league
+                    sport = dc_utils.LEAGUE_SPORT_MAP[league]
                     # to track the leagues being collected
-                    dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+                    dc_utils.RelevantData.update_relevant_leagues(league, self.name)
                     # get the nested player data
                     if player_data := extract_player_data(prop_line_data, league, players):
                         # get the team from the player data
-                        if team := extract_team(self.source.name, league, player_data):
+                        if team := extract_team(self.name, league, player_data):
                             # get the game data from database
-                            if game := dc_utils.get_game(league, team['id']):
+                            if game := dc_utils.get_game(league, team['abbr_name']):
                                 # get the subject id from db and extract player name from dictionary
-                                if subject := extract_subject(self.source.name, player_data, league, team):
+                                if subject := extract_subject(self.name, player_data, league, team):
                                     # get the market id from db and extract the market name from dictionary
-                                    if market := extract_market(self.source.name, prop_line_data, league):
+                                    if market := extract_market(self.name, prop_line_data, league):
                                         # for each dictionary containing label, line, odds in prop_line_data's options if exists
                                         for outcome_data in prop_line_data.get('options', []):
                                             # get the numeric over/under line and the decimal odds from the dictionary, if both exist keep going
@@ -165,18 +167,17 @@ class Sleeper(bkm_utils.LinesRetriever):
                                                 if label := extract_label(outcome_data):
                                                     # update shared data
                                                     self.update_betting_lines({
-                                                        'batch_id': self.batch_id,
-                                                        'time_processed': datetime.now(),
-                                                        'bookmaker': self.source.name,
+                                                        's_tstamp': str(datetime.now()),
+                                                        'bookmaker': self.name,
+                                                        'sport': sport,
                                                         'league': league,
-                                                        'game_id': game['id'],
                                                         'game': game['info'],
-                                                        'market_category': 'player_props',
                                                         'market_id': market['id'],
                                                         'market': market['name'],
                                                         'subject_id': subject['id'],
                                                         'subject': subject['name'],
                                                         'label': label,
                                                         'line': line,
-                                                        'odds': float(odds)
+                                                        'odds': float(odds),
+                                                        'im_prb': round(1 / odds, 4)
                                                     })

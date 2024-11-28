@@ -97,11 +97,11 @@ class VividPicks(bkm_utils.LinesRetriever):
 
     async def retrieve(self) -> None:
         # get the url required to request for prop lines data
-        url = bkm_utils.get_url(self.source.name)
+        url = bkm_utils.get_url(self.name)
         # get the headers required to request for prop lines data
-        headers = bkm_utils.get_headers(self.source.name)
+        headers = bkm_utils.get_headers(self.name)
         # get the json required to request for prop lines data
-        json_data = bkm_utils.get_json_data(self.source.name, )
+        json_data = bkm_utils.get_json_data(self.name, )
         # make the request for prop lines data
         await self.req_mngr.post(url, self._parse_lines, headers=headers, json=json_data)
 
@@ -112,41 +112,44 @@ class VividPicks(bkm_utils.LinesRetriever):
             for event_data in json_data.get('gret', []):
                 # extract the league name from dictionary, if it exists keep going
                 if league := extract_league(event_data):
+                    # get the sport for this league
+                    sport = dc_utils.LEAGUE_SPORT_MAP[league]
                     # to track the leagues being collected
-                    dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+                    dc_utils.RelevantData.update_relevant_leagues(league, self.name)
                     # for each dictionary in event data's activePlayers if they exist
                     for player_data in event_data.get('activePlayers', []):
                         # get player attributes
-                        if team := extract_team(self.source.name, league, player_data):
+                        if team := extract_team(self.name, league, player_data):
                             # get the game data from database
-                            if game := dc_utils.get_game(league, team['id']):
+                            if game := dc_utils.get_game(league, team['abbr_name']):
                                 # get the subject id from db and extract the subject name from dictionary
-                                if subject := extract_subject(self.source.name, player_data, league, team):
+                                if subject := extract_subject(self.name, player_data, league, team):
                                     # for each dictionary in player data's visiblePlayerProps if they exist
                                     for prop_line_data in player_data.get('visiblePlayerProps', []):
                                         # get the market id from the db and extract the market name from the dictionary
-                                        if market := extract_market(self.source.name, prop_line_data, league):
+                                        if market := extract_market(self.name, prop_line_data, league):
                                             # get the numeric over/under line from the dictionary, keep going if exists
                                             if line := prop_line_data.get('val'):
                                                 # extract the multiplier from the dictionary
                                                 multiplier = extract_multiplier(player_data, market['name'])
                                                 # for each label (depending on the value of the multiplier)
                                                 for label in get_labels(multiplier):
-                                                    # update shared data
-                                                    self.update_betting_lines({
-                                                        'batch_id': self.batch_id,
-                                                        'time_processed': datetime.now(),
-                                                        'bookmaker': self.source.name,
-                                                        'league': league,
-                                                        'game_id': game['id'],
-                                                        'game': game['info'],
-                                                        'market_category': 'player_props',
-                                                        'market_id': market['id'],
-                                                        'market': market['name'],
-                                                        'subject_id': subject['id'],
-                                                        'subject': subject['name'],
-                                                        'label': label,
-                                                        'line': line,
-                                                        'multiplier': multiplier,
-                                                        'odds': get_odds(self.source.default_payout.odds, multiplier)
-                                                    })
+                                                    # get the odds
+                                                    if odds := get_odds(self.dflt_odds, multiplier):
+                                                        # update shared data
+                                                        self.update_betting_lines({
+                                                            's_tstamp': str(datetime.now()),
+                                                            'bookmaker': self.name,
+                                                            'sport': sport,
+                                                            'league': league,
+                                                            'game': game['info'],
+                                                            'market_id': market['id'],
+                                                            'market': market['name'],
+                                                            'subject_id': subject['id'],
+                                                            'subject': subject['name'],
+                                                            'label': label,
+                                                            'line': line,
+                                                            'mult': multiplier,
+                                                            'odds': odds,
+                                                            'im_prb': round(1 / odds, 4)
+                                                        })

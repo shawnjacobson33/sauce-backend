@@ -81,11 +81,11 @@ class Rebet(bkm_utils.LinesRetriever):
 
     async def retrieve(self) -> None:
         # get the url required to request tourney ids data
-        url = bkm_utils.get_url(self.source.name, name='tourney_ids')
+        url = bkm_utils.get_url(self.name, name='tourney_ids')
         # get the headers required to request tourney ids data
-        headers = bkm_utils.get_headers(self.source.name, name='tourney_ids')
+        headers = bkm_utils.get_headers(self.name, name='tourney_ids')
         # get the json data required to request tourney ids data with POST request
-        json_data = bkm_utils.get_json_data(self.source.name, name='tourney_ids')
+        json_data = bkm_utils.get_json_data(self.name, name='tourney_ids')
         # make the post request for tourney ids data
         await self.req_mngr.post(url, self._parse_tourney_ids, headers=headers, json=json_data)
 
@@ -99,11 +99,11 @@ class Rebet(bkm_utils.LinesRetriever):
                 # get the tournament id, if exist keep executing
                 if tournament_id := league_data.get('tournament_id'):
                     # get the url required to request for prop lines
-                    url = bkm_utils.get_url(self.source.name)
+                    url = bkm_utils.get_url(self.name)
                     # get the headers required to request for prop lines
-                    headers = bkm_utils.get_headers(self.source.name)
+                    headers = bkm_utils.get_headers(self.name)
                     # get the json data required to request for prop lines using tournament id
-                    json_data = bkm_utils.get_json_data(self.source.name, var=tournament_id)
+                    json_data = bkm_utils.get_json_data(self.name, var=tournament_id)
                     # add the request to tasks
                     tasks.append(self.req_mngr.post(url, self._parse_lines, headers=headers, json=json_data))
 
@@ -117,15 +117,17 @@ class Rebet(bkm_utils.LinesRetriever):
             for event_data in data.get('events', []):
                 # extract league name from the dictionary and get data dic, if both exists keep executing
                 if (league := extract_league(event_data)) and (odds_data := event_data.get('odds')):
+                    # get the sport for this league
+                    sport = dc_utils.LEAGUE_SPORT_MAP[league]
                     # to track the leagues being collected
-                    dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+                    dc_utils.RelevantData.update_relevant_leagues(league, self.name)
                     # for each market dictionary in the odds data dictionary's market if they exist
                     for market_data in odds_data.get('market', []):
                         # get the market id from the db and extract the market name from dictionary
-                        if market := extract_market(self.source.name, market_data, league):
+                        if market := extract_market(self.name, market_data, league):
                             # TODO: For Subjects Shared Data make sure to store a team id so that it can be used to get a game
                             # get the subject id from db, and extract the subject name from dictionary
-                            if subject := extract_subject(self.source.name, market_data, league):
+                            if subject := extract_subject(self.name, market_data, league):
                                 # use team data to get some game data
                                 if game := dc_utils.get_game(league, subject['team_id']):
                                     # get dictionary that holds data on odds, label, line, if exists then execute
@@ -140,13 +142,11 @@ class Rebet(bkm_utils.LinesRetriever):
                                                 if bet_details := extract_line_and_label(outcome_data):
                                                     # update shared data
                                                     self.update_betting_lines({
-                                                        'batch_id': self.batch_id,
-                                                        'time_processed': datetime.now(),
-                                                        'bookmaker': self.source.name,
+                                                        's_tstamp': str(datetime.now()),
+                                                        'bookmaker': self.name,
+                                                        'sport': sport,
                                                         'league': league,
-                                                        'game_id': game['id'],
                                                         'game': game['info'],
-                                                        'market_category': 'player_props',
                                                         'market_id': market['id'],
                                                         'market': market['name'],
                                                         'subject_id': subject['id'],
@@ -154,4 +154,5 @@ class Rebet(bkm_utils.LinesRetriever):
                                                         'label': bet_details['label'],
                                                         'line': bet_details['line'],
                                                         'odds': odds,
+                                                        'im_prb': round(1 / odds, 4)
                                                     })

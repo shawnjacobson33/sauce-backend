@@ -66,13 +66,13 @@ class MoneyLine(bkm_utils.LinesRetriever):
 
     async def retrieve(self) -> None:
         # gets the url to get prop lines
-        url = bkm_utils.get_url(self.source.name)
+        url = bkm_utils.get_url(self.name)
         # gets the headers to make request for prop lines
-        headers = bkm_utils.get_headers(self.source.name)
+        headers = bkm_utils.get_headers(self.name)
         # gets the cookies to make request for prop lines
-        cookies = bkm_utils.get_cookies(self.source.name)
+        cookies = bkm_utils.get_cookies(self.name)
         # gets the params to make request for prop lines
-        params = bkm_utils.get_params(self.source.name)
+        params = bkm_utils.get_params(self.name)
         # makes request for prop lines
         await self.req_mngr.get(url, self._parse_lines, headers=headers, cookies=cookies, params=params)
 
@@ -82,9 +82,11 @@ class MoneyLine(bkm_utils.LinesRetriever):
             # for each prop line in the data, if they exist
             for prop_line in data:
                 # extract the league name, keep going if it exists
-                if league := extract_league(prop_line, self.source.name):  # TODO: BUG - GETTING "NFL" AS LEAGUE FOR NCAAF PLAYERS
+                if league := extract_league(prop_line, self.name):  # TODO: BUG - GETTING "NFL" AS LEAGUE FOR NCAAF PLAYERS
+                    # get the sport for this league
+                    sport = dc_utils.LEAGUE_SPORT_MAP[league]
                     # extract the market id from database and market name from dictionary
-                    if market := extract_market(self.source.name, prop_line, league):
+                    if market := extract_market(self.name, prop_line, league):
                         # get the subject data from data, if exists keep going
                         if subject_data := prop_line.get('title'):
                             # splits the data into sub components containing individual attributes
@@ -92,28 +94,27 @@ class MoneyLine(bkm_utils.LinesRetriever):
                             # Make sure subject components meets an expected format
                             if '(' in subject_components[-1]:
                                 # get the player's team
-                                if team := extract_team(self.source.name, league, subject_components):
+                                if team := extract_team(self.name, league, subject_components):
                                     # get the game data using the team data
-                                    if game := dc_utils.get_game(league, team['id']):
+                                    if game := dc_utils.get_game(league, team['abbr_name']):
                                         # extract the subject id and subject name from the database and dictionary respectively
-                                        if subject := extract_subject(self.source.name, subject_components, league, team):
+                                        if subject := extract_subject(self.name, subject_components, league, team):
                                             # get line and label for every one that exists
                                             for line, label in extract_line_and_label(prop_line):
                                                 # update shared data
                                                 self.update_betting_lines({
-                                                    'batch_id': self.batch_id,
-                                                    'time_processed': datetime.now(),
-                                                    'bookmaker': self.source.name,
+                                                    's_tstamp': str(datetime.now()),
+                                                    'bookmaker': self.name,
+                                                    'sport': sport,
                                                     'league': league,
-                                                    'game_id': game['id'],
                                                     'game': game['info'],
-                                                    'market_category': 'player_props',
                                                     'market_id': market['id'],
                                                     'market': market['name'],
                                                     'subject_id': subject['id'],
                                                     'subject': subject['name'],
                                                     'label': label,
                                                     'line': float(line),
-                                                    'odds': self.source.default_payout.odds,
-                                                    'is_boosted': 'Discount' in market['name'] # TODO: COULD BE A BUG HERE...DEFINITELY NOT GOING TO WORK
+                                                    'is_boosted': 'Discount' in market['name'],  # TODO: COULD BE A BUG HERE...DEFINITELY NOT GOING TO WORK
+                                                    'dflt_odds': self.dflt_odds,
+                                                    'dflt_im_prb': self.dflt_im_prb
                                                 })

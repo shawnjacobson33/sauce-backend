@@ -56,6 +56,8 @@ URL_MAP = {
         'prop_lines': 'https://api.underdogfantasy.com/beta/v6/over_under_lines'
     }, 'VividPicks': {
         'prop_lines': 'https://api.betcha.one/v1/game/activePlayersForLeagueBoard'
+    }, 'PropProfessor': {
+        'prop_lines': 'https://www.propprofessor.com/api/trpc/screen.getMarket'
     }
 }
 HEADERS_MAP = {
@@ -391,6 +393,21 @@ HEADERS_MAP = {
             'sentry-trace': '2dc7d3ce69644329b9c80f91212dc785-08ef37f394df43a6-0',
         }
 
+    }, 'PropProfessor': {
+        'prop_lines': {
+            'accept': '*/*',
+            'accept-language': 'en-US,en;q=0.9',
+            'content-type': 'application/json',
+            'priority': 'u=1, i',
+            'referer': 'https://www.propprofessor.com/screen',
+            'sec-ch-ua': '"Chromium";v="130", "Google Chrome";v="130", "Not?A_Brand";v="99"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        }
     }
 }
 COOKIES_MAP = {
@@ -421,6 +438,10 @@ COOKIES_MAP = {
         '__cf_bm': 'lz7mfq8j3DbD1Uk5X7wgejJSrJAHV13lV7208c.nZuc-1725470254-1.0.1.1-27Cuj4s2EIyqyKwXIAbhEaax1e7mCVLNm46uA1mF3E5VpNoyXFgjQ4vKH__t8EXtB.DL6ekGs7PBf.zOCM_nnQ',
         '_cfuvid': 'rNjJXOGEnkp6jGAfQWPKDbfVxCD7XkAyqh0PF1RXU90-1725470254729-0.0.1.1-604800000',
         'cf_clearance': '5aZBgJKdqsbijrlaENVCbJaMdkLwEf8xaL38PB4cOMM-1722455195-1.0.1.1-76s6PM08.0.Slze2RsWlbcrHR..BJCbb3THnUCVjEOCm1rUUUwB2MfcCEOE5zzgGtrNph1VM8OTG2dUGGHOjyQ',
+    }, 'PropProfessor': {
+        '__Secure-next-auth.session-token': '1a813161-7946-469e-80b0-9a9a4ba0fbeb',
+        '__Host-next-auth.csrf-token': '943d82bbc29cba7ecdc533fd53bb838d7e67b579727583adbfab0562b2cd092a%7Cdaa3a5fb202d05ac6eb53f9b3b500642783e5b3398dc8288b842becb61674af1',
+        '__Secure-next-auth.callback-url': 'https%3A%2F%2Fwww.propprofessor.com',
     }
 }
 
@@ -492,6 +513,11 @@ def get_params(bookmaker_name: str, name: str = 'prop_lines', var_1=None, var_2=
         }, 'Sleeper': {
             'prop_lines': {
                 'exclude_injury': 'false',
+            }
+        }, 'PropProfessor': {
+            'prop_lines': {
+                'batch': '1',
+                'input': '{"0":{"json":{"market":{},"league":{},"games":[],"participants":[],"marketTime":{}}}}',
             }
         }
     }

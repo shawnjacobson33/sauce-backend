@@ -160,11 +160,11 @@ class BetOnline(bkm_utils.LinesRetriever):
         # these are valid in-season leagues
         for league in LEAGUES:
             # get url for request to get games
-            url = bkm_utils.get_url(self.source.name, name='games')
+            url = bkm_utils.get_url(self.name, name='games')
             # get headers for request to get games
-            headers = bkm_utils.get_headers(self.source.name, name='games')
+            headers = bkm_utils.get_headers(self.name, name='games')
             # get params for request to get games
-            params = bkm_utils.get_params(self.source.name, name='games', var_1=league)
+            params = bkm_utils.get_params(self.name, name='games', var_1=league)
             # clean the league name after setting params
             cleaned_league = dc_utils.clean_league(league)
             # add the request task for this market to tasks
@@ -183,13 +183,13 @@ class BetOnline(bkm_utils.LinesRetriever):
                 # extract the game id from the dictionary, if exists keep going
                 if game_id := extract_game_id(game_data):
                     # get url for request to get prop lines
-                    url = bkm_utils.get_url(self.source.name)
+                    url = bkm_utils.get_url(self.name)
                     # get headers for request to get prop lines
-                    headers = bkm_utils.get_headers(self.source.name)
+                    headers = bkm_utils.get_headers(self.name)
                     # for every market
                     for market in get_league_markets(league):
                         # get params for request to get prop lines
-                        params = bkm_utils.get_params(self.source.name, var_1=game_id, var_2=market)
+                        params = bkm_utils.get_params(self.name, var_1=game_id, var_2=market)
                         # add the request task for this market to tasks
                         tasks.append(self.req_mngr.get(url, self._parse_lines, league, headers=headers, params=params))
 
@@ -200,15 +200,15 @@ class BetOnline(bkm_utils.LinesRetriever):
         # get the response data as json, if exists keep going
         if json_data := response.json():
             # update shared leagues data
-            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.name)
             # for each prop line in the response data
             for prop_line_data in json_data:
                 # get the market id from the db and extract the market name from the dictionary
-                if market := extract_market(self.source.name, prop_line_data, league):
+                if market := extract_market(self.name, prop_line_data, league):
                     # for every player in the prop line
                     for player_data in prop_line_data.get('players', []):
                         # get the subject id from the db and extract the subject name from dictionary
-                        if subject := extract_subject(self.source.name, player_data, league):
+                        if subject := extract_subject(self.name, player_data, league):
                             # for all markets that the player has
                             for market_data in player_data.get('markets', []):
                                 # market must exist and active on BetOnline
@@ -222,14 +222,14 @@ class BetOnline(bkm_utils.LinesRetriever):
                                             # update shared data
                                             self.update_betting_lines({
                                                 'batch_id': self.batch_id,
-                                                'time_processed': datetime.now(),
+                                                's_tstamp': str(datetime.now()),
                                                 'league': league,
                                                 'market_category': 'player_props',
                                                 'market_id': market['id'],
                                                 'market': market['name'],
                                                 'subject_id': subject['id'],
                                                 'subject': subject['name'],
-                                                'bookmaker': self.source.name,
+                                                'bookmaker': self.name,
                                                 'label': label,
                                                 'line': line,
                                                 'odds': odds,

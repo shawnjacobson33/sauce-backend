@@ -19,5 +19,5 @@ class RelevantGames:
     @classmethod
     def update_games(cls, game: dict) -> None:
         with cls._lock:
-            cls._relevant_games.add((game['league'], game['info']))
+            cls._relevant_games.add((game['box_score_url'], game['info']))
 

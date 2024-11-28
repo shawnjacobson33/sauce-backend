@@ -83,11 +83,11 @@ class OddsShopper(bkm_utils.LinesRetriever):
 
     async def retrieve(self) -> None:
         # get the url to request matchups data
-        url = bkm_utils.get_url(self.source.name, name='matchups')
+        url = bkm_utils.get_url(self.name, name='matchups')
         # get the headers to request matchups data
-        headers = bkm_utils.get_headers(self.source.name)
+        headers = bkm_utils.get_headers(self.name)
         # get the cookies to request matchups data
-        cookies = bkm_utils.get_cookies(self.source.name)
+        cookies = bkm_utils.get_cookies(self.name)
         # make request for matchups data
         await self.req_mngr.get(url, self._parse_matchups, headers=headers, cookies=cookies)
 
@@ -107,11 +107,11 @@ class OddsShopper(bkm_utils.LinesRetriever):
                             # get dates which are required for params of url for prop lines
                             start_date, end_date = get_dates()
                             # get the url required to request prop lines and format it with the offer id
-                            url = bkm_utils.get_url(self.source.name).format(offer_id)
+                            url = bkm_utils.get_url(self.name).format(offer_id)
                             # get the headers required to request prop lines
-                            headers = bkm_utils.get_headers(self.source.name)
+                            headers = bkm_utils.get_headers(self.name)
                             # get the params required to request prop lines, using start_date, and end date
-                            params = bkm_utils.get_params(self.source.name, var_1=start_date, var_2=end_date)
+                            params = bkm_utils.get_params(self.name, var_1=start_date, var_2=end_date)
                             # add the request to tasks
                             tasks.append(self.req_mngr.get(url, self._parse_lines, league, headers=headers, params=params))
 
@@ -122,17 +122,19 @@ class OddsShopper(bkm_utils.LinesRetriever):
     async def _parse_lines(self, response, league: str) -> None:
         # get json data from response and check its existence
         if json_data := response.json():
+            # get the sport for this league
+            sport = dc_utils.LEAGUE_SPORT_MAP[league]
             # to track the leagues being collected
-            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.name)
             # for each event/game in the response data
             for event in json_data:
                 # get the market id from db and extract market from the data
-                if market := extract_market(self.source.name, event, league):
+                if market := extract_market(self.name, event, league):
                     # TODO: For Subjects Shared Data make sure to store a team id so that it can be used to get a game
                     # get the subject id from the db and extract the subject from outcome
-                    if subject := extract_subject(self.source.name, event, league):
+                    if subject := extract_subject(self.name, event, league):
                         # use team data to get some game data
-                        if game := dc_utils.get_game(league, subject['team_id']):
+                        if game := dc_utils.get_game(league, subject['team']):
                             # iterate through each side or bookmaker for the prop line
                             for side in event.get('sides', []):
                                 # get the label from the side dictionary, only keep going if it exists
@@ -145,13 +147,11 @@ class OddsShopper(bkm_utils.LinesRetriever):
                                             odds, impl_prob, tw_prob, ev = extract_odds_and_other_stats(outcome)
                                             # update shared data
                                             self.update_betting_lines({
-                                                'batch_id': self.batch_id,
-                                                'time_processed': datetime.now(),
+                                                's_tstamp': str(datetime.now()),
                                                 'bookmaker': bookmaker_name,
+                                                'sport': sport,
                                                 'league': league,
-                                                'game_id': game['id'],
                                                 'game': game['info'],
-                                                'market_category': 'player_props',
                                                 'market_id': market['id'],
                                                 'market': market['name'],
                                                 'subject_id': subject['id'],
@@ -159,9 +159,5 @@ class OddsShopper(bkm_utils.LinesRetriever):
                                                 'label': label,
                                                 'line': float(outcome.get('line', 0.5)),
                                                 'odds': odds,
-                                                'implied_prob': impl_prob,
-                                                'other_stats': {
-                                                    'true_win_prob': tw_prob,
-                                                    'ev': ev
-                                                }
+                                                'im_prb': impl_prob,
                                             })

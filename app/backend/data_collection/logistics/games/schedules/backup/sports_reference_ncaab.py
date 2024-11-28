@@ -97,16 +97,16 @@ class NCAABScheduleCollector(sc_utils.ScheduleRetriever):
             # get all the rows
             if rows := table.find_all('tr'):
                 # extract the away team
-                if away_team := extract_away_team(self.source.name, self.source.league, rows):
+                if away_team := extract_away_team(self.name, self.source.league, rows):
                     # extract both home team and game time, located on the same row
-                    home_team, game_time = extract_home_team_and_game_time(self.source.name, self.source.league, rows, date)
+                    home_team, game_time = extract_home_team_and_game_time(self.name, self.source.league, rows, date)
                     # if both exist
                     if home_team and game_time:
                         # extract the league (NCAAM or NCAAW)
                         if league := extract_league(rows):
                             # adds the game and all of its extracted data to the shared data structure
                             self.update_games({
-                                'time_processed': datetime.now(),
+                                's_tstamp': str(datetime.now()),
                                 "game_time": game_time,
                                 "league": league,
                                 "away_team": away_team,

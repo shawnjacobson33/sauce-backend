@@ -159,13 +159,13 @@ class HotStreak(bkm_utils.LinesRetriever):
         # make call to the parent class Plug
         super().__init__(bookmaker)
         # get the universal url to make for all requests (uses graphql)
-        self.url = bkm_utils.get_url(self.source.name)
+        self.url = bkm_utils.get_url(self.name)
         # get the universal headers to make for all requests
-        self.headers = bkm_utils.get_headers(self.source.name)
+        self.headers = bkm_utils.get_headers(self.name)
 
     async def retrieve(self) -> None:
         # get the json data associated with requesting for session data
-        json_data = bkm_utils.get_json_data(self.source.name, name='tokens')
+        json_data = bkm_utils.get_json_data(self.name, name='tokens')
         # make the request for session data
         await self.req_mngr.post(self.url, self._parse_token, headers=self.headers, json=json_data)
 
@@ -179,13 +179,13 @@ class HotStreak(bkm_utils.LinesRetriever):
                     # update the authorization token
                     self.headers['authorization'] = f'Bearer {token}'
                     # get the json data needed for the request for current leagues data
-                    json_data = bkm_utils.get_json_data(self.source.name, name='leagues')
+                    json_data = bkm_utils.get_json_data(self.name, name='leagues')
                     # make the request for leagues data
                     await self.req_mngr.post(self.url, self._parse_league_aliases, headers=self.headers, json=json_data)
 
     async def fetch_page(self, leagues: dict, page: int) -> None:
         # get the json_data (for post request) to get the data of a page of prop lines
-        json_data = bkm_utils.get_json_data(self.source.name, var=page)
+        json_data = bkm_utils.get_json_data(self.name, var=page)
         # make the post request for the particular (page) page of prop lines
         return await self.req_mngr.post(self.url, self._parse_lines, leagues, headers=self.headers, json=json_data)
 
@@ -220,33 +220,34 @@ class HotStreak(bkm_utils.LinesRetriever):
                     if participant_id and market_components and (participant_data := participants.get(participant_id)):
                         # extract the league using an extracted dict of conn. opp. ids to league names, if exists then execute
                         if league := extract_league(participant_data, extract_opponent_ids(search, league_aliases)):
+                            # get the sport for this league
+                            sport = dc_utils.LEAGUE_SPORT_MAP[league]
                             # to track the leagues being collected
-                            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+                            dc_utils.RelevantData.update_relevant_leagues(league, self.name)
                             # extract the market id and market name from data
-                            if market := extract_market(self.source.name, market_components, league):
+                            if market := extract_market(self.name, market_components, league):
                                 # TODO: For Subjects Shared Data make sure to store a team id so that it can be used to get a game
                                 # get the subject id from db and extract subject from data
-                                if subject := extract_subject(self.source.name, participant_data, league):
+                                if subject := extract_subject(self.name, participant_data, league):
                                     # use team data to get some game data
-                                    if game := dc_utils.get_game(league, subject['team_id']):
+                                    if game := dc_utils.get_game(league, subject['team']):
                                         # for each line and corresponding over/under odds pair
                                         for line, odds_pair in zip(extract_line(market_dict), extract_odds(market_dict)):
                                             # each (odds) and label are at corresponding indices, so for each of them...
                                             for odds, label in zip(odds_pair, ['Under', 'Over']):
                                                 # update shared data
                                                 self.update_betting_lines({
-                                                    'batch_id': self.batch_id,
-                                                    'time_processed': datetime.now(),
-                                                    'bookmaker': self.source.name,
+                                                    's_tstamp': str(datetime.now()),
+                                                    'bookmaker': self.name,
+                                                    'sport': sport,
                                                     'league': league,
-                                                    'game_id': game['id'],
                                                     'game': game['info'],
-                                                    'market_category': 'player_props',
                                                     'market_id': market['id'],
                                                     'market': market['name'],
                                                     'subject_id': subject['id'],
                                                     'subject': subject['name'],
                                                     'label': label,
                                                     'line': line,
-                                                    'odds': odds
+                                                    'odds': odds,
+                                                    'im_prb': round(1 / odds, 4)
                                                 })

@@ -78,13 +78,13 @@ class Payday(bkm_utils.LinesRetriever):
         # call parent class Plug
         super().__init__(bookmaker)
         # get the universal headers used to make all requests
-        self.headers = bkm_utils.get_headers(self.source.name)
+        self.headers = bkm_utils.get_headers(self.name)
 
     async def retrieve(self) -> None:
         # get the url required to make request for leagues data
-        url = bkm_utils.get_url(self.source.name, name='leagues')
+        url = bkm_utils.get_url(self.name, name='leagues')
         # get the params required to make the request for leagues data
-        params = bkm_utils.get_params(self.source.name, name='leagues')
+        params = bkm_utils.get_params(self.name, name='leagues')
         # make the request to get leagues data
         await self.req_mngr.get(url, self._parse_leagues, headers=self.headers, params=params)
 
@@ -94,13 +94,13 @@ class Payday(bkm_utils.LinesRetriever):
             # initialize a structure to hold requests to be made
             tasks = []
             # get the url required to make requests for contests data
-            url = bkm_utils.get_url(self.source.name, name='contests')
+            url = bkm_utils.get_url(self.name, name='contests')
             # for each dictionary of league data in the response data if it exists
             for league_data in json_data.get('data', []):
                 # extract the league from league_data
                 if league := extract_league(league_data):
                     # get the params necessary for requesting contests data for this league
-                    params = bkm_utils.get_params(self.source.name, name='contests', var_1=league)
+                    params = bkm_utils.get_params(self.name, name='contests', var_1=league)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_contests, dc_utils.clean_league(league), headers=self.headers, params=params))
 
@@ -113,15 +113,17 @@ class Payday(bkm_utils.LinesRetriever):
             # get contests dictionary and the contest id from it, if both exists continue executing
             if (contests := data.get('contests')) and (contest_id := extract_contest_id(contests)):
                 # get the url required to request for prop lines using the contest id
-                url = bkm_utils.get_url(self.source.name).format(contest_id)
+                url = bkm_utils.get_url(self.name).format(contest_id)
                 # make request for prop lines
                 await self.req_mngr.get(url, self._parse_lines, league, headers=self.headers)
 
     async def _parse_lines(self, response, league: str):
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('data')):
+            # get the sport for this league
+            sport = dc_utils.LEAGUE_SPORT_MAP[league]
             # to track the leagues being collected
-            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.name)
             # for each game in data's games if they exist
             for game_data in data.get('games', []):
                 # get the teams dictionary holding team info
@@ -129,31 +131,30 @@ class Payday(bkm_utils.LinesRetriever):
                 # for each player prop data dictionary in game_data's player props if they exist
                 for player_prop_data in game_data.get('player_props', []):
                     # get the market id from the db and extract the market name
-                    if market := extract_market(self.source.name, player_prop_data, league):
+                    if market := extract_market(self.name, player_prop_data, league):
                         # get some player dictionary and the numeric over/under line, if both exist keep executing
                         if (player_data := player_prop_data.get('player')) and (line := player_prop_data.get('value')):
                             # get some team data
-                            if team := extract_team(self.source.name, league, player_data, teams_dict):
+                            if team := extract_team(self.name, league, player_data, teams_dict):
                                 # get the game data from database
-                                if game := dc_utils.get_game(league, team['id']):
+                                if game := dc_utils.get_game(league, team['abbr_name']):
                                     # get the subject id from the db and extract the subject name
-                                    if subject := extract_subject(self.source.name, player_data, league, team):
+                                    if subject := extract_subject(self.name, player_data, league, team):
                                         # for each general prop line label
                                         for label in ['Over', 'Under']:
                                             # update shared data
                                             self.update_betting_lines({
-                                                'batch_id': self.batch_id,
-                                                'time_processed': datetime.now(),
-                                                'bookmaker': self.source.name,
+                                                's_tstamp': str(datetime.now()),
+                                                'bookmaker': self.name,
+                                                'sport': sport,
                                                 'league': league,
-                                                'game_id': game['id'],
                                                 'game': game['info'],
-                                                'market_category': 'player_props',
                                                 'market_id': market['id'],
                                                 'market': market['name'],
                                                 'subject_id': subject['id'],
                                                 'subject': subject['name'],
                                                 'label': label,
                                                 'line': line,
-                                                'odds': self.source.default_payout.odds
+                                                'dflt_odds': self.dflt_odds,
+                                                'dflt_im_prb': self.dflt_im_prb
                                             })

@@ -51,11 +51,11 @@ class ParlayPlay(bkm_utils.LinesRetriever):
         # call parent class Plug
         super().__init__(bookmaker)
         # get the headers required to make requests for prop lines
-        self.headers = bkm_utils.get_headers(self.source.name)
+        self.headers = bkm_utils.get_headers(self.name)
 
     async def retrieve(self) -> None:
         # get the url that is required to make requests for prop lines
-        url = bkm_utils.get_url(self.source.name, name='sports')
+        url = bkm_utils.get_url(self.name, name='sports')
         # make the request for prop lines
         await self.req_mngr.get(url, self._parse_sports, headers=self.headers)
 
@@ -77,7 +77,7 @@ class ParlayPlay(bkm_utils.LinesRetriever):
                             # check if the league is valid
                             if bkm_utils.is_league_valid(cleaned_league):
                                 # get the prop lines url
-                                url = bkm_utils.get_url(self.source.name)
+                                url = bkm_utils.get_url(self.name)
                                 # include some params based upon the data collected
                                 params = {
                                     'sport': sport_name,
@@ -94,22 +94,24 @@ class ParlayPlay(bkm_utils.LinesRetriever):
     async def _parse_lines(self, response, league: str) -> None:
         # get the response data, if exists then keep executing
         if json_data := response.json():
+            # get the sport for this league
+            sport = dc_utils.LEAGUE_SPORT_MAP[league]
             # to track the leagues being collected
-            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.name)
             # for each player in the response data's players if they exist
             for player_data in json_data.get('players', []):
                 # get a player dictionary
                 if player := player_data.get('player'):
                     # get some player attributes
-                    if team := extract_team(self.source.name, league, player):
+                    if team := extract_team(self.name, league, player):
                         # get some game data using the team data
-                        if game := dc_utils.get_game(league, team['id']):
+                        if game := dc_utils.get_game(league, team['abbr_name']):
                             # get the subject id from db and extract the subject name from a dictionary
-                            if subject := extract_subject(self.source.name, player, league, team):
+                            if subject := extract_subject(self.name, player, league, team):
                                 # for each stat dictionary in the player data dictionary if they exist
                                 for stat_data in player_data.get('stats', []):
                                     # get the market id from the db and extract the market
-                                    if market := extract_market(self.source.name, stat_data, league):
+                                    if market := extract_market(self.name, stat_data, league):
                                         # get a dictionary of data around market, lines, and odds
                                         if alt_lines_data := stat_data.get('altLines'):
                                             # for each dictionary holding line, odds data if values exist
@@ -118,15 +120,12 @@ class ParlayPlay(bkm_utils.LinesRetriever):
                                                 if line := line_data.get('selectionPoints'):
                                                     # for each over and under label
                                                     for odds, label in extract_odds_and_label(line_data):
-                                                        # update shared data
-                                                        self.update_betting_lines({
-                                                            'batch_id': self.batch_id,
-                                                            'time_processed': datetime.now(),
-                                                            'bookmaker': self.source.name,
+                                                        betting_line = {
+                                                            's_tstamp': str(datetime.now()),
+                                                            'bookmaker': self.name,
+                                                            'sport': sport,
                                                             'league': league,
-                                                            'game_id': game['id'],
                                                             'game': game['info'],
-                                                            'market_category': 'player_props',
                                                             'market_id': market['id'],
                                                             'market': market['name'],
                                                             'subject_id': subject['id'],
@@ -134,5 +133,12 @@ class ParlayPlay(bkm_utils.LinesRetriever):
                                                             'label': label,
                                                             'line': line,
                                                             'odds': odds,
-                                                            'is_boosted': stat_data.get('isBoostedPayout')
-                                                        })
+                                                            'im_prb': round(1 / odds, 4)
+                                                        }
+                                                        if is_boosted := stat_data.get('isBoostedPayout'):
+                                                            betting_line['is_boosted'] = is_boosted
+
+                                                        # update shared data
+                                                        self.update_betting_lines(betting_line)
+
+

@@ -1,6 +1,6 @@
 import threading
 from collections import defaultdict
-from typing import Union
+from typing import Union, Optional
 
 import pandas as pd
 
@@ -34,19 +34,17 @@ class Subjects:
     def get_subjects(cls, dtype: str = None) -> Union[dict, pd.DataFrame]:
         if dtype == 'df':
             return pd.DataFrame(
-                [[key[0], subject_data['id'], key[2], subject_data['team_id']]
+                [[key[0], subject_data['id'], key[2], subject_data['team']]
                 for key, subject_data in cls._subjects.items() if len(key[1]) < 5], # only want one attribute (pos in this case)
-                columns=['league', 'id', 'name', 'team_id']
+                columns=['league', 'id', 'name', 'team']
             )
 
         return cls._subjects
 
     @classmethod
-    def get_subject(cls, subject: dict):
-        if spec_attr := subject.get('position', subject.get('team_id')):
+    def get_subject(cls, subject: dict) -> Optional[dict]:
+        if spec_attr := subject.get('position', subject.get('team')):
             return cls._subjects.get((subject['league'], spec_attr, subject['name']))
-
-        raise ValueError("Position or Team Id attribute not found!")
 
     @classmethod
     def update_subjects(cls, subject: dict) -> int:

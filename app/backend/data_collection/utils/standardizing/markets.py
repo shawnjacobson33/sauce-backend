@@ -5,19 +5,19 @@ from app.backend.data_collection.utils.shared_data import Markets, ProblemData, 
 from app.backend.data_collection.bookmakers.utils.modelling import Market
 
 
-def get_market(bookmaker_name: str, league: str, market_name: str, period_type: str = None) -> Optional[Market]:
+def get_market(bookmaker_name: str, league: str, market_name: str, period_type: str = None) -> Optional[dict]:
     # create a market object
-    market = Market(market_name, league=league)
+    market = Market(market_name, league=league).__dict__
     # clean the market name
-    cleaned_market = clean_market(market.name, market.sport, period_classifier=period_type)
+    cleaned_market = clean_market(market['name'], market['sport'], period_classifier=period_type)
     # get the matched data if it exists
-    if market_id := Markets.get_market(market.sport, market.name):
+    if market_id := Markets.get_market(market['sport'], cleaned_market):
         # update the market object with new data
-        market.id, market.name = market_id, cleaned_market
+        market['id'], market['name'] = market_id, cleaned_market
         # update the shared dictionary of valid markets
-        RelevantData.update_relevant_markets(market.__dict__, bookmaker_name)
+        RelevantData.update_relevant_markets(market, bookmaker_name)
         # return the market id and cleaned name
         return market
 
     # update the shared dictionary of pending markets
-    ProblemData.update_problem_markets(market.__dict__, bookmaker_name)
+    ProblemData.update_problem_markets(market, bookmaker_name)

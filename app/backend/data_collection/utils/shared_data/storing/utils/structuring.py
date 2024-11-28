@@ -19,12 +19,12 @@ def store_subject(store: defaultdict, subject: dict) -> None:
     # helps to standardize names across different sources
     attrs_stored = {
         'id': str(subject['_id']),
-        'team_id': subject['team_id'],
+        'team': subject['team'],
     }
     # add key value pair...one with position identifier and one with team identifier because of varying available data for bookmakers
     store[(subject['league'], subject['position'], c_subject_name)] = attrs_stored
     # store subject data for the second unique identifier
-    store[(subject['league'], subject['team_id'], c_subject_name)] = {key: val for key, val in attrs_stored.items() if key != 'team_id'}
+    store[(subject['league'], subject['team'], c_subject_name)] = {key: val for key, val in attrs_stored.items() if key != 'team'}
 
 
 def store_market(store: defaultdict, market: dict) -> None:

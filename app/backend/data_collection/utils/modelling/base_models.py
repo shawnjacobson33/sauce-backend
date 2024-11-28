@@ -20,9 +20,8 @@ class Team:
 
 class Retriever:
     def __init__(self, source: Source):
-        self.batch_id = str(uuid.uuid4())
+        self.name = source.name
         self.data_collected = 0
-        self.source = source
 
     async def retrieve(self):
         pass

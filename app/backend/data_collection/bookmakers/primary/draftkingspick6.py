@@ -50,11 +50,11 @@ class DraftKingsPick6(bkm_utils.LinesRetriever):
         # make call to parent class Plug
         super().__init__(bookmaker)
         # get universal request headers used for many requests
-        self.headers = bkm_utils.get_headers(self.source.name)
+        self.headers = bkm_utils.get_headers(self.name)
 
     async def retrieve(self) -> None:
         # get url to request sports
-        url = bkm_utils.get_url(self.source.name)
+        url = bkm_utils.get_url(self.name)
         # make a request to get the sports
         await self.req_mngr.get(url, self._parse_sports, headers=self.headers)
 
@@ -82,14 +82,16 @@ class DraftKingsPick6(bkm_utils.LinesRetriever):
     async def _parse_lines(self, response, league: str) -> None:
         # gets the json data from the response and then the redundant data from pickableIdToPickableMap field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('pickableIdToPickableMap')):
+            # get the sport for this league
+            sport = dc_utils.LEAGUE_SPORT_MAP[league]
             # to track the leagues being collected
-            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.name)
             # for every prop line in the data
             for prop_line_data in data.values():
                 # get pickable data and market_category data, if both exist then execute
                 if (pick_data := prop_line_data.get('pickable')) and (m_category_data := pick_data.get('marketCategory')):
                     # get the market id from the db and extract the market from the data dict
-                    if market := extract_market(self.source.name, m_category_data, league):
+                    if market := extract_market(self.name, m_category_data, league):
                         # get the over/under numeric line for the prop line, execute if exists
                         if line := extract_line(prop_line_data):
                             # for each subject in the pickableEntities if they exist
@@ -97,27 +99,26 @@ class DraftKingsPick6(bkm_utils.LinesRetriever):
                                 # get a dictionary that holds player attributes data
                                 if competitions := entity.get('pickableCompetitions'):
                                     # get player attributes
-                                    if team := extract_team(self.source.name, league, competitions):
+                                    if team := extract_team(self.name, league, competitions):
                                         # use team data to get some game data
-                                        if game := dc_utils.get_game(league, team['id']):
+                                        if game := dc_utils.get_game(league, team['abbr_name']):
                                             # get the subject id from the db and extract the subject from data
-                                            if subject := extract_subject(self.source.name, entity, league, team):
+                                            if subject := extract_subject(self.name, entity, league, team):
                                                 # for each label Over and Under update shared data prop lines
                                                 for label in ['Over', 'Under']:
                                                     # update shared data
                                                     self.update_betting_lines({
-                                                        'batch_id': self.batch_id,
-                                                        'time_processed': datetime.now(),
-                                                        'bookmaker': self.source.name,
+                                                        's_tstamp': str(datetime.now()),
+                                                        'bookmaker': self.name,
+                                                        'sport': sport,
                                                         'league': league,
-                                                        'game_id': game['id'],
                                                         'game': game['info'],
-                                                        'market_category': 'player_props',
                                                         'market_id': market['id'],
                                                         'market': market['name'],
                                                         'subject_id': subject['id'],
                                                         'subject': subject['name'],
                                                         'label': label,
                                                         'line': line,
-                                                        'odds': self.source.default_payout.odds
+                                                        'dflt_odds': self.dflt_odds,
+                                                        'dflt_im_prb': self.dflt_im_prb
                                                     })

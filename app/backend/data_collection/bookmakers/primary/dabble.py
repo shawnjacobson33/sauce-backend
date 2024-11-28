@@ -130,7 +130,7 @@ class Dabble(bkm_utils.LinesRetriever):
 
     async def retrieve(self) -> None:
         # gets the url required to request for the current competitions
-        url = bkm_utils.get_url(self.source.name, name='competitions')
+        url = bkm_utils.get_url(self.name, name='competitions')
         # will make an asynchronous request for the competitions using valid request data
         await self.req_mngr.get(url, self._parse_competitions, headers=self.headers, cookies=self.cookies)
 
@@ -144,11 +144,11 @@ class Dabble(bkm_utils.LinesRetriever):
                 # extract the league from competition and get the competition id, if both exist then execute
                 if (league := extract_league(competition)) and (competition_id := competition.get('id')):
                     # to track the leagues being collected
-                    dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+                    dc_utils.RelevantData.update_relevant_leagues(league, self.name)
                     # get the url required to request the current events for each competition and insert comp id into it
-                    url = bkm_utils.get_url(self.source.name, name='events').format(competition_id)
+                    url = bkm_utils.get_url(self.name, name='events').format(competition_id)
                     # get the params required to request the current events
-                    params = bkm_utils.get_params(self.source.name)
+                    params = bkm_utils.get_params(self.name)
                     # add the request task to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_events, league, params=params))
 
@@ -165,7 +165,7 @@ class Dabble(bkm_utils.LinesRetriever):
                 # gets the event id, game information, and checks whether this event is displayed, if all exist execute
                 if (event_id := event.get('id')) and event.get('isDisplayed'):
                     # gets the url required to request for prop lines and inserts event id into url string
-                    url = bkm_utils.get_url(self.source.name).format(event_id)
+                    url = bkm_utils.get_url(self.name).format(event_id)
                     # add the request task to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_lines, league))
 
@@ -175,34 +175,35 @@ class Dabble(bkm_utils.LinesRetriever):
     async def _parse_lines(self, response, league: str) -> None:
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('data')):
+            # get the sport for this league
+            sport = dc_utils.LEAGUE_SPORT_MAP[league]
             # get market groups
             markets_map = extract_market_map(data)
             # for each prop line in data's player props if they exist
             for player_prop_data in data.get('playerProps', []):
                 # get the market id from the db and extract the market name from the dictionary
-                if market := extract_market(self.source.name, player_prop_data, markets_map, league):
+                if market := extract_market(self.name, player_prop_data, markets_map, league):
                     # extract the player's team data
-                    if team := extract_team(self.source.name, league, player_prop_data):
+                    if team := extract_team(self.name, league, player_prop_data):
                         # use the team data to get game data
-                        if game := dc_utils.get_game(league, team['id']):
+                        if game := dc_utils.get_game(league, team['abbr_name']):
                             # get the subject id from the db and extract the subject name from dictionary
-                            if subject := extract_subject(self.source.name, player_prop_data, league, team):
+                            if subject := extract_subject(self.name, player_prop_data, league, team):
                                 # get over/under label for player prop and get numeric line, only execute if both exist
                                 if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
                                     # update shared data
                                     self.update_betting_lines({
-                                        'batch_id': self.batch_id,
-                                        'time_processed': datetime.now(),
-                                        'bookmaker': self.source.name,
+                                        's_tstamp': str(datetime.now()),
+                                        'bookmaker': self.name,
+                                        'sport': sport,
                                         'league': league,
-                                        'game_id': game['id'],
                                         'game': game['info'],
-                                        'market_category': 'player_props',
                                         'market_id': market['id'],
                                         'market': market['name'],
                                         'subject_id': subject['id'],
                                         'subject': subject['name'],
                                         'label': label,
                                         'line': line,
-                                        'odds': self.source.default_payout.odds
+                                        'dflt_odds': self.dflt_odds,
+                                        'dflt_im_prb': self.dflt_im_prb
                                     })

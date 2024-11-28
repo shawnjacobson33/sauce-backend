@@ -37,8 +37,6 @@ class Subject:
 class LinesSource(dc_utils.Source):
     def __init__(self, bookmaker_info: dict):
         super().__init__(bookmaker_info['name'])
-        self.is_dfs: bool = bookmaker_info['is_dfs']
-
         self.default_payout, self.payouts = None, None
         # don't have to check for 'payouts' because these two will always be together.
         if 'default_odds' in bookmaker_info:
@@ -51,6 +49,11 @@ class LinesSource(dc_utils.Source):
 class LinesRetriever(dc_utils.Retriever):
     def __init__(self, lines_source: LinesSource):
         super().__init__(lines_source)
+        self.dflt_odds, self.dflt_im_prb = None, None
+        if dflt_payout := lines_source.__dict__.get('default_payout'):
+            self.dflt_odds = dflt_payout.odds
+            self.dflt_im_prb = round(1 / self.dflt_odds, 4)
+
         self.req_mngr = RequestManager(use_requests=(lines_source.name == 'BetOnline'))  # BetOnline doesn't work with 'cloudscraper'
 
     def update_betting_lines(self, betting_line: dict) -> None:

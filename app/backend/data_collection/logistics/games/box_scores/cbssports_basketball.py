@@ -37,7 +37,7 @@ class BasketballBoxScoreRetriever(bs_utils.BoxScoreRetriever):
                                                     cells = [cell for cell in cells if 'for-mobile' not in cell.get('class')]
                                                     # extracts subject data from shared data structure
                                                     if subject := bs_utils.extract_subject(cells[0], self.source.league_specific,
-                                                                                           self.source.name, team=team):
+                                                                                           self.name, team=team):
                                                         # TODO: need to think a bit more about subject name standardization
                                                         # extracts the statistical data from the table
                                                         if box_score := bs_utils.extract_basketball_stats(cells[1:], self.source.league_specific):

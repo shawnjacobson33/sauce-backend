@@ -96,16 +96,16 @@ class BoomFantasy(bkm_utils.LinesRetriever):
 
     async def retrieve(self) -> None:
         # gets the url to get prop lines
-        url = bkm_utils.get_url(self.source.name)
+        url = bkm_utils.get_url(self.name)
         # get the headers that will be sent with request for prop lines
-        headers = bkm_utils.get_headers(self.source.name)
+        headers = bkm_utils.get_headers(self.name)
         # gets params that will be sent with request for prop lines
-        params = bkm_utils.get_params(self.source.name)
+        params = bkm_utils.get_params(self.name)
         # gets valid tokens needed to access data
         tokens_data = {
-            'url': bkm_utils.get_url(self.source.name, name='tokens'),
-            'headers': bkm_utils.get_headers(self.source.name, name='tokens'),
-            'json_data': bkm_utils.get_json_data(self.source.name, name='tokens')
+            'url': bkm_utils.get_url(self.name, name='tokens'),
+            'headers': bkm_utils.get_headers(self.name, name='tokens'),
+            'json_data': bkm_utils.get_json_data(self.name, name='tokens')
         }
         # because of tokens, use a special get method to request data
         await self.req_mngr.get_bf(url, tokens_data, self._parse_lines, headers=headers, params=params)
@@ -121,22 +121,24 @@ class BoomFantasy(bkm_utils.LinesRetriever):
                     if section_data.get('status') == 'active':
                         # if they exist execute
                         if league := extract_league(section_data):
+                            # get the sport for this league
+                            sport = dc_utils.LEAGUE_SPORT_MAP[league]
                             # to track the leagues being collected
-                            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+                            dc_utils.RelevantData.update_relevant_leagues(league, self.name)
                             # for each section in the league's sections if they exist
                             for qg_data in section_data.get('qG', []):
                                 # get some player attributes
-                                if team := extract_team(self.source.name, league, qg_data):
+                                if team := extract_team(self.name, league, qg_data):
                                     # get the game data from database
-                                    if game := dc_utils.get_game(league, team['id']):
+                                    if game := dc_utils.get_game(league, team['abbr_name']):
                                         # extract the subject and get the subject id from the response data and database
-                                        if subject := extract_subject(self.source.name, qg_data, league, team):
+                                        if subject := extract_subject(self.name, qg_data, league, team):
                                             # get the period classifier from dictionary (fullGame, firstQuarter, etc.)
                                             period = extract_period(qg_data)
                                             # get more prop line info from the league's section's fullQuestions if they exist
                                             for q_data in qg_data.get('q', []):
                                                 # extract the market and market id from the response data and database
-                                                if market := extract_market(self.source.name, q_data, league, period):   # TODO: Consider dropping market ids, you can just index by (sport, market)
+                                                if market := extract_market(self.name, q_data, league, period):
                                                     # for each dictionary in q_data's c field
                                                     for c_data in q_data.get('c', []):
                                                         # extract the numeric line for the prop line, if exists keep going
@@ -147,19 +149,19 @@ class BoomFantasy(bkm_utils.LinesRetriever):
                                                                 label, odds = extract_label_and_odds(more_c_data)
                                                                 # if both exist the keep going
                                                                 if label and odds:
-                                                                    # calculate the implied probability
-                                                                    implied_prob = round(1 / odds, 4)
                                                                     # update shared data
                                                                     self.update_betting_lines({
-                                                                        's_tstamp': datetime.now(),
-                                                                        'bookmaker': self.source.name,
+                                                                        's_tstamp': str(datetime.now()),
+                                                                        'bookmaker': self.name,
+                                                                        'sport': sport,
                                                                         'league': league,
                                                                         'game': game['info'],
+                                                                        'market_id': market['id'],
                                                                         'market': market['name'],
                                                                         'subject_id': subject['id'],
                                                                         'subject': subject['name'],
                                                                         'label': label,
                                                                         'line': line,
                                                                         'odds': odds,
-                                                                        'im_prb': implied_prob
+                                                                        'im_prb': round(1 / odds, 4)
                                                                     })

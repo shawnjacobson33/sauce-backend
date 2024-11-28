@@ -54,9 +54,9 @@ class Drafters(bkm_utils.LinesRetriever):
 
     async def retrieve(self) -> None:
         # get url to make a request for leagues
-        url = bkm_utils.get_url(self.source.name, name='leagues')
+        url = bkm_utils.get_url(self.name, name='leagues')
         # get headers to make a request for prop lines
-        headers = bkm_utils.get_headers(self.source.name, name='leagues')
+        headers = bkm_utils.get_headers(self.name, name='leagues')
         # make asynchronous request for prop lines
         await self.req_mngr.get(url, self._parse_leagues, headers=headers)
 
@@ -74,9 +74,9 @@ class Drafters(bkm_utils.LinesRetriever):
                     # if the league is valid keep going
                     if bkm_utils.is_league_valid(cleaned_league):
                         # get the url to get prop lines data and insert the league id
-                        url = bkm_utils.get_url(self.source.name).format(league_id)
+                        url = bkm_utils.get_url(self.name).format(league_id)
                         # get the headers associated with prop lines requests
-                        headers = bkm_utils.get_headers(self.source.name)
+                        headers = bkm_utils.get_headers(self.name)
                         # store some params
                         params = {
                             'page_no': '1'
@@ -90,8 +90,10 @@ class Drafters(bkm_utils.LinesRetriever):
     async def _parse_lines(self, response, league: str):
         # get response data, if exists execute
         if json_data := response.json():
+            # get the sport for this league
+            sport = dc_utils.LEAGUE_SPORT_MAP[league]
             # to track the leagues being collected
-            dc_utils.RelevantData.update_relevant_leagues(league, self.source.name)
+            dc_utils.RelevantData.update_relevant_leagues(league, self.name)
             # for each event in the data's entities
             for event_data in json_data.get('entities', []):
                 # check if the event is valid before executing
@@ -99,31 +101,30 @@ class Drafters(bkm_utils.LinesRetriever):
                     # for each player in event's players if they exist
                     for player_data in event_data.get('players', []):
                         # extract the player's team
-                        if team := extract_team(self.source.name, league, player_data):
+                        if team := extract_team(self.name, league, player_data):
                             # use the team data to get game data
-                            if game := dc_utils.get_game(league, team['id']):
+                            if game := dc_utils.get_game(league, team['abbr_name']):
                                 # extract the subject id from db and get subject from player dict
-                                if subject := extract_subject(self.source.name, player_data, league, team):
+                                if subject := extract_subject(self.name, player_data, league, team):
                                     # get market id from db and extract market from player dict
-                                    if market := extract_market(self.source.name, player_data, league):
+                                    if market := extract_market(self.name, player_data, league):
                                         # get numeric over/under line and execute if exists
                                         if line := player_data.get('bid_stats_value'):
                                             # for each label Over and Under update shared data
                                             for label in ['Over', 'Under']:
                                                 # update shared data
                                                 self.update_betting_lines({
-                                                    'batch_id': self.batch_id,
-                                                    'time_processed': datetime.now(),
-                                                    'bookmaker': self.source.name,
+                                                    's_tstamp': str(datetime.now()),
+                                                    'bookmaker': self.name,
+                                                    'sport': sport,
                                                     'league': league,
-                                                    'game_id': game['id'],
                                                     'game': game['info'],
-                                                    'market_category': 'player_props',
                                                     'market_id': market['id'],
                                                     'market': market['name'],
                                                     'subject_id': subject['id'],
                                                     'subject': subject['name'],
                                                     'label': label,
                                                     'line': line,
-                                                    'odds': self.source.default_payout.odds
+                                                    'dflt_odds': self.dflt_odds,
+                                                    'dflt_im_prb': self.dflt_im_prb
                                                 })

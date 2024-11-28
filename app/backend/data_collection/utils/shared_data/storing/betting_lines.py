@@ -2,6 +2,13 @@ import threading
 from collections import defaultdict, deque
 from datetime import datetime
 
+
+class BettingLinesStore(dict):
+    def __missing__(self, key):
+        value = defaultdict(dict)
+        self[key] = value
+        return value
+
 """
 {
     'date': '2024-11-24',
@@ -71,11 +78,11 @@ from datetime import datetime
 }
 """
 class BettingLines:
-    _betting_lines = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(deque))))
+    _betting_lines = BettingLinesStore()
     _lock = threading.Lock()
 
     @classmethod
-    def get(cls):
+    def get_lines(cls):
         return cls._betting_lines
 
     @classmethod
@@ -86,8 +93,8 @@ class BettingLines:
                                    {'s_tstamp', 'line', 'mult', 'odds', 'im_prb', 'is_boosted'} and value
                                    }
             if betting_line_history := cls._betting_lines[uniq_identifier]:
-                if bookmaker_history := betting_line_history['bookmakers'][betting_line['bookmaker']]:
-                    if label_specific_history := bookmaker_history[betting_line['label']]:
+                if bookmaker_history := betting_line_history['bookmakers'].setdefault(betting_line['bookmaker'], {}):
+                    if label_specific_history := bookmaker_history.setdefault(betting_line['label'], deque()):
                         betting_line_data_min_tstamp = {key: value for key, value in betting_line.items() if key != 's_tstamp'}
                         most_recent_bookmaker_history = label_specific_history[-1]
                         if betting_line_data_min_tstamp != most_recent_bookmaker_history:
@@ -98,12 +105,14 @@ class BettingLines:
                         label_specific_history.append(betting_line_record)
                 else:
                     if 'dflt_odds' in betting_line:
-                        betting_line_history['dflt_odds'] = betting_line['dflt_odds']
+                        bookmaker_history['dflt_odds'] = betting_line['dflt_odds']
+                        bookmaker_history['dflt_im_prb'] = betting_line['dflt_im_prb']
 
                     bookmaker_history[betting_line['label']] = deque([betting_line_record])
             else:
-                betting_line_history = {
+                cls._betting_lines[uniq_identifier] = {
                     'date': datetime.now().strftime('%Y-%m-%d'),
+                    'sport': betting_line['sport'],
                     'league': betting_line['league'],
                     'game': betting_line['game'],
                     'market': betting_line['market'],
@@ -117,7 +126,11 @@ class BettingLines:
                     }
                 }
                 if 'dflt_odds' in betting_line:
-                    betting_line_history['bookmakers'][betting_line['bookmaker']]['dflt_odds'] = betting_line['dflt_odds']
+                    cls._betting_lines[uniq_identifier]['bookmakers'][betting_line['bookmaker']]['dflt_odds'] = betting_line[
+                        'dflt_odds']
+                    cls._betting_lines[uniq_identifier]['bookmakers'][betting_line['bookmaker']]['dflt_im_prb'] = \
+                    betting_line[
+                        'dflt_im_prb']
 
     @classmethod
     def size(cls, bookmaker_name: str = None) -> int:

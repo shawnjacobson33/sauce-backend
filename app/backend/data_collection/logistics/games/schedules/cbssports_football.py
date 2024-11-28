@@ -50,9 +50,9 @@ class FootballScheduleRetriever(sc_utils.ScheduleRetriever):
                             # make sure 2 teams exist
                             if len(span_elems) > 1:
                                 # get the away team name and id if it exists
-                                if away_team := sc_utils.extract_team(span_elems[0], self.source.name, self.source.league):
+                                if away_team := sc_utils.extract_team(span_elems[0], self.name, self.source.league):
                                     # get the home team name and id if it exists
-                                    if home_team := sc_utils.extract_team(span_elems[1], self.source.name, self.source.league):
+                                    if home_team := sc_utils.extract_team(span_elems[1], self.name, self.source.league):
                                         # checks if box scores are available for this game and updates accordingly
                                         if sc_utils.is_box_score_url_valid(box_score_url):
                                             # adds the game and all of its extracted data to the shared data structure

@@ -21,7 +21,7 @@ def find_match_using_distances(subject: dict) -> Optional[dict]:
     f_subjects_df = subjects_df[subjects_df['league'] == subject['league']].copy()
     f_subjects_df['distance'] = f_subjects_df['name'].apply(lambda x: Levenshtein.distance(c_subject_name, x))
     closest_subject = f_subjects_df.sort_values(by='distance').iloc[0]
-    if not closest_subject['distance']:
+    if closest_subject['distance'] == 0:
         return {
             'id': closest_subject['id'],
             'name': closest_subject['name'],

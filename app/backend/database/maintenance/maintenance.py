@@ -80,7 +80,7 @@ def insert_game(game_data: dict = None, insert_all: bool = False, exclude: list[
         game_data['game_time'] = datetime.strptime(game_data['game_time'], "%Y-%m-%d %H:%M:%S.%f")
         collection.insert_one(game_data)
 
-    delete_duplicates(collection, 'time_processed', 'league')
+    delete_duplicates(collection, 's_tstamp', 'league')
 
 
 # subject = {
@@ -116,7 +116,7 @@ def insert_game(game_data: dict = None, insert_all: bool = False, exclude: list[
 #         "box_score_url": "NBA_20241120_CHI@MIL",
 #         "league": "NBA",
 #         "source": "cbssports-nba",
-#         "time_processed": "2024-11-19 08:58:13.284000"
+#         "s_tstamp": "2024-11-19 08:58:13.284000"
 #     }
 # NHL
 # game = {
@@ -132,7 +132,7 @@ def insert_game(game_data: dict = None, insert_all: bool = False, exclude: list[
 #         "box_score_url": "NHL_20241120_CAR@PHI",
 #         "league": "NHL",
 #         "source": "cbssports-nhl",
-#         "time_processed": "2024-11-19 08:58:13.284000"
+#         "s_tstamp": "2024-11-19 08:58:13.284000"
 #     }
 # NFL
 # game = {
@@ -148,7 +148,7 @@ def insert_game(game_data: dict = None, insert_all: bool = False, exclude: list[
 #         "box_score_url": "NCAAB_20241120_ILL@BAMA",
 #         "league": "NCAAM",
 #         "source": "cbssports-ncaam",
-#         "time_processed": "2024-11-19 08:58:13.284000"
+#         "s_tstamp": "2024-11-19 08:58:13.284000"
 #     }
 #
 # insert_game(

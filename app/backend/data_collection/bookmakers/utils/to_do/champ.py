@@ -21,14 +21,14 @@ class Champ(bkm_utils.LinesRetriever):
         super().__init__(bookmaker)
 
     async def retrieve(self):
-        url = bkm_utils.get_url(self.source.name)
-        headers = bkm_utils.get_headers(self.source.name)
+        url = bkm_utils.get_url(self.name)
+        headers = bkm_utils.get_headers(self.name)
         tasks = []
         for league in get_in_season_leagues():
             if not is_league_good(clean_league(league)):
                 continue
 
-            json_data = bkm_utils.get_json_data(self.source.name, var=league)
+            json_data = bkm_utils.get_json_data(self.name, var=league)
             tasks.append(self.req_mngr.post(url, self._parse_lines, league, headers=headers, json=json_data))
 
         await asyncio.gather(*tasks)
@@ -71,9 +71,9 @@ class Champ(bkm_utils.LinesRetriever):
 
                     for label in labels:
                         # update shared data
-                        PropLines.update(''.join(self.source.name.split()).lower(), {
+                        PropLines.update(''.join(self.name.split()).lower(), {
                             'batch_id': self.batch_id,
-                            'time_processed': datetime.now(),
+                            's_tstamp': str(datetime.now()),
                             'league': league,
                             'game_info': game_info,
                             'market_category': 'player_props',
@@ -81,7 +81,7 @@ class Champ(bkm_utils.LinesRetriever):
                             'market': market['name'],
                             'subject_id': subject['id'],
                             'subject': subject['name'],
-                            'bookmaker': self.source.name,
+                            'bookmaker': self.name,
                             'label': label,
                             'line': line,
                             'multiplier': multiplier,

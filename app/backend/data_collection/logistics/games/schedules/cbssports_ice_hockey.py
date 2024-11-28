@@ -26,30 +26,30 @@ class IceHockeyScheduleRetriever(sc_utils.ScheduleRetriever):
         # initializes a html parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # extracts the table element that holds schedule data
-        table = soup.find('table')
-        # extracts all rows except for the header row from the table
-        rows = table.find_all('tr')[1:]
-        # for each row
-        for row in rows:
-            # get the time and date of the game and check if it's in the right range of dates desired
-            game_time, box_score_url = sc_utils.extract_game_time_and_box_score_url(row, date)
-            # if the game time and box score url exist
-            if game_time and box_score_url:
-                # get the elements where team names lie
-                span_elems = row.find_all('span', {'class': 'TeamName'})
-                # make sure 2 teams exist
-                if len(span_elems) > 1:
-                    # get the away team name and id if it exists
-                    if away_team := sc_utils.extract_team(span_elems[0], self.source.name, self.source.league):
-                        # get the home team name and id if it exists
-                        if home_team := sc_utils.extract_team(span_elems[1], self.source.name, self.source.league):
-                            # checks if box scores are available for this game and updates accordingly
-                            if sc_utils.is_box_score_url_valid(box_score_url):
-                                # adds the game and all of its extracted data to the shared data structure
-                                Games.update_games({
-                                    "league": self.source.league_specific,
-                                    "game_time": game_time,
-                                    "away_team": away_team,
-                                    "home_team": home_team,
-                                    "box_score_url": box_score_url
-                                })
+        if table := soup.find('table'):
+            # extracts all rows except for the header row from the table
+            if rows := table.find_all('tr'):
+                # for each row
+                for row in rows[1:]:
+                    # get the time and date of the game and check if it's in the right range of dates desired
+                    game_time, box_score_url = sc_utils.extract_game_time_and_box_score_url(row, date)
+                    # if the game time and box score url exist
+                    if game_time and box_score_url:
+                        # get the elements where team names lie
+                        span_elems = row.find_all('span', {'class': 'TeamName'})
+                        # make sure 2 teams exist
+                        if len(span_elems) > 1:
+                            # get the away team name and id if it exists
+                            if away_team := sc_utils.extract_team(span_elems[0], self.name, self.source.league):
+                                # get the home team name and id if it exists
+                                if home_team := sc_utils.extract_team(span_elems[1], self.name, self.source.league):
+                                    # checks if box scores are available for this game and updates accordingly
+                                    if sc_utils.is_box_score_url_valid(box_score_url):
+                                        # adds the game and all of its extracted data to the shared data structure
+                                        Games.update_games({
+                                            "league": self.source.league_specific,
+                                            "game_time": game_time,
+                                            "away_team": away_team,
+                                            "home_team": home_team,
+                                            "box_score_url": box_score_url
+                                        })
