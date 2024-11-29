@@ -102,11 +102,12 @@ class MoneyLine(bkm_utils.LinesRetriever):
                                             # get line and label for every one that exists
                                             for line, label in extract_line_and_label(prop_line):
                                                 # update shared data
-                                                self.update_betting_lines({
+                                                dc_utils.BettingLines.update({
                                                     's_tstamp': str(datetime.now()),
                                                     'bookmaker': self.name,
                                                     'sport': sport,
                                                     'league': league,
+                                                    'game_time': game['game_time'],
                                                     'game': game['info'],
                                                     'market_id': market['id'],
                                                     'market': market['name'],

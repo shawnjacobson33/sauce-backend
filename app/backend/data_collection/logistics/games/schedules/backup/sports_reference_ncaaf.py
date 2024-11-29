@@ -67,9 +67,9 @@ class NCAAFScheduleCollector(sc_utils.ScheduleRetriever):
                             # extract the away team and home team if they exist
                             if (away_team_name := cells[0].text) and (home_team_name := cells[1].text):
                                 # get the away team data from db
-                                if away_team := clean_team(self.name, self.source.league, away_team_name):
+                                if away_team := clean_team(self.name, self.league, away_team_name):
                                     # get the home team data from db
-                                    if home_team := clean_team(self.name, self.source.league,
+                                    if home_team := clean_team(self.name, self.league,
                                                                home_team_name):
                                         # extract the game time
                                         if game_time := extract_game_time(game_date, cells[2]):
@@ -77,7 +77,7 @@ class NCAAFScheduleCollector(sc_utils.ScheduleRetriever):
                                             self.update_games({
                                                 's_tstamp': str(datetime.now()),
                                                 "game_time": game_time,
-                                                "league": self.source.league,
+                                                "league": self.league,
                                                 "away_team": away_team,
                                                 "home_team": home_team
                                             })

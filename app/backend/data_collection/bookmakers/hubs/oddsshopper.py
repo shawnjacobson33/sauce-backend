@@ -89,9 +89,9 @@ class OddsShopper(bkm_utils.LinesRetriever):
         # get the cookies to request matchups data
         cookies = bkm_utils.get_cookies(self.name)
         # make request for matchups data
-        await self.req_mngr.get(url, self._parse_matchups, headers=headers, cookies=cookies)
+        return await self.req_mngr.get(url, self._parse_matchups, headers=headers, cookies=cookies)
 
-    async def _parse_matchups(self, response) -> None:
+    async def _parse_matchups(self, response) -> list:
         # get json data from response and check its existence
         if json_data := response.json():
             # initialize tasks to hold all the requests to be made
@@ -116,7 +116,7 @@ class OddsShopper(bkm_utils.LinesRetriever):
                             tasks.append(self.req_mngr.get(url, self._parse_lines, league, headers=headers, params=params))
 
             # add all requests to the event loop and make the asynchronously
-            await asyncio.gather(*tasks)
+            return tasks
 
     # TODO: ANYWAY TO CHANGE game_info FORMAT? DON'T GET DATA FROM BOOKMAKERS YOU ALREADY HAVE?
     async def _parse_lines(self, response, league: str) -> None:
@@ -146,13 +146,13 @@ class OddsShopper(bkm_utils.LinesRetriever):
                                             # extract odds, implied probability, true win probability, and expected value if they exist
                                             odds, impl_prob, tw_prob, ev = extract_odds_and_other_stats(outcome)
                                             # update shared data
-                                            self.update_betting_lines({
+                                            dc_utils.BettingLines.update({
                                                 's_tstamp': str(datetime.now()),
                                                 'bookmaker': bookmaker_name,
                                                 'sport': sport,
                                                 'league': league,
+                                                'game_time': game['game_time'],
                                                 'game': game['info'],
-                                                'market_id': market['id'],
                                                 'market': market['name'],
                                                 'subject_id': subject['id'],
                                                 'subject': subject['name'],

@@ -408,6 +408,23 @@ HEADERS_MAP = {
             'sec-fetch-site': 'same-origin',
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
         }
+    }, 'OddsJam': {
+        'prop_lines': {
+            'accept': 'application/json',
+            'accept-language': 'en-US,en;q=0.9',
+            'baggage': 'sentry-environment=preview,sentry-release=r5zfrICO8UgfIhZtmpNaF,sentry-public_key=66796a2fc7244437a5d67cc60232438b,sentry-trace_id=a6b1440886224a249080e4a6bd99093c,sentry-sample_rate=0,sentry-transaction=%2F%5BsportOrLeague%5D%2Fscreen%2F%5Bmarket%5D,sentry-sampled=false',
+            'content-type': 'application/json',
+            'priority': 'u=1, i',
+            'referer': '{}',  # url = 'https://oddsjam.com/nfl/screen/moneyline'
+            'sec-ch-ua': '"Chromium";v="130", "Google Chrome";v="130", "Not?A_Brand";v="99"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'sentry-trace': 'a6b1440886224a249080e4a6bd99093c-b620603bcc3ba705-0',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        }
     }
 }
 COOKIES_MAP = {
@@ -442,6 +459,44 @@ COOKIES_MAP = {
         '__Secure-next-auth.session-token': '1a813161-7946-469e-80b0-9a9a4ba0fbeb',
         '__Host-next-auth.csrf-token': '943d82bbc29cba7ecdc533fd53bb838d7e67b579727583adbfab0562b2cd092a%7Cdaa3a5fb202d05ac6eb53f9b3b500642783e5b3398dc8288b842becb61674af1',
         '__Secure-next-auth.callback-url': 'https%3A%2F%2Fwww.propprofessor.com',
+    }, 'OddsJam': {
+        '_ga': 'GA1.1.27410901.1728512773',
+        '_gcl_au': '1.1.1713951455.1728512773',
+        'intercom-id-xgkfzdmt': '32a3398f-a418-4847-be4e-62a0e19bfa86',
+        'intercom-device-id-xgkfzdmt': '6b01144f-99f8-47d6-9f42-c0895ccc1b68',
+        'uwguid': 'WEBLS-8ae8e8cc-ee02-4edd-aa31-a8bf32eedf6a',
+        'state': 'MN',
+        '__stripe_mid': '2c26623d-f90e-4440-bba9-082a1a4cf28170c8b9',
+        'anon_user_id': '1731774860070crue6f6r7wa',
+        'email-subscribed': 'false',
+        'modals%2Fsubscribe': '',
+        'positive-ev_tour-index': '0',
+        'sidebar': 'false',
+        'navGroups': '{}',
+        'HeardAboutUs': '',
+        'heardAboutUsSource': '',
+        'heardAboutUsSpecific': '',
+        '_fbp': 'fb.1.1731774863470.790573114113043925',
+        'access_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYzMzEwOTAwLCJqdGkiOiIwODg3MjE5MTM5M2Q0MTg3OWI2YTc0NWVkMGU3ZWYyZCIsInVzZXJfaWQiOjc1MjE0NiwicGxhbnMiOltdLCJiYW5rcm9sbCI6bnVsbH0.K6LDSfz6glauzjC4Y6iPABJfMYPPD_JrJrZSSRm5Tg0',
+        'local/ab-test/OJ-DevigMethod-Power': 'Power',
+        'local/ab-test/OJ-14-pandppricing-allDevices': 'Control',
+        'local/ab-test/OJ-17-globalplanpricing-allDevices': 'Treatment99',
+        'local/ab-test/OJ-15-NewCheckout-allDevices': 'NewCheckout',
+        'local/ab-test/OJ-17-BettingToolVideos-allDevices': 'Control',
+        'local/ab-test/silver-plan-experiment': 'Control',
+        'local/ab-test/default-filters': '1hour',
+        'local/ab-test/gold249_inseason': 'Control',
+        'redirectTrue': 'true',
+        'ajs_user_id': 'jacobsonshawn33@gmail.com',
+        'ajs_anonymous_id': '1bee9c40-2773-475b-b685-6319bbc07381',
+        'cookieyes-consent': 'consentid:UTRHOG8zR25BMno5QlkyZjNpTUMwczloQ21ZblZDMXU,consent:no,action:yes,necessary:yes,functional:yes,analytics:yes,performance:yes,advertisement:yes,other:yes',
+        'cf_clearance': 'GK_aypkM23ynOVLaZx_.Y0JWsYCa.b0viFHPR7ND1es-1732844542-1.2.1.1-EVghJ85AXcKfKMw5Ibut9OyRkVbOIlDznFvwk0Nr2uc3PhdFp7hz2nzkryAcYRDkqD2taSTlf2yh0KCWl57BD3W85Oi.97VAirnU1Ppe8iUenGBe6miz5_QnNynsOeLNdJNN4ZhBVIl_bI2kMkxgR2Ioj_G57l3md1ykDUPtIBl8pCPWDgg7nEean86qnzY.qcKsCY2OJIpv_DJoAR13eHaRtDVVMz7XrYm0u3gmcgsaL_JWueeF9Q3YxPUslQPtvo30fEeB8l_LdMen8.ZjRlkgJN.4k29DvWwTaaQoCmbf42sPgazrGqjJHZx35_CJbdd2zGEQxnuEMmQcoZUsus.QI_zSHqZOgQ3cpPNVc1hz9w6wI4txVs2zjd.8PoZ.hsfufW57ug43yJEpFhidLA',
+        '_clck': 'ozbm6h%7C2%7Cfra%7C0%7C1743',
+        '__stripe_sid': '6c1a1adb-a101-4be8-9412-ed32114f6549a91ba1',
+        '_rdt_uuid': '1728512769176.ca1e23c5-f6f1-4d50-86c1-2bea1ad59cf8',
+        '_clsk': '11cfbme%7C1732844720190%7C6%7C1%7Ck.clarity.ms%2Fcollect',
+        'intercom-session-xgkfzdmt': 'WXcyNm1ZejROdFVTUFFZa1pEMHhPZE84WWRqZkJGV0hYdWVJV2paVkpMN0RTWFoybEk5Zm1TRVZTUVh6RjM3eC0tNDhNaE81ZnRFUzRzLzU3UWJsYkF3dz09--2ab9e6e8a6e104d91719d5929c14dbfb9ff13bdc',
+        '_ga_DRPX475B27': 'GS1.1.1732844545.14.1.1732844720.0.0.0',
     }
 }
 
@@ -518,6 +573,15 @@ def get_params(bookmaker_name: str, name: str = 'prop_lines', var_1=None, var_2=
             'prop_lines': {
                 'batch': '1',
                 'input': '{"0":{"json":{"market":{},"league":{},"games":[],"participants":[],"marketTime":{}}}}',
+            }
+        }, 'OddsJam': {
+            'prop_lines': {
+                'sport': 'football',
+                'league': 'nfl',
+                'state': 'MN',
+                'market_name': 'moneyline',
+                'is_future': '0',
+                'game_status_filter': 'All',
             }
         }
     }

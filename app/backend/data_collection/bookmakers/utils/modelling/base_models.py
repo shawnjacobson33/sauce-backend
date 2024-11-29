@@ -3,6 +3,7 @@ from typing import Optional
 
 from app.backend.data_collection import utils as dc_utils
 from app.backend.data_collection.bookmakers.utils.requesting import RequestManager
+from app.backend.data_collection.utils import BettingLines
 
 
 # ***************************** EXTRA HELPERS *********************************
@@ -56,11 +57,5 @@ class LinesRetriever(dc_utils.Retriever):
 
         self.req_mngr = RequestManager(use_requests=(lines_source.name == 'BetOnline'))  # BetOnline doesn't work with 'cloudscraper'
 
-    def update_betting_lines(self, betting_line: dict) -> None:
-        # update shared data...formatting bookmaker name for OddsShopper's contrasting formats...OddShopper will use bookmaker param
-        dc_utils.BettingLines.update(betting_line)
-        # add one to the prop line count
-        self.data_collected += 1
-
     def __str__(self):
-        return f'{str(self.data_collected)} lines'
+        return f'{str(BettingLines.size(self.name))} lines'

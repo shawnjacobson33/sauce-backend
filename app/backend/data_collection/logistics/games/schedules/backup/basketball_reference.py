@@ -97,16 +97,16 @@ class NBAScheduleRetriever(sc_utils.ScheduleRetriever):
             # get the time and date of the game and check if it's in the right range of dates desired
             if game_time := extract_game_time(row, dates):
                 # get the away team name and id if it exists
-                if away_team := extract_team(self.name, self.source.league, row,
+                if away_team := extract_team(self.name, self.league, row,
                                              'visitor_team_name'):
                     # get the home team name and id if it exists
-                    if home_team := extract_team(self.name, self.source.league, row,
+                    if home_team := extract_team(self.name, self.league, row,
                                                  'home_team_name'):
                             # adds the game and all of its extracted data to the shared data structure
                             self.update_games({
                                 's_tstamp': str(datetime.now()),
                                 'source': self.name,
-                                "league": self.source.league,
+                                "league": self.league,
                                 "game_time": game_time,
                                 "away_team": away_team,
                                 "home_team": home_team,

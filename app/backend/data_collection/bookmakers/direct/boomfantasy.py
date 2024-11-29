@@ -94,7 +94,7 @@ class BoomFantasy(bkm_utils.LinesRetriever):
         # call parent class Plug
         super().__init__(bookmaker)
 
-    async def retrieve(self) -> None:
+    async def retrieve(self) -> list:
         # gets the url to get prop lines
         url = bkm_utils.get_url(self.name)
         # get the headers that will be sent with request for prop lines
@@ -108,7 +108,7 @@ class BoomFantasy(bkm_utils.LinesRetriever):
             'json_data': bkm_utils.get_json_data(self.name, name='tokens')
         }
         # because of tokens, use a special get method to request data
-        await self.req_mngr.get_bf(url, tokens_data, self._parse_lines, headers=headers, params=params)
+        return [self.req_mngr.get_bf(url, tokens_data, self._parse_lines, headers=headers, params=params)]
 
     async def _parse_lines(self, response) -> None:
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
@@ -150,11 +150,12 @@ class BoomFantasy(bkm_utils.LinesRetriever):
                                                                 # if both exist the keep going
                                                                 if label and odds:
                                                                     # update shared data
-                                                                    self.update_betting_lines({
+                                                                    dc_utils.BettingLines.update({
                                                                         's_tstamp': str(datetime.now()),
                                                                         'bookmaker': self.name,
                                                                         'sport': sport,
                                                                         'league': league,
+                                                                        'game_time': game['game_time'],
                                                                         'game': game['info'],
                                                                         'market_id': market['id'],
                                                                         'market': market['name'],

@@ -1,7 +1,7 @@
 import json
 import os
 
-from app.backend.data_collection.bookmakers import ODDSSHOPPER_NOVEL_BOOKMAKERS
+from app.backend.data_collection.bookmakers import ODDSSHOPPER_NOVEL_BOOKMAKERS, PROPPROFESSOR_NOVEL_BOOKMAKERS
 from app.backend.data_collection import utils as dc_utils
 
 
@@ -144,9 +144,9 @@ def save_data_to_files() -> None:
 
 def output_source_stats(retriever: dc_utils.Retriever, time_taken: float) -> None:
     # Because OddsShopper isn't actually a bookmaker, but a tool that holds other bookmaker's odds
-    if retriever.name == 'OddsShopper':
+    if retriever.name in {'OddsShopper', 'PropProfessor'}:
         # for every bookmaker that they offer
-        for bookmaker_name in ODDSSHOPPER_NOVEL_BOOKMAKERS:
+        for bookmaker_name in {*ODDSSHOPPER_NOVEL_BOOKMAKERS, *PROPPROFESSOR_NOVEL_BOOKMAKERS}:
             # output the amount of lines collected from each bookmaker they offer and the time taken for the whole job.
             print(f'[{bookmaker_name}]: {dc_utils.BettingLines.size(bookmaker_name=bookmaker_name)}, {round(time_taken, 3)}s')
     else:

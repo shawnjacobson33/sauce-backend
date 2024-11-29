@@ -35,7 +35,7 @@ class Subjects:
         if dtype == 'df':
             return pd.DataFrame(
                 [[key[0], subject_data['id'], key[2], subject_data['team']]
-                for key, subject_data in cls._subjects.items() if len(key[1]) < 5], # only want one attribute (pos in this case)
+                for key, subject_data in cls._subjects.items() if 'team' in subject_data], # only want one attribute (pos in this case)
                 columns=['league', 'id', 'name', 'team']
             )
 

@@ -9,6 +9,7 @@ MARKET_MAP = {
         'PTS': 'Points',  # Payday
         'Total Points': 'Points',  # Rebet
         'Player points (incl. overtime)': 'Points',  # Rebet
+        'Player Points': 'Points',  # PropProfessor
       # 1Q Points
         '1Q POINTS': '1Q Points',  # BoomFantasy
         'first_qtr_points': '1Q Points',  # Sleeper
@@ -20,6 +21,7 @@ MARKET_MAP = {
         'REB': 'Rebounds',  # Payday
         'Total Rebounds': 'Rebounds',  # Rebet
         'Player rebounds (incl. overtime)': 'Rebounds',  # Rebet
+        'Player Rebounds': 'Rebounds',  # PropProfessor
       # 1Q Rebounds
         '1Q REBOUNDS': '1Q Rebounds',  # BoomFantasy
         'first_qtr_rebounds': '1Q Rebounds',  # Sleeper
@@ -33,6 +35,7 @@ MARKET_MAP = {
         'AST': 'Assists',  # Payday
         'Player assists (incl. overtime)': 'Assists',  # Rebet
         'Total Assists': 'Assists',  # Rebet
+        'Player Assists': 'Assists',  # PropProfessor
       # 1Q Assists
         '1Q ASSISTS': '1Q Assists',  # BoomFantasy
         'first_qtr_assists': '1Q Assists',  # Sleeper
@@ -46,6 +49,7 @@ MARKET_MAP = {
         'Points+Rebounds': 'Points + Rebounds',  # Drafters
         'points_and_rebounds': 'Points + Rebounds',  # Sleeper
         'Pts + Rebounds': 'Points + Rebounds',  # SuperDraft
+        'Player Points + Rebounds': 'Points + Rebounds',  # PropProfessor
       # Points + Assists
         'Pts + Ast': 'Points + Assists',  # ParlayPlay
         'Pts + Asts': 'Points + Assists',  # OwnersBox
@@ -56,6 +60,7 @@ MARKET_MAP = {
         'Points+Assists': 'Points + Assists',  # Drafters
         'points_and_assists': 'Points + Assists',  # Sleeper
         'Pts + Assists': 'Points + Assists',  # SuperDraft
+        'Player Points + Assists': 'Points + Assists',  # PropProfessor
       # Rebounds + Assists
         'Reb + Ast': 'Rebounds + Assists',  # ParlayPlay
         'Rebs + Asts': 'Rebounds + Assists',  # OwnersBox
@@ -67,6 +72,7 @@ MARKET_MAP = {
         'Rebounds+Assists': 'Rebounds + Assists',  # Drafters
         'rebounds_and_assists': 'Rebounds + Assists',  # Sleeper
         'Rbs + Assists': 'Rebounds + Assists',  # SuperDraft
+        'Player Rebounds + Assists': 'Rebounds + Assists',  # PropProfessor
       # Points + Rebounds + Assists
         'Pts + Reb + Ast': 'Points + Rebounds + Assists',  # ParlayPlay, BetOnline
         'Pts + Rebs + Asts': 'Points + Rebounds + Assists',  # OwnersBox
@@ -77,6 +83,7 @@ MARKET_MAP = {
         'Pts+Rebs+Asts': 'Points + Rebounds + Assists',  # PrizePicks
         'pts_reb_ast': 'Points + Rebounds + Assists',  # Sleeper
         'Pts + Rbs + Asts': 'Points + Rebounds + Assists',  # SuperDraft
+        'Player Points + Assists + Rebounds': 'Points + Rebounds + Assists',  # PropProfessor
       # 1Q Points + Rebounds + Assists
         '1Q Pts + Rebs + Asts': '1Q Points + Rebounds + Assists',  # Underdog Fantasy
       # 1H Points + Rebounds + Assists
@@ -98,6 +105,7 @@ MARKET_MAP = {
         'threes_made': '3-Pointers Made',  # Sleeper
         'Total 3-Point Field Goals': '3-Pointers Made',  # Rebet
         'Player 3-point field goals (incl. overtime)': '3-Pointers Made',  # Rebet
+        'Player Threes Made': '3-Pointers Made',  # PropProfessor
       # 1Q 3-Pointers Made
         '1Q 3-Pointers Made': '1Q 3-Pointers Made',  # Underdog Fantasy
       # 1H 3-Pointers Made
@@ -122,24 +130,29 @@ MARKET_MAP = {
         'Total Double Doubles': 'Double Doubles',  # OddsShopper
         'double_double': 'Double Doubles',  # HotStreak
         'Double Double (incl. Overtime)': 'Double Doubles',  # Rebet
+        'Player Double Double': 'Double Doubles',  # PropProfessor
       # Triple Doubles
         'Triple Double': 'Triple Doubles',  # ParlayPlay
         'Total Triple Doubles': 'Triple Doubles',  # OddsShopper
         'triple_double': 'Triple Doubles',  # HotStreak
         'Triple Double (incl. Overtime)': 'Triple Doubles',  # Rebet
+        'Player Triple Double': 'Triple Doubles',  # PropProfessor
       # Turnovers
         'TURNOVERS': 'Turnovers',  # BoomFantasy
         'turnovers': 'Turnovers',  # HotStreak
         'Turnovers  ': 'Turnovers',  # Underdog Fantasy
+        'Player Turnovers': 'Turnovers',  # PropProfessor
       # Steals
         'STEALS': 'Steals',  # BoomFantasy
         'steals': 'Steals',  # HotStreak
         'Player steals (incl. overtime)': 'Steals',  # Rebet
+        'Player Steals': 'Steals',  # PropProfessor
       # Blocks
         'BLOCKS': 'Blocks',  # BoomFantasy
         'Blocked Shots': 'Blocks',  # OwnersBox
         'blocks': 'Blocks',
         'Player blocks (incl. overtime)': 'Blocks',  # Rebet
+        'Player Blocks': 'Blocks',  # PropProfessor
       # Blocks + Steals
         'BLOCKS_AND_STEALS': 'Blocks + Steals',  # BoomFantasy
         'stocks': 'Blocks + Steals',  # HotStreak
@@ -148,6 +161,7 @@ MARKET_MAP = {
         'Blks+Stls': 'Blocks + Steals',  # PrizePicks
         'Blocks+Steals': 'Blocks + Steals',  # Drafters
         'blocks_and_steals': 'Blocks + Steals',  # Sleeper
+        'Player Blocks + Steals': 'Blocks + Steals',  # PropProfessor
       # Fantasy Points
         'fantasy_points': 'Fantasy Points',  # HotStreak
         'Fantasy Score': 'Fantasy Points',  # PrizePicks
@@ -173,6 +187,7 @@ MARKET_MAP = {
           'Pass Yards': 'Passing Yards',  # PrizePicks
           'passing_yards': 'Passing Yards',  # Sleeper
           'PassingYards': 'Passing Yards',  # Vivid Picks
+          'Player Passing Yards': 'Passing Yards',  # PropProfessor
         # 1Q Passing Yards
           '1Q Pass Yards': '1Q Passing Yards',  # PrizePicks
           '1Q PASSING_YARDS': '1Q Passing Yards',  # BoomFantasy
@@ -186,6 +201,7 @@ MARKET_MAP = {
           'PASSING_ATTEMPTS': 'Passing Attempts',  # BoomFantasy
           'Total Passing Attempts': 'Passing Attempts',  # OddsShopper
           'passing_attempts': 'Passing Attempts',  # Sleeper
+          'Player Passing Attempts': 'Passing Attempts',  # PropProfessor
         # Completions
           'Completions': 'Completions',  # DraftKingsPick6, OwnersBox
           'Passing Completions': 'Completions',  # Dabble
@@ -194,6 +210,7 @@ MARKET_MAP = {
           'Total Pass Completions': 'Completions',   # OddsShopper
           'CMP': 'Completions',  # Payday
           'pass_completions': 'Completions',  # Sleeper
+          'Player Passing Completions': 'Completions',  # PropProfessor
         # Passing Touchdowns
           'Passing Touchdowns': 'Passing Touchdowns',  # MoneyLine, OwnersBox
           'Passing TDs': 'Passing Touchdowns',  # BetOnline, ParlayPlay
@@ -203,6 +220,7 @@ MARKET_MAP = {
           'passing_touchdowns': 'Passing Touchdowns',  # Sleeper
           'PassingTouchdowns': 'Passing Touchdowns',  # Vivid Picks
           'PASSTD': 'Passing Touchdowns',  # Payday
+          'Player Passing Touchdowns': 'Passing Touchdowns',  # PropProfessor
         # Interceptions Thrown -- IMPORTANT FOR SOME BOOKMAKERS THEY FORMAT Interceptions as Passing Interceptions, AND SOME DO Interceptions as actual Interceptions caught.
           'Pass Interceptions': 'Interceptions Thrown',  # BetOnline
           'INTERCEPTIONS_THROWN': 'Interceptions Thrown',  # BoomFantasy
@@ -212,12 +230,14 @@ MARKET_MAP = {
           'interceptions': 'Interceptions Thrown',  # Sleeper
           'passing_interceptions': 'Interceptions Thrown',  # HotStreak
           'Interception': 'Interceptions Thrown',  # ParlayPlay
+          'Player Interceptions': 'Interceptions Thrown',  # PropProfessor
         # Longest Passing Completion
           'Longest Passing Completion': 'Longest Passing Completion',  # OddsShopper
           'Longest Passing Completion (Yards)': 'Longest Passing Completion',  # Dabble
           'Longest Pass': 'Longest Passing Completion',  # ParlayPlay
           'longest_pass': 'Longest Passing Completion',  # HotStreak
           'Longest Completion': 'Longest Passing Completion',  # Drafters
+          'Player Longest Completion': 'Longest Passing Completion',  # PropProfessor
         # Rushing Yards
           'RUSHING_YARDS': 'Rushing Yards',  # BoomFantasy
           'Total Rushing Yards': 'Rushing Yards',  # OddsShopper
@@ -226,6 +246,7 @@ MARKET_MAP = {
           'Rush Yards': 'Rushing Yards',  # PrizePicks
           'rushing_yards': 'Rushing Yards',  # Sleeper
           'RushingYards': 'Rushing Yards',  # Vivid Picks
+          'Player Rushing Yards': 'Rushing Yards',  # PropProfessor
         # 1Q Rushing Yards
           '1Q Rush Yards': '1Q Rushing Yards',  # PrizePicks
           '1Q RUSHING_YARDS': '1Q Rushing Yards',  # BoomFantasy
@@ -242,6 +263,7 @@ MARKET_MAP = {
           'Rush Attempts': 'Carries',  # ParlayPlay
           'rushing_attempts': 'Carries',  # Sleeper
           'carries': 'Carries',  # HotStreak
+          'Player Rushing Attempts': 'Carries',  # PropProfessor
         # Rushing Touchdowns
           'RUSHING_TOUCHDOWNS': 'Rushing Touchdowns',  # BoomFantasy
           'Total Rushing Touchdowns': 'Rushing Touchdowns',  # OddsShopper
@@ -252,6 +274,7 @@ MARKET_MAP = {
           'Longest Rush': 'Longest Rush',  # OddsShopper, OwnersBox, ParlayPlay
           'Longest Rush (Yards)': 'Longest Rush',  # Dabble
           'longest_rush': 'Longest Rush',  # HotStreak
+          'Player Longest Rush': 'Longest Rush',  # PropProfessor
         # Receiving Yards
           'RECEIVING_YARDS': 'Receiving Yards',  # BoomFantasy
           'Rec Yds': 'Receiving Yards',  # ParlayPlay
@@ -259,6 +282,7 @@ MARKET_MAP = {
           'RECYDS': 'Receiving Yards',  # Payday
           'receiving_yards': 'Receiving Yards',  # Sleeper
           'ReceivingYards': 'Receiving Yards',  # Vivid Picks
+          'Player Receiving Yards': 'Receiving Yards',  # PropProfessor
         # 1Q Receiving Yards
           '1Q Receiving Yards': '1Q Receiving Yards',  # PrizePicks
           '1Q RECEIVING_YARDS': '1Q Receiving Yards',  # BoomFantasy
@@ -270,11 +294,13 @@ MARKET_MAP = {
         # Targets
           'Receiving Targets': 'Targets',  # ParlayPlay
           'Rec Targets': 'Targets',  # PrizePicks
+          'Player Receiving Targets': 'Targets',  # PropProfessor
         # Receptions
           'RECEPTIONS': 'Receptions',  # BoomFantasy
           'Total Receptions': 'Receptions',  # OddsShopper
           'REC': 'Receptions',  # Payday
           'receptions': 'Receptions',  # Sleeper
+          'Player Receptions': 'Receptions',  # PropProfessor
         # 2H Receptions
           '2H Receptions': '2H Receptions',  # PrizePicks
         # Receiving Touchdowns
@@ -286,6 +312,7 @@ MARKET_MAP = {
           'Longest Reception': 'Longest Reception',  # OddsShopper, OwnersBox, ParlayPlay
           'Longest Reception (Yards)': 'Longest Reception',  # Dabble
           'longest_reception': 'Longest Reception',  # HotStreak
+          'Player Longest Reception': 'Longest Reception',  # PropProfessor
         # Passing + Rushing Touchdowns
         # Passing + Rushing Yards
           'Passing Yards + Rushing Yards': 'Passing + Rushing Yards',  # Dabble
@@ -295,6 +322,7 @@ MARKET_MAP = {
           'Pass+Rush Yds': 'Passing + Rushing Yards',  # PrizePicks
           'passing_and_rushing_yards': 'Passing + Rushing Yards',  # Sleeper
           'passing_plus_rushing_yards': 'Passing + Rushing Yards',  # HotStreak
+          'Player Passing + Rushing Yards': 'Passing + Rushing Yards',  # PropProfessor
         # Rushing + Receiving Yards
           'Rushing + Receiving Yards': 'Rushing + Receiving Yards',  # MoneyLine
           'Receiving Yards + Rushing Yards': 'Rushing + Receiving Yards',  # Dabble
@@ -305,6 +333,7 @@ MARKET_MAP = {
           'rushing_and_receiving_yards': 'Rushing + Receiving Yards',  # Sleeper
           'receiving_plus_rushing_yards': 'Rushing + Receiving Yards',  # HotStreak
           'Rush+Receiving Yds': 'Rushing + Receiving Yards',  # Drafters
+          'Player Rushing + Receiving Yards': 'Rushing + Receiving Yards',  # PropProfessor
         # Rushing + Receiving Touchdowns
           'Rushing + Receiving Touchdowns': 'Rushing + Receiving Touchdowns',  # MoneyLine
           'Receiving + Rushing Touchdowns': 'Rushing + Receiving Touchdowns',  # Dabble
@@ -323,6 +352,7 @@ MARKET_MAP = {
           'Pass+Rush+Rec TDs': 'Total Touchdowns',  # PrizePicks
           'anytime_touchdowns': 'Total Touchdowns',  # Sleeper
           'Anytime TD Scored': 'Total Touchdowns',  # Vivid Picks
+          'Player Touchdowns': 'Total Touchdowns',  # PropProfessor
         # Fantasy Points
           'Fantasy Points': 'Fantasy Points',  # ParlayPlay
           'Fantasy Score': 'Fantasy Points',  # PrizePicks
@@ -334,6 +364,7 @@ MARKET_MAP = {
         # Sacks
           'Total Sacks': 'Sacks',  # OddsShopper
           'sacks': 'Sacks',  # Sleeper
+          'Player Sacks': 'Sacks',  # PropProfessor
         # Total Tackles
           'Tackles': 'Total Tackles',  # BetOnline
           'Tackles + Assists': 'Total Tackles',  # DraftKingsPick6, OwnersBox
@@ -341,15 +372,18 @@ MARKET_MAP = {
           'Tackles S+A': 'Total Tackles',  # ParlayPlay
           'Tackles Solo+Assists': 'Total Tackles',  # Payday
           'tackles_and_assists': 'Total Tackles',  # Sleeper
+          'Player Tackles + Assists': 'Total Tackles',  # PropProfessor
         # Tackle Assists
           'Tackle Assists': 'Tackle Assists',  # Dabble
           'Total Assists': 'Tackle Assists',   # OddsShopper
           'assists': 'Tackle Assists',  # Sleeper
           'Assists': 'Tackle Assists',  # Underdog Fantasy
+          'Player Tackles Assisted': 'Tackle Assists',  # PropProfessor
         # Solo Tackles
           'Solo Tackles': 'Solo Tackles',  # OwnersBox, ParlayPlay
           'Tackle Tackles': 'Solo Tackles',  # OddsShopper
           'tackles': 'Solo Tackles',  # Sleeper
+          'Player Tackles': 'Solo Tackles',  # PropProfessor
         # Interceptions -- IMPORTANT FOR SOME BOOKMAKERS THEY FORMAT Interceptions as Passing Interceptions, AND SOME DO Interceptions as actual Interceptions caught.
            # Dabble, OwnersBox -- "Interceptions" TODO: IMPLEMENT LOGIC
            # ParlayPlay -- "Interception"
@@ -362,6 +396,7 @@ MARKET_MAP = {
           'Total Points': 'Kicking Points',  # ParlayPlay
           'Total Kicking Points': 'Kicking Points',  # OddsShopper
           'kicking_points': 'Kicking Points',  # Sleeper
+          'Player Kicking Points': 'Kicking Points',  # PropProfessor
         # 2H Kicking Points
           '2H Kicking Points': '2H Kicking Points',  # PrizePicks
         # Extra Points Made
@@ -370,6 +405,7 @@ MARKET_MAP = {
           'XP Made': 'Extra Points Made',  # OwnersBox
           'PAT': 'Extra Points Made',  # Payday
           'extra_points': 'Extra Points Made',  # HotStreak
+          'Player Extra Points': 'Extra Points Made',  # PropProfessor
         # Field Goals Made
           'Field Goal Made': 'Field Goals Made',  # Dabble
           'Total Field Goals Made': 'Field Goals Made',  # OddsShopper
@@ -377,6 +413,7 @@ MARKET_MAP = {
           'field_goal_made': 'Field Goals Made',  # Sleeper
           'field_goals': 'Field Goals Made',  # HotStreak
           'FGM': 'Field Goals Made',  # Payday
+          'Player Field Goals Made': 'Field Goals Made',  # PropProfessor
         # First Touchdown Scorer
           'First Touchdown Scorer': 'First Touchdown Scorer',  # OddsShopper
           'First TD Scorer': 'First Touchdown Scorer',  # Underdog Fantasy
@@ -396,8 +433,11 @@ MARKET_MAP = {
           'Avg Yards Per Punt': 'Average Yards Per Punt',  # Underdog Fantasy
         # Punts
           'Total Punts': 'Punts',  # Underdog Fantasy
+          'Player Punts': 'Punts',  # PropProfessor
         # Punts Inside 20
           'Punts Inside 20': 'Punts Inside 20',  # PrizePicks
+        # Tackles for Loss
+          'Player Tackles for Loss': 'Tackles for Loss',  # PropProfessor
     },
     'Ice Hockey': {
         # Points
@@ -406,6 +446,7 @@ MARKET_MAP = {
           'Total Points': 'Points',  # OddsShopper
           'points': 'Points',  # Sleeper
           'Player points (incl. overtime)': 'Points',  # Rebet
+          'Player Points': 'Points',  # PropProfessor
         # Shots On Goal
           'Shots On Goal': 'Shots On Goal',
           'SHOTS_ON_GOAL': 'Shots On Goal',  # BoomFantasy
@@ -417,6 +458,7 @@ MARKET_MAP = {
           'ShotsOnGoal': 'Shots On Goal',  # Vivid Picks
           'Player shots on goal (incl. overtime)': 'Shots On Goal',  # Rebet
           'Total Shots On Goal': 'Shots On Goal',  # Rebet
+          'Player Shots on Goal': 'Shots On Goal',  # PropProfessor
         # 1st Period Shots On Goal
           '1st Period Shots': '1st Period Shots On Goal',  # UnderdogFantasy
         # Blocked Shots
@@ -424,6 +466,7 @@ MARKET_MAP = {
           'BLKS': 'Blocked Shots',  # Payday
           'Blocks': 'Blocked Shots',  # DraftKingsPick6
           'blocked_shots': 'Blocked Shots',  # Sleeper
+          'Player Blocks': 'Blocked Shots',  # PropProfessor
         # Saves
           'Goalie Saves': 'Saves',
           'Saves': 'Saves',  # Drafters
@@ -446,6 +489,7 @@ MARKET_MAP = {
           'assists': 'Assists',  # Sleeper
           'Player assists (incl. overtime)': 'Assists',  # Rebet
           'ASSISTS': 'Assists',  # BoomFantasy
+          'Player Assists': 'Assists',  # PropProfessor
         # Goals
           'Total Player Goals': 'Goals',  # OddsShopper
           'Goals': 'Goals',  # OwnersBox
@@ -453,6 +497,7 @@ MARKET_MAP = {
           'GOL': 'Goals',  # Payday
           'Player goals (incl. overtime)': 'Goals',  # Rebet
           'GOALS': 'Goals',  # BoomFantasy
+          'Player Goals': 'Goals',  # PropProfessor
         # Power Play Points
           'Power Play Points': 'Power Play Points',  # OddsShopper
           'powerplay_points': 'Power Play Points',  # Sleeper
@@ -465,8 +510,10 @@ MARKET_MAP = {
         # Faceoffs Won
           'Faceoffs Won': 'Faceoffs Won',  # PrizePicks
           'Face Offs Won': 'Faceoffs Won',  # DraftKingsPick6
+          'Player Faceoffs Won': 'Faceoffs Won',  # PropProfessor
         # Hits
           'Hits': 'Hits',  # PrizePicks
+          'Player Hits': 'Hits',  # PropProfessor
         # Time On Ice
           'Time On Ice': 'Time On Ice',  # PrizePicks
           'Time on Ice': 'Time On Ice',  # Underdog Fantasy

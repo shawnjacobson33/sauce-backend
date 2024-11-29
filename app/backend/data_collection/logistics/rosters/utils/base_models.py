@@ -76,7 +76,7 @@ class RosterRetriever(dc_utils.Retriever):
         # get the url for retrieving subjects
         url_data = lg_utils.get_url(self.source, 'rosters')
         # make a network request to extract all teams for which we want subjects
-        if teams := dc_utils.Teams.get_teams(self.source.league):
+        if teams := dc_utils.Teams.get_teams(self.league):
             # initialize a list to hold requests to make
             tasks = list()
             # for each abbreviated and full name for each team
@@ -84,7 +84,7 @@ class RosterRetriever(dc_utils.Retriever):
                 # get the full team name prepared
                 f_full_team_name = get_full_team_name_formatted(team_data, self.source)
                 # get the abbreviated team name prepared
-                f_abbr_name = get_abbr_team_name_formatted(self.source.league_specific, abbr_name)
+                f_abbr_name = get_abbr_team_name_formatted(self.league_spec, abbr_name)
                 # format the url with the names
                 formatted_url = url_data['url'].format(url_data['league'], f_abbr_name, f_full_team_name)
                 # update team with its abbreviated name for outputting purposes
@@ -101,7 +101,7 @@ class RosterRetriever(dc_utils.Retriever):
         self.data_collected += dc_utils.Subjects.update_subjects(subject)
 
     def log_team(self, abbr_name: str) -> None:
-        print(f"[{self.source.league_specific}]: {abbr_name}")
+        print(f"[{self.league_spec}]: {abbr_name}")
 
     def __str__(self):
-        return f'{str(self.data_collected)} ({self.source.league_specific}) Updated/Added subjects'
+        return f'{str(self.data_collected)} ({self.league_spec}) Updated/Added subjects'

@@ -21,9 +21,9 @@ class FootballScheduleRetriever(sc_utils.ScheduleRetriever):
 
     async def retrieve(self) -> None:
         # Get the URL for the NBA schedule
-        url = lg_utils.get_url(self.source, 'schedule')
+        url = lg_utils.get_url(self.name, self.league_spec, 'schedule')
         # Asynchronously request the data and call parse schedule for each formatted URL
-        await lg_utils.fetch(url, self._parse_schedule, DATE_RANGE_MAP[self.source.league_specific])
+        await lg_utils.fetch(url, self._parse_schedule, DATE_RANGE_MAP[self.league_spec])
 
     async def _parse_schedule(self, html_content, n_days: int) -> None:
         # initializes a html parser
@@ -50,14 +50,14 @@ class FootballScheduleRetriever(sc_utils.ScheduleRetriever):
                             # make sure 2 teams exist
                             if len(span_elems) > 1:
                                 # get the away team name and id if it exists
-                                if away_team := sc_utils.extract_team(span_elems[0], self.name, self.source.league):
+                                if away_team := sc_utils.extract_team(span_elems[0], self.name, self.league):
                                     # get the home team name and id if it exists
-                                    if home_team := sc_utils.extract_team(span_elems[1], self.name, self.source.league):
+                                    if home_team := sc_utils.extract_team(span_elems[1], self.name, self.league):
                                         # checks if box scores are available for this game and updates accordingly
                                         if sc_utils.is_box_score_url_valid(box_score_url):
                                             # adds the game and all of its extracted data to the shared data structure
                                             Games.update_games({
-                                                "league": self.source.league_specific,
+                                                "league": self.league_spec,
                                                 "game_time": game_time,
                                                 "away_team": away_team,
                                                 "home_team": home_team,

@@ -7,7 +7,16 @@ SUBJECT_MAP = {
         'Cameron Thomas': 'Cam Thomas',
         'Cam Johnson': 'Cameron Johnson',
         'Alex Sarr': 'Alexandre Sarr',
-        'Carlton Carrington': 'Bub Carrington'
+        'Carlton Carrington': 'Bub Carrington',
+        'Shai Gilgeous': 'Shai Gilgeous-Alexander',
+        'Shai Gilgeous Alexander': 'Shai Gilgeous-Alexander',
+        'S Gilgeous Alexander': 'Shai Gilgeous-Alexander',
+        'Lu Dort': 'Luguentz Dort',
+        'Lebron James': 'LeBron James',
+        'Deaaron Fox': "De'Aaron Fox",
+        'Dangelo Russell': "D'Angelo Russell",
+        'Zach Lavine': 'Zach LaVine',
+        'Ue Holiday': 'Jrue Holiday'
     },
     'NFL': {
         'Chigoziem Okonkwo': 'Chig Okonkwo',
@@ -19,11 +28,17 @@ SUBJECT_MAP = {
         'Patrick Surtain II': 'Pat Surtain II',
         'Tariq Woolen': 'Riq Woolen',
         'Kamren Curl': 'Kam Curl',
-        'Decobie Durant': 'Cobie Durant'
+        'Decobie Durant': 'Cobie Durant',
+        'Cj Stroud': 'C.J. Stroud',
+        'Lamar Demeatrice Jackson': 'Lamar Jackson',
+        'Aidan Oconnell': "Aidan O'Connell",
     },
     'NHL': {
         'Mitchell Marner': 'Mitch Marner',
         'Christopher Tanev': 'Chris Tanev'
+    },
+    'NCAAF': {
+        'Cameron Ward': 'Cam Ward'
     }
 }
 

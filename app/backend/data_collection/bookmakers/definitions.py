@@ -1,22 +1,31 @@
 from app.backend.data_collection.bookmakers import hubs as hbs
-from app.backend.data_collection.bookmakers import primary as prm
+from app.backend.data_collection.bookmakers import direct as drt
 
 
-LINES_RETRIEVERS = {
-    "BoomFantasy": prm.BoomFantasy,
-    "Dabble": prm.Dabble,
-    "Drafters": prm.Drafters,
-    "DraftKingsPick6": prm.DraftKingsPick6,
-    "HotStreak": prm.HotStreak,
-    "MoneyLine": prm.MoneyLine,
-    "OwnersBox": prm.OwnersBox,
-    "ParlayPlay": prm.ParlayPlay,
-    "Payday": prm.Payday,
-    # "PrizePicks": prm.PrizePicks,
-    "Rebet": prm.Rebet,
-    "Sleeper": prm.Sleeper,
-    "SuperDraft": prm.SuperDraft,
-    "UnderdogFantasy": prm.UnderdogFantasy,
-    "VividPicks": prm.VividPicks,
-    "OddsShopper": hbs.OddsShopper
+LINE_RETRIEVERS = {
+    'A': {
+        "PropProfessor": hbs.PropProfessor
+    },
+    'B': {
+        "OddsShopper": hbs.OddsShopper,
+    },
+    'C': {
+        "Drafters": drt.Drafters,
+        "MoneyLine": drt.MoneyLine,
+        "OwnersBox": drt.OwnersBox,
+        "Payday": drt.Payday,
+        "SuperDraft": drt.SuperDraft,
+        "VividPicks": drt.VividPicks,
+    },
+    'D': {
+        "BoomFantasy": drt.BoomFantasy,
+        "Dabble": drt.Dabble,
+        "DraftKingsPick6": drt.DraftKingsPick6,
+        "HotStreak": drt.HotStreak,
+        "PrizePicks": drt.PrizePicks,
+        "UnderdogFantasy": drt.UnderdogFantasy,
+        "Rebet": drt.Rebet,
+        "ParlayPlay": drt.ParlayPlay,
+        "Sleeper": drt.Sleeper,
+    }
 }

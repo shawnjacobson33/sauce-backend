@@ -113,11 +113,12 @@ class Drafters(bkm_utils.LinesRetriever):
                                             # for each label Over and Under update shared data
                                             for label in ['Over', 'Under']:
                                                 # update shared data
-                                                self.update_betting_lines({
+                                                dc_utils.BettingLines.update({
                                                     's_tstamp': str(datetime.now()),
                                                     'bookmaker': self.name,
                                                     'sport': sport,
                                                     'league': league,
+                                                    'game_time': game['game_time'],
                                                     'game': game['info'],
                                                     'market_id': market['id'],
                                                     'market': market['name'],

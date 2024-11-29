@@ -41,7 +41,7 @@ class FootballBoxScoreRetriever(bs_utils.BoxScoreRetriever):
                                                         # dont need team cell
                                                         cells = cells[1:]
                                                         # extracts subject data from shared data structure
-                                                        if subject := bs_utils.extract_subject(cells[0], self.source.league,
+                                                        if subject := bs_utils.extract_subject(cells[0], self.league,
                                                                                                self.name, team=team):
                                                             # get the structured box score for the row
                                                             box_score = bs_utils.extract_football_stats(cells[1:], extraction_info)

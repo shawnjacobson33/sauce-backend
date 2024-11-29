@@ -236,11 +236,12 @@ class HotStreak(bkm_utils.LinesRetriever):
                                             # each (odds) and label are at corresponding indices, so for each of them...
                                             for odds, label in zip(odds_pair, ['Under', 'Over']):
                                                 # update shared data
-                                                self.update_betting_lines({
+                                                dc_utils.BettingLines.update({
                                                     's_tstamp': str(datetime.now()),
                                                     'bookmaker': self.name,
                                                     'sport': sport,
                                                     'league': league,
+                                                    'game_time': game['game_time'],
                                                     'game': game['info'],
                                                     'market_id': market['id'],
                                                     'market': market['name'],

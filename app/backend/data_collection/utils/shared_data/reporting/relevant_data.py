@@ -13,16 +13,19 @@ class RelevantData:
     _lock4: threading.Lock = threading.Lock()
 
     @classmethod
-    def get_relevant_subjects(cls, source_name: str = None, league: str = None) -> dict:
-        return {key: val for key, val in cls._relevant_subjects.items() if key[0] == source_name}
+    def get_relevant_subjects(cls, source_name: str = None) -> dict:
+        return {key: val for key, val in cls._relevant_subjects.items() if key[0] == source_name} \
+            if source_name else cls._relevant_subjects
 
     @classmethod
-    def get_relevant_teams(cls, source_name: str = None, league: str = None) -> dict:
-        return {key: val for key, val in cls._relevant_teams.items() if key[0] == source_name}
+    def get_relevant_teams(cls, source_name: str = None) -> dict:
+        return {key: val for key, val in cls._relevant_teams.items() if key[0] == source_name} \
+            if source_name else cls._relevant_teams
 
     @classmethod
-    def get_relevant_markets(cls, source_name: str = None, league: str = None) -> dict:
-        return {key: val for key, val in cls._relevant_markets.items() if key[0] == source_name}
+    def get_relevant_markets(cls, source_name: str = None) -> dict:
+        return {key: val for key, val in cls._relevant_markets.items() if key[0] == source_name} \
+            if source_name else cls._relevant_markets
 
     @classmethod
     def get_relevant_leagues(cls, source_name: str = None) -> dict:

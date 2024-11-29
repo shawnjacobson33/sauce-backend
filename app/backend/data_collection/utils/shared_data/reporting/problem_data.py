@@ -11,22 +11,27 @@ class ProblemData:
     _lock3: threading.Lock = threading.Lock()
 
     @classmethod
-    def get_problem_subjects(cls, source_name: str = None, league: str = None) -> dict:
-        return {key: val for key, val in cls._problem_subjects.items() if key[0] == source_name}
+    def get_problem_subjects(cls, source_name: str = None) -> dict:
+        return {key: val for key, val in cls._problem_subjects.items() if key[0] == source_name} \
+            if source_name else cls._problem_subjects
 
     @classmethod
-    def get_problem_teams(cls, source_name: str = None, league: str = None) -> dict:
-        return {key: val for key, val in cls._problem_teams.items() if key[0] == source_name}
+    def get_problem_teams(cls, source_name: str = None) -> dict:
+        return {key: val for key, val in cls._problem_teams.items() if key[0] == source_name} \
+            if source_name else cls._problem_teams
 
     @classmethod
-    def get_problem_markets(cls, source_name: str = None, league: str = None) -> dict:
-        return {key: val for key, val in cls._problem_markets.items() if key[0] == source_name}
+    def get_problem_markets(cls, source_name: str = None) -> dict:
+        return {key: val for key, val in cls._problem_markets.items() if key[0] == source_name} \
+            if source_name else cls._problem_markets
 
     @classmethod
     def update_problem_subjects(cls, subject: dict, source_name: str) -> None:
         with cls._lock1:
-            spec_subject_attr = [val for attr, val in subject.items() if attr not in {'name', 'league'}][0]
-            cls._problem_subjects[(source_name, subject['league'], spec_subject_attr, subject['name'])] = subject
+            if spec_subject_attr := [val for attr, val in subject.items() if attr not in {'name', 'league'}]:
+                cls._problem_subjects[(source_name, subject['league'], spec_subject_attr[0], subject['name'])] = subject
+            else:
+                cls._problem_subjects[(source_name, subject['league'], subject['name'])] = subject
 
     @classmethod
     def update_problem_teams(cls, team: dict, source_name: str) -> None:

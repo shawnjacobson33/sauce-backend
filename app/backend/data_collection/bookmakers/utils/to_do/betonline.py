@@ -220,7 +220,7 @@ class BetOnline(bkm_utils.LinesRetriever):
                                             # calculate the implied probability for the prop line using the odds
                                             implied_prob = 1 / float(odds)
                                             # update shared data
-                                            self.update_betting_lines({
+                                            dc_utils.BettingLines.update({
                                                 'batch_id': self.batch_id,
                                                 's_tstamp': str(datetime.now()),
                                                 'league': league,

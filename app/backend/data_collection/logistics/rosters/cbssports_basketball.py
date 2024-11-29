@@ -28,7 +28,7 @@ class BasketballRosterRetriever(rs_utils.RosterRetriever):
                                     'jersey_number': cells[0].text.strip(),
                                     'name': a_elem.text.strip(),
                                     'position': cells[2].text.strip(),
-                                    'league': self.source.league_specific,
+                                    'league': self.league_spec,
                                     'team_id': team['id'],
                                 })
 

@@ -35,13 +35,13 @@ URL_MAP = {
 }
 
 
-def get_url(source: Source, content: str) -> Optional[Union[dict, str]]:
+def get_url(name: str, league: str, content: str) -> Optional[Union[dict, str]]:
     # get the data specific to source
-    if source_urls := URL_MAP.get(source.name.split('-')[0]):
+    if source_urls := URL_MAP.get(name.split('-')[0]):
         # check if a general url is mapped for the desired content
         if gen_url := source_urls.get('ALL').get(content):
             # format the league tailored for the url address
-            formatted_league = CBSSPORTS_LEAGUE_MAP.get(source.league_specific, source.league_specific)
+            formatted_league = CBSSPORTS_LEAGUE_MAP.get(league, league)
             # return data found
             return {
                 'url': gen_url,
@@ -49,7 +49,7 @@ def get_url(source: Source, content: str) -> Optional[Union[dict, str]]:
             }
 
         # get the all the urls specific to this league
-        if league_urls := source_urls.get(source.league_specific):
+        if league_urls := source_urls.get(league):
             # get the desired content for the league specific urls
             if spec_url := league_urls.get(content):
                 return spec_url

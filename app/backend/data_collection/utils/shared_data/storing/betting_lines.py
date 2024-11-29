@@ -1,5 +1,5 @@
 import threading
-from collections import defaultdict, deque
+from collections import defaultdict, deque, Counter
 from datetime import datetime
 
 
@@ -79,6 +79,7 @@ class BettingLinesStore(dict):
 """
 class BettingLines:
     _betting_lines = BettingLinesStore()
+    _count = defaultdict(int)
     _lock = threading.Lock()
 
     @classmethod
@@ -114,6 +115,7 @@ class BettingLines:
                     'date': datetime.now().strftime('%Y-%m-%d'),
                     'sport': betting_line['sport'],
                     'league': betting_line['league'],
+                    'g_time': betting_line['game_time'],
                     'game': betting_line['game'],
                     'market': betting_line['market'],
                     'player': betting_line['subject'],
@@ -132,14 +134,13 @@ class BettingLines:
                     betting_line[
                         'dflt_im_prb']
 
+            cls._count[betting_line['bookmaker']] += 1
+
     @classmethod
     def size(cls, bookmaker_name: str = None) -> int:
-        # if bookmaker is inputted
-        if bookmaker_name:
-            # get the lines associated with that bookmaker
-            lines = cls._betting_lines.get(bookmaker_name, "")
-            # return the number of lines they have
-            return len(lines)
+        total_count = 0
+        if not bookmaker_name:
+            for bookmaker_count in cls._count.values():
+                total_count += bookmaker_count
 
-        # gets the total amount of betting lines stored
-        return sum(len(value) for value in cls._betting_lines.values())
+        return cls._count[bookmaker_name] if bookmaker_name else total_count

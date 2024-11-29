@@ -100,7 +100,7 @@ class NFLScheduleCollector(sc_utils.ScheduleRetriever):
             # get the game time
             if game_time := extract_game_time(n_days, row):
                 # extract the away and home team
-                away_team, home_team = extract_teams(self.name, self.source.league, row)
+                away_team, home_team = extract_teams(self.name, self.league, row)
                 # if they exist in the database
                 if away_team and home_team:
                     # adds the game and all of its extracted data to the shared data structure

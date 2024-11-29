@@ -1,7 +1,9 @@
 import asyncio
 import time
+from asyncio import Task
+from multiprocessing.pool import worker
 
-from app.backend.data_collection.bookmakers import LINES_RETRIEVERS
+from app.backend.data_collection.bookmakers import LINE_RETRIEVERS
 from app.backend.data_collection.logistics import BOX_SCORE_RETRIEVERS, SCHEDULE_RETRIEVERS, ROSTER_RETRIEVERS
 
 from app.backend.data_collection.utils.modelling.base_models import Retriever
@@ -76,7 +78,7 @@ def launch_box_score_retrievers(box_score_retriever_names: list[str] = None):
     return tasks
 
 
-def launch_schedules_retrievers(schedule_retriever_names: list[str] = None):
+def launch_schedule_retrievers(schedule_retriever_names: list[str] = None):
     # 1. First Get Schedule Classes
     schedules_retriever_classes = SCHEDULE_RETRIEVERS.items() if not schedule_retriever_names else [
         (schedule_retriever_name, SCHEDULE_RETRIEVERS[schedule_retriever_name]) for schedule_retriever_name in
@@ -94,16 +96,15 @@ def launch_schedules_retrievers(schedule_retriever_names: list[str] = None):
     return tasks
 
 
-def launch_lines_retrievers(lines_retriever_names: list[str] = None):
+def load_line_tasks(group: str, worker_names: list[str] = None) -> list[Task]:
     # get all the bookmaker plugs to run
-    lines_retriever_classes = LINES_RETRIEVERS.values() if not lines_retriever_names else [
-        LINES_RETRIEVERS[lines_retriever_name] for lines_retriever_name in
-        lines_retriever_names]
+    line_retriever_classes = LINE_RETRIEVERS[group].values() if not worker_names else [
+        LINE_RETRIEVERS[group][worker] for worker in worker_names]
 
     # collect request task to run
     tasks = list()
     # for every bookmaker plug available
-    for line_retriever_class in lines_retriever_classes:
+    for line_retriever_class in line_retriever_classes:
         # configure a bookmaker plug to collect data
         line_retriever = configure_lines_retriever(line_retriever_class)
         # start collecting

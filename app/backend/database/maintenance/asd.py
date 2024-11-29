@@ -4,17 +4,17 @@ from pymongo.synchronous.collection import Collection
 
 from app.backend.database import MongoDB, SUBJECTS_COLLECTION_NAME, TEAMS_COLLECTION_NAME
 
-teams = {str(doc['_id']): doc['abbr_name'] for doc in MongoDB.fetch_collection(TEAMS_COLLECTION_NAME).find()}
-subjects_cursor = MongoDB.fetch_collection(SUBJECTS_COLLECTION_NAME)
-for doc in subjects_cursor.find():
-    if 'team_id' in doc:
-        subjects_cursor.update_one(
-            filter={'_id': doc['_id']},
-            update={
-                '$set': {'team': teams[doc['team_id']]},
-                '$unset': {'team_id': ''}
-            }
-        )
+# teams = {str(doc['_id']): doc['abbr_name'] for doc in MongoDB.fetch_collection(TEAMS_COLLECTION_NAME).find()}
+# subjects_cursor = MongoDB.fetch_collection(SUBJECTS_COLLECTION_NAME)
+# for doc in subjects_cursor.find():
+#     if 'team_id' in doc:
+#         subjects_cursor.update_one(
+#             filter={'_id': doc['_id']},
+#             update={
+#                 '$set': {'team': teams[doc['team_id']]},
+#                 '$unset': {'team_id': ''}
+#             }
+#         )
 
 
 

@@ -10,12 +10,13 @@ from app.backend.data_collection.logistics.games.utils import GameSource
 class BoxScoreRetriever(dc_utils.Retriever):
     def __init__(self, source: GameSource):
         super().__init__(source)
+        self.league_spec = source.league_spec
 
     def get_games_to_retrieve(self) -> Optional[dict]:
         # get games that are actively going on
-        if active_games := dc_utils.ActiveGames.get_active_games(self.source.league_specific):
+        if active_games := dc_utils.ActiveGames.get_active_games(self.league_spec):
             # get games that have players in them that have prop lines with bookmakers
-            if relevant_games := dc_utils.RelevantGames.get_relevant_games(self.source.league_specific):
+            if relevant_games := dc_utils.RelevantGames.get_relevant_games(self.league_spec):
                 # only want games that are going on that are relevant
                 return active_games.intersection(relevant_games)
 
@@ -29,7 +30,7 @@ class BoxScoreRetriever(dc_utils.Retriever):
             # for every game
             for game_id, game_data in games_to_retrieve.items():
                 # Get the URL for the NBA schedule
-                url_data = lg_utils.get_url(self.source, 'box_scores')
+                url_data = lg_utils.get_url(self.name, self.league_spec, 'box_scores')
                 # format the url with the unique url piece stored in the game dictionary
                 formatted_url = url_data['url'].format(url_data['league'], game_data['box_score_url'])
                 # Asynchronously request the data and call parse schedule for each formatted URL
@@ -43,9 +44,9 @@ class BoxScoreRetriever(dc_utils.Retriever):
 
     def update_box_scores(self, game_id: str, subject: dict, box_score: dict, stat_type: str) -> None:
         # add the game to the shared data structure
-        dc_utils.BoxScores.update_box_scores(self.source.league, game_id, subject, box_score, stat_type)
+        dc_utils.BoxScores.update_box_scores(self.league_spec, game_id, subject, box_score, stat_type)
         # keep track of the number of games found per league
         self.data_collected += 1
 
     def __str__(self):
-        return f'{str(self.data_collected)} ({self.source.league_specific}) player stat lines collected'
+        return f'{str(self.data_collected)} ({self.league_spec}) player stat lines collected'

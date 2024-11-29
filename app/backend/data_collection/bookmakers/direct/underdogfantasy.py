@@ -237,13 +237,13 @@ class UnderdogFantasy(bkm_utils.LinesRetriever):
                                                     # get the odds
                                                     if odds := get_odds(self.dflt_odds, multiplier):
                                                         # update shared data
-                                                        self.update_betting_lines({
+                                                        dc_utils.BettingLines.update({
                                                             's_tstamp': str(datetime.now()),
                                                             'bookmaker': self.name,
                                                             'sport': sport,
                                                             'league': league,
+                                                            'game_time': game['game_time'],
                                                             'game': game['info'],
-                                                            'market_id': market['id'],
                                                             'market': market['name'],
                                                             'subject_id': subject['id'],
                                                             'subject': subject['name'],

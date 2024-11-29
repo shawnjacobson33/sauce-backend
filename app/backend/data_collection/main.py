@@ -73,7 +73,7 @@ async def run_betting_lines_retrieving_tasks(lines_retriever_names: list[str] = 
     # return time taken to complete retrieving tasks
     lines_retrieving_time = round(t2-t1, 3)
     # Output total number of betting lines collected and the time it took to run entire job
-    # print(f"[TOTAL LINES]: {dc_utils.BettingLines.size()}, {lines_retrieving_time}s")
+    print(f"[TOTAL LINES]: {dc_utils.BettingLines.size()}, {lines_retrieving_time}s")
 
 
 async def retrieve_and_report(logistic_retriever_names: list[str] = None, lines_retriever_names: list[str] = None) -> None:
@@ -81,7 +81,7 @@ async def retrieve_and_report(logistic_retriever_names: list[str] = None, lines_
     # await run_roster_retrieving_tasks(logistic_retriever_names)
     # run the schedule retrieving tasks
     # await run_schedule_retrieving_tasks(logistic_retriever_names)
-    # run the box score retrieving tasks
+    # # run the box score retrieving tasks
     # await run_box_score_retrieving_tasks(logistic_retriever_names)
     # # # run the lines retrieving tasks second
     await run_betting_lines_retrieving_tasks(lines_retriever_names)
@@ -95,4 +95,4 @@ def execute(logistic_retriever_names: list[str] = None, lines_retriever_names: l
     asyncio.run(retrieve_and_report(logistic_retriever_names, lines_retriever_names))
 
 if __name__ == '__main__':
-    execute(None, ['HotStreak'])
+    execute(None, ['BoomFantasy'])

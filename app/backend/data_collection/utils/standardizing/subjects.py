@@ -13,7 +13,7 @@ subjects_df = Subjects.get_subjects(dtype='df')
 def update_subject(subject: dict, matched_subject: dict):
     # update the subject with its id and optionally the team id stored if 'positions' was used to index
     subject['id'] = matched_subject['id']
-    subject['team_id'] = matched_subject.get('team_id', subject.get('team_id'))
+    subject['team'] = matched_subject.get('team', subject.get('team'))
 
 
 def find_match_using_distances(subject: dict) -> Optional[dict]:
@@ -25,7 +25,7 @@ def find_match_using_distances(subject: dict) -> Optional[dict]:
         return {
             'id': closest_subject['id'],
             'name': closest_subject['name'],
-            'team_id': closest_subject['team_id']
+            'team': closest_subject['team']
         }
 
 # TODO: create a way to clean position for subjects where position data mismatches between bookmakers and cbs

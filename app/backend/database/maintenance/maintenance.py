@@ -87,13 +87,13 @@ def insert_game(game_data: dict = None, insert_all: bool = False, exclude: list[
 #     'name'
 # }
 # insert_subject()
-# market = {
-#     'name': '1st Period Shots On Goal',
-#     'sport': 'Ice Hockey'
-# }
-# insert_market(
-#     market_data=market
-# )
+market = {
+    'name': 'Tackles for Loss',
+    'sport': 'Football'
+}
+insert_market(
+    market_data=market
+)
 # team = {
 #     'abbr_name': 'MISS',
 #     'full_name': "Ole Miss",

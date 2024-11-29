@@ -70,7 +70,7 @@ class IceHockeyBoxScoreRetriever(bs_utils.BoxScoreRetriever):
                                         # gets all data cells in the row and make sure expected length matches
                                         if cells := row.find_all('td'):
                                             # extracts subject data from shared data structure
-                                            if subject := bs_utils.extract_subject(cells[0], self.source.league, self.name):
+                                            if subject := bs_utils.extract_subject(cells[0], self.league, self.name):
                                                 # get everything but the player name
                                                 stats = cells[1:]
                                                 # this means that it is a non-goalie box score

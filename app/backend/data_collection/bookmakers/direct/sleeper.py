@@ -166,11 +166,12 @@ class Sleeper(bkm_utils.LinesRetriever):
                                                 # get the over or under label from the dictionary, if exists keep going
                                                 if label := extract_label(outcome_data):
                                                     # update shared data
-                                                    self.update_betting_lines({
+                                                    dc_utils.BettingLines.update({
                                                         's_tstamp': str(datetime.now()),
                                                         'bookmaker': self.name,
                                                         'sport': sport,
                                                         'league': league,
+                                                        'game_time': game['game_time'],
                                                         'game': game['info'],
                                                         'market_id': market['id'],
                                                         'market': market['name'],
@@ -179,5 +180,5 @@ class Sleeper(bkm_utils.LinesRetriever):
                                                         'label': label,
                                                         'line': line,
                                                         'odds': float(odds),
-                                                        'im_prb': round(1 / odds, 4)
+                                                        'im_prb': round(1 / float(odds), 4)
                                                     })

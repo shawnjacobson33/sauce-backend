@@ -125,6 +125,7 @@ class ParlayPlay(bkm_utils.LinesRetriever):
                                                             'bookmaker': self.name,
                                                             'sport': sport,
                                                             'league': league,
+                                                            'game_time': game['game_time'],
                                                             'game': game['info'],
                                                             'market_id': market['id'],
                                                             'market': market['name'],
@@ -139,6 +140,6 @@ class ParlayPlay(bkm_utils.LinesRetriever):
                                                             betting_line['is_boosted'] = is_boosted
 
                                                         # update shared data
-                                                        self.update_betting_lines(betting_line)
+                                                        dc_utils.BettingLines.update(betting_line)
 
 
