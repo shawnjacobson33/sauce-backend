@@ -12,9 +12,9 @@ def nest(data: dict):
     return nested_dict
 
 
-def get_file_path(entity_type: str, is_pending: bool) -> str:
-    # get a customizable file path
-    file_path = f'../utils/reports/{"problem" if is_pending else "relevant"}/{entity_type}.json'
+def get_file_path(report_type: str, is_secondary: bool = False, is_problem: bool = False) -> str:
+    # form the file path
+    file_path = f'reports/primary/{report_type}.json' if not is_secondary else f'reports/secondary/{"problem" if is_problem else "relevant"}/{report_type}.json'
     # make any directories that don't already exist
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     # return file path

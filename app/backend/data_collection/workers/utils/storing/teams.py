@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Optional
 
 from app.backend.database import MongoDB, TEAMS_COLLECTION_NAME
-from app.backend.data_collection.workers.utils.storing import get_entities
+from app.backend.data_collection.workers.utils.storing.utils import get_entities
 
 # get the teams collection so we can structure that data in memory
 teams_c = MongoDB.fetch_collection(TEAMS_COLLECTION_NAME)

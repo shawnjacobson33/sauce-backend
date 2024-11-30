@@ -3,7 +3,7 @@ import asyncio
 from typing import Optional
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -83,18 +83,18 @@ def get_label(data: dict) -> Optional[str]:
             yield label
 
 
-class OwnersBox(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class OwnersBox(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
         # get the universal headers required to make requests
-        self.headers = bkm_utils.get_headers(self.name)
+        self.headers = ln_utils.get_headers(self.name)
         # get the universal cookies required to make requests
-        self.cookies = bkm_utils.get_cookies(self.name)
+        self.cookies = ln_utils.get_cookies(self.name)
 
     async def retrieve(self) -> None:
         # get the url required to make request for leagues data
-        url = bkm_utils.get_url(self.name, name='leagues')
+        url = ln_utils.get_url(self.name, name='leagues')
         # make the request for the leagues data
         await self.req_mngr.get(url, self._parse_leagues, headers=self.headers, cookies=self.cookies)
 
@@ -104,13 +104,13 @@ class OwnersBox(bkm_utils.LinesRetriever):
             # initialize structure to hold all requests to make
             tasks = []
             # get the url required to make requests for markets data
-            url = bkm_utils.get_url(self.name, name='markets')
+            url = ln_utils.get_url(self.name, name='markets')
             # for each league in the response data dictionary
             for league in json_data:
                 # only execute if the league is valid...also clean the league before checking
-                if bkm_utils.is_league_valid(dc_utils.clean_league(league)):
+                if ln_utils.is_league_valid(dc_utils.clean_league(league)):
                     # if valid get the params to make the request required to get markets data for this league
-                    params = bkm_utils.get_params(self.name, name='markets', var_1=league)
+                    params = ln_utils.get_params(self.name, name='markets', var_1=league)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_markets, league, headers=self.headers, cookies=self.cookies, params=params))
 
@@ -123,13 +123,13 @@ class OwnersBox(bkm_utils.LinesRetriever):
             # initialize structure to hold all requests to make
             tasks = []
             # get the url required to make the request for prop lines
-            url = bkm_utils.get_url(self.name)
+            url = ln_utils.get_url(self.name)
             # for each market in the response data
             for market in json_data:
                 # get market id (not from db), if exists add request
                 if market_id := market.get('id'):
                     # get the params required to make request for prop lines
-                    params = bkm_utils.get_params(self.name, var_1=league, var_2=market_id)
+                    params = ln_utils.get_params(self.name, var_1=league, var_2=market_id)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_lines, headers=self.headers, cookies=self.cookies, params=params))
 

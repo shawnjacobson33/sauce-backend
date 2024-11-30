@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 UNAVAILABLE_LEAGUES = ['NCAAM', 'NCAAW']
@@ -127,7 +127,7 @@ def extract_label(data: dict) -> Optional[str]:
         return 'Over' if condition == 1 else 'Under'
 
 
-class BetOnline(bkm_utils.LinesRetriever):
+class BetOnline(ln_utils.LinesRetriever):
     """
     A class to collect and process player prop lines from BetOnline.
 
@@ -136,7 +136,7 @@ class BetOnline(bkm_utils.LinesRetriever):
     a shared data structure for further processing.
 
     Attributes:
-        bookmaker_info (bkm_utils.LinesSource): The bookmaker object containing BetOnline details.
+        bookmaker_info (ln_utils.LinesSource): The bookmaker object containing BetOnline details.
         batch_id (str): Identifier for the current data collection batch.
 
     Methods:
@@ -150,7 +150,7 @@ class BetOnline(bkm_utils.LinesRetriever):
             Processes and cleans player prop line data, updating shared prop line structures.
     """
 
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
 
@@ -160,11 +160,11 @@ class BetOnline(bkm_utils.LinesRetriever):
         # these are valid in-season leagues
         for league in LEAGUES:
             # get url for request to get games
-            url = bkm_utils.get_url(self.name, name='games')
+            url = ln_utils.get_url(self.name, name='games')
             # get headers for request to get games
-            headers = bkm_utils.get_headers(self.name, name='games')
+            headers = ln_utils.get_headers(self.name, name='games')
             # get params for request to get games
-            params = bkm_utils.get_params(self.name, name='games', var_1=league)
+            params = ln_utils.get_params(self.name, name='games', var_1=league)
             # clean the league name after setting params
             cleaned_league = dc_utils.clean_league(league)
             # add the request task for this market to tasks
@@ -183,13 +183,13 @@ class BetOnline(bkm_utils.LinesRetriever):
                 # extract the game id from the dictionary, if exists keep going
                 if game_id := extract_game_id(game_data):
                     # get url for request to get prop lines
-                    url = bkm_utils.get_url(self.name)
+                    url = ln_utils.get_url(self.name)
                     # get headers for request to get prop lines
-                    headers = bkm_utils.get_headers(self.name)
+                    headers = ln_utils.get_headers(self.name)
                     # for every market
                     for market in get_league_markets(league):
                         # get params for request to get prop lines
-                        params = bkm_utils.get_params(self.name, var_1=game_id, var_2=market)
+                        params = ln_utils.get_params(self.name, var_1=game_id, var_2=market)
                         # add the request task for this market to tasks
                         tasks.append(self.req_mngr.get(url, self._parse_lines, league, headers=headers, params=params))
 

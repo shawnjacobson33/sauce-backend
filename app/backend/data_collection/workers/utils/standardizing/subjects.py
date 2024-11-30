@@ -2,9 +2,9 @@ from typing import Optional
 
 import Levenshtein
 
+from app.backend.data_collection.workers.utils.modelling import Subject
 from app.backend.data_collection.workers.utils.cleaning import clean_subject
-from app.backend.data_collection.workers.utils import Subjects, ProblemData, RelevantData
-from app.backend.data_collection.workers.bookmakers import Subject
+from app.backend.data_collection.workers.utils.storing import Subjects, ProblemData, RelevantData
 
 
 subjects_df = Subjects.get_subjects(dtype='df')

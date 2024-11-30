@@ -4,8 +4,8 @@ from asyncio import Task
 
 from app.backend.data_collection import workers as wrk
 
-from app.backend.data_collection.management.utils.reporting import output_source_stats
-from app.backend.data_collection.executing.configure import configure_game_retriever, configure_lines_retriever
+from app.backend.data_collection.management.utils import report_line_counts
+from app.backend.data_collection.management.configure import configure_game_retriever, configure_lines_retriever
 
 
 def cleanup(retriever: wrk.Retriever):
@@ -17,7 +17,7 @@ def cleanup(retriever: wrk.Retriever):
             result = await func(*args, **kwargs)
             t2 = time.time()
             # output the statistics from the job
-            output_source_stats(retriever, t2-t1)
+            report_line_counts(retriever, t2-t1)
             # return the function call as part of the decorator
             return result
 
@@ -99,8 +99,8 @@ async def load_schedule_tasks(worker_names: list[str] = None) -> list[Task]:
 
 async def load_line_tasks(group: str, worker_names: list[str] = None) -> list[Task]:
     # get all the bookmaker plugs to run
-    line_retriever_classes = wrk.LINE_RETRIEVERS[group].values() if not worker_names else [
-        wrk.LINE_RETRIEVERS[group][worker] for worker in worker_names]
+    line_retriever_classes = wrk.LINE_WORKERS[group].values() if not worker_names else [
+        wrk.LINE_WORKERS[group][worker] for worker in worker_names]
 
     # collect request task to run
     tasks = list()

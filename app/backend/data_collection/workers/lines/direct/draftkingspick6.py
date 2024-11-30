@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import asyncio
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
@@ -45,16 +45,16 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
-class DraftKingsPick6(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class DraftKingsPick6(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # make call to parent class Plug
         super().__init__(bookmaker)
         # get universal request headers used for many requests
-        self.headers = bkm_utils.get_headers(self.name)
+        self.headers = ln_utils.get_headers(self.name)
 
     async def retrieve(self) -> None:
         # get url to request sports
-        url = bkm_utils.get_url(self.name)
+        url = ln_utils.get_url(self.name)
         # make a request to get the sports
         await self.req_mngr.get(url, self._parse_sports, headers=self.headers)
 
@@ -68,7 +68,7 @@ class DraftKingsPick6(bkm_utils.LinesRetriever):
                            not sport_div.text.isnumeric()]:
 
                 # only execute if league exists and the league is valid
-                if league and bkm_utils.is_league_valid(league):
+                if league and ln_utils.is_league_valid(league):
                     # clean the league name
                     league = dc_utils.clean_league(league)
                     # create an url based and insert a league param for prop lines request

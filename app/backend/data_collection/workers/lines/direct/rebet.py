@@ -3,7 +3,7 @@ import asyncio
 from typing import Optional, Union, Any
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -12,7 +12,7 @@ def extract_league(data: dict) -> Optional[str]:
         # clean the league
         cleaned_league = dc_utils.clean_league(league)
         # check for validity of the league
-        if bkm_utils.is_league_valid(league):
+        if ln_utils.is_league_valid(league):
             # return the cleaned league name
             return cleaned_league
 
@@ -74,18 +74,18 @@ def extract_line_and_label(data: dict) -> Union[dict[str, Any], dict[str, Union[
             }
 
 
-class Rebet(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class Rebet(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
 
     async def retrieve(self) -> None:
         # get the url required to request tourney ids data
-        url = bkm_utils.get_url(self.name, name='tourney_ids')
+        url = ln_utils.get_url(self.name, name='tourney_ids')
         # get the headers required to request tourney ids data
-        headers = bkm_utils.get_headers(self.name, name='tourney_ids')
+        headers = ln_utils.get_headers(self.name, name='tourney_ids')
         # get the json data required to request tourney ids data with POST request
-        json_data = bkm_utils.get_json_data(self.name, name='tourney_ids')
+        json_data = ln_utils.get_json_data(self.name, name='tourney_ids')
         # make the post request for tourney ids data
         await self.req_mngr.post(url, self._parse_tourney_ids, headers=headers, json=json_data)
 
@@ -99,11 +99,11 @@ class Rebet(bkm_utils.LinesRetriever):
                 # get the tournament id, if exist keep executing
                 if tournament_id := league_data.get('tournament_id'):
                     # get the url required to request for prop lines
-                    url = bkm_utils.get_url(self.name)
+                    url = ln_utils.get_url(self.name)
                     # get the headers required to request for prop lines
-                    headers = bkm_utils.get_headers(self.name)
+                    headers = ln_utils.get_headers(self.name)
                     # get the json data required to request for prop lines using tournament id
-                    json_data = bkm_utils.get_json_data(self.name, var=tournament_id)
+                    json_data = ln_utils.get_json_data(self.name, var=tournament_id)
                     # add the request to tasks
                     tasks.append(self.req_mngr.post(url, self._parse_lines, headers=headers, json=json_data))
 

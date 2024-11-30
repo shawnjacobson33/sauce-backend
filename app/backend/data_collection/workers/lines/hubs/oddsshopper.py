@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 BOOKMAKER_MAP = {
@@ -17,7 +17,7 @@ def extract_league(data: dict) -> Optional[str]:
         # clean the league name
         cleaned_league = dc_utils.clean_league(league)
         # league must be valid
-        if bkm_utils.is_league_valid(league):
+        if ln_utils.is_league_valid(league):
             # return the valid and clean league name
             return cleaned_league
 
@@ -49,7 +49,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
 
 def extract_bookmaker(data: dict) -> Optional[str]:
     # get the bookmaker from the dictionary
-    if (bookmaker := data.get('sportsbookCode')) and (bookmaker in bkm_utils.ODDSSHOPPER_NOVEL_BOOKMAKERS):
+    if bookmaker := data.get('sportsbookCode'):
         # return the bookmaker after checking if it needs formatting...to standardize across other plugs
         return BOOKMAKER_MAP.get(bookmaker, bookmaker)
 
@@ -75,18 +75,18 @@ def extract_odds_and_other_stats(data: dict) -> Optional[tuple[float, float, flo
         return round(odds, 3), round(1 / odds, 3), extract_true_win_probability(data), extract_expected_value(data)
 
 
-class OddsShopper(bkm_utils.LinesRetriever):
-    def __init__(self, lines_hub: bkm_utils.LinesSource):
+class OddsShopper(ln_utils.LinesRetriever):
+    def __init__(self, lines_hub: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(lines_hub)
 
     async def retrieve(self) -> None:
         # get the url to request matchups data
-        url = bkm_utils.get_url(self.name, name='matchups')
+        url = ln_utils.get_url(self.name, name='matchups')
         # get the headers to request matchups data
-        headers = bkm_utils.get_headers(self.name)
+        headers = ln_utils.get_headers(self.name)
         # get the cookies to request matchups data
-        cookies = bkm_utils.get_cookies(self.name)
+        cookies = ln_utils.get_cookies(self.name)
         # make request for matchups data
         return await self.req_mngr.get(url, self._parse_matchups, headers=headers, cookies=cookies)
 
@@ -106,11 +106,11 @@ class OddsShopper(bkm_utils.LinesRetriever):
                             # get dates which are required for params of url for prop lines
                             start_date, end_date = get_dates()
                             # get the url required to request prop lines and format it with the offer id
-                            url = bkm_utils.get_url(self.name).format(offer_id)
+                            url = ln_utils.get_url(self.name).format(offer_id)
                             # get the headers required to request prop lines
-                            headers = bkm_utils.get_headers(self.name)
+                            headers = ln_utils.get_headers(self.name)
                             # get the params required to request prop lines, using start_date, and end date
-                            params = bkm_utils.get_params(self.name, var_1=start_date, var_2=end_date)
+                            params = ln_utils.get_params(self.name, var_1=start_date, var_2=end_date)
                             # add the request to tasks
                             tasks.append(self.req_mngr.get(url, self._parse_lines, league, headers=headers, params=params))
 

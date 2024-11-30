@@ -1,7 +1,7 @@
 import json
 import os
 
-from app.backend.data_collection.management.utils import reporting as rp
+from app.backend.data_collection.management.utils.reporting import utils as rp_utils
 from app.backend.data_collection.workers import BettingLines, Games, BoxScores, Retriever, HUB_BOOKMAKERS
 
 
@@ -19,41 +19,41 @@ def report_line_counts(retriever: Retriever, time_taken: float) -> None:
 
 def report_lines():
     # create a custom file path to store the betting lines sample
-    file_path = 'utils/reports/betting_lines.json'
+    file_path = rp_utils.get_file_path("lines")
     # open the pending markets file
     with open(file_path, 'w') as f:
         # get rid of tuples
-        restruct_data = rp.nest(BettingLines.get_lines())
+        restruct_data = rp_utils.nest(BettingLines.get_lines())
         # save the betting lines to the file, in pretty print mode
         json.dump(restruct_data, f, indent=4, default=str)
 
     # output the size of the file storing the betting lines
-    print(f"[FILE SIZE]: {round(os.path.getsize('utils/reports/betting_lines.json') / (1024 ** 2), 2)} MB")
+    print(f"[FILE SIZE]: {round(os.path.getsize(file_path) / (1024 ** 2), 2)} MB")
 
 
 def report_games():
     # create a custom file path to store the betting lines sample
-    file_path = 'utils/reports/games.json'
+    file_path = rp_utils.get_file_path("games")
     # open the pending markets file
     with open(file_path, 'w') as f:
         # get rid of tuples
-        restruct_data = rp.nest(Games.get_games())
+        restruct_data = rp_utils.nest(Games.get_games())
         # save the betting lines to the file, in pretty print mode
         json.dump(restruct_data, f, indent=4, default=str)
 
 
 def report_box_scores():
     # create a custom file path to store the betting lines sample
-    file_path = 'utils/reports/box_scores.json'
+    file_path = rp_utils.get_file_path("box_scores")
     # open the pending markets file
     with open(file_path, 'w') as f:
         # get rid of tuples
-        restruct_data = rp.nest(BoxScores.get_box_scores())
+        restruct_data = rp_utils.nest(BoxScores.get_box_scores())
         # save the betting lines to the file, in pretty print mode
         json.dump(restruct_data, f, indent=4, default=str)
 
 
-def generate_reports():
+def generate_primary_reports():
     report_games()
     report_lines()
     report_box_scores()

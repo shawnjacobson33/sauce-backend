@@ -1,8 +1,8 @@
 from typing import Optional
 
+from app.backend.data_collection.workers.utils.modelling import Market
 from app.backend.data_collection.workers.utils.cleaning import clean_market
-from app.backend.data_collection.workers.utils import Markets, ProblemData, RelevantData
-from app.backend.data_collection.workers.bookmakers import Market
+from app.backend.data_collection.workers.utils.storing import Markets, ProblemData, RelevantData
 
 
 def get_market(bookmaker_name: str, league: str, market_name: str, period_type: str = None) -> Optional[dict]:

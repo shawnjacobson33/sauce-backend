@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, Any, Union
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -11,7 +11,7 @@ def extract_league(data: dict) -> Optional[str]:
         # clean the league name
         cleaned_league = dc_utils.clean_league(league.upper())
         # checks if the league is valid
-        if bkm_utils.is_league_valid(cleaned_league):
+        if ln_utils.is_league_valid(cleaned_league):
             # cleans the league name
             return cleaned_league
 
@@ -70,7 +70,7 @@ def extract_label_and_odds(data: list) -> Optional[tuple[str, float]]:
         return data[1].title(), float(data[2])
 
 
-class BoomFantasy(bkm_utils.LinesRetriever):
+class BoomFantasy(ln_utils.LinesRetriever):
     """
     BoomFantasy is a class that represents the process of collecting and parsing player prop lines from
     the BoomFantasy API. It inherits from the `Plug` class and utilizes asynchronous requests to gather
@@ -90,22 +90,22 @@ class BoomFantasy(bkm_utils.LinesRetriever):
             data storage for further use.
     """
 
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
 
     async def retrieve(self) -> list:
         # gets the url to get prop lines
-        url = bkm_utils.get_url(self.name)
+        url = ln_utils.get_url(self.name)
         # get the headers that will be sent with request for prop lines
-        headers = bkm_utils.get_headers(self.name)
+        headers = ln_utils.get_headers(self.name)
         # gets params that will be sent with request for prop lines
-        params = bkm_utils.get_params(self.name)
+        params = ln_utils.get_params(self.name)
         # gets valid tokens needed to access data
         tokens_data = {
-            'url': bkm_utils.get_url(self.name, name='tokens'),
-            'headers': bkm_utils.get_headers(self.name, name='tokens'),
-            'json_data': bkm_utils.get_json_data(self.name, name='tokens')
+            'url': ln_utils.get_url(self.name, name='tokens'),
+            'headers': ln_utils.get_headers(self.name, name='tokens'),
+            'json_data': ln_utils.get_json_data(self.name, name='tokens')
         }
         # because of tokens, use a special get method to request data
         return [self.req_mngr.get_bf(url, tokens_data, self._parse_lines, headers=headers, params=params)]

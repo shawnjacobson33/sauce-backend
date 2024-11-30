@@ -4,7 +4,7 @@ import asyncio
 from typing import Optional, Union, Any
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league_aliases(data: dict) -> Optional[dict]:
@@ -93,7 +93,7 @@ def extract_league(data: dict, opponent_ids: dict) -> Optional[str]:
         # clean the league name
         cleaned_league = dc_utils.clean_league(league)
         # check the validity of the league and if so then return the league name
-        if bkm_utils.is_league_valid(cleaned_league):
+        if ln_utils.is_league_valid(cleaned_league):
             # return the cleaned and valid league name
             return cleaned_league
 
@@ -154,18 +154,18 @@ def extract_odds(data: dict) -> Union[tuple[Any, Any], tuple[None, None]]:
     yield None, None
 
 
-class HotStreak(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class HotStreak(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # make call to the parent class Plug
         super().__init__(bookmaker)
         # get the universal url to make for all requests (uses graphql)
-        self.url = bkm_utils.get_url(self.name)
+        self.url = ln_utils.get_url(self.name)
         # get the universal headers to make for all requests
-        self.headers = bkm_utils.get_headers(self.name)
+        self.headers = ln_utils.get_headers(self.name)
 
     async def retrieve(self) -> None:
         # get the json data associated with requesting for session data
-        json_data = bkm_utils.get_json_data(self.name, name='tokens')
+        json_data = ln_utils.get_json_data(self.name, name='tokens')
         # make the request for session data
         await self.req_mngr.post(self.url, self._parse_token, headers=self.headers, json=json_data)
 
@@ -179,13 +179,13 @@ class HotStreak(bkm_utils.LinesRetriever):
                     # update the authorization token
                     self.headers['authorization'] = f'Bearer {token}'
                     # get the json data needed for the request for current leagues data
-                    json_data = bkm_utils.get_json_data(self.name, name='leagues')
+                    json_data = ln_utils.get_json_data(self.name, name='leagues')
                     # make the request for leagues data
                     await self.req_mngr.post(self.url, self._parse_league_aliases, headers=self.headers, json=json_data)
 
     async def fetch_page(self, leagues: dict, page: int) -> None:
         # get the json_data (for post request) to get the data of a page of prop lines
-        json_data = bkm_utils.get_json_data(self.name, var=page)
+        json_data = ln_utils.get_json_data(self.name, var=page)
         # make the post request for the particular (page) page of prop lines
         return await self.req_mngr.post(self.url, self._parse_lines, leagues, headers=self.headers, json=json_data)
 

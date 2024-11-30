@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-from typing import Optional
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import RequestManager
-from app.backend.data_collection.workers.utils import BettingLines
+from app.backend.data_collection.workers import lines as lns
+from app.backend.data_collection.workers import utils as wk_utils
 
 
 # ***************************** EXTRA HELPERS *********************************
@@ -16,26 +14,7 @@ class Payout:
 
 # ***************************** DATABASE MODELS *********************************
 
-class Market:
-    def __init__(self, name: str, league: Optional[str] = None, sport: Optional[str] = None):
-        self.name = name
-        self.sport = dc_utils.LEAGUE_SPORT_MAP.get(league) if not sport else sport
-
-    def __str__(self):
-        return f"Market(name: {self.name}, sport: {self.sport})"
-
-
-class Subject:
-    def __init__(self, name: str, league: str, team: Optional[dict] = None, position: Optional[dict] = None, jersey_number: Optional[dict] = None):
-        self.name = name
-        self.league = league
-        self.team_id = team['id'] if team else None
-        self.team_name = team.get('abbr_name', team.get('full_name')) if team else None
-        self.position = position
-        self.jersey_number = jersey_number
-
-
-class LinesSource(dc_utils.Source):
+class LinesSource(wk_utils.Source):
     def __init__(self, bookmaker_info: dict):
         super().__init__(bookmaker_info['name'])
         self.default_payout, self.payouts = None, None
@@ -47,7 +26,7 @@ class LinesSource(dc_utils.Source):
 
 # ***************************** BASE MODELS *********************************
 
-class LinesRetriever(dc_utils.Retriever):
+class LinesRetriever(wk_utils.Retriever):
     def __init__(self, lines_source: LinesSource):
         super().__init__(lines_source)
         self.dflt_odds, self.dflt_im_prb = None, None
@@ -55,7 +34,7 @@ class LinesRetriever(dc_utils.Retriever):
             self.dflt_odds = dflt_payout.odds
             self.dflt_im_prb = round(1 / self.dflt_odds, 4)
 
-        self.req_mngr = RequestManager(use_requests=(lines_source.name == 'BetOnline'))  # BetOnline doesn't work with 'cloudscraper'
+        self.req_mngr = lns.RequestManager(use_requests=(lines_source.name == 'BetOnline'))  # BetOnline doesn't work with 'cloudscraper'
 
     def __str__(self):
-        return f'{str(BettingLines.size(self.name))} lines'
+        return f'{str(wk_utils.BettingLines.counts(self.name))} lines'

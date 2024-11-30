@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, Union, Any
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_position(data: dict) -> Optional[str]:
@@ -46,16 +46,16 @@ def extract_odds_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, Non
             yield odds, label
 
 
-class ParlayPlay(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class ParlayPlay(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
         # get the headers required to make requests for prop lines
-        self.headers = bkm_utils.get_headers(self.name)
+        self.headers = ln_utils.get_headers(self.name)
 
     async def retrieve(self) -> None:
         # get the url that is required to make requests for prop lines
-        url = bkm_utils.get_url(self.name, name='sports')
+        url = ln_utils.get_url(self.name, name='sports')
         # make the request for prop lines
         await self.req_mngr.get(url, self._parse_sports, headers=self.headers)
 
@@ -75,9 +75,9 @@ class ParlayPlay(bkm_utils.LinesRetriever):
                             # clean the league
                             cleaned_league = dc_utils.clean_league(league_name)
                             # check if the league is valid
-                            if bkm_utils.is_league_valid(cleaned_league):
+                            if ln_utils.is_league_valid(cleaned_league):
                                 # get the prop lines url
-                                url = bkm_utils.get_url(self.name)
+                                url = ln_utils.get_url(self.name)
                                 # include some params based upon the data collected
                                 params = {
                                     'sport': sport_name,

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_teams_dict(data: dict) -> dict:
@@ -120,7 +120,7 @@ def extract_league(a_id: str, game_ids_dict: dict, games_dict: dict, solo_games_
             # clean the league name
             cleaned_league = dc_utils.clean_league(league)
             # check if the cleaned league name is valid
-            if bkm_utils.is_league_valid(cleaned_league):
+            if ln_utils.is_league_valid(cleaned_league):
                 # return the cleaned and valid league name
                 return cleaned_league
 
@@ -167,18 +167,18 @@ def get_odds(default_odds: float, multiplier: float) -> float:
     return round(default_odds * multiplier, 3)
 
 
-class UnderdogFantasy(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class UnderdogFantasy(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
 
     async def retrieve(self) -> None:
         # get the url required to request teams data
-        url = bkm_utils.get_url(self.name, name='teams')
+        url = ln_utils.get_url(self.name, name='teams')
         # get the headers required to request teams data
-        headers = bkm_utils.get_headers(self.name, name='teams')
+        headers = ln_utils.get_headers(self.name, name='teams')
         # get the cookies required to get teams data
-        cookies = bkm_utils.get_cookies(self.name)
+        cookies = ln_utils.get_cookies(self.name)
         # make the request for teams data
         await self.req_mngr.get(url, self._parse_teams, headers=headers, cookies=cookies)
 
@@ -188,9 +188,9 @@ class UnderdogFantasy(bkm_utils.LinesRetriever):
             # get the teams dict from response data, if exists keep going
             if teams_dict := extract_teams_dict(json_data):
                 # get the required url to request for prop lines
-                url = bkm_utils.get_url(self.name)
+                url = ln_utils.get_url(self.name)
                 # get the required headers to request for prop lines
-                headers = bkm_utils.get_headers(self.name)
+                headers = ln_utils.get_headers(self.name)
                 # make the request for the prop lines
                 await self.req_mngr.get(url, self._parse_lines, teams_dict, headers=headers)
 

@@ -12,8 +12,8 @@ def manage_line_workers(worker_names: list[str]):
 
 
 async def kickoff(lg_worker_names: list[str] = None, ln_worker_names: list[str] = None) -> None:
-    # run the roster retrieving tasks
-    mng.assign_roster_tasks(lg_worker_names)
+    # # run the roster retrieving tasks
+    # mng.assign_roster_tasks(lg_worker_names)
     # run the schedule retrieving tasks
     mng.assign_schedule_tasks(lg_worker_names)
     # # run the box score retrieving tasks
@@ -21,7 +21,7 @@ async def kickoff(lg_worker_names: list[str] = None, ln_worker_names: list[str] 
     # # # run the lines retrieving tasks second
     manage_line_workers(ln_worker_names)
     # save all output data to json files
-    mng.file_reports()
+    mng.generate_reports()
 
 
 if __name__ == '__main__':

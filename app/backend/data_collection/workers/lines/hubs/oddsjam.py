@@ -1,8 +1,8 @@
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 
-class OddsJam(bkm_utils.LinesRetriever):
-    def __init__(self, lines_hub: bkm_utils.LinesSource):
+class OddsJam(ln_utils.LinesRetriever):
+    def __init__(self, lines_hub: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(lines_hub)

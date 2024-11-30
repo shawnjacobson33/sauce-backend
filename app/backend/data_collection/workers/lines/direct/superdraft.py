@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, Any, Union
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_sports_dict(data: dict) -> dict:
@@ -26,7 +26,7 @@ def extract_league(data: dict, sports_dict: dict) -> Optional[str]:
         # get the sport id and league from dictionaries, if both exist then keep going
         if (sport_id := data.get('sportId')) and (league := sports_dict.get(int(sport_id))):
             # check if league name is valid
-            if bkm_utils.is_league_valid(league):
+            if ln_utils.is_league_valid(league):
                 # return the cleaned league name
                 return dc_utils.clean_league(league)
 
@@ -66,18 +66,18 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
-class SuperDraft(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class SuperDraft(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
         # get the headers required to request prop lines data
-        self.headers = bkm_utils.get_headers(self.name)
+        self.headers = ln_utils.get_headers(self.name)
         # update headers timestamp
         self.headers['timestamp'] = str(datetime.now())
 
     async def retrieve(self) -> None:
         # get the url required to request prop lines data
-        url = bkm_utils.get_url(self.name).format('0')
+        url = ln_utils.get_url(self.name).format('0')
         # make the request for the prop lines
         await self.req_mngr.get(url, self._parse_leagues, headers=self.headers)
 
@@ -93,11 +93,11 @@ class SuperDraft(bkm_utils.LinesRetriever):
                     # clean the league name
                     cleaned_league = dc_utils.clean_league(league_name)
                     # if it is a valid league and has props available
-                    if bkm_utils.is_league_valid(cleaned_league) and sport_data.get('hasProps'):
+                    if ln_utils.is_league_valid(cleaned_league) and sport_data.get('hasProps'):
                         # get the league id if exists
                         if league_id := sport_data.get('sportId'):
                             # get the url with the inserted sport id param
-                            url = bkm_utils.get_url(self.name).format(league_id)
+                            url = ln_utils.get_url(self.name).format(league_id)
                             # add the request for the prop lines
                             tasks.append(self.req_mngr.get(url, self._parse_lines, headers=self.headers))
 

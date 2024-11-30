@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -47,7 +47,7 @@ def get_league(data: dict, leagues: dict) -> Optional[dict[str, str]]:
                 # clean league after extracting quarter or half info from it if it exists.
                 cleaned_league = dc_utils.clean_league(league_name[:-2] if re.match(r'^.+[1-4]([QH])$', league_name) else league_name)
                 # only want valid leagues
-                if bkm_utils.is_league_valid(cleaned_league):
+                if ln_utils.is_league_valid(cleaned_league):
                     # return the valid and cleaned league, and the original league name format without cleaning it (needed for market)
                     return {
                         'uncleaned': league_name,
@@ -57,7 +57,7 @@ def get_league(data: dict, leagues: dict) -> Optional[dict[str, str]]:
 
 def extract_market(bookmaker_name: str, data: dict, league: dict) -> Optional[dict[str, str]]:
     # get the market name and check for validity, if exists and valid then execute
-    if (market_name := data.get('stat_type', data.get('stat_display_name'))) and bkm_utils.is_market_valid(market_name):
+    if (market_name := data.get('stat_type', data.get('stat_display_name'))) and ln_utils.is_market_valid(market_name):
         # in order to create comparable market names -- for Quarter and Half Markets
         if re.match(r'^.+[1-4]([QH])$', league['uncleaned']):
             # re-format the market name
@@ -102,14 +102,14 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
-class PrizePicks(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class PrizePicks(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
 
     async def retrieve(self) -> None:
         # get the url required to make request for leagues data
-        url = bkm_utils.get_url(self.name, name='leagues')
+        url = ln_utils.get_url(self.name, name='leagues')
         # make request for leagues data
         await self.req_mngr.get(url, self._parse_leagues)
 
@@ -126,7 +126,7 @@ class PrizePicks(bkm_utils.LinesRetriever):
                     leagues[league_id] = league
 
             # get the url required to make request for prop lines
-            url = bkm_utils.get_url(self.name)
+            url = ln_utils.get_url(self.name)
             # make the request for prop lines
             await self.req_mngr.get(url, self._parse_lines, leagues)
 

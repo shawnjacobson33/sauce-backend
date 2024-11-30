@@ -3,7 +3,7 @@ import asyncio
 from typing import Optional
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -12,7 +12,7 @@ def extract_league(data: dict) -> Optional[str]:
         # clean the league name
         cleaned_league = dc_utils.clean_league(league)
         # if league is not valid then skip
-        if bkm_utils.is_league_valid(cleaned_league):
+        if ln_utils.is_league_valid(cleaned_league):
             # return league name
             return cleaned_league
 
@@ -31,7 +31,7 @@ def extract_market(bookmaker_name: str, data: dict, data_map: dict, league: str)
     # get the market id from the response data, if that exists get the market name, if they both exist execute
     if (data_map_market_id := data.get('marketId')) and (market_name := data_map.get(data_map_market_id)):
         # check if the market is valid
-        if bkm_utils.is_market_valid(market_name):
+        if ln_utils.is_market_valid(market_name):
             # gets the market id or log message
             market = dc_utils.get_market(bookmaker_name, league, market_name)
             # return both market id search result and cleaned market
@@ -68,7 +68,7 @@ def extract_label(data: dict) -> Optional[str]:
         return label.title()
 
 
-class Dabble(bkm_utils.LinesRetriever):
+class Dabble(ln_utils.LinesRetriever):
     """
     A class to collect and process player prop lines from the Dabble bookmaker.
 
@@ -120,17 +120,17 @@ class Dabble(bkm_utils.LinesRetriever):
             Standardizes the label for player props (e.g., over/under).
     """
 
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
         # gets universally used request headers
-        self.headers = bkm_utils.get_headers(bookmaker.name)
+        self.headers = ln_utils.get_headers(bookmaker.name)
         # gets universally used request cookies
-        self.cookies = bkm_utils.get_cookies(bookmaker.name)
+        self.cookies = ln_utils.get_cookies(bookmaker.name)
 
     async def retrieve(self) -> None:
         # gets the url required to request for the current competitions
-        url = bkm_utils.get_url(self.name, name='competitions')
+        url = ln_utils.get_url(self.name, name='competitions')
         # will make an asynchronous request for the competitions using valid request data
         await self.req_mngr.get(url, self._parse_competitions, headers=self.headers, cookies=self.cookies)
 
@@ -146,9 +146,9 @@ class Dabble(bkm_utils.LinesRetriever):
                     # to track the leagues being collected
                     dc_utils.RelevantData.update_relevant_leagues(league, self.name)
                     # get the url required to request the current events for each competition and insert comp id into it
-                    url = bkm_utils.get_url(self.name, name='events').format(competition_id)
+                    url = ln_utils.get_url(self.name, name='events').format(competition_id)
                     # get the params required to request the current events
-                    params = bkm_utils.get_params(self.name)
+                    params = ln_utils.get_params(self.name)
                     # add the request task to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_events, league, params=params))
 
@@ -165,7 +165,7 @@ class Dabble(bkm_utils.LinesRetriever):
                 # gets the event id, game information, and checks whether this event is displayed, if all exist execute
                 if (event_id := event.get('id')) and event.get('isDisplayed'):
                     # gets the url required to request for prop lines and inserts event id into url string
-                    url = bkm_utils.get_url(self.name).format(event_id)
+                    url = ln_utils.get_url(self.name).format(event_id)
                     # add the request task to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_lines, league))
 

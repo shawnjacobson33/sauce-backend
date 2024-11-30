@@ -1,8 +1,8 @@
 import asyncio
 from datetime import datetime
 
-from app.backend.data_collection.bkm_utils.constants import IN_SEASON_LEAGUES
-from app.backend.data_collection.bkm_utils.objects import Subject, Market
+from app.backend.data_collection.ln_utils.constants import IN_SEASON_LEAGUES
+from app.backend.data_collection.ln_utils.objects import Subject, Market
 from app.backend.data_collection.workers.bookmakers import clean_market, clean_subject, clean_position
 
 
@@ -13,19 +13,19 @@ def get_in_season_leagues():
     return [league_name_map.get(league, league) for league in IN_SEASON_LEAGUES if league_name_map.get(league, league) in valid_champ_leagues]
 
 
-class Champ(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class Champ(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         super().__init__(bookmaker)
 
     async def retrieve(self):
-        url = bkm_utils.get_url(self.name)
-        headers = bkm_utils.get_headers(self.name)
+        url = ln_utils.get_url(self.name)
+        headers = ln_utils.get_headers(self.name)
         tasks = []
         for league in get_in_season_leagues():
             if not is_league_good(clean_league(league)):
                 continue
 
-            json_data = bkm_utils.get_json_data(self.name, var=league)
+            json_data = ln_utils.get_json_data(self.name, var=league)
             tasks.append(self.req_mngr.post(url, self._parse_lines, league, headers=headers, json=json_data))
 
         await asyncio.gather(*tasks)

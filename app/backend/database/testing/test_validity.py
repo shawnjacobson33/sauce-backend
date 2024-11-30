@@ -2,7 +2,7 @@
 import pprint
 from collections import defaultdict
 from database import get_db
-from app.data_sourcing.bkm_utils.constants import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME, \
+from app.data_sourcing.ln_utils.constants import SUBJECT_COLLECTION_NAME, MARKETS_COLLECTION_NAME, \
     BOOKMAKERS_COLLECTION_NAME, VALID_LEAGUES
 
 # TESTS:

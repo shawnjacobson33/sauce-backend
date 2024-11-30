@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_game_info(data: dict) -> Optional[str]:
@@ -18,7 +18,7 @@ def extract_league(data: dict) -> Optional[str]:
         # clean the league name
         cleaned_league = dc_utils.clean_league(league)
         # check if the league name is valid
-        if bkm_utils.is_league_valid(cleaned_league):
+        if ln_utils.is_league_valid(cleaned_league):
             # return the cleaned and valid league name
             return cleaned_league
 
@@ -90,18 +90,18 @@ def get_odds(default_odds: float, multiplier: Optional[float]) -> float:
     return default_odds
 
 
-class VividPicks(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class VividPicks(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
 
     async def retrieve(self) -> None:
         # get the url required to request for prop lines data
-        url = bkm_utils.get_url(self.name)
+        url = ln_utils.get_url(self.name)
         # get the headers required to request for prop lines data
-        headers = bkm_utils.get_headers(self.name)
+        headers = ln_utils.get_headers(self.name)
         # get the json required to request for prop lines data
-        json_data = bkm_utils.get_json_data(self.name, )
+        json_data = ln_utils.get_json_data(self.name, )
         # make the request for prop lines data
         await self.req_mngr.post(url, self._parse_lines, headers=headers, json=json_data)
 

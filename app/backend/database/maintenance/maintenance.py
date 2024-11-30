@@ -23,7 +23,7 @@ def delete_duplicates(collection, name: str, attribute: str):
 def insert_subject(subject_data: dict = None, insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
     collection = MongoDB[SUBJECTS_COLLECTION_NAME]
     if insert_all:
-        with open('../../data_collection/management/utils/reporting/utils/reports/pending_subjects.json') as file:
+        with open('../../data_collection/reports/pending_subjects.json') as file:
             pending_subjects = json.load(file)
             pending_subjects = [subject for bookmaker, subjects in pending_subjects.items() for subject in subjects if
                              (bookmaker not in exclude) and ((subject['league'], subject['name'],) not in exclude)]
@@ -43,7 +43,7 @@ def insert_subject(subject_data: dict = None, insert_all: bool = False, exclude:
 def insert_market(market_data: dict = None, insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
     collection = MongoDB[MARKETS_COLLECTION_NAME]
     if insert_all:
-        with open('../../data_collection/management/utils/reporting/utils/reports/pending_markets.json') as file:
+        with open('../../data_collection/reports/pending_markets.json') as file:
             pending_markets = json.load(file)
             pending_markets = [market for bookmaker, markets in pending_markets.items() for market in markets if
                                 (bookmaker not in exclude) and ((market['sport'], market['name'],) not in exclude)]
@@ -57,7 +57,7 @@ def insert_market(market_data: dict = None, insert_all: bool = False, exclude: l
 def insert_team(team_data: dict = None, insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
     collection = MongoDB[TEAMS_COLLECTION_NAME]
     if insert_all:
-        with open('../../data_collection/management/utils/reporting/utils/reports/pending_teams.json') as file:
+        with open('../../data_collection/reports/pending_teams.json') as file:
             pending_teams = json.load(file)
             pending_teams = [team_obj for bookmaker, teams in pending_teams.items() for team_obj in teams if
                              (bookmaker not in exclude) and ((team_obj['league'], team_obj['abbr_name'],) not in exclude)]
@@ -71,7 +71,7 @@ def insert_team(team_data: dict = None, insert_all: bool = False, exclude: list[
 def insert_game(game_data: dict = None, insert_all: bool = False, exclude: list[Union[tuple[str, str], str]] = None):
     collection = MongoDB[GAMES_COLLECTION_NAME]
     if insert_all:
-        with open('../../data_collection/management/utils/reporting/utils/reports/pending_teams.json') as file:
+        with open('../../data_collection/reports/pending_teams.json') as file:
             pending_teams = json.load(file)
             pending_teams = [team_obj for bookmaker, teams in pending_teams.items() for team_obj in teams if
                              (bookmaker not in exclude) and ((team_obj['league'], team_obj['abbr_name'],) not in exclude)]

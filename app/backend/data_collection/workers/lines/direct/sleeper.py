@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Optional
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 # formatting consistency
@@ -22,7 +22,7 @@ def extract_league(data: dict) -> Optional[str]:
         # clean the league name
         cleaned_league = dc_utils.clean_league(league)
         # check if the league name is valid
-        if bkm_utils.is_league_valid(cleaned_league):
+        if ln_utils.is_league_valid(cleaned_league):
             # return the clean league name
             return cleaned_league
 
@@ -75,18 +75,18 @@ def extract_label(data: dict) -> Optional[str]:
         return label.title()
 
 # TODO: Sleeper recently added alt_lines
-class Sleeper(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class Sleeper(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
         # get universally used headers to make requests
-        self.headers = bkm_utils.get_headers(self.name)
+        self.headers = ln_utils.get_headers(self.name)
 
     async def retrieve(self) -> None:
         # get the url required to request player data
-        url = bkm_utils.get_url(self.name, name='players')
+        url = ln_utils.get_url(self.name, name='players')
         # get params required to request player data
-        params = bkm_utils.get_params(self.name)
+        params = ln_utils.get_params(self.name)
         # make the request for player data
         await self.req_mngr.get(url, self._parse_players, headers=self.headers, params=params)
 
@@ -104,7 +104,7 @@ class Sleeper(bkm_utils.LinesRetriever):
                         # get the subject's sport, if exists then keep executing
                         if subject_sport := player_data.get('sport'):
                             cleaned_league = dc_utils.clean_league(subject_sport)
-                            if bkm_utils.is_league_valid(cleaned_league):
+                            if ln_utils.is_league_valid(cleaned_league):
                                 # store data about the subject, corresponding to their sport and id
                                 players_dict[cleaned_league][player_id] = {
                                     'subject_team': subject_team,
@@ -117,7 +117,7 @@ class Sleeper(bkm_utils.LinesRetriever):
             # for each in season league mapped towards sleeper's format
             for league_name in LEAGUES:
                 # get the url required to make request for prop lines
-                url = bkm_utils.get_url(self.name)
+                url = ln_utils.get_url(self.name)
                 # create a dictionary of params specific to a particular league
                 params = {
                     'sports%5B%5D': league_name,

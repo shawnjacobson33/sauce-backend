@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, Union, Any
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league(data: dict, source_name: str) -> Optional[str]:
@@ -11,7 +11,7 @@ def extract_league(data: dict, source_name: str) -> Optional[str]:
         # clean the league
         cleaned_league = dc_utils.clean_league(league)
         # check if league is valid
-        if bkm_utils.is_league_valid(cleaned_league):
+        if ln_utils.is_league_valid(cleaned_league):
             # to track the leagues being collected
             dc_utils.RelevantData.update_relevant_leagues(source_name, league)
             # return valid and clean league
@@ -59,20 +59,20 @@ def extract_line_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, Non
 
 
 # TODO: CHECK IS_BOOSTED LOGIC
-class MoneyLine(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class MoneyLine(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
 
     async def retrieve(self) -> None:
         # gets the url to get prop lines
-        url = bkm_utils.get_url(self.name)
+        url = ln_utils.get_url(self.name)
         # gets the headers to make request for prop lines
-        headers = bkm_utils.get_headers(self.name)
+        headers = ln_utils.get_headers(self.name)
         # gets the cookies to make request for prop lines
-        cookies = bkm_utils.get_cookies(self.name)
+        cookies = ln_utils.get_cookies(self.name)
         # gets the params to make request for prop lines
-        params = bkm_utils.get_params(self.name)
+        params = ln_utils.get_params(self.name)
         # makes request for prop lines
         await self.req_mngr.get(url, self._parse_lines, headers=headers, cookies=cookies, params=params)
 

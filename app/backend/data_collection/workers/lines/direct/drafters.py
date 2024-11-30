@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def is_event_valid(data: dict) -> bool:
@@ -33,7 +33,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
     # get market name, execute if it exists
     if market_name := data.get('bid_stats_name'):
         # check if the market is valid...watching out for MMA markets
-        if bkm_utils.is_market_valid(market_name):
+        if ln_utils.is_market_valid(market_name):
             # gets the market id or log message
             market = dc_utils.get_market(bookmaker_name, league, market_name)
             # return both market id search result and cleaned market
@@ -47,16 +47,16 @@ def extract_position(data: dict) -> Optional[str]:
         return dc_utils.clean_position(position.strip())
 
 
-class Drafters(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class Drafters(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
 
     async def retrieve(self) -> None:
         # get url to make a request for leagues
-        url = bkm_utils.get_url(self.name, name='leagues')
+        url = ln_utils.get_url(self.name, name='leagues')
         # get headers to make a request for prop lines
-        headers = bkm_utils.get_headers(self.name, name='leagues')
+        headers = ln_utils.get_headers(self.name, name='leagues')
         # make asynchronous request for prop lines
         await self.req_mngr.get(url, self._parse_leagues, headers=headers)
 
@@ -72,11 +72,11 @@ class Drafters(bkm_utils.LinesRetriever):
                     # clean the league name
                     cleaned_league = dc_utils.clean_league(league_name)
                     # if the league is valid keep going
-                    if bkm_utils.is_league_valid(cleaned_league):
+                    if ln_utils.is_league_valid(cleaned_league):
                         # get the url to get prop lines data and insert the league id
-                        url = bkm_utils.get_url(self.name).format(league_id)
+                        url = ln_utils.get_url(self.name).format(league_id)
                         # get the headers associated with prop lines requests
-                        headers = bkm_utils.get_headers(self.name)
+                        headers = ln_utils.get_headers(self.name)
                         # store some params
                         params = {
                             'page_no': '1'

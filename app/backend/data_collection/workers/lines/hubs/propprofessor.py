@@ -3,7 +3,7 @@ from typing import Optional
 import math
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 LEAGUE_MAP = {
@@ -133,8 +133,8 @@ def extract_line_data(data: dict):
     ]
 
 
-class PropProfessor(bkm_utils.LinesRetriever):
-    def __init__(self, lines_hub: bkm_utils.LinesSource):
+class PropProfessor(ln_utils.LinesRetriever):
+    def __init__(self, lines_hub: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(lines_hub)
 
@@ -142,13 +142,13 @@ class PropProfessor(bkm_utils.LinesRetriever):
         # initialize a dictionary to hold requests
         tasks = list()
         # get the url to request matchups data
-        url = bkm_utils.get_url(self.name)
+        url = ln_utils.get_url(self.name)
         # get the headers to request matchups data
-        headers = bkm_utils.get_headers(self.name)
+        headers = ln_utils.get_headers(self.name)
         # get the cookies to request matchups data
-        cookies = bkm_utils.get_cookies(self.name)
+        cookies = ln_utils.get_cookies(self.name)
         # get the template for params
-        params_templ = bkm_utils.get_params(self.name)
+        params_templ = ln_utils.get_params(self.name)
         # for every available league
         for league in dc_utils.IN_SEASON_LEAGUES:
             # get the sport for this league

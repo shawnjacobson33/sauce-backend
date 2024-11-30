@@ -3,14 +3,14 @@ import asyncio
 from typing import Optional
 
 from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.bookmakers import utils as bkm_utils
+from app.backend.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league(data: dict) -> Optional[str]:
     # get the league name, if it exists keep going
     if league := data.get('slug'):
         # check if the cleaned league is valid...still need originally formatted league for params
-        if bkm_utils.is_league_valid(dc_utils.clean_league(league)):
+        if ln_utils.is_league_valid(dc_utils.clean_league(league)):
             # return the valid league name
             return league
 
@@ -73,18 +73,18 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
         return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
-class Payday(bkm_utils.LinesRetriever):
-    def __init__(self, bookmaker: bkm_utils.LinesSource):
+class Payday(ln_utils.LinesRetriever):
+    def __init__(self, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
         super().__init__(bookmaker)
         # get the universal headers used to make all requests
-        self.headers = bkm_utils.get_headers(self.name)
+        self.headers = ln_utils.get_headers(self.name)
 
     async def retrieve(self) -> None:
         # get the url required to make request for leagues data
-        url = bkm_utils.get_url(self.name, name='leagues')
+        url = ln_utils.get_url(self.name, name='leagues')
         # get the params required to make the request for leagues data
-        params = bkm_utils.get_params(self.name, name='leagues')
+        params = ln_utils.get_params(self.name, name='leagues')
         # make the request to get leagues data
         await self.req_mngr.get(url, self._parse_leagues, headers=self.headers, params=params)
 
@@ -94,13 +94,13 @@ class Payday(bkm_utils.LinesRetriever):
             # initialize a structure to hold requests to be made
             tasks = []
             # get the url required to make requests for contests data
-            url = bkm_utils.get_url(self.name, name='contests')
+            url = ln_utils.get_url(self.name, name='contests')
             # for each dictionary of league data in the response data if it exists
             for league_data in json_data.get('data', []):
                 # extract the league from league_data
                 if league := extract_league(league_data):
                     # get the params necessary for requesting contests data for this league
-                    params = bkm_utils.get_params(self.name, name='contests', var_1=league)
+                    params = ln_utils.get_params(self.name, name='contests', var_1=league)
                     # add the request to tasks
                     tasks.append(self.req_mngr.get(url, self._parse_contests, dc_utils.clean_league(league), headers=self.headers, params=params))
 
@@ -113,7 +113,7 @@ class Payday(bkm_utils.LinesRetriever):
             # get contests dictionary and the contest id from it, if both exists continue executing
             if (contests := data.get('contests')) and (contest_id := extract_contest_id(contests)):
                 # get the url required to request for prop lines using the contest id
-                url = bkm_utils.get_url(self.name).format(contest_id)
+                url = ln_utils.get_url(self.name).format(contest_id)
                 # make request for prop lines
                 await self.req_mngr.get(url, self._parse_lines, league, headers=self.headers)
 
