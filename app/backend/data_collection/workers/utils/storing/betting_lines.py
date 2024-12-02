@@ -91,16 +91,16 @@ class BettingLines:
         with cls._lock:
             uniq_identifier = (betting_line['league'], betting_line['market'], betting_line['subject_id'])
             betting_line_record = {key: value for key, value in betting_line.items() if key in
-                                   {'s_tstamp', 'line', 'mult', 'odds', 'im_prb', 'is_boosted'} and value
+                                   {'batch_id', 'line', 'mult', 'odds', 'im_prb', 'is_boosted'} and value
                                    }
             if betting_line_history := cls._betting_lines[uniq_identifier]:
                 if bookmaker_history := betting_line_history['bookmakers'].setdefault(betting_line['bookmaker'], {}):
                     if label_specific_history := bookmaker_history.setdefault(betting_line['label'], deque()):
-                        betting_line_data_min_tstamp = {key: value for key, value in betting_line.items() if key != 's_tstamp'}
                         most_recent_bookmaker_history = label_specific_history[-1]
-                        if betting_line_data_min_tstamp != most_recent_bookmaker_history:
+                        if {key: value for key, value in betting_line.items() if key != 'batch_id'} != most_recent_bookmaker_history:
                             label_specific_history.append(betting_line_record)
                         else:
+                            # TODO: rethink this
                             most_recent_bookmaker_history['e_tstamp'] = betting_line['s_tstamp']
                     else:
                         label_specific_history.append(betting_line_record)
@@ -112,10 +112,10 @@ class BettingLines:
                     bookmaker_history[betting_line['label']] = deque([betting_line_record])
             else:
                 cls._betting_lines[uniq_identifier] = {
-                    'date': datetime.now().strftime('%Y-%m-%d'),
+                    'birth': datetime.now().strftime('%Y-%m-%d'),
                     'sport': betting_line['sport'],
                     'league': betting_line['league'],
-                    'g_time': betting_line['game_time'],
+                    'game_time': betting_line['game_time'],
                     'game': betting_line['game'],
                     'market': betting_line['market'],
                     'player': betting_line['subject'],

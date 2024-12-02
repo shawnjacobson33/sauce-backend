@@ -46,7 +46,7 @@ class RequestManager:
     async def get(self, url, func, *args, **kwargs):
         response = await self.get_thread(url, **kwargs)
         if response.status_code == 200:
-            await func(response, *args)
+            return await func(response, *args)
         else:
             print(f"Failed to retrieve {url} with status code {response.status_code}")
             print(f"ERROR: {response.content}")

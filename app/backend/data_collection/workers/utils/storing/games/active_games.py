@@ -1,6 +1,6 @@
 import threading
 from collections import defaultdict
-from typing import Any, Union
+from typing import Any
 
 
 class ActiveGames:
@@ -14,13 +14,8 @@ class ActiveGames:
     _lock1: threading.Lock = threading.Lock()
 
     @classmethod
-    def get_active_games(cls, league: str = None):
-        if league:
-            league_spec_active_games_dict = {game_id: url for game_id, url in cls._active_games.items() if game_id[0] == league}
-            league_spec_active_games_set = set(league_spec_active_games_dict.keys())
-            return league_spec_active_games_set, league_spec_active_games_dict
-
-        return cls._active_games
+    def get_active_games(cls, league: str = None) -> dict:
+        return {game_id: url for game_id, url in cls._active_games.items() if game_id[0] == league} if league else cls._active_games
 
     @classmethod
     def update_active_games(cls, games: list[dict]):

@@ -1,4 +1,7 @@
+import asyncio
+from collections import defaultdict
 from datetime import datetime
+import random
 from typing import Optional
 import math
 
@@ -140,15 +143,13 @@ class PropProfessor(ln_utils.LinesRetriever):
 
     async def retrieve(self) -> None:
         # initialize a dictionary to hold requests
-        tasks = list()
+        coros = defaultdict(list)
         # get the url to request matchups data
         url = ln_utils.get_url(self.name)
         # get the headers to request matchups data
         headers = ln_utils.get_headers(self.name)
         # get the cookies to request matchups data
         cookies = ln_utils.get_cookies(self.name)
-        # get the template for params
-        params_templ = ln_utils.get_params(self.name)
         # for every available league
         for league in dc_utils.IN_SEASON_LEAGUES:
             # get the sport for this league
@@ -159,15 +160,18 @@ class PropProfessor(ln_utils.LinesRetriever):
                 # for market_time in MARKET_TIME_MAP[sport]:
                 # inject the params into the template
                 params_dyn = f'"market":"{market}","league":"{LEAGUE_MAP.get(league, league)}","games":[],"participants":[],"marketTime":"{"Game"}"'
-                params_templ['input'] = '{"0":{"json":{' + params_dyn + '}}}'
+                params = ln_utils.get_params(self.name)
+                params['input'] = '{"0":{"json":{' + params_dyn + '}}}'
                 # make request for matchups data
-                await self.req_mngr.get(
-                    url, self._parse_lines, sport, league, headers=headers, cookies=cookies, params=params_templ
-                )
+                coros[league].append(self.req_mngr.get(
+                    url, self._parse_lines, sport, league, market, headers=headers, cookies=cookies, params=params
+                ))
 
-        # await asyncio.gather(*tasks)
+        for coros in coros.values():
+            await asyncio.gather(*coros)
+            await asyncio.sleep(0.5)
 
-    async def _parse_lines(self, response, sport: str, league: str):
+    async def _parse_lines(self, response, sport: str, league: str, market: str):
         if (response_json := response.json()) and (result := response_json[0].get('result')):
             if (data := result.get('data')) and (json_data := data.get('json')):
                 dc_utils.RelevantData.update_relevant_leagues(league, self.name)
@@ -182,7 +186,7 @@ class PropProfessor(ln_utils.LinesRetriever):
                                     for line_data in extract_line_data(odds_data):
                                         if len(line_data) == 3:
                                             dc_utils.BettingLines.update({
-                                                's_tstamp': str(datetime.now()),
+                                                'batch_id': self.batch_id,
                                                 'bookmaker': BOOKMAKER_MAP.get(bookmaker, bookmaker),
                                                 'sport': sport,
                                                 'league': league,

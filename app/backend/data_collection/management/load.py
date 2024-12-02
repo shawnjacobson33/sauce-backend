@@ -1,6 +1,5 @@
-import asyncio
 import time
-from asyncio import Task
+from datetime import datetime
 
 from app.backend.data_collection import workers as wrk
 
@@ -8,7 +7,11 @@ from app.backend.data_collection.management.utils import report_line_counts
 from app.backend.data_collection.management.configure import configure_game_retriever, configure_lines_retriever
 
 
-def cleanup(retriever: wrk.Retriever):
+BATCH_DAY = datetime.now().day
+BATCH_NUM = 0
+
+
+def report(retriever: wrk.Retriever):
     # create the decorator function
     def decorator(func):
         async def wrapper(*args, **kwargs):
@@ -28,13 +31,13 @@ def cleanup(retriever: wrk.Retriever):
 
 async def load_retriever(retriever: wrk.Retriever):
     # a decorator to log metrics and save samples of the data in a file
-    @cleanup(retriever)
+    @report(retriever)
     async def retrieve():
         # wait until the plug is finished collecting its data
         await retriever.retrieve()
 
     # wait until the collection process is done
-    return retrieve
+    await retrieve()
 
 
 async def load_roster_tasks(roster_retriever_names: list[str] = None):
@@ -43,74 +46,61 @@ async def load_roster_tasks(roster_retriever_names: list[str] = None):
         (roster_retriever_name, wrk.ROSTER_RETRIEVERS[roster_retriever_name]) for roster_retriever_name in
         roster_retriever_names]
 
-    # collect request task to run
-    tasks = list()
-    # for every bookmaker plug available
-    for source_name, roster_retriever_class in roster_retriever_classes:
-        # configure a bookmaker plug to collect data
-        roster_retriever = configure_game_retriever(source_name, roster_retriever_class)
-        # get the retrieve coroutine
-        coro = await load_retriever(roster_retriever)
-        # start collecting
-        tasks.append(asyncio.create_task(coro))
+    coros = [
+        load_retriever(configure_game_retriever(source_name, retriever_class))
+        for source_name, retriever_class in roster_retriever_classes
+    ]
 
-    return tasks
+    return coros
 
 
-async def load_box_score_tasks(box_score_retriever_names: list[str] = None):
+async def load_box_score_tasks(box_score_retriever_names: list[str] = None) -> list:
     # 1. First Get Schedule Classes
     box_score_retriever_classes = wrk.BOX_SCORE_RETRIEVERS.items() if not box_score_retriever_names else [
         (box_score_retriever_name, wrk.BOX_SCORE_RETRIEVERS[box_score_retriever_name]) for box_score_retriever_name in
         box_score_retriever_names]
 
-    # collect request task to run
-    tasks = list()
-    # for every bookmaker plug available
-    for source_name, box_score_retriever_class in box_score_retriever_classes:
-        # configure a bookmaker plug to collect data
-        box_score_retriever = configure_game_retriever(source_name, box_score_retriever_class)
-        # get the retrieve coroutine
-        coro = await load_retriever(box_score_retriever)
-        # start collecting
-        tasks.append(asyncio.create_task(coro))
+    coros = [
+        load_retriever(configure_game_retriever(source_name, retriever_class))
+        for source_name, retriever_class in box_score_retriever_classes
+    ]
 
-    return tasks
+    return coros
 
 
-async def load_schedule_tasks(worker_names: list[str] = None) -> list[Task]:
+async def load_schedule_tasks(worker_names: list[str] = None) -> list:
     # 1. First Get Schedule Classes
     schedules_retriever_classes = wrk.SCHEDULE_RETRIEVERS.items() if not worker_names else [
         (schedule_retriever_name, wrk.SCHEDULE_RETRIEVERS[schedule_retriever_name]) for schedule_retriever_name in
         worker_names]
-    
-    # collect request task to run
-    tasks = list()
-    # for every bookmaker plug available
-    for source_name, schedule_retriever_class in schedules_retriever_classes:
-        # configure a bookmaker plug to collect data
-        schedule_retriever = configure_game_retriever(source_name, schedule_retriever_class)
-        # get the retrieve coroutine
-        coro = await load_retriever(schedule_retriever)
-        # start collecting
-        tasks.append(asyncio.create_task(coro))
 
-    return tasks
+    coros = [
+        load_retriever(configure_game_retriever(source_name, retriever_class))
+        for source_name, retriever_class in schedules_retriever_classes
+    ]
+
+    return coros
 
 
-async def load_line_tasks(group: str, worker_names: list[str] = None) -> list[Task]:
-    # get all the bookmaker plugs to run
-    line_retriever_classes = wrk.LINE_WORKERS[group].values() if not worker_names else [
-        wrk.LINE_WORKERS[group][worker] for worker in worker_names]
+def update_batch_id():
+    global BATCH_NUM, BATCH_DAY
+    if BATCH_DAY != datetime.now().day:
+        BATCH_DAY, BATCH_NUM = datetime.now().day, 0
+    else:
+        BATCH_NUM += 1
 
-    # collect request task to run
-    tasks = list()
-    # for every bookmaker plug available
-    for line_retriever_class in line_retriever_classes:
-        # configure a bookmaker plug to collect data
-        line_retriever = configure_lines_retriever(line_retriever_class)
-        # get the retrieve coroutine
-        coro = await load_retriever(line_retriever)
-        # start collecting
-        tasks.append(asyncio.create_task(coro))
 
-    return tasks
+async def load_line_tasks(group: str, worker_name: str = None) -> list:
+    if worker_group := wrk.LINE_WORKERS.get(group):
+        # get all the bookmaker plugs to run
+        line_retriever_classes = worker_group.items() if not worker_name else (worker_name, worker_group[worker_name])
+        # create a batch id for this batch of lines
+        batch_id = f"{str(datetime.now())}:{BATCH_NUM}"
+        update_batch_id()
+
+        coros = [
+            load_retriever(configure_lines_retriever(batch_id, retriever_class))
+            for source_name, retriever_class in line_retriever_classes
+        ]
+
+        return coros

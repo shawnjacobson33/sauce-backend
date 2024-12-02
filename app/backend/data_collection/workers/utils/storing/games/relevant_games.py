@@ -14,7 +14,7 @@ class RelevantGames:
 
     @classmethod
     def get_relevant_games(cls, league: str = None):
-        return set([game_id for game_id in cls._relevant_games if game_id[0] == league]) if league else cls._relevant_games
+        return set(game_id for game_id in cls._relevant_games if game_id[0] == league) if league else cls._relevant_games
 
     @classmethod
     def update_games(cls, game: dict) -> None:

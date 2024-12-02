@@ -1,6 +1,6 @@
 from datetime import datetime
 import asyncio
-from typing import Optional
+from typing import Optional, List, Any
 
 from app.backend.data_collection.workers import utils as dc_utils
 from app.backend.data_collection.workers.lines import utils as ln_utils
@@ -135,10 +135,10 @@ class Dabble(ln_utils.LinesRetriever):
         await self.req_mngr.get(url, self._parse_competitions, headers=self.headers, cookies=self.cookies)
 
     async def _parse_competitions(self, response) -> None:
-        # initializes a tasks list to store tasks that will be run asynchronously
-        tasks = []
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
         if (json_data := response.json()) and (data := json_data.get('data')):
+            # initializes a tasks list to store tasks that will be run asynchronously
+            tasks = []
             # for each competition in the data's activeCompetitions if they exist
             for competition in data.get('activeCompetitions', []):
                 # extract the league from competition and get the competition id, if both exist then execute
@@ -193,7 +193,7 @@ class Dabble(ln_utils.LinesRetriever):
                                 if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
                                     # update shared data
                                     dc_utils.BettingLines.update({
-                                        's_tstamp': str(datetime.now()),
+                                        'batch_id': self.batch_id,
                                         'bookmaker': self.name,
                                         'sport': sport,
                                         'league': league,

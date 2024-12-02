@@ -1,7 +1,7 @@
 import json
 
 from app.backend.data_collection.workers import RelevantGames, RelevantData
-from app.backend.data_collection.management.utils.reporting import utils as rp_utils
+from app.backend.data_collection.management.reporting import utils as rp_utils
 
 
 def report_relevant_leagues() -> None:

@@ -94,7 +94,7 @@ class BoomFantasy(ln_utils.LinesRetriever):
         # call parent class Plug
         super().__init__(bookmaker)
 
-    async def retrieve(self) -> list:
+    async def retrieve(self) -> None:
         # gets the url to get prop lines
         url = ln_utils.get_url(self.name)
         # get the headers that will be sent with request for prop lines
@@ -108,7 +108,7 @@ class BoomFantasy(ln_utils.LinesRetriever):
             'json_data': ln_utils.get_json_data(self.name, name='tokens')
         }
         # because of tokens, use a special get method to request data
-        return [self.req_mngr.get_bf(url, tokens_data, self._parse_lines, headers=headers, params=params)]
+        await self.req_mngr.get_bf(url, tokens_data, self._parse_lines, headers=headers, params=params)
 
     async def _parse_lines(self, response) -> None:
         # gets the json data from the response and then the redundant data from data field, executes if they both exist
@@ -151,7 +151,7 @@ class BoomFantasy(ln_utils.LinesRetriever):
                                                                 if label and odds:
                                                                     # update shared data
                                                                     dc_utils.BettingLines.update({
-                                                                        's_tstamp': str(datetime.now()),
+                                                                        'batch_id': self.batch_id,
                                                                         'bookmaker': self.name,
                                                                         'sport': sport,
                                                                         'league': league,

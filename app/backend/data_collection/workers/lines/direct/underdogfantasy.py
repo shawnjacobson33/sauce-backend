@@ -238,7 +238,7 @@ class UnderdogFantasy(ln_utils.LinesRetriever):
                                                     if odds := get_odds(self.dflt_odds, multiplier):
                                                         # update shared data
                                                         dc_utils.BettingLines.update({
-                                                            's_tstamp': str(datetime.now()),
+                                                            'batch_id': self.batch_id,
                                                             'bookmaker': self.name,
                                                             'sport': sport,
                                                             'league': league,

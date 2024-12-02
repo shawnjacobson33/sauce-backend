@@ -167,7 +167,7 @@ class Sleeper(ln_utils.LinesRetriever):
                                                 if label := extract_label(outcome_data):
                                                     # update shared data
                                                     dc_utils.BettingLines.update({
-                                                        's_tstamp': str(datetime.now()),
+                                                        'batch_id': self.batch_id,
                                                         'bookmaker': self.name,
                                                         'sport': sport,
                                                         'league': league,

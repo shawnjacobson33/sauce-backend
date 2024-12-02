@@ -103,7 +103,7 @@ class MoneyLine(ln_utils.LinesRetriever):
                                             for line, label in extract_line_and_label(prop_line):
                                                 # update shared data
                                                 dc_utils.BettingLines.update({
-                                                    's_tstamp': str(datetime.now()),
+                                                    'batch_id': self.batch_id,
                                                     'bookmaker': self.name,
                                                     'sport': sport,
                                                     'league': league,

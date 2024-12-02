@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from app.backend.data_collection.workers import lines as lns
-from app.backend.data_collection.workers import utils as wk_utils
+from app.backend.data_collection.workers import utils as wrk_utils
 
 
 # ***************************** EXTRA HELPERS *********************************
@@ -14,7 +14,7 @@ class Payout:
 
 # ***************************** DATABASE MODELS *********************************
 
-class LinesSource(wk_utils.Source):
+class LinesSource(wrk_utils.Source):
     def __init__(self, bookmaker_info: dict):
         super().__init__(bookmaker_info['name'])
         self.default_payout, self.payouts = None, None
@@ -26,9 +26,10 @@ class LinesSource(wk_utils.Source):
 
 # ***************************** BASE MODELS *********************************
 
-class LinesRetriever(wk_utils.Retriever):
-    def __init__(self, lines_source: LinesSource):
+class LinesRetriever(wrk_utils.Retriever):
+    def __init__(self, batch_id: str, lines_source: LinesSource):
         super().__init__(lines_source)
+        self.batch_id = batch_id
         self.dflt_odds, self.dflt_im_prb = None, None
         if dflt_payout := lines_source.__dict__.get('default_payout'):
             self.dflt_odds = dflt_payout.odds
@@ -37,4 +38,4 @@ class LinesRetriever(wk_utils.Retriever):
         self.req_mngr = lns.RequestManager(use_requests=(lines_source.name == 'BetOnline'))  # BetOnline doesn't work with 'cloudscraper'
 
     def __str__(self):
-        return f'{str(wk_utils.BettingLines.counts(self.name))} lines'
+        return f'{str(wrk_utils.BettingLines.counts(self.name))} lines'

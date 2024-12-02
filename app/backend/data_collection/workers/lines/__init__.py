@@ -6,28 +6,35 @@ from .utils import *
 LINE_WORKERS = {
     'A': {
         "PropProfessor": PropProfessor,
-    },
-    'B': {
-        "OddsShopper": OddsShopper,
-    },
-    'C': {
         "Drafters": Drafters,
         "MoneyLine": MoneyLine,
         "OwnersBox": OwnersBox,
         "Payday": Payday,
         "SuperDraft": SuperDraft,
         "VividPicks": VividPicks,
+        "Rebet": Rebet,
+        "Sleeper": Sleeper,
+        "UnderdogFantasy": UnderdogFantasy,
     },
-    'D': {
+    'B': {
+        "OddsShopper": OddsShopper,
+        "Drafters": Drafters,
+        "MoneyLine": MoneyLine,
+        "OwnersBox": OwnersBox,
+        "Payday": Payday,
+        "SuperDraft": SuperDraft,
+        "VividPicks": VividPicks,
         "BoomFantasy": BoomFantasy,
+        "HotStreak": HotStreak,
+        "Rebet": Rebet,
+        "Sleeper": Sleeper,
+        "UnderdogFantasy": UnderdogFantasy,
+    },
+    'Backups': {
         "Dabble": Dabble,
         "DraftKingsPick6": DraftKingsPick6,
-        "HotStreak": HotStreak,
         "PrizePicks": PrizePicks,
-        "UnderdogFantasy": UnderdogFantasy,
-        "Rebet": Rebet,
         "ParlayPlay": ParlayPlay,
-        "Sleeper": Sleeper,
     }
 }
 

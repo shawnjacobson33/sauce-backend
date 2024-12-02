@@ -1,7 +1,7 @@
 import json
 import os
 
-from app.backend.data_collection.management.utils.reporting import utils as rp_utils
+from app.backend.data_collection.management.reporting import utils as rp_utils
 from app.backend.data_collection.workers import BettingLines, Games, BoxScores, Retriever, HUB_BOOKMAKERS
 
 

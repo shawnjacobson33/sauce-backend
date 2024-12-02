@@ -50,11 +50,9 @@ async def execute_box_score_tasks(worker_names: list[str] = None) -> None:
     print(f"[TOTAL ACTIVE GAMES]: {BoxScores.counts()}, {box_score_retrieving_time}s\n")
 
 
-async def execute_line_tasks(group: str, worker_names: list[str] = None) -> None:
-    # section header
-    print(f'{"*" * 22} Lines Retrieval {"*" * 22}\n')
+async def execute_line_tasks(group: str, worker_name: str = None) -> None:
     # get the coroutines
-    line_tasks = await ld.load_line_tasks(group, worker_names)
+    line_tasks = await ld.load_line_tasks(group, worker_name)
     # start making requests asynchronously
     t1 = time.time()
     await asyncio.gather(*line_tasks)

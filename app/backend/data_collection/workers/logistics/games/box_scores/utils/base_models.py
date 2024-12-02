@@ -6,7 +6,6 @@ from app.backend.data_collection.workers.logistics import utils as lg_utils
 from app.backend.data_collection.workers.logistics.games.utils import GameSource
 
 
-
 class BoxScoreRetriever(dc_utils.Retriever):
     def __init__(self, source: GameSource):
         super().__init__(source)
@@ -18,7 +17,9 @@ class BoxScoreRetriever(dc_utils.Retriever):
             # get games that have players in them that have prop lines with bookmakers
             if relevant_games := dc_utils.RelevantGames.get_relevant_games(self.league_spec):
                 # only want games that are going on that are relevant
-                return active_games.intersection(relevant_games)
+                valid_game_ids = set(game_id for game_id in active_games).intersection(relevant_games)
+                # return unique active games that are being used by bookmakers
+                return {game_id: active_games[game_id] for game_id in valid_game_ids}
 
         return active_games # TODO: change later
 

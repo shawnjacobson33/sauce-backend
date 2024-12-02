@@ -457,7 +457,7 @@ COOKIES_MAP = {
         'cf_clearance': '5aZBgJKdqsbijrlaENVCbJaMdkLwEf8xaL38PB4cOMM-1722455195-1.0.1.1-76s6PM08.0.Slze2RsWlbcrHR..BJCbb3THnUCVjEOCm1rUUUwB2MfcCEOE5zzgGtrNph1VM8OTG2dUGGHOjyQ',
     }, 'PropProfessor': {
         '__Secure-next-auth.session-token': '1a813161-7946-469e-80b0-9a9a4ba0fbeb',
-        '__Host-next-auth.csrf-token': '943d82bbc29cba7ecdc533fd53bb838d7e67b579727583adbfab0562b2cd092a%7Cdaa3a5fb202d05ac6eb53f9b3b500642783e5b3398dc8288b842becb61674af1',
+        '__Host-next-auth.csrf-token': 'aa9a2ed4e7ac616b30df2c26020a1ab00e39ccc90d7bb8dac03bab5545e6d889%7Cb3dd8e561b4f7e6336ae732f23849b7c633e5144fc2c70726563f6cf5dc651ac',
         '__Secure-next-auth.callback-url': 'https%3A%2F%2Fwww.propprofessor.com',
     }, 'OddsJam': {
         '_ga': 'GA1.1.27410901.1728512773',

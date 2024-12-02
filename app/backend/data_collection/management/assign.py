@@ -1,16 +1,34 @@
-import schedule
+import asyncio
 
 from app.backend.database import MongoDB
-from app.backend.data_collection.workers.utils import ActiveGames
 import app.backend.data_collection.management.execute as exc
+from app.backend.data_collection.workers.utils import ActiveGames
+from app.backend.data_collection.management import reporting as rp
 
 
-def assign_roster_tasks(worker_names: list[str] = None, interval: float = None) -> None:
-    schedule.every(interval if interval else 86_400).seconds.do(exc.execute_roster_tasks, worker_names)
+REPORTING_FUNC_MAP = {
+    'execute_box_score_tasks': rp.report_box_scores,
+    'execute_schedule_tasks': rp.report_games,
+    'execute_line_tasks': rp.report_lines
+}
 
 
-def assign_schedule_tasks(worker_names: list[str] = None, interval: float = None) -> None:
-    schedule.every(interval if interval else 21_000).seconds.do(exc.execute_schedule_tasks, worker_names)
+async def schedule_task(func, interval: int, group: str = None, worker: str = None):
+    while True:
+        print('*' * 15, f'Group {group}', '*' * 15)
+        await func(group, worker)
+        if reporting_func := REPORTING_FUNC_MAP.get(func.__name__):
+            reporting_func()
+
+        await asyncio.sleep(interval)
+
+
+async def assign_roster_tasks(worker_names: list[str] = None, interval: float = None) -> None:
+    await schedule_task(exc.execute_roster_tasks, interval or 120)
+
+
+async def assign_schedule_tasks(worker_names: list[str] = None, interval: float = None) -> None:
+    await schedule_task(exc.execute_schedule_tasks, interval or 10)
 
 
 def there_are_active_games() -> bool:
@@ -23,14 +41,15 @@ def there_are_active_games() -> bool:
     return False
 
 
-def assign_box_score_tasks(worker_names: list[str] = None, interval: float = None) -> None:
+async def assign_box_score_tasks(worker_names: list[str] = None, interval: float = None) -> None:
     if there_are_active_games():
-        schedule.every(interval if interval else 120).seconds.do(exc.execute_box_score_tasks, worker_names)
+        await schedule_task(exc.execute_box_score_tasks, interval or 120)
 
     # TODO: need data stored somewhere to track if active games finished...then you can cancel the job
 
 
-def assign_line_tasks(group: str, worker_names: list[str] = None, interval: float = None) -> None:
-    # schedule the betting line tasks to be run for the inputted interval
-    schedule.every(interval if interval else 120).seconds.do(exc.execute_line_tasks, group, worker_names)
+async def assign_line_tasks(group: str, worker: str = None, interval: float = None) -> None:
+    if group == 'B':
+        await asyncio.sleep(int(interval / 3) if interval else 150)
 
+    await schedule_task(exc.execute_line_tasks, interval or 300, group, worker)

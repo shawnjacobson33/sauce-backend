@@ -43,7 +43,7 @@ def extract_odds_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, Non
     odds_and_labels = zip([data.get('decimalPriceOver'), data.get('decimalPriceUnder')], ['Over', 'Under'])
     for odds, label in odds_and_labels:
         if odds:
-            yield odds, label
+            yield round(float(odds), 4), label
 
 
 class ParlayPlay(ln_utils.LinesRetriever):
@@ -121,7 +121,7 @@ class ParlayPlay(ln_utils.LinesRetriever):
                                                     # for each over and under label
                                                     for odds, label in extract_odds_and_label(line_data):
                                                         betting_line = {
-                                                            's_tstamp': str(datetime.now()),
+                                                            'batch_id': self.batch_id,
                                                             'bookmaker': self.name,
                                                             'sport': sport,
                                                             'league': league,

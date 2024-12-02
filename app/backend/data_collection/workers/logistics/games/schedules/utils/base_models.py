@@ -10,4 +10,4 @@ class ScheduleRetriever(Retriever):
         self.league_spec = source.league_spec
 
     def __str__(self):
-        return f'{str(Games.size(self.league_spec))} ({self.league_spec}) new games'
+        return f'{str(Games.counts(self.league_spec))} ({self.league_spec}) new games'
