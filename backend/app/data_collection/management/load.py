@@ -1,10 +1,9 @@
 import time
 from datetime import datetime
 
-from app.backend.data_collection import workers as wrk
+from backend.app.data_collection import workers as wrk
 
-from app.backend.data_collection.management.utils import report_line_counts
-from app.backend.data_collection.management.configure import configure_game_retriever, configure_lines_retriever
+from backend.app.data_collection.management.configure import configure_game_retriever, configure_lines_retriever
 
 
 BATCH_DAY = datetime.now().day
@@ -20,7 +19,7 @@ def report(retriever: wrk.Retriever):
             result = await func(*args, **kwargs)
             t2 = time.time()
             # output the statistics from the job
-            report_line_counts(retriever, t2-t1)
+            # repor(retriever, t2-t1)
             # return the function call as part of the decorator
             return result
 

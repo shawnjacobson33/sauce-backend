@@ -1,6 +1,6 @@
-from app.backend.data_collection.workers.utils import Games
-from app.backend.data_collection.workers.utils.modelling import Retriever
-from app.backend.data_collection.workers.logistics.games.utils import GameSource
+from backend.app.data_collection.workers.utils import Games
+from backend.app.data_collection.workers.utils.modelling import Retriever
+from backend.app.data_collection.workers.logistics.games.utils import GameSource
 
 
 class ScheduleRetriever(Retriever):

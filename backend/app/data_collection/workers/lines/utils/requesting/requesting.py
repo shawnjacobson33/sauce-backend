@@ -3,6 +3,8 @@ import cloudscraper
 import requests
 import os
 
+from backend.app.data_collection.workers.utils import LineWorkerStats
+
 
 # TODO: LOG THESE MESSAGES INSTEAD OF PRINT
 
@@ -31,7 +33,8 @@ async def parse_tokens(token_response, file_path: str, access_token: str, refres
 
 
 class RequestManager:
-    def __init__(self, use_requests: bool = False):
+    def __init__(self, name: str, use_requests: bool = False):
+        self.name = name
         self.use_requests = use_requests
         self.scraper = cloudscraper.create_scraper()
 
@@ -46,16 +49,24 @@ class RequestManager:
     async def get(self, url, func, *args, **kwargs):
         response = await self.get_thread(url, **kwargs)
         if response.status_code == 200:
+            # report the success
+            LineWorkerStats.update_request_counts(self.name, successful_requests=1)
             return await func(response, *args)
         else:
+            # report the failure
+            LineWorkerStats.update_request_counts(self.name, failed_requests=1)
             print(f"Failed to retrieve {url} with status code {response.status_code}")
             print(f"ERROR: {response.content}")
 
     async def post(self, url, func, *args, **kwargs):
         response = await self.post_thread(url, **kwargs)
         if response.status_code == 200:
+            # report the success
+            LineWorkerStats.update_request_counts(self.name, successful_requests=1)
             await func(response, *args)
         else:
+            # report the failure
+            LineWorkerStats.update_request_counts(self.name, failed_requests=1)
             print(f"Failed to retrieve {url} with status code {response.status_code}")
             print(f"ERROR: {response.content}")
 
@@ -68,6 +79,8 @@ class RequestManager:
         response = await self.get_thread(url, headers=headers, params=params)
         # if it is a successful request then execute function
         if response.status_code == 200:
+            # report the success
+            LineWorkerStats.update_request_counts(self.name, successful_requests=1)
             # asynchronously call the function
             await func(response)
 
@@ -89,13 +102,19 @@ class RequestManager:
                 response = await self.get_thread(url, headers=headers, params=params)
                 # if request is successful keep executing
                 if response.status_code == 200:
+                    # report the success
+                    LineWorkerStats.update_request_counts(self.name, successful_requests=1)
                     # asynchronously call the function
                     await func(response)
 
                 # unsuccessful request
                 else:
+                    # report the failure
+                    LineWorkerStats.update_request_counts(self.name, failed_requests=1)
                     # output a message with details
                     print(f"Failed to retrieve {url} with status code {response.status_code}")
             else:
+                # report the failure
+                LineWorkerStats.update_request_counts(self.name, failed_requests=1)
                 # output a message for failure with tokens request
                 print(f"Failed to retrieve {tokens_data['url']} with status code {tokens_response.status_code}")

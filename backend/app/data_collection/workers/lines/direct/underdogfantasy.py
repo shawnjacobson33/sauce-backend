@@ -1,8 +1,8 @@
-from datetime import datetime
+from collections import deque
 from typing import Optional
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_teams_dict(data: dict) -> dict:
@@ -168,9 +168,9 @@ def get_odds(default_odds: float, multiplier: float) -> float:
 
 
 class UnderdogFantasy(ln_utils.LinesRetriever):
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
 
     async def retrieve(self) -> None:
         # get the url required to request teams data
@@ -237,8 +237,8 @@ class UnderdogFantasy(ln_utils.LinesRetriever):
                                                     # get the odds
                                                     if odds := get_odds(self.dflt_odds, multiplier):
                                                         # update shared data
-                                                        dc_utils.BettingLines.update({
-                                                            'batch_id': self.batch_id,
+                                                        dc_utils.Lines.update({
+                                                            'batch_ids': deque([self.batch_id]),
                                                             'bookmaker': self.name,
                                                             'sport': sport,
                                                             'league': league,

@@ -1,17 +1,19 @@
-from datetime import datetime
+from collections import deque
 from typing import Optional, Any, Union
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
-def extract_league(data: dict) -> Optional[str]:
+def extract_league(name: str, data: dict) -> Optional[str]:
     # get name of league, executes if exists
     if league := data.get('league'):
         # clean the league name
         cleaned_league = dc_utils.clean_league(league.upper())
         # checks if the league is valid
         if ln_utils.is_league_valid(cleaned_league):
+            # to track the leagues being collected
+            dc_utils.RelevantData.update_relevant_leagues(cleaned_league, name)
             # cleans the league name
             return cleaned_league
 
@@ -90,9 +92,9 @@ class BoomFantasy(ln_utils.LinesRetriever):
             data storage for further use.
     """
 
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
 
     async def retrieve(self) -> None:
         # gets the url to get prop lines
@@ -120,11 +122,9 @@ class BoomFantasy(ln_utils.LinesRetriever):
                     # check if this section is active, if so keep executing
                     if section_data.get('status') == 'active':
                         # if they exist execute
-                        if league := extract_league(section_data):
+                        if league := extract_league(self.name, section_data):
                             # get the sport for this league
                             sport = dc_utils.LEAGUE_SPORT_MAP[league]
-                            # to track the leagues being collected
-                            dc_utils.RelevantData.update_relevant_leagues(league, self.name)
                             # for each section in the league's sections if they exist
                             for qg_data in section_data.get('qG', []):
                                 # get some player attributes
@@ -150,8 +150,8 @@ class BoomFantasy(ln_utils.LinesRetriever):
                                                                 # if both exist the keep going
                                                                 if label and odds:
                                                                     # update shared data
-                                                                    dc_utils.BettingLines.update({
-                                                                        'batch_id': self.batch_id,
+                                                                    dc_utils.Lines.update({
+                                                                        'batch_ids': deque([self.batch_id]),
                                                                         'bookmaker': self.name,
                                                                         'sport': sport,
                                                                         'league': league,

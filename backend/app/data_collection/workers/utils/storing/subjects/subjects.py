@@ -4,9 +4,9 @@ from typing import Union, Optional
 
 import pandas as pd
 
-from app.backend.database import MongoDB, SUBJECTS_COLLECTION_NAME
-from app.backend.data_collection.workers.utils.storing.utils import get_entities
-from app.backend.data_collection.workers.utils.storing.subjects.utils import update_subjects
+from backend.app.database import MongoDB, SUBJECTS_COLLECTION_NAME
+from backend.app.data_collection.workers.utils.storing.utils import get_entities
+from backend.app.data_collection.workers.utils.storing.subjects.utils import update_subjects
 
 # get the pointer to the subjects collection
 subjects_c = MongoDB.fetch_collection(SUBJECTS_COLLECTION_NAME)

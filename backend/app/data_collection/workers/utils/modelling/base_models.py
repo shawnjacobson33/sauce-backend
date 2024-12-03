@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from app.backend.data_collection.workers.utils.definitions import LEAGUE_SPORT_MAP
+from backend.app.data_collection.workers.utils.definitions import LEAGUE_SPORT_MAP
 
 
 # ***************************** DATABASE MODELS *********************************

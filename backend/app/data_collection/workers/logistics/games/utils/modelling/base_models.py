@@ -1,6 +1,6 @@
 from typing import Optional
 
-from app.backend.data_collection.workers.utils.modelling import Source
+from backend.app.data_collection.workers.utils.modelling import Source
 
 
 class GameSource(Source):

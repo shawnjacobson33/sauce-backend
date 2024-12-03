@@ -1,6 +1,6 @@
 from typing import Optional
 
-from app.backend.data_collection.workers.utils import get_subject
+from backend.app.data_collection.workers.utils import get_subject
 
 
 def extract_team(div, game: dict) -> Optional[dict[str, str]]:

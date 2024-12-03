@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
-from app.backend.data_collection.workers.logistics.games import utils as gm_utils
-from app.backend.data_collection.workers.logistics.rosters import utils as rs_utils
+from backend.app.data_collection.workers.logistics.games import utils as gm_utils
+from backend.app.data_collection.workers.logistics.rosters import utils as rs_utils
 
 
 class BasketballRosterRetriever(rs_utils.RosterRetriever):

@@ -1,9 +1,9 @@
-from datetime import datetime
+from collections import deque
 import asyncio
-from typing import Optional, List, Any
+from typing import Optional
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -120,9 +120,9 @@ class Dabble(ln_utils.LinesRetriever):
             Standardizes the label for player props (e.g., over/under).
     """
 
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
         # gets universally used request headers
         self.headers = ln_utils.get_headers(bookmaker.name)
         # gets universally used request cookies
@@ -192,8 +192,8 @@ class Dabble(ln_utils.LinesRetriever):
                                 # get over/under label for player prop and get numeric line, only execute if both exist
                                 if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
                                     # update shared data
-                                    dc_utils.BettingLines.update({
-                                        'batch_id': self.batch_id,
+                                    dc_utils.Lines.update({
+                                        'batch_ids': deque([self.batch_id]),
                                         'bookmaker': self.name,
                                         'sport': sport,
                                         'league': league,

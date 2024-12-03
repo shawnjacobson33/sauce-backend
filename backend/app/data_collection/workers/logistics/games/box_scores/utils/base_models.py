@@ -1,9 +1,9 @@
 import asyncio
 from typing import Optional
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.logistics import utils as lg_utils
-from app.backend.data_collection.workers.logistics.games.utils import GameSource
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.logistics import utils as lg_utils
+from backend.app.data_collection.workers.logistics.games.utils import GameSource
 
 
 class BoxScoreRetriever(dc_utils.Retriever):

@@ -1,9 +1,9 @@
 import re
-from datetime import datetime
+from collections import deque
 from typing import Optional
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -103,9 +103,9 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
 
 
 class PrizePicks(ln_utils.LinesRetriever):
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
 
     async def retrieve(self) -> None:
         # get the url required to make request for leagues data
@@ -162,8 +162,8 @@ class PrizePicks(ln_utils.LinesRetriever):
                                                     # for each generic label for an over/under line
                                                     for label in ['Over', 'Under']:
                                                         # update shared data
-                                                        dc_utils.BettingLines.update({
-                                                            'batch_id': self.batch_id,
+                                                        dc_utils.Lines.update({
+                                                            'batch_ids': deque([self.batch_id]),
                                                             'bookmaker': self.name,
                                                             'sport': sport,
                                                             'league': league['cleaned'],

@@ -1,8 +1,8 @@
 from typing import Optional
 
-from app.backend.data_collection.workers.utils.modelling import Team
-from app.backend.data_collection.workers.utils import Teams, RelevantData, ProblemData
-from app.backend.data_collection.workers.utils.cleaning import clean_team
+from backend.app.data_collection.workers.utils.modelling import Team
+from backend.app.data_collection.workers.utils import Teams, RelevantData, ProblemData
+from backend.app.data_collection.workers.utils.cleaning import clean_team
 
 
 def get_team(source_name: str, league: str, abbr_team_name: str) -> Optional[dict]:

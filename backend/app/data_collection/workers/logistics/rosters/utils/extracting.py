@@ -2,8 +2,8 @@ from typing import Optional
 
 from bs4 import BeautifulSoup
 
-from app.backend.data_collection.workers.logistics import utils as lg_utils
-from app.backend.data_collection.workers.utils import Source
+from backend.app.data_collection.workers.logistics import utils as lg_utils
+from backend.app.data_collection.workers.utils import Source
 
 
 CONFERENCE_MAP = {
@@ -65,7 +65,7 @@ def parse_teams(html_content, conferences, league: str) -> Optional[list[tuple[s
 
 
 # import requests
-# from app.backend.database import MongoDB
+# from backend.app.database import MongoDB
 #
 # source = Source('cbssports-ncaaf', 'NCAAF')
 # # get the url to retrieve teams

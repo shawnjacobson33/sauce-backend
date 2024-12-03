@@ -2,10 +2,10 @@ from datetime import datetime
 
 from bs4 import BeautifulSoup
 
-from app.backend.data_collection.workers.utils import Games
-from app.backend.data_collection.workers.logistics import utils as lg_utils
-from app.backend.data_collection.workers.logistics.games import utils as gm_utils
-from app.backend.data_collection.workers.logistics.games.schedules import utils as sc_utils
+from backend.app.data_collection.workers.utils import Games
+from backend.app.data_collection.workers.logistics import utils as lg_utils
+from backend.app.data_collection.workers.logistics.games import utils as gm_utils
+from backend.app.data_collection.workers.logistics.games.schedules import utils as sc_utils
 
 
 # Gets the number of days ahead we want to get scheduled games for each league

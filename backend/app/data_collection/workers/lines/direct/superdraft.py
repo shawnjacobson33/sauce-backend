@@ -1,9 +1,10 @@
 import asyncio
+from collections import deque
 from datetime import datetime
 from typing import Optional, Any, Union
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_sports_dict(data: dict) -> dict:
@@ -67,9 +68,9 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
 
 
 class SuperDraft(ln_utils.LinesRetriever):
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
         # get the headers required to request prop lines data
         self.headers = ln_utils.get_headers(self.name)
         # update headers timestamp
@@ -132,8 +133,8 @@ class SuperDraft(ln_utils.LinesRetriever):
                                             # for each generic over/under label for prop lines
                                             for label in ['Over', 'Under']:
                                                 # update shared data
-                                                dc_utils.BettingLines.update({
-                                                    'batch_id': self.batch_id,
+                                                dc_utils.Lines.update({
+                                                    'batch_ids': deque([self.batch_id]),
                                                     'bookmaker': self.name,
                                                     'sport': sport,
                                                     'league': league,

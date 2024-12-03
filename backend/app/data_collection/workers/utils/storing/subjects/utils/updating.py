@@ -4,9 +4,9 @@ from typing import Optional
 
 from pymongo import ReturnDocument
 
-from app.backend.data_collection.workers.utils.storing.subjects.updated_subjects import UpdatedSubjects
-from app.backend.data_collection.workers.utils.storing.subjects.new_subjects import NewSubjects
-from app.backend.data_collection.workers.utils.storing.utils.structuring import store_subject
+from backend.app.data_collection.workers.utils.storing.subjects.updated_subjects import UpdatedSubjects
+from backend.app.data_collection.workers.utils.storing.subjects.new_subjects import NewSubjects
+from backend.app.data_collection.workers.utils.storing.utils.structuring import store_subject
 
 
 visited_subjects = defaultdict(int)

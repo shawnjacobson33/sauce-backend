@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from app.backend.data_collection.workers import lines as lns
-from app.backend.data_collection.workers import utils as wrk_utils
+from backend.app.data_collection.workers import lines as lns
+from backend.app.data_collection.workers import utils as wrk_utils
 
 
 # ***************************** EXTRA HELPERS *********************************
@@ -30,12 +30,13 @@ class LinesRetriever(wrk_utils.Retriever):
     def __init__(self, batch_id: str, lines_source: LinesSource):
         super().__init__(lines_source)
         self.batch_id = batch_id
+
         self.dflt_odds, self.dflt_im_prb = None, None
         if dflt_payout := lines_source.__dict__.get('default_payout'):
             self.dflt_odds = dflt_payout.odds
             self.dflt_im_prb = round(1 / self.dflt_odds, 4)
 
-        self.req_mngr = lns.RequestManager(use_requests=(lines_source.name == 'BetOnline'))  # BetOnline doesn't work with 'cloudscraper'
+        self.req_mngr = lns.RequestManager(self.name, use_requests=(lines_source.name == 'BetOnline'))  # BetOnline doesn't work with 'cloudscraper'
 
     def __str__(self):
-        return f'{str(wrk_utils.BettingLines.counts(self.name))} lines'
+        return f'{str(wrk_utils.Lines.counts(self.name))} lines'

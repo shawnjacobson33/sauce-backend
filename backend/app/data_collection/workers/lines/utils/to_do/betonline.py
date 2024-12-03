@@ -1,9 +1,9 @@
 import asyncio
-from datetime import datetime
+from collections import deque
 from typing import Optional
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 UNAVAILABLE_LEAGUES = ['NCAAM', 'NCAAW']
@@ -150,9 +150,9 @@ class BetOnline(ln_utils.LinesRetriever):
             Processes and cleans player prop line data, updating shared prop line structures.
     """
 
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
 
     async def retrieve(self) -> None:
         # tracks requests to complete
@@ -220,8 +220,8 @@ class BetOnline(ln_utils.LinesRetriever):
                                             # calculate the implied probability for the prop line using the odds
                                             implied_prob = 1 / float(odds)
                                             # update shared data
-                                            dc_utils.BettingLines.update({
-                                                'batch_id': self.batch_id,
+                                            dc_utils.Lines.update({
+                                                'batch_ids': deque([self.batch_id]),
                                                 's_tstamp': str(datetime.now()),
                                                 'league': league,
                                                 'market_category': 'player_props',

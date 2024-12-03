@@ -1,7 +1,7 @@
 import threading
 from collections import defaultdict
 
-from app.backend.data_collection.workers.utils.cleaning import clean_subject
+from backend.app.data_collection.workers.utils.cleaning import clean_subject
 
 
 class NewSubjects:

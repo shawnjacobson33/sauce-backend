@@ -1,8 +1,8 @@
-from datetime import datetime
+from collections import deque
 from typing import Optional
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_game_info(data: dict) -> Optional[str]:
@@ -48,9 +48,8 @@ def extract_multiplier(data: dict, market: str) -> Optional[float]:
     # get some dictionaries that hold data about the multiplier, if both exist keep executing
     if (m_player_props_data := data.get('configPlayerProps')) and (m_market_data := m_player_props_data.get(market)):
         # return the multiplier cast from a str to float
-        return float(m_market_data.get('multiplier', 1.0))
-
-    return 1.0
+        if mult := m_market_data.get('multiplier'):
+            return float(mult)
 
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
@@ -80,20 +79,10 @@ def get_labels(multiplier: Optional[float]) -> list:
     return labels
 
 
-def get_odds(default_odds: float, multiplier: Optional[float]) -> float:
-    # multiplier must exist to multiply with float type
-    if multiplier:
-        # return the product of the bookmaker's default odds stored in the db with the multiplier to get adjusted odds
-        return round(default_odds * multiplier, 3)
-
-    # otherwise the default-best odds available will just be used
-    return default_odds
-
-
 class VividPicks(ln_utils.LinesRetriever):
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
 
     async def retrieve(self) -> None:
         # get the url required to request for prop lines data
@@ -131,26 +120,30 @@ class VividPicks(ln_utils.LinesRetriever):
                                             # get the numeric over/under line from the dictionary, keep going if exists
                                             if line := prop_line_data.get('val'):
                                                 # extract the multiplier from the dictionary
-                                                multiplier = extract_multiplier(player_data, market['name'])
+                                                mult = extract_multiplier(player_data, market['name'])
                                                 # for each label (depending on the value of the multiplier)
-                                                for label in get_labels(multiplier):
-                                                    # get the odds
-                                                    if odds := get_odds(self.dflt_odds, multiplier):
-                                                        # update shared data
-                                                        dc_utils.BettingLines.update({
-                                                            'batch_id': self.batch_id,
-                                                            'bookmaker': self.name,
-                                                            'sport': sport,
-                                                            'league': league,
-                                                            'game_time': game['game_time'],
-                                                            'game': game['info'],
-                                                            'market_id': market['id'],
-                                                            'market': market['name'],
-                                                            'subject_id': subject['id'],
-                                                            'subject': subject['name'],
-                                                            'label': label,
-                                                            'line': line,
-                                                            'mult': multiplier,
-                                                            'odds': odds,
-                                                            'im_prb': round(1 / odds, 4)
-                                                        })
+                                                for label in get_labels(mult):
+                                                    betting_line = {
+                                                        'batch_ids': deque([self.batch_id]),
+                                                        'bookmaker': self.name,
+                                                        'sport': sport,
+                                                        'league': league,
+                                                        'game_time': game['game_time'],
+                                                        'game': game['info'],
+                                                        'market_id': market['id'],
+                                                        'market': market['name'],
+                                                        'subject_id': subject['id'],
+                                                        'subject': subject['name'],
+                                                        'label': label,
+                                                        'line': line,
+                                                    }
+                                                    if mult:
+                                                        betting_line['mult'] = mult
+                                                        betting_line['odds'] = round(self.dflt_odds * mult, 4)
+                                                        betting_line['im_prb'] = round(1 / (self.dflt_odds * mult), 4)
+                                                    else:
+                                                        betting_line['dflt_odds'] = self.dflt_odds
+                                                        betting_line['dflt_im_prb'] = round(1 / self.dflt_odds, 4)
+
+                                                    # update shared data
+                                                    dc_utils.Lines.update(betting_line)

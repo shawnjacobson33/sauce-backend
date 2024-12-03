@@ -1,10 +1,10 @@
 import json
 import os
-from datetime import datetime
+from collections import deque
 from typing import Tuple, Optional
 from pymongo import MongoClient
 
-from app.backend.database.configs import DATABASE_URL, DATABASE_NAME, SOURCES_COLLECTION_NAME, GAMES_COLLECTION_NAME
+from backend.app.database.configs import DATABASE_URL, DATABASE_NAME, SOURCES_COLLECTION_NAME, GAMES_COLLECTION_NAME
 
 
 def get_db_creds() -> Tuple[str, str]:

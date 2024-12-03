@@ -1,8 +1,8 @@
 from collections import defaultdict
 from typing import Optional
 
-from app.backend.database import MongoDB, MARKETS_COLLECTION_NAME
-from app.backend.data_collection.workers.utils.storing import get_entities
+from backend.app.database import MongoDB, MARKETS_COLLECTION_NAME
+from backend.app.data_collection.workers.utils.storing import get_entities
 
 # get the teams collection so we can structure that data in memory
 markets_c = MongoDB.fetch_collection(MARKETS_COLLECTION_NAME)

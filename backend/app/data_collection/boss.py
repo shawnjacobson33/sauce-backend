@@ -1,7 +1,7 @@
 import asyncio
 
-from app.backend.data_collection import management as mng
-import app.backend.data_collection.management.execute as exc
+from backend.app.data_collection import management as mng
+import backend.app.data_collection.management.execute as exc
 
 
 async def manage_line_workers(group: str = None, worker: str = None, interval: int = None):
@@ -9,7 +9,6 @@ async def manage_line_workers(group: str = None, worker: str = None, interval: i
         coros = [
             mng.assign_line_tasks('A', interval=interval), mng.assign_line_tasks('B', interval=interval)
         ]
-
         await asyncio.gather(*coros)
 
     elif group and not worker:

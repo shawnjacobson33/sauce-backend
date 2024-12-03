@@ -1,9 +1,10 @@
 import asyncio
+from collections import deque
 from datetime import datetime, timedelta
 from typing import Optional
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 BOOKMAKER_MAP = {
@@ -73,13 +74,13 @@ def extract_odds_and_other_stats(data: dict) -> Optional[tuple[float, float, flo
     # get the odds from dictionary, only execute if it exists
     if odds := data.get('odds'):
         # return the odds rounded by 3 decimal points, implied probability, true win probability, and expected value (calculated by OddsShopper)
-        return round(odds, 4), round(1 / odds, 3), extract_true_win_probability(data), extract_expected_value(data)
+        return round(odds, 2), round(1 / odds, 4), extract_true_win_probability(data), extract_expected_value(data)
 
 
 class OddsShopper(ln_utils.LinesRetriever):
-    def __init__(self, lines_hub: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, lines_hub: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(lines_hub)
+        super().__init__(batch_id, lines_hub)
 
     async def retrieve(self) -> None:
         # get the url to request matchups data
@@ -145,19 +146,20 @@ class OddsShopper(ln_utils.LinesRetriever):
                                         if bookmaker_name := extract_bookmaker(outcome):
                                             # extract odds, implied probability, true win probability, and expected value if they exist
                                             odds, impl_prob, tw_prob, ev = extract_odds_and_other_stats(outcome)
-                                            # update shared data
-                                            dc_utils.BettingLines.update({
-                                                'batch_id': self.batch_id,
-                                                'bookmaker': bookmaker_name,
-                                                'sport': sport,
-                                                'league': league,
-                                                'game_time': game['game_time'],
-                                                'game': game['info'],
-                                                'market': market['name'],
-                                                'subject_id': subject['id'],
-                                                'subject': subject['name'],
-                                                'label': label,
-                                                'line': float(outcome.get('line', 0.5)),
-                                                'odds': odds,
-                                                'im_prb': impl_prob,
-                                            })
+                                            if odds:
+                                                # update shared data
+                                                dc_utils.Lines.update({
+                                                    'batch_ids': deque([self.batch_id]),
+                                                    'bookmaker': bookmaker_name,
+                                                    'sport': sport,
+                                                    'league': league,
+                                                    'game_time': game['game_time'],
+                                                    'game': game['info'],
+                                                    'market': market['name'],
+                                                    'subject_id': subject['id'],
+                                                    'subject': subject['name'],
+                                                    'label': label,
+                                                    'line': float(outcome.get('line', 0.5)),
+                                                    'odds': odds,
+                                                    'im_prb': impl_prob,
+                                                })

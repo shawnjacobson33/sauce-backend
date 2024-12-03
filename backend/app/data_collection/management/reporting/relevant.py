@@ -1,12 +1,12 @@
 import json
 
-from app.backend.data_collection.workers import RelevantGames, RelevantData
-from app.backend.data_collection.management.reporting import utils as rp_utils
+from backend.app.data_collection.workers import RelevantGames, RelevantData
+from backend.app.data_collection.management.reporting import utils as rp_utils
 
 
 def report_relevant_leagues() -> None:
     # create a custom file path to store the betting lines sample
-    file_path = rp_utils.get_file_path("leagues", is_secondary=True)
+    file_path = rp_utils.get_file_path("leagues", is_secondary=True, secondary_type="relevant")
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
@@ -15,7 +15,7 @@ def report_relevant_leagues() -> None:
 
 def report_relevant_games():
     # create a custom file path to store the betting lines sample
-    file_path = rp_utils.get_file_path("games", is_secondary=True)
+    file_path = rp_utils.get_file_path("games", is_secondary=True, secondary_type="relevant")
     # open the pending markets file
     with open(file_path, 'w') as f:
         # save the betting lines to the file, in pretty print mode
@@ -24,11 +24,11 @@ def report_relevant_games():
 
 def report_relevant_markets() -> None:
     # create a custom file path to store the betting lines sample
-    file_path = rp_utils.get_file_path("markets", is_secondary=True)
+    file_path = rp_utils.get_file_path("markets", is_secondary=True, secondary_type="relevant")
     # open the pending markets file
     with open(file_path, 'w') as f:
         # get rid of tuples
-        restruct_reports = rp_utils.nest(RelevantData.get_relevant_markets())
+        restruct_reports = rp_utils.convert_deque_and_keys(RelevantData.get_relevant_markets())
         # save the betting lines to the file, in pretty print mode
         json.dump(restruct_reports, f, indent=4, default=str)
 
@@ -39,7 +39,7 @@ def report_relevant_subjects() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # get rid of tuples
-        restruct_reports = rp_utils.nest(RelevantData.get_relevant_subjects())
+        restruct_reports = rp_utils.convert_deque_and_keys(RelevantData.get_relevant_subjects())
         # save the betting lines to the file, in pretty print mode
         json.dump(restruct_reports, f, indent=4, default=str)
 
@@ -50,7 +50,7 @@ def report_relevant_teams() -> None:
     # open the pending markets file
     with open(file_path, 'w') as f:
         # get rid of tuples
-        restruct_reports = rp_utils.nest(RelevantData.get_relevant_teams())
+        restruct_reports = rp_utils.convert_deque_and_keys(RelevantData.get_relevant_teams())
         # save the betting lines to the file, in pretty print mode
         json.dump(restruct_reports, f, indent=4, default=str)
 

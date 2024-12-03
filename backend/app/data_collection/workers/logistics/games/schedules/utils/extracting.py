@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from app.backend.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers import utils as dc_utils
 
 
 def get_complete_date_time(date: datetime, time_str: str) -> Optional[datetime]:

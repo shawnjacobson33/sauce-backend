@@ -2,7 +2,7 @@ import threading
 from typing import Optional
 from collections import defaultdict
 
-from app.backend.database import MongoDB, GAMES_COLLECTION_NAME
+from backend.app.database import MongoDB, GAMES_COLLECTION_NAME
 
 
 def get_game_info(away_team: dict, home_team: dict) -> str:

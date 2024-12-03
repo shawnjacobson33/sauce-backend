@@ -1,12 +1,12 @@
 import asyncio
 from collections import defaultdict
-from datetime import datetime
+from collections import deque
 import random
 from typing import Optional
 import math
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 LEAGUE_MAP = {
@@ -137,13 +137,13 @@ def extract_line_data(data: dict):
 
 
 class PropProfessor(ln_utils.LinesRetriever):
-    def __init__(self, lines_hub: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, lines_hub: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(lines_hub)
+        super().__init__(batch_id, lines_hub)
 
     async def retrieve(self) -> None:
         # initialize a dictionary to hold requests
-        coros = defaultdict(list)
+        coros = list()
         # get the url to request matchups data
         url = ln_utils.get_url(self.name)
         # get the headers to request matchups data
@@ -163,15 +163,14 @@ class PropProfessor(ln_utils.LinesRetriever):
                 params = ln_utils.get_params(self.name)
                 params['input'] = '{"0":{"json":{' + params_dyn + '}}}'
                 # make request for matchups data
-                coros[league].append(self.req_mngr.get(
-                    url, self._parse_lines, sport, league, market, headers=headers, cookies=cookies, params=params
+                coros.append(self.req_mngr.get(
+                    url, self._parse_lines, sport, league, headers=headers, cookies=cookies, params=params
                 ))
 
-        for coros in coros.values():
-            await asyncio.gather(*coros)
-            await asyncio.sleep(0.5)
+        await asyncio.gather(*coros)
+            # await asyncio.sleep(0.5)
 
-    async def _parse_lines(self, response, sport: str, league: str, market: str):
+    async def _parse_lines(self, response, sport: str, league: str):
         if (response_json := response.json()) and (result := response_json[0].get('result')):
             if (data := result.get('data')) and (json_data := data.get('json')):
                 dc_utils.RelevantData.update_relevant_leagues(league, self.name)
@@ -185,8 +184,8 @@ class PropProfessor(ln_utils.LinesRetriever):
                                 for bookmaker, odds_data in game_data.get('odds', {}).items():
                                     for line_data in extract_line_data(odds_data):
                                         if len(line_data) == 3:
-                                            dc_utils.BettingLines.update({
-                                                'batch_id': self.batch_id,
+                                            dc_utils.Lines.update({
+                                                'batch_ids': deque([self.batch_id]),
                                                 'bookmaker': BOOKMAKER_MAP.get(bookmaker, bookmaker),
                                                 'sport': sport,
                                                 'league': league,
@@ -198,7 +197,7 @@ class PropProfessor(ln_utils.LinesRetriever):
                                                 'subject': subject['name'],
                                                 'label': line_data[0],
                                                 'line': line_data[1],
-                                                'odds': round(line_data[2], 4),
+                                                'odds': round(line_data[2], 2),
                                                 'im_prb': round(1 / line_data[2], 4),
                                             })
 

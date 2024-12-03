@@ -1,9 +1,9 @@
 import asyncio
-from datetime import datetime
+from collections import deque
 
-from app.backend.data_collection.ln_utils.constants import IN_SEASON_LEAGUES
-from app.backend.data_collection.ln_utils.objects import Subject, Market
-from app.backend.data_collection.workers.bookmakers import clean_market, clean_subject, clean_position
+from backend.app.data_collection.ln_utils.constants import IN_SEASON_LEAGUES
+from backend.app.data_collection.ln_utils.objects import Subject, Market
+from backend.app.data_collection.workers.bookmakers import clean_market, clean_subject, clean_position
 
 
 # Champ formats leagues slightly differently...used for making requests
@@ -14,8 +14,8 @@ def get_in_season_leagues():
 
 
 class Champ(ln_utils.LinesRetriever):
-    def __init__(self, bookmaker: ln_utils.LinesSource):
-        super().__init__(bookmaker)
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
+        super().__init__(batch_id, bookmaker)
 
     async def retrieve(self):
         url = ln_utils.get_url(self.name)
@@ -69,7 +69,7 @@ class Champ(ln_utils.LinesRetriever):
                     for label in labels:
                         # update shared data
                         PropLines.update(''.join(self.name.split()).lower(), {
-                            'batch_id': self.batch_id,
+                            'batch_ids': deque([self.batch_id]),
                             's_tstamp': str(datetime.now()),
                             'league': league,
                             'game_info': game_info,

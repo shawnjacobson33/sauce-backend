@@ -1,20 +1,8 @@
 import json
 import os
 
-from app.backend.data_collection.management.reporting import utils as rp_utils
-from app.backend.data_collection.workers import BettingLines, Games, BoxScores, Retriever, HUB_BOOKMAKERS
-
-
-def report_line_counts(retriever: Retriever, time_taken: float) -> None:
-    # Because OddsShopper isn't actually a bookmaker, but a tool that holds other bookmaker's odds
-    if retriever.name in {'OddsShopper', 'PropProfessor'}:
-        # for every bookmaker that they offer
-        for bookmaker_name in HUB_BOOKMAKERS[retriever.name]:
-            # output the amount of lines collected from each bookmaker they offer and the time taken for the whole job.
-            print(f'[{bookmaker_name}]: {BettingLines.counts(bookmaker_name=bookmaker_name)}, {round(time_taken, 3)}s')
-    else:
-        # otherwise just output for the inputted bookmaker plug
-        print(f'[{retriever.name}]: {retriever}, {round(time_taken, 3)}s')
+from backend.app.data_collection.management.reporting import utils as rp_utils
+from backend.app.data_collection.workers import Lines, Games, BoxScores, Retriever, HUB_BOOKMAKERS
 
 
 def report_lines():
@@ -22,10 +10,10 @@ def report_lines():
     file_path = rp_utils.get_file_path("lines")
     # open the pending markets file
     with open(file_path, 'w') as f:
-        # get rid of tuples
-        restruct_data = rp_utils.nest(BettingLines.get_lines())
+        # TODO: Find a way not to have to convert this everytime
+        converted_data = rp_utils.convert_deque_and_keys(Lines.get_lines())
         # save the betting lines to the file, in pretty print mode
-        json.dump(restruct_data, f, indent=4, default=str)
+        json.dump(converted_data, f, indent=4, default=str)
 
     # output the size of the file storing the betting lines
     print(f"[FILE SIZE]: {round(os.path.getsize(file_path) / (1024 ** 2), 2)} MB")
@@ -37,7 +25,7 @@ def report_games():
     # open the pending markets file
     with open(file_path, 'w') as f:
         # get rid of tuples
-        restruct_data = rp_utils.nest(Games.get_games())
+        restruct_data = rp_utils.convert_deque_and_keys(Games.get_games())
         # save the betting lines to the file, in pretty print mode
         json.dump(restruct_data, f, indent=4, default=str)
 
@@ -48,7 +36,7 @@ def report_box_scores():
     # open the pending markets file
     with open(file_path, 'w') as f:
         # get rid of tuples
-        restruct_data = rp_utils.nest(BoxScores.get_box_scores())
+        restruct_data = rp_utils.convert_deque_and_keys(BoxScores.get_box_scores())
         # save the betting lines to the file, in pretty print mode
         json.dump(restruct_data, f, indent=4, default=str)
 

@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from pymongo.synchronous.collection import Collection
 
-from app.backend.database import MongoDB, SUBJECTS_COLLECTION_NAME, TEAMS_COLLECTION_NAME
+from backend.app.database import MongoDB, SUBJECTS_COLLECTION_NAME, TEAMS_COLLECTION_NAME
 
 # teams = {str(doc['_id']): doc['abbr_name'] for doc in MongoDB.fetch_collection(TEAMS_COLLECTION_NAME).find()}
 # subjects_cursor = MongoDB.fetch_collection(SUBJECTS_COLLECTION_NAME)

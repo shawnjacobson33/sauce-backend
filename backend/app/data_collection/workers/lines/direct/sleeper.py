@@ -1,10 +1,10 @@
 import asyncio
-from datetime import datetime
+from collections import deque
 from collections import defaultdict
 from typing import Optional
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 # formatting consistency
@@ -76,9 +76,9 @@ def extract_label(data: dict) -> Optional[str]:
 
 # TODO: Sleeper recently added alt_lines
 class Sleeper(ln_utils.LinesRetriever):
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
         # get universally used headers to make requests
         self.headers = ln_utils.get_headers(self.name)
 
@@ -166,8 +166,8 @@ class Sleeper(ln_utils.LinesRetriever):
                                                 # get the over or under label from the dictionary, if exists keep going
                                                 if label := extract_label(outcome_data):
                                                     # update shared data
-                                                    dc_utils.BettingLines.update({
-                                                        'batch_id': self.batch_id,
+                                                    dc_utils.Lines.update({
+                                                        'batch_ids': deque([self.batch_id]),
                                                         'bookmaker': self.name,
                                                         'sport': sport,
                                                         'league': league,

@@ -1,9 +1,9 @@
 from typing import Type
 
-from app.backend.database import MongoDB
-from app.backend.data_collection.workers import lines as lns
-from app.backend.data_collection.workers.logistics import games as gms
-from app.backend.data_collection.workers.utils.modelling import Retriever
+from backend.app.database import MongoDB
+from backend.app.data_collection.workers import lines as lns
+from backend.app.data_collection.workers.logistics import games as gms
+from backend.app.data_collection.workers.utils.modelling import Retriever
 
 
 def configure_game_retriever(source_name: str, game_retriever: Type[Retriever]) -> Retriever:

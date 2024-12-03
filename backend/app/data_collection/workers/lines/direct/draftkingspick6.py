@@ -1,11 +1,11 @@
-from datetime import datetime
+from collections import deque
 from typing import Optional
 
 from bs4 import BeautifulSoup
 import asyncio
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dict[str, str]]:
@@ -46,9 +46,9 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) ->
 
 
 class DraftKingsPick6(ln_utils.LinesRetriever):
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # make call to parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
         # get universal request headers used for many requests
         self.headers = ln_utils.get_headers(self.name)
 
@@ -107,8 +107,8 @@ class DraftKingsPick6(ln_utils.LinesRetriever):
                                                 # for each label Over and Under update shared data prop lines
                                                 for label in ['Over', 'Under']:
                                                     # update shared data
-                                                    dc_utils.BettingLines.update({
-                                                        'batch_id': self.batch_id,
+                                                    dc_utils.Lines.update({
+                                                        'batch_ids': deque([self.batch_id]),
                                                         'bookmaker': self.name,
                                                         'sport': sport,
                                                         'league': league,

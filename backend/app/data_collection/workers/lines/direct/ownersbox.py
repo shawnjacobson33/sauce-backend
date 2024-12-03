@@ -1,9 +1,9 @@
-from datetime import datetime
+from collections import deque
 import asyncio
 from typing import Optional
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league(data: dict) -> Optional[str]:
@@ -84,9 +84,9 @@ def get_label(data: dict) -> Optional[str]:
 
 
 class OwnersBox(ln_utils.LinesRetriever):
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
         # get the universal headers required to make requests
         self.headers = ln_utils.get_headers(self.name)
         # get the universal cookies required to make requests
@@ -162,8 +162,8 @@ class OwnersBox(ln_utils.LinesRetriever):
                                             # for each label that the prop line has
                                             for label in get_label(prop_line_data):
                                                 # update the shared data
-                                                dc_utils.BettingLines.update({
-                                                    'batch_id': self.batch_id,
+                                                dc_utils.Lines.update({
+                                                    'batch_ids': deque([self.batch_id]),
                                                     'bookmaker': self.name,
                                                     'sport': sport,
                                                     'league': league,

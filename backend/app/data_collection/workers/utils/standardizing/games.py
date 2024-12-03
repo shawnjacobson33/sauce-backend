@@ -1,6 +1,6 @@
 from typing import Optional
 
-from app.backend.data_collection.workers.utils.storing import Games, RelevantGames
+from backend.app.data_collection.workers.utils.storing import Games, RelevantGames
 
 
 def get_game(league: str, team_abbr: str) -> Optional[dict[str, str]]:

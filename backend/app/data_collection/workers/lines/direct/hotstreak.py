@@ -1,10 +1,10 @@
 import random
-from datetime import datetime
+from collections import deque
 import asyncio
 from typing import Optional, Union, Any
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_league_aliases(data: dict) -> Optional[dict]:
@@ -155,9 +155,9 @@ def extract_odds(data: dict) -> Union[tuple[Any, Any], tuple[None, None]]:
 
 
 class HotStreak(ln_utils.LinesRetriever):
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # make call to the parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
         # get the universal url to make for all requests (uses graphql)
         self.url = ln_utils.get_url(self.name)
         # get the universal headers to make for all requests
@@ -236,8 +236,8 @@ class HotStreak(ln_utils.LinesRetriever):
                                             # each (odds) and label are at corresponding indices, so for each of them...
                                             for odds, label in zip(odds_pair, ['Under', 'Over']):
                                                 # update shared data
-                                                dc_utils.BettingLines.update({
-                                                    'batch_id': self.batch_id,
+                                                dc_utils.Lines.update({
+                                                    'batch_ids': deque([self.batch_id]),
                                                     'bookmaker': self.name,
                                                     'sport': sport,
                                                     'league': league,

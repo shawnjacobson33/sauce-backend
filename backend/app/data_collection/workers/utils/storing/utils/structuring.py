@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from pymongo.synchronous.collection import Collection
 
-from app.backend.data_collection.workers.utils.cleaning import clean_subject, clean_market
+from backend.app.data_collection.workers.utils.cleaning import clean_subject, clean_market
 
 
 def store_team(teams: defaultdict, team: dict) -> None:

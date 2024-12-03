@@ -1,4 +1,4 @@
-from app.backend.data_collection.workers.utils.definitions import IN_SEASON_LEAGUES
+from backend.app.data_collection.workers.utils.definitions import IN_SEASON_LEAGUES
 
 
 MARKET_INVALID_KEYWORDS = ['Season', 'Regular Season', 'Significant Strikes', 'Takedowns', '(Combo)']

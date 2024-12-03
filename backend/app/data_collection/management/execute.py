@@ -1,8 +1,8 @@
 import asyncio
 import time
 
-import app.backend.data_collection.management.load as ld
-from app.backend.data_collection.workers.utils import BettingLines, Games, BoxScores, Subjects
+import backend.app.data_collection.management.load as ld
+from backend.app.data_collection.workers.utils import Lines, Games, BoxScores, Subjects
 
 
 async def execute_roster_tasks(worker_names: list[str] = None) -> None:
@@ -60,4 +60,4 @@ async def execute_line_tasks(group: str, worker_name: str = None) -> None:
     # return time taken to complete retrieving tasks
     retrieval_time = round(t2-t1, 3)
     # Output total number of betting lines collected and the time it took to run entire job
-    print(f"[TOTAL LINES]: {BettingLines.counts()}, {retrieval_time}s")
+    print(f"[TOTAL LINES]: {Lines.counts()}, {retrieval_time}s")

@@ -1,9 +1,9 @@
 import asyncio
-from datetime import datetime
+from collections import deque
 from typing import Optional, Union, Any
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.lines import utils as ln_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.lines import utils as ln_utils
 
 
 def extract_position(data: dict) -> Optional[str]:
@@ -47,9 +47,9 @@ def extract_odds_and_label(data: dict) -> Union[tuple[Any, Any], tuple[None, Non
 
 
 class ParlayPlay(ln_utils.LinesRetriever):
-    def __init__(self, bookmaker: ln_utils.LinesSource):
+    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
         # call parent class Plug
-        super().__init__(bookmaker)
+        super().__init__(batch_id, bookmaker)
         # get the headers required to make requests for prop lines
         self.headers = ln_utils.get_headers(self.name)
 
@@ -121,7 +121,7 @@ class ParlayPlay(ln_utils.LinesRetriever):
                                                     # for each over and under label
                                                     for odds, label in extract_odds_and_label(line_data):
                                                         betting_line = {
-                                                            'batch_id': self.batch_id,
+                                                            'batch_ids': deque([self.batch_id]),
                                                             'bookmaker': self.name,
                                                             'sport': sport,
                                                             'league': league,
@@ -140,6 +140,6 @@ class ParlayPlay(ln_utils.LinesRetriever):
                                                             betting_line['is_boosted'] = is_boosted
 
                                                         # update shared data
-                                                        dc_utils.BettingLines.update(betting_line)
+                                                        dc_utils.Lines.update(betting_line)
 
 

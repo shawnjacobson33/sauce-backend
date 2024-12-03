@@ -1,8 +1,8 @@
 import asyncio
 
-from app.backend.data_collection.workers import utils as dc_utils
-from app.backend.data_collection.workers.logistics import utils as lg_utils
-from app.backend.data_collection.workers.logistics.games import utils as gm_utils
+from backend.app.data_collection.workers import utils as dc_utils
+from backend.app.data_collection.workers.logistics import utils as lg_utils
+from backend.app.data_collection.workers.logistics.games import utils as gm_utils
 
 # TODO: DUPLICATES FOUND
 # NCAAM : Jordan Williams
