@@ -11,10 +11,7 @@ teams_c = MongoDB.fetch_collection(TEAMS_COLLECTION_NAME)
 class Teams:
     """
     {
-        ('NBA', 'BOS'): {
-            'id': 'asdooiuh34',
-            'full_name': 'Boston Celtics',
-        },
+        ('NBA', 'BOS'): 'Boston Celtics'  FULL NAME USED BY ROSTERS, LINE WORKERS ONLY USE FOR EXISTENCE CHECKING
         ...
     }
     """
@@ -22,11 +19,12 @@ class Teams:
 
     @classmethod
     def get_teams(cls, league: str = None) -> dict:
-        return cls._teams
+        """Used by Rosters to get all teams for a spec league"""
+        return {key: val for key, val in cls._teams.items() if key[0] == league} if league else cls._teams
 
     @classmethod
-    def get_team(cls, league: str, abbr_name: str, content: str = None) -> Optional[str]:
+    def get_team(cls, league: str, team: str) -> Optional[tuple[str, str]]:
         # get the team name using unique identifier
-        if team := cls._teams.get((league, abbr_name)):
+        if cls._teams.get((league, team)):
             # return the attribute predicated upon the content wanted
-            return team['full_name'] if content == 'full_name' else team['id']
+            return league, team

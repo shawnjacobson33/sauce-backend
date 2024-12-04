@@ -9,7 +9,7 @@ class FootballBoxScoreRetriever(bs_utils.BoxScoreRetriever):
         super().__init__(source)
 
     # TODO: DO PLAYER GAME LOGS GET UPDATED IN REAL TIME??
-    async def _parse_box_score(self, html_content, game: dict) -> None:
+    async def _parse_box_score(self, html_content, game_id: tuple[str, str]) -> None:
         # initializes a html parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # get the player stats div
@@ -23,7 +23,7 @@ class FootballBoxScoreRetriever(bs_utils.BoxScoreRetriever):
                         # we don't want any 'return' box scores
                         for box_score_div in [div for div in team_box_score_div.contents if div != '\n'][:-2]:
                             # get team data from db data and div
-                            if team := bs_utils.extract_team(team_name_div, game):
+                            if team := bs_utils.extract_team(team_name_div):
                                 # get the stats div that holds actual statistical table
                                 if stats_div := box_score_div.find('div', {'class': 'stats-rows'}):
                                     # get the table and the stat type for the table 'passing', 'rushing', etc.
@@ -40,10 +40,10 @@ class FootballBoxScoreRetriever(bs_utils.BoxScoreRetriever):
                                                     if cells := [cell for cell in row.contents if cell != '\n']:
                                                         # dont need team cell
                                                         cells = cells[1:]
-                                                        # extracts subject data from shared data structure
-                                                        if subject := bs_utils.extract_subject(cells[0], self.league,
+                                                        # DATA LOOKS LIKE --> {'id': 123asd, 'name': 'Jayson Tatum'}
+                                                        if subject := bs_utils.extract_subject(cells[0], self.league_spec,
                                                                                                self.name, team=team):
                                                             # get the structured box score for the row
                                                             box_score = bs_utils.extract_football_stats(cells[1:], extraction_info)
                                                             # update box scores
-                                                            self.update_box_scores(game['id'], subject, box_score, stat_type=stat_type)
+                                                            self.update_box_scores(game_id, subject, box_score, stat_type=stat_type)

@@ -4,7 +4,7 @@ from collections import defaultdict
 
 class ProblemData:
     _problem_subjects: defaultdict[tuple, dict] = defaultdict(dict)
-    _problem_teams: defaultdict[tuple, dict] = defaultdict(dict)
+    _problem_teams: defaultdict[tuple, str] = dict()
     _problem_markets: defaultdict[tuple, dict] = defaultdict(dict)
     _lock1: threading.Lock = threading.Lock()
     _lock2: threading.Lock = threading.Lock()
@@ -34,9 +34,10 @@ class ProblemData:
                 cls._problem_subjects[(source_name, subject['league'], subject['name'])] = subject
 
     @classmethod
-    def update_problem_teams(cls, team: dict, source_name: str) -> None:
+    def update_problem_teams(cls, team_id: tuple[str, str], source_name: str) -> None:
         with cls._lock2:
-            cls._problem_teams[(source_name, team['league'], team['abbr_name'])] = team
+            # DATA LOOKS LIKE --> ('NBA', 'BOS')
+            cls._problem_teams[(source_name, team_id[0], team_id[1])] = team_id[1]
 
     @classmethod
     def update_problem_markets(cls, market: dict, source_name: str) -> None:

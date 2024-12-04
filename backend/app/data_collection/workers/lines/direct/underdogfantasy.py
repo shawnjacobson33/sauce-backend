@@ -134,14 +134,14 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
         return market
 
 
-def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[tuple[str, str]]:
     # get the player's team name from the dictionary
     if abbr_team_name := data.get('subject_team'):
         # return the team id and team name
         return dc_utils.get_team(bookmaker_name, league, abbr_team_name)
 
 
-def extract_subject(bookmaker_name: str, league: str, data: dict, team: dict) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, league: str, data: dict, team: str) -> Optional[dict[str, str]]:
     # get the player name, if exists keep executing
     if subject_name := data.get('subject'):
         # return both subject id search result and cleaned subject
@@ -223,11 +223,11 @@ class UnderdogFantasy(ln_utils.LinesRetriever):
                             if (player_id := player_ids_dict.get(a_id)) and (
                             player_data := players_dict.get(player_id)):
                                 # get player attributes
-                                if team := extract_team(self.name, league, player_data):
+                                if team_id := extract_team(self.name, league, player_data):
                                     # get the game data from database
-                                    if game := dc_utils.get_game(league, team['abbr_name']):
+                                    if game := dc_utils.get_game(team_id):
                                         # get the subject id from db and extract the subject name
-                                        if subject := extract_subject(self.name, league, player_data, team):
+                                        if subject := extract_subject(self.name, league, player_data, team_id[1]):
                                             # get the numeric over/under line, if exists keep executing
                                             if line := prop_line_data.get('stat_value'):
                                                 # for each dictionary in prop_line_data's options if they exist
@@ -237,8 +237,7 @@ class UnderdogFantasy(ln_utils.LinesRetriever):
                                                     # get the odds
                                                     if odds := get_odds(self.dflt_odds, multiplier):
                                                         # update shared data
-                                                        dc_utils.Lines.update({
-                                                            'batch_ids': deque([self.batch_id]),
+                                                        self.store({
                                                             'bookmaker': self.name,
                                                             'sport': sport,
                                                             'league': league,

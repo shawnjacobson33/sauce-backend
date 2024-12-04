@@ -1,4 +1,6 @@
+from collections import deque
 from dataclasses import dataclass
+from datetime import datetime
 
 from backend.app.data_collection.workers import lines as lns
 from backend.app.data_collection.workers import utils as wrk_utils
@@ -38,5 +40,15 @@ class LinesRetriever(wrk_utils.Retriever):
 
         self.req_mngr = lns.RequestManager(self.name, use_requests=(lines_source.name == 'BetOnline'))  # BetOnline doesn't work with 'cloudscraper'
 
+    def store(self, betting_line: dict):
+        if betting_line['game_time'] > datetime.now():
+            if box_score := wrk_utils.BoxScores.get_box_score(
+                betting_line['league'], betting_line['game'], betting_line['subject_id']):
+
+                betting_line['stats'] = box_score['stats']
+
+        betting_line['batch_ids'] = deque([self.batch_id])
+        wrk_utils.BettingLines.update(betting_line)
+
     def __str__(self):
-        return f'{str(wrk_utils.Lines.counts(self.name))} lines'
+        return f'{str(wrk_utils.BettingLines.counts(self.name))} lines'

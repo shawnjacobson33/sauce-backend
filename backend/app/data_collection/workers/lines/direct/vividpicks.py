@@ -23,7 +23,7 @@ def extract_league(data: dict) -> Optional[str]:
             return cleaned_league
 
 
-def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[tuple[str, str]]:
     # get the team name from the dictionary
     if abbr_team_name := data.get('abvTeamName'):
         # store an abbreviated team name tuple
@@ -37,7 +37,7 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
         return dc_utils.get_team(bookmaker_name, league, team_name)
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> Optional[dict[str, str]]:
     # get the player's name, if it exists keep going
     if subject_name := data.get('name'):
         # return both subject id search result and cleaned subject
@@ -108,11 +108,11 @@ class VividPicks(ln_utils.LinesRetriever):
                     # for each dictionary in event data's activePlayers if they exist
                     for player_data in event_data.get('activePlayers', []):
                         # get player attributes
-                        if team := extract_team(self.name, league, player_data):
+                        if team_id := extract_team(self.name, league, player_data):
                             # get the game data from database
-                            if game := dc_utils.get_game(league, team['abbr_name']):
+                            if game := dc_utils.get_game(team_id):
                                 # get the subject id from db and extract the subject name from dictionary
-                                if subject := extract_subject(self.name, player_data, league, team):
+                                if subject := extract_subject(self.name, player_data, league, team_id[1]):
                                     # for each dictionary in player data's visiblePlayerProps if they exist
                                     for prop_line_data in player_data.get('visiblePlayerProps', []):
                                         # get the market id from the db and extract the market name from the dictionary
@@ -124,7 +124,6 @@ class VividPicks(ln_utils.LinesRetriever):
                                                 # for each label (depending on the value of the multiplier)
                                                 for label in get_labels(mult):
                                                     betting_line = {
-                                                        'batch_ids': deque([self.batch_id]),
                                                         'bookmaker': self.name,
                                                         'sport': sport,
                                                         'league': league,
@@ -146,4 +145,4 @@ class VividPicks(ln_utils.LinesRetriever):
                                                         betting_line['dflt_im_prb'] = round(1 / self.dflt_odds, 4)
 
                                                     # update shared data
-                                                    dc_utils.Lines.update(betting_line)
+                                                    self.store(betting_line)

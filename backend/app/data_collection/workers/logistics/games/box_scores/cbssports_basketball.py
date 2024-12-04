@@ -8,7 +8,7 @@ class BasketballBoxScoreRetriever(bs_utils.BoxScoreRetriever):
     def __init__(self, source: gm_utils.GameSource):
         super().__init__(source)
 
-    async def _parse_box_score(self, html_content, game: dict) -> None:
+    async def _parse_box_score(self, html_content, game_id: tuple[str, str]) -> None:
         # initializes a html parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # get the divs that hold statistical data for starters and bench players
@@ -22,7 +22,7 @@ class BasketballBoxScoreRetriever(bs_utils.BoxScoreRetriever):
                         # for each box score type
                         for box_score_div in box_score_divs:
                             # get team data from db data and div
-                            if team := bs_utils.extract_team(team_name_div, game):
+                            if team := bs_utils.extract_team(team_name_div):
                                 # get the table div that holds the statistical data
                                 if table_div := box_score_div.find('div', {'class': 'stats-viewable-area'}):
                                     # extracts every starter and bench players box score table for both teams --  4 in total
@@ -35,11 +35,11 @@ class BasketballBoxScoreRetriever(bs_utils.BoxScoreRetriever):
                                                 if cells := row.find_all('td'):
                                                     # don't want extra formatting cells
                                                     cells = [cell for cell in cells if 'for-mobile' not in cell.get('class')]
-                                                    # extracts subject data from shared data structure
+                                                    # DATA LOOKS LIKE --> {'id': 123asd, 'name': 'Jayson Tatum'}
                                                     if subject := bs_utils.extract_subject(cells[0], self.league_spec,
                                                                                            self.name, team=team):
                                                         # TODO: need to think a bit more about subject name standardization
                                                         # extracts the statistical data from the table
                                                         if box_score := bs_utils.extract_basketball_stats(cells[1:], self.league_spec):
                                                             # update the shared box scores data structure
-                                                            self.update_box_scores(game['id'], subject, box_score, stat_type='all')
+                                                            self.update_box_scores(game_id, subject, box_score, stat_type='all')

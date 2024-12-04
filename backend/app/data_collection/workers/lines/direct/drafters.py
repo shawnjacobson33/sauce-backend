@@ -11,7 +11,7 @@ def is_event_valid(data: dict) -> bool:
     return 'Season' not in data.get('_id')
 
 
-def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[tuple[str, str]]:
     # get some event data that holds team data
     if event_data := data.get('event'):
         # get the team the player is on and only return if it exists and doesn't equal MMA
@@ -20,11 +20,9 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[
             return dc_utils.get_team(bookmaker_name, league, abbr_team_name)
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> Optional[dict[str, str]]:
     # get the player's name, if exists then execute
     if subject_name := data.get('player_name'):
-        # # get player attributes
-        # position = extract_position(data)
         # gets the subject id or log message
         return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
@@ -101,11 +99,11 @@ class Drafters(ln_utils.LinesRetriever):
                     # for each player in event's players if they exist
                     for player_data in event_data.get('players', []):
                         # extract the player's team
-                        if team := extract_team(self.name, league, player_data):
+                        if team_id := extract_team(self.name, league, player_data):
                             # use the team data to get game data
-                            if game := dc_utils.get_game(league, team['abbr_name']):
+                            if game := dc_utils.get_game(team_id):
                                 # extract the subject id from db and get subject from player dict
-                                if subject := extract_subject(self.name, player_data, league, team):
+                                if subject := extract_subject(self.name, player_data, league, team_id[1]):
                                     # get market id from db and extract market from player dict
                                     if market := extract_market(self.name, player_data, league):
                                         # get numeric over/under line and execute if exists
@@ -113,8 +111,7 @@ class Drafters(ln_utils.LinesRetriever):
                                             # for each label Over and Under update shared data
                                             for label in ['Over', 'Under']:
                                                 # update shared data
-                                                dc_utils.Lines.update({
-                                                    'batch_ids': deque([self.batch_id]),
+                                                self.store({
                                                     'bookmaker': self.name,
                                                     'sport': sport,
                                                     'league': league,

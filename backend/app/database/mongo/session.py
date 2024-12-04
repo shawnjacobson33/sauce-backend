@@ -1,6 +1,7 @@
 import json
 import os
 from collections import deque
+from datetime import datetime
 from typing import Tuple, Optional
 from pymongo import MongoClient
 
@@ -45,10 +46,10 @@ class MongoDB:
         # Step 1: Find the games that will be deleted
         if started_games := list(games.find({'game_time': {'$lt': datetime.now()}})):
             # delete any games that already occurred
-            games.delete_many({'game_time': {'$lt': datetime.now()}})
+            # games.delete_many({'game_time': {'$lt': datetime.now()}})
 
-            with open('del_games.json', 'w') as f:
-                json.dump(started_games, f, indent=4, default=str)
+            # with open('del_games.json', 'w') as f:
+            #     json.dump(started_games, f, indent=4, default=str)
 
             # return the started games data
             return started_games

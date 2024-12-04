@@ -12,10 +12,14 @@ class BoxScores:
         return cls._box_scores
 
     @classmethod
-    def update_box_scores(cls, league: str, game_id: str, subject: dict, box_score: dict, stat_type: str) -> None:
+    def get_box_score(cls, league: str, game: str, subject_id: str) -> dict:
+        return cls._box_scores.get((league, game, subject_id))
+
+    @classmethod
+    def update_box_scores(cls, game_id: tuple[str, str], subject: dict, box_score: dict, stat_type: str) -> None:
         with cls._lock1:
             # gets all box scores associated with the game
-            cls._box_scores[(league, game_id, subject['id'])] = {
+            cls._box_scores[(*game_id, subject['id'])] = {
                 'name': subject['name'],  # TODO: just here for logging purposes?
                 'stats': {
                     stat_type: box_score

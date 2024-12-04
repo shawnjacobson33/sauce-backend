@@ -1,5 +1,4 @@
 import asyncio
-from collections import deque
 from collections import defaultdict
 from typing import Optional
 
@@ -34,7 +33,7 @@ def extract_position(data: dict) -> Optional[str]:
         return dc_utils.clean_position(position)
 
 
-def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[tuple[str, str]]:
     # get the player's team name from the dictionary
     if abbr_team_name := data.get('subject_team'):
         # get the team id and team name from the database
@@ -50,7 +49,7 @@ def extract_player_data(data: dict, league: str, players_dict: dict) -> Optional
         return league_data.get(player_id)
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> Optional[dict[str, str]]:
     # get the subject's name from the dictionary
     if subject_name := data.get('subject'):
         # # get player attributes
@@ -152,11 +151,11 @@ class Sleeper(ln_utils.LinesRetriever):
                     # get the nested player data
                     if player_data := extract_player_data(prop_line_data, league, players):
                         # get the team from the player data
-                        if team := extract_team(self.name, league, player_data):
+                        if team_id := extract_team(self.name, league, player_data):
                             # get the game data from database
-                            if game := dc_utils.get_game(league, team['abbr_name']):
+                            if game := dc_utils.get_game(team_id):
                                 # get the subject id from db and extract player name from dictionary
-                                if subject := extract_subject(self.name, player_data, league, team):
+                                if subject := extract_subject(self.name, player_data, league, team_id[1]):
                                     # get the market id from db and extract the market name from dictionary
                                     if market := extract_market(self.name, prop_line_data, league):
                                         # for each dictionary containing label, line, odds in prop_line_data's options if exists
@@ -166,8 +165,7 @@ class Sleeper(ln_utils.LinesRetriever):
                                                 # get the over or under label from the dictionary, if exists keep going
                                                 if label := extract_label(outcome_data):
                                                     # update shared data
-                                                    dc_utils.Lines.update({
-                                                        'batch_ids': deque([self.batch_id]),
+                                                    self.store({
                                                         'bookmaker': self.name,
                                                         'sport': sport,
                                                         'league': league,

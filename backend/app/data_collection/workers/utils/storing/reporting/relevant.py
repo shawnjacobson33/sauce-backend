@@ -5,7 +5,7 @@ from collections import defaultdict, deque
 class RelevantData:
     _relevant_leagues: defaultdict[str, deque] = defaultdict(deque)
     _relevant_subjects: defaultdict[tuple, dict] = defaultdict(dict)
-    _relevant_teams: defaultdict[tuple, dict] = defaultdict(dict)
+    _relevant_teams: defaultdict[tuple, str] = defaultdict(dict)
     _relevant_markets: defaultdict[tuple, dict] = defaultdict(dict)
     _lock1: threading.Lock = threading.Lock()
     _lock2: threading.Lock = threading.Lock()
@@ -34,13 +34,15 @@ class RelevantData:
     @classmethod
     def update_relevant_subjects(cls, subject: dict, source_name: str) -> None:
         with cls._lock1:
+            # DATA LOOKS LIKE --> {'id': 123asd, 'name': 'Jayson Tatum'} POSSIBLY WITH 'team': 'BOS'
             spec_subject_attr = [val for attr, val in subject.items() if attr not in {'name', 'league'}][0]
             cls._relevant_subjects[(source_name, subject['league'], spec_subject_attr, subject['name'])] = subject
 
     @classmethod
-    def update_relevant_teams(cls, team: dict, source_name: str) -> None:
+    def update_relevant_teams(cls, team_id: tuple[str, str], source_name: str) -> None:
         with cls._lock2:
-            cls._relevant_teams[(source_name, team['league'], team['abbr_name'])] = team
+            # DATA LOOKS LIKE --> ('NBA', 'BOS')
+            cls._relevant_teams[(source_name, team_id[0], team_id[1])] = team_id[1]
 
     @classmethod
     def update_relevant_markets(cls, market: dict, source_name: str) -> None:

@@ -1,4 +1,3 @@
-from cProfile import label
 from collections import defaultdict
 import threading
 from collections import deque
@@ -7,7 +6,7 @@ from datetime import datetime
 from backend.app.data_collection.workers.utils.storing.reporting import LineWorkerStats
 
 
-class Lines:
+class BettingLines:
     _lines = defaultdict(dict)
     _count = defaultdict(int)
     _lock = threading.Lock()
@@ -73,13 +72,20 @@ class Lines:
                 betting_line['bookmaker']: {
                     (betting_line['label'], betting_line['line']): deque([betting_line_record])
                 }
-            }
+            },
         }
+
+        if 'stats' in betting_line:
+            betting_line['curr_stat'] = cls._extract_curr_stat(betting_line['market'], betting_line['stats'])
+
         if 'dflt_odds' in betting_line:
             cls._lines[unique_identifier]['bookmakers'][betting_line['bookmaker']]['dflt_odds'] = betting_line[
                 'dflt_odds']
             cls._lines[unique_identifier]['bookmakers'][betting_line['bookmaker']]['dflt_im_prb'] = \
             betting_line['dflt_im_prb']
+
+    @classmethod
+    def _extract_curr_stat(cls, market: str, stats: dict):
 
     @classmethod
     def counts(cls, bookmaker_name: str = None) -> int:

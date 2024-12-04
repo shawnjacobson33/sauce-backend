@@ -29,11 +29,11 @@ class BoxScoreRetriever(dc_utils.Retriever):
         # get the games to retrieve box scores from if there are any
         if games_to_retrieve := self.get_games_to_retrieve():
             # for every game
-            for game_id, game_data in games_to_retrieve.items():
+            for game_id, box_score_url in games_to_retrieve.items():
                 # Get the URL for the NBA schedule
                 url_data = lg_utils.get_url(self.name, self.league_spec, 'box_scores')
                 # format the url with the unique url piece stored in the game dictionary
-                formatted_url = url_data['url'].format(url_data['league'], game_data['box_score_url'])
+                formatted_url = url_data['url'].format(url_data['league'], box_score_url)
                 # Asynchronously request the data and call parse schedule for each formatted URL
                 tasks.append(lg_utils.fetch(formatted_url, self._parse_box_score, game_id))
 
@@ -43,9 +43,9 @@ class BoxScoreRetriever(dc_utils.Retriever):
     async def _parse_box_score(self, html_content: str, game_id: str) -> None:
         pass
 
-    def update_box_scores(self, game_id: str, subject: dict, box_score: dict, stat_type: str) -> None:
+    def update_box_scores(self, game_id: tuple[str, str], subject: dict, box_score: dict, stat_type: str) -> None:
         # add the game to the shared data structure
-        dc_utils.BoxScores.update_box_scores(self.league_spec, game_id, subject, box_score, stat_type)
+        dc_utils.BoxScores.update_box_scores(game_id, subject, box_score, stat_type)
         # keep track of the number of games found per league
         self.data_collected += 1
 

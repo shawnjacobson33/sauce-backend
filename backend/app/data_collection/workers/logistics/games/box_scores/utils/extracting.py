@@ -1,15 +1,15 @@
 from typing import Optional
 
-from backend.app.data_collection.workers.utils import get_subject
+from backend.app.data_collection.workers.utils import get_subject, get_team
 
 
-def extract_team(div, game: dict) -> Optional[dict[str, str]]:
+def extract_team(div) -> Optional[dict[str, str]]:
     # get the href link that holds the abbreviated team name
     if (a_elem := div.find('a')) and (href := a_elem.get('href')):
         # make sure there are enough elements to index
         if (len(href) > 3) and (team_name := href.split('/')[3]):
             # the team id is stored under the team's name
-            return game.get(team_name)
+            return team_name
 
 
 def extract_position(span_elem, league: str) -> str:
@@ -69,7 +69,7 @@ def extract_basketball_stats(cells, league: str) -> Optional[dict]:
 
         # college basketball doesn't have these stats on cbssports
         if league == 'NBA':
-            box_score['Plus Minus'] = data[11]
+            box_score['Plus Minus'] = int(data[11][1:]) if '+' in data[11] else int(data[11])
             box_score['Fantasy Points'] = int(data[12])
 
         return box_score

@@ -1,5 +1,8 @@
+import asyncio
+import itertools
 import time
 from datetime import datetime
+from typing import Tuple, List, Any, Coroutine
 
 from backend.app.data_collection import workers as wrk
 
@@ -89,7 +92,8 @@ def update_batch_id():
         BATCH_NUM += 1
 
 
-async def load_line_tasks(group: str, worker_name: str = None) -> list:
+async def load_line_tasks(group: str, worker_name: str = None) -> tuple[
+    Coroutine[Any, Any, None], list[Coroutine[Any, Any, None]]]:
     if worker_group := wrk.LINE_WORKERS.get(group):
         # get all the bookmaker plugs to run
         line_retriever_classes = worker_group.items() if not worker_name else (worker_name, worker_group[worker_name])
@@ -101,5 +105,17 @@ async def load_line_tasks(group: str, worker_name: str = None) -> list:
             load_retriever(configure_lines_retriever(batch_id, retriever_class))
             for source_name, retriever_class in line_retriever_classes
         ]
+        # Display loading output
+        return show_loading_animation(batch_id), coros
 
-        return coros
+
+# Dynamic loading animation
+async def show_loading_animation(batch_id: str):
+    spinner = itertools.cycle(["|", "/", "-", "\\"])
+    try:
+        print(f"Starting batch ID: {batch_id}\n")
+        while True:
+            print(f"\rProcessing batch {BATCH_NUM} {next(spinner)}", end="")
+            await asyncio.sleep(0.1)
+    except asyncio.CancelledError:
+        print("\nLoading complete!")

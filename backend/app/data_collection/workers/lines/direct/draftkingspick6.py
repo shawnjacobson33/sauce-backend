@@ -24,7 +24,7 @@ def extract_line(data: dict) -> Optional[str]:
         return active_market.get('targetValue')
 
 
-def extract_team(bookmaker_name: str, league: str, data: list[dict]) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: list[dict]) -> Optional[tuple[str, str]]:
     # get the team data dictionary, if exists then execute
     if (team_data := data[0].get('team')) and (abbr_team_name := team_data.get('abbreviation')):
         # return the team id and team name
@@ -38,7 +38,7 @@ def extract_position(data: list[dict]) -> Optional[str]:
         return dc_utils.clean_position(position.split('/')[0] if '/' in position else position)
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> Optional[dict[str, str]]:
     # get the subject name and the competitions dict, if both exist then execute
     if subject_name := data.get('displayName'):
         # gets the subject id or log message
@@ -99,16 +99,15 @@ class DraftKingsPick6(ln_utils.LinesRetriever):
                                 # get a dictionary that holds player attributes data
                                 if competitions := entity.get('pickableCompetitions'):
                                     # get player attributes
-                                    if team := extract_team(self.name, league, competitions):
+                                    if team_id := extract_team(self.name, league, competitions):
                                         # use team data to get some game data
-                                        if game := dc_utils.get_game(league, team['abbr_name']):
+                                        if game := dc_utils.get_game(team_id):
                                             # get the subject id from the db and extract the subject from data
-                                            if subject := extract_subject(self.name, entity, league, team):
+                                            if subject := extract_subject(self.name, entity, league, team_id[1]):
                                                 # for each label Over and Under update shared data prop lines
                                                 for label in ['Over', 'Under']:
                                                     # update shared data
-                                                    dc_utils.Lines.update({
-                                                        'batch_ids': deque([self.batch_id]),
+                                                    self.store({
                                                         'bookmaker': self.name,
                                                         'sport': sport,
                                                         'league': league,

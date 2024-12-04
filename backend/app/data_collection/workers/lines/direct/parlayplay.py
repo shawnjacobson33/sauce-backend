@@ -1,5 +1,4 @@
 import asyncio
-from collections import deque
 from typing import Optional, Union, Any
 
 from backend.app.data_collection.workers import utils as dc_utils
@@ -13,16 +12,14 @@ def extract_position(data: dict) -> Optional[str]:
         return dc_utils.clean_position(position)
 
 
-def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[tuple[str, str]]:
     # get the dictionary holding player's team, if exists execute
     if (team_data := data.get('team')) and (abbr_team_name := team_data.get('teamAbbreviation')):
-        # get the team id and team name from the database
-        if team_data := dc_utils.get_team(bookmaker_name, league, abbr_team_name):
-            # return the team id and team name
-            return team_data
+        # return the team id and team name
+        return dc_utils.get_team(bookmaker_name, league, abbr_team_name)
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> Optional[dict[str, str]]:
     # get a dictionary holding player attributes, if exists keep executing
     if subject_name := data.get('fullName'):
         # gets the subject id or log message
@@ -103,11 +100,11 @@ class ParlayPlay(ln_utils.LinesRetriever):
                 # get a player dictionary
                 if player := player_data.get('player'):
                     # get some player attributes
-                    if team := extract_team(self.name, league, player):
+                    if team_id := extract_team(self.name, league, player):
                         # get some game data using the team data
-                        if game := dc_utils.get_game(league, team['abbr_name']):
+                        if game := dc_utils.get_game(team_id):
                             # get the subject id from db and extract the subject name from a dictionary
-                            if subject := extract_subject(self.name, player, league, team):
+                            if subject := extract_subject(self.name, player, league, team_id[1]):
                                 # for each stat dictionary in the player data dictionary if they exist
                                 for stat_data in player_data.get('stats', []):
                                     # get the market id from the db and extract the market
@@ -121,7 +118,6 @@ class ParlayPlay(ln_utils.LinesRetriever):
                                                     # for each over and under label
                                                     for odds, label in extract_odds_and_label(line_data):
                                                         betting_line = {
-                                                            'batch_ids': deque([self.batch_id]),
                                                             'bookmaker': self.name,
                                                             'sport': sport,
                                                             'league': league,
@@ -140,6 +136,6 @@ class ParlayPlay(ln_utils.LinesRetriever):
                                                             betting_line['is_boosted'] = is_boosted
 
                                                         # update shared data
-                                                        dc_utils.Lines.update(betting_line)
+                                                        self.store(betting_line)
 
 

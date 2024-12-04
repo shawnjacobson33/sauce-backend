@@ -1,4 +1,3 @@
-from collections import deque
 import asyncio
 from typing import Optional, Union, Any
 
@@ -129,7 +128,7 @@ class Rebet(ln_utils.LinesRetriever):
                             # get the subject id from db, and extract the subject name from dictionary
                             if subject := extract_subject(self.name, market_data, league):
                                 # use team data to get some game data
-                                if game := dc_utils.get_game(league, subject['team']):
+                                if game := dc_utils.get_game((league, subject['team'])):
                                     # get dictionary that holds data on odds, label, line, if exists then execute
                                     if outcomes_data := market_data.get('outcome', []):
                                         # convert to list if outcomes data only returns a dictionary
@@ -141,8 +140,7 @@ class Rebet(ln_utils.LinesRetriever):
                                                 # if both exist then execute
                                                 if bet_details := extract_line_and_label(outcome_data):
                                                     # update shared data
-                                                    dc_utils.Lines.update({
-                                                        'batch_ids': deque([self.batch_id]),
+                                                    self.store({
                                                         'bookmaker': self.name,
                                                         'sport': sport,
                                                         'league': league,

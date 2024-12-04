@@ -135,7 +135,7 @@ class OddsShopper(ln_utils.LinesRetriever):
                     # get the subject id from the db and extract the subject from outcome
                     if subject := extract_subject(self.name, event, league):
                         # use team data to get some game data
-                        if game := dc_utils.get_game(league, subject['team']):
+                        if game := dc_utils.get_game((league, subject['team'])):
                             # iterate through each side or bookmaker for the prop line
                             for side in event.get('sides', []):
                                 # get the label from the side dictionary, only keep going if it exists
@@ -148,8 +148,7 @@ class OddsShopper(ln_utils.LinesRetriever):
                                             odds, impl_prob, tw_prob, ev = extract_odds_and_other_stats(outcome)
                                             if odds:
                                                 # update shared data
-                                                dc_utils.Lines.update({
-                                                    'batch_ids': deque([self.batch_id]),
+                                                self.store({
                                                     'bookmaker': bookmaker_name,
                                                     'sport': sport,
                                                     'league': league,

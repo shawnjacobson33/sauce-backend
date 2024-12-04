@@ -29,16 +29,14 @@ def extract_position(data: dict) -> Optional[str]:
         return dc_utils.clean_position(position)
 
 
-def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[tuple[str, str]]:
     # get the subject team, if exists then keep executing
     if abbr_team_name := data.get('teamAlias'):
-        # get the team id and team name from the database
-        if team_data := dc_utils.get_team(bookmaker_name, league, abbr_team_name.upper()):
-            # return the team id and team name
-            return team_data
+        # return the team id and team name
+        return dc_utils.get_team(bookmaker_name, league, abbr_team_name.upper())
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> Optional[dict[str, str]]:
     # get the first nam and last name of the player, if both exist then keep executing
     if (first_name := data.get('firstName')) and (last_name := data.get('lastName')):
         # get subject name
@@ -152,18 +150,17 @@ class OwnersBox(ln_utils.LinesRetriever):
                         # get the player data, if it exists then keep executing
                         if player_data := prop_line_data.get('player'):
                             # extract team data from the dictionary
-                            if team := extract_team(self.name, league, player_data):
+                            if team_id := extract_team(self.name, league, player_data):
                                 # get game data using the team data
-                                if game := dc_utils.get_game(league, team['abbr_name']):
+                                if game := dc_utils.get_game(team_id):
                                     # get the subject id from db and extract the subject name from the dictionary
-                                    if subject := extract_subject(self.name, player_data, league, team):
+                                    if subject := extract_subject(self.name, player_data, league, team_id[1]):
                                         # get the numeric over/under line, execute if exists
                                         if line := extract_line(prop_line_data):
                                             # for each label that the prop line has
                                             for label in get_label(prop_line_data):
                                                 # update the shared data
-                                                dc_utils.Lines.update({
-                                                    'batch_ids': deque([self.batch_id]),
+                                                self.store({
                                                     'bookmaker': self.name,
                                                     'sport': sport,
                                                     'league': league,

@@ -44,7 +44,7 @@ def get_subject(source_name: str, league: str, name: str, **kwargs) -> Optional[
     c_subject_name = clean_subject(name, league)
     # create a dictionary representation of the subject
     subject = {key: value for key, value in Subject(c_subject_name, league, **kwargs).__dict__.items() if value}
-    # get the matched data if it exists
+    # DATA LOOKS LIKE --> {'id': 123asd, 'name': 'Jayson Tatum'} POSSIBLY WITH 'team': 'BOS'
     if matched_subject := find_match(subject):
         # update the subject's data
         update_subject(subject, matched_subject)

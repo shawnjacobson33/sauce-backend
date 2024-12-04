@@ -48,7 +48,7 @@ class IceHockeyBoxScoreRetriever(bs_utils.BoxScoreRetriever):
     def __init__(self, source: gm_utils.GameSource):
         super().__init__(source)
 
-    async def _parse_box_score(self, html_content, game_id: str) -> None:
+    async def _parse_box_score(self, html_content, game_id: tuple[str, str]) -> None:
         # initializes a html parser
         soup = BeautifulSoup(html_content, 'html.parser')
         # get the div containing all box scores tables
@@ -69,8 +69,8 @@ class IceHockeyBoxScoreRetriever(bs_utils.BoxScoreRetriever):
                                     for row in [row for row in rows if 'gametracker-table__tr' in row.get('class')]:
                                         # gets all data cells in the row and make sure expected length matches
                                         if cells := row.find_all('td'):
-                                            # extracts subject data from shared data structure
-                                            if subject := bs_utils.extract_subject(cells[0], self.league, self.name):
+                                            # DATA LOOKS LIKE --> {'id': 123asd, 'name': 'Jayson Tatum'}
+                                            if subject := bs_utils.extract_subject(cells[0], self.league_spec, self.name):
                                                 # get everything but the player name
                                                 stats = cells[1:]
                                                 # this means that it is a non-goalie box score

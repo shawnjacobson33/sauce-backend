@@ -180,12 +180,11 @@ class PropProfessor(ln_utils.LinesRetriever):
                         # extract the subject from the db
                         if subject := extract_subject(self.name, game_data, league):
                             # use team data to get some game data
-                            if game := dc_utils.get_game(league, subject['team']):
+                            if game := dc_utils.get_game((league, subject['team'])):
                                 for bookmaker, odds_data in game_data.get('odds', {}).items():
                                     for line_data in extract_line_data(odds_data):
                                         if len(line_data) == 3:
-                                            dc_utils.Lines.update({
-                                                'batch_ids': deque([self.batch_id]),
+                                            self.store({
                                                 'bookmaker': BOOKMAKER_MAP.get(bookmaker, bookmaker),
                                                 'sport': sport,
                                                 'league': league,

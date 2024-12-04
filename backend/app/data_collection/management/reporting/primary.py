@@ -2,7 +2,7 @@ import json
 import os
 
 from backend.app.data_collection.management.reporting import utils as rp_utils
-from backend.app.data_collection.workers import Lines, Games, BoxScores, Retriever, HUB_BOOKMAKERS
+from backend.app.data_collection.workers import BettingLines, Games, BoxScores, Retriever, HUB_BOOKMAKERS
 
 
 def report_lines():
@@ -11,7 +11,7 @@ def report_lines():
     # open the pending markets file
     with open(file_path, 'w') as f:
         # TODO: Find a way not to have to convert this everytime
-        converted_data = rp_utils.convert_deque_and_keys(Lines.get_lines())
+        converted_data = rp_utils.convert_deque_and_keys(BettingLines.get_lines())
         # save the betting lines to the file, in pretty print mode
         json.dump(converted_data, f, indent=4, default=str)
 

@@ -7,10 +7,7 @@ from backend.app.data_collection.workers.utils.cleaning import clean_subject, cl
 
 def store_team(teams: defaultdict, team: dict) -> None:
     # give each team name type its id as a pair and update the dictionary
-    teams[(team['league'], team['abbr_name'])] = {
-        'id': str(team['_id']),
-        'full_name': team['full_name'],
-    }
+    teams[(team['league'], team['abbr_name'])] = team['full_name']
 
 
 def store_subject(store: defaultdict, subject: dict) -> None:

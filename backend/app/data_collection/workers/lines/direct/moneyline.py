@@ -29,16 +29,14 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
         return market
 
 
-def extract_team(bookmaker_name: str, league: str, data: list) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: list) -> Optional[tuple[str, str]]:
     # extract the subject team
     abbr_team_name = data[-1][1:-1].replace('r.(', '')
-    # get the team id and team name from the database
-    if team_data := dc_utils.get_team(bookmaker_name, league if 'NCAA' not in league else 'NCAA', abbr_team_name):
-        # return the team id and team name
-        return team_data
+    # return the team id and team name
+    return dc_utils.get_team(bookmaker_name, league if 'NCAA' not in league else 'NCAA', abbr_team_name)
 
 
-def extract_subject(bookmaker_name: str, data: list, league: str, team: dict) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: list, league: str, team: str) -> Optional[dict[str, str]]:
     # get subject name
     subject_name = ' '.join(data[:-1])
     # return both subject id search result and cleaned subject
@@ -94,16 +92,15 @@ class MoneyLine(ln_utils.LinesRetriever):
                             # Make sure subject components meets an expected format
                             if '(' in subject_components[-1]:
                                 # get the player's team
-                                if team := extract_team(self.name, league, subject_components):
+                                if team_id := extract_team(self.name, league, subject_components):
                                     # get the game data using the team data
-                                    if game := dc_utils.get_game(league, team['abbr_name']):
+                                    if game := dc_utils.get_game(team_id):
                                         # extract the subject id and subject name from the database and dictionary respectively
-                                        if subject := extract_subject(self.name, subject_components, league, team):
+                                        if subject := extract_subject(self.name, subject_components, league, team_id[1]):
                                             # get line and label for every one that exists
                                             for line, label in extract_line_and_label(prop_line):
                                                 # update shared data
-                                                dc_utils.Lines.update({
-                                                    'batch_ids': deque([self.batch_id]),
+                                                self.store({
                                                     'bookmaker': self.name,
                                                     'sport': sport,
                                                     'league': league,

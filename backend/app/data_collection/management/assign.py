@@ -7,8 +7,8 @@ from backend.app.data_collection.management import reporting as rp
 
 
 REPORTING_FUNC_MAP = {
-    'execute_box_score_tasks': rp.report_box_scores,
-    'execute_schedule_tasks': rp.report_games,
+    'execute_box_score_tasks': [rp.report_box_scores],
+    'execute_schedule_tasks': [rp.report_games],
     'execute_line_tasks': [rp.report_lines, rp.report_line_worker_stats]
 }
 

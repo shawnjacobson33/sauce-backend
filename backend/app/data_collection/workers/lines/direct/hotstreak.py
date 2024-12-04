@@ -230,14 +230,13 @@ class HotStreak(ln_utils.LinesRetriever):
                                 # get the subject id from db and extract subject from data
                                 if subject := extract_subject(self.name, participant_data, league):
                                     # use team data to get some game data
-                                    if game := dc_utils.get_game(league, subject['team']):
+                                    if game := dc_utils.get_game((league, subject['team'])):
                                         # for each line and corresponding over/under odds pair
                                         for line, odds_pair in zip(extract_line(market_dict), extract_odds(market_dict)):
                                             # each (odds) and label are at corresponding indices, so for each of them...
                                             for odds, label in zip(odds_pair, ['Under', 'Over']):
                                                 # update shared data
-                                                dc_utils.Lines.update({
-                                                    'batch_ids': deque([self.batch_id]),
+                                                self.store({
                                                     'bookmaker': self.name,
                                                     'sport': sport,
                                                     'league': league,

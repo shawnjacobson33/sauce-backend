@@ -28,12 +28,14 @@ def get_games_for_testing():
 class Games:
     """
     _games: {
-        ('NBA', '1239asd09' ( away team id )): {
+        ('NBA', 'BOS'): {
             'info': 'BOS @ BKN',
+            'game_time': 2024-12-03 20:00:00
             'box_score_url': 'NBA_20241113_BOS@BKN'
         },
-        ('NBA', '9198asd' ( home team id )): {
+        ('NBA', 'BKN'): {
             'info': 'BOS @ BKN',
+            'game_time': 2024-12-03 20:00:00
             'box_score_url': 'NBA_20241113_BOS@BKN'
         },
         ...
@@ -50,9 +52,9 @@ class Games:
         return cls._games
 
     @classmethod
-    def get_game(cls, league: str, team_id: str) -> Optional[dict]:
+    def get_game(cls, team_id: tuple[str, str]) -> Optional[dict]:
         # returns a game associated with the team id passed
-        return cls._games.get((league, team_id))
+        return cls._games.get(team_id)
 
     @classmethod
     def update_games(cls, game: dict) -> None:

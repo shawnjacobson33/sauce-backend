@@ -45,19 +45,17 @@ def extract_position(data: dict) -> Optional[str]:
         return dc_utils.clean_position(position)
 
 
-def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[tuple[str, str]]:
     # get the subject team name abbreviated, if exists keep going
     if abbr_team_name := data.get('teamAbbreviation'):
-        # return the team id and team name
+        # DATA LOOKS LIKE --> ('NBA', 'BOS')
         return dc_utils.get_team(bookmaker_name, league, abbr_team_name.upper())
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> Optional[dict[str, str]]:
     # get subject name from the data, if exists then execute
     if subject_name := data.get('playerName'):
-        # # extract player attributes
-        # position = extract_position(data)
-        # gets the subject id or log message
+        # DATA LOOKS LIKE --> {'id': 123asd, 'name': 'Jayson Tatum'} POSSIBLY WITH 'team': 'BOS'
         return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
@@ -183,17 +181,16 @@ class Dabble(ln_utils.LinesRetriever):
             for player_prop_data in data.get('playerProps', []):
                 # get the market id from the db and extract the market name from the dictionary
                 if market := extract_market(self.name, player_prop_data, markets_map, league):
-                    # extract the player's team data
-                    if team := extract_team(self.name, league, player_prop_data):
-                        # use the team data to get game data
-                        if game := dc_utils.get_game(league, team['abbr_name']):
-                            # get the subject id from the db and extract the subject name from dictionary
-                            if subject := extract_subject(self.name, player_prop_data, league, team):
+                    # DATA LOOKS LIKE --> ('NBA', 'BOS')
+                    if team_id := extract_team(self.name, league, player_prop_data):
+                        # DATA LOOKS LIKE --> {'info': 'BOS @ BKN','box_score_url': 'NBA_20241113_BOS@BKN','game_time': 2024-12-03 20:00:00}
+                        if game := dc_utils.get_game(team_id):
+                            # DATA LOOKS LIKE --> {'id': 123asd, 'name': 'Jayson Tatum'} POSSIBLY WITH 'team': 'BOS'
+                            if subject := extract_subject(self.name, player_prop_data, league, team_id[1]):
                                 # get over/under label for player prop and get numeric line, only execute if both exist
                                 if (label := extract_label(player_prop_data)) and (line := player_prop_data.get('value')):
                                     # update shared data
-                                    dc_utils.Lines.update({
-                                        'batch_ids': deque([self.batch_id]),
+                                    self.store({
                                         'bookmaker': self.name,
                                         'sport': sport,
                                         'league': league,

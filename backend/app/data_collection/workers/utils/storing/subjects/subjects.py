@@ -18,9 +18,9 @@ class Subjects:
         ('NBA', 'SG', 'Jayson Tatum'): {
             'id': 123asd,
             'name': 'Jayson Tatum',
-            'team_id': 'jpij[jasd'
+            'team': 'BOS'
         },
-        ('NBA', 'asdjhasd', 'Jayson Tatum'): {
+        ('NBA', 'BOS', 'Jayson Tatum'): {
             'id': 123asd,
             'name': 'Jayson Tatum',
         }

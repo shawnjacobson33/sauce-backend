@@ -76,7 +76,7 @@ def extract_position(data: dict) -> Optional[str]:
         return dc_utils.clean_position(position.split('-')[0] if '-' in position else position)
 
 
-def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[dict[str, str]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[tuple[str, str]]:
     # get the player's team name from the dictionary
     if abbr_team_name := data.get('subject_team'):
         # return the team id and team name
@@ -93,7 +93,7 @@ def extract_subject_data(data: dict, subjects_dict: dict) -> Optional[dict]:
             return subjects_dict.get(str(player_id))
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> Optional[dict[str, str]]:
     # get the subject name and check if it is a 'combo' player prop, if exists keep executing
     if (subject_name := data.get('subject')) and (' + ' not in subject_name):
         # # get player attributes
@@ -152,18 +152,17 @@ class PrizePicks(ln_utils.LinesRetriever):
                                 # extract a nested dictionary of subjects data
                                 if subject_data := extract_subject_data(relationships_data, subjects_dict):
                                     # extract some player's team data
-                                    if team := extract_team(self.name, league['cleaned'], subject_data):
+                                    if team_id := extract_team(self.name, league['cleaned'], subject_data):
                                         # get the game data from database
-                                        if game := dc_utils.get_game(league['cleaned'], team['id']):
+                                        if game := dc_utils.get_game(team_id):
                                             # get the subject id from the db and extract the subject name
-                                            if subject := extract_subject(self.name, subject_data, league['cleaned'], team):
+                                            if subject := extract_subject(self.name, subject_data, league['cleaned'], team_id[1]):
                                                 # get numeric over/under line and check for existence
                                                 if line := prop_line_attrs.get('line_score'):
                                                     # for each generic label for an over/under line
                                                     for label in ['Over', 'Under']:
                                                         # update shared data
-                                                        dc_utils.Lines.update({
-                                                            'batch_ids': deque([self.batch_id]),
+                                                        self.store({
                                                             'bookmaker': self.name,
                                                             'sport': sport,
                                                             'league': league['cleaned'],

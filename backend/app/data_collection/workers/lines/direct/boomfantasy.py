@@ -1,5 +1,4 @@
-from collections import deque
-from typing import Optional, Any, Union
+from typing import Optional
 
 from backend.app.data_collection.workers import utils as dc_utils
 from backend.app.data_collection.workers.lines import utils as ln_utils
@@ -18,7 +17,7 @@ def extract_league(name: str, data: dict) -> Optional[str]:
             return cleaned_league
 
 
-def extract_team(bookmaker_name: str, league: str, data: dict) -> dict[str, Union[Optional[dict], Any]]:
+def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[tuple[str, str]]:
     # get a dictionary, if exists keep going
     if player_image_data := data.get('playerImage'):
         # get the team name if it exists
@@ -27,14 +26,14 @@ def extract_team(bookmaker_name: str, league: str, data: dict) -> dict[str, Unio
             return dc_utils.get_team(bookmaker_name, league, team_name)
 
 
-def extract_subject(bookmaker_name: str, data: dict, league: str, team: dict) -> Optional[dict[str, str]]:
+def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> Optional[dict[str, str]]:
     # gets the league section's title and options from that title, executes if they both exist
     if (title := data.get('title')) and (options := title.get('o')):
         # gets the first and last name of the player, executes if both exist
         if (first_name := options.get('firstName')) and (last_name := options.get('lastName')):
             # get subject name
             subject_name = ' '.join([first_name, last_name])
-            # gets the subject id and subject name
+            # DATA LOOKS LIKE --> {'id': 123asd, 'name': 'Jayson Tatum'} POSSIBLY WITH 'team': 'BOS'
             return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
@@ -127,12 +126,12 @@ class BoomFantasy(ln_utils.LinesRetriever):
                             sport = dc_utils.LEAGUE_SPORT_MAP[league]
                             # for each section in the league's sections if they exist
                             for qg_data in section_data.get('qG', []):
-                                # get some player attributes
-                                if team := extract_team(self.name, league, qg_data):
-                                    # get the game data from database
-                                    if game := dc_utils.get_game(league, team['abbr_name']):
-                                        # extract the subject and get the subject id from the response data and database
-                                        if subject := extract_subject(self.name, qg_data, league, team):
+                                # DATA LOOKS LIKE --> ('NBA', 'BOS')
+                                if team_id := extract_team(self.name, league, qg_data):
+                                    # DATA LOOKS LIKE --> {'info': 'BOS @ BKN','box_score_url': 'NBA_20241113_BOS@BKN','game_time': 2024-12-03 20:00:00}
+                                    if game := dc_utils.get_game(team_id):
+                                        # DATA LOOKS LIKE --> {'id': 123asd, 'name': 'Jayson Tatum'} POSSIBLY WITH 'team': 'BOS'
+                                        if subject := extract_subject(self.name, qg_data, league, team_id[1]):
                                             # get the period classifier from dictionary (fullGame, firstQuarter, etc.)
                                             period = extract_period(qg_data)
                                             # get more prop line info from the league's section's fullQuestions if they exist
@@ -150,14 +149,12 @@ class BoomFantasy(ln_utils.LinesRetriever):
                                                                 # if both exist the keep going
                                                                 if label and odds:
                                                                     # update shared data
-                                                                    dc_utils.Lines.update({
-                                                                        'batch_ids': deque([self.batch_id]),
+                                                                    self.store({
                                                                         'bookmaker': self.name,
                                                                         'sport': sport,
                                                                         'league': league,
                                                                         'game_time': game['game_time'],
                                                                         'game': game['info'],
-                                                                        'market_id': market['id'],
                                                                         'market': market['name'],
                                                                         'subject_id': subject['id'],
                                                                         'subject': subject['name'],

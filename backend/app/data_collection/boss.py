@@ -29,14 +29,14 @@ async def kickoff(lg_worker_names: list[str] = None, ln_args: dict = None) -> No
     # # run the roster retrieving tasks
     # mng.assign_roster_tasks(lg_worker_names)
     # run the schedule retrieving tasks
-    # await mng.assign_box_score_tasks(lg_worker_names)
+    await mng.assign_box_score_tasks(lg_worker_names)
     # # run the box score retrieving tasks
     #
     # # # run the lines retrieving tasks second
-    await manage_line_workers(**ln_args)
+    # await manage_line_workers(**ln_args)
     # save all output data to json files
     # mng.generate_reports()
 
 
 if __name__ == '__main__':
-    asyncio.run(kickoff(None, {'interval': 300}))
+    asyncio.run(kickoff(None, {'interval': 150}))
