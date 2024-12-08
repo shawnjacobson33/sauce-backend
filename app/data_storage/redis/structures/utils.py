@@ -11,13 +11,12 @@ def convert_to_timestamp(dt: datetime) -> int:
 
 def reset_id_generator(r: redis.Redis, name: str) -> None:
     """Resets the unique id field back to 0"""
-    r.set(f'{name}:new:id', 0)
+    r.set(f'{name}:auto:id', 0)
 
 
-def get_short_id(r: redis.Redis, name: str) -> str:
-    short_id = r.get(f'{name}:auto:id')
-    r.incrby(f'{name}:auto:id', 1)
-    return f'{name[:-1]}:{short_id}'
+def get_auto_id(r: redis.Redis, name: str) -> str:
+    auto_id = r.incrby(f'{name}:auto:id')
+    return f'{name[:-1]}:{auto_id if auto_id else 0}'
 
 
 def update_live_hash(r: redis.Redis, name: str, live_ids: set[str]) -> None:

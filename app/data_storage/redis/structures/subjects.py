@@ -1,4 +1,5 @@
 from typing import Optional
+from collections import namedtuple
 
 import redis
 
@@ -24,20 +25,28 @@ class Subjects:
     def _set_unidentified(self, *args) -> None:
         self.__r.sadd('subjects:noid', 'subjects:{}:{}:{}'.format(*args))
 
-    def _set_subject_id(self, subj_id: str, league: str, team: str, pos: str, subjects: list[str]) -> str:
-        s_id = utils.get_short_id(self.__r, 'subjects')
-        self.__r.hset(f'subjects:lookup:{league}', key=subj_id, value=s_id)
-        subj_std_name = f'subjects:std:{league}'
-        for subj in subjects:
-            self.__r.hsetnx(subj_std_name, key=f'{team}:{subj}', value=s_id)
-            self.__r.hsetnx(subj_std_name, key=f'{pos}:{subj}', value=s_id)
+    def _set_subject_id(self, subj: namedtuple) -> str:
+        try:
+            if not self.__r.hget(f'teams:std:{subj.league}', subj.name):
+                s_id = utils.get_auto_id(self.__r, 'subjects')
+                with self.__r.pipeline() as pipe:
+                    pipe.multi()
+                    subj_std_name = f'subjects:std:{subj.league}'
+                    for subj in [subj.name, subj.std_name]:
+                        pipe.hset(subj_std_name, key=f'{subj.team}:{subj}', value=s_id)
+                        pipe.hset(subj_std_name, key=f'{subj.pos}:{subj}', value=s_id)
 
-        return s_id
+                    pipe.execute()
 
-    def store(self, league: str, team: str, position: str, subject: str, std_subject: str) -> None:
-        subj_id = f'subjects:{league}:{team}:{position}:{std_subject}'
-        s_id = self._set_subject_id(subj_id, league, team, position, subjects=[subject, std_subject])
-        self.__r.hset(s_id, mapping={
-            'name': std_subject,
-            'team': team
-        })
+                return s_id
+
+            print(f'Subject: {subj.name} already stored!')
+
+        except AttributeError as e:
+            print(e)
+
+    def store(self, subj: namedtuple) -> None:
+        if s_id := self._set_subject_id(subj):
+            self.__r.hset(s_id, mapping={
+                **{key if key != 'std_name' else 'name': val for key, val in subj.__dict__.items() if key != 'name'}
+            })

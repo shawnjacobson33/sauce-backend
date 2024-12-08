@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Tuple, Optional
 from pymongo import MongoClient
 
-from app import DATABASE_URL, DATABASE_NAME, SOURCES_COLLECTION_NAME, GAMES_COLLECTION_NAME
+from app.database.configs import DATABASE_URL, DATABASE_NAME, SOURCES_COLLECTION_NAME, GAMES_COLLECTION_NAME, MARKETS_COLLECTION_NAME
 
 
 def get_db_creds() -> Tuple[str, str]:
@@ -53,3 +53,5 @@ class MongoDB:
 
             # return the started games data
             return started_games
+
+

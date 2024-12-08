@@ -10,7 +10,7 @@ class Teams:
         self.__r = r
 
     def _get_team_id(self, league: str, team: str) -> Optional[str]:
-        return self.__r.hget(f'teams:lookup:{league}', key=team)
+        return self.__r.hget(f'teams:std:{league}', key=team)
 
     def get(self, league: str, team: str, key: str = None) -> Optional[Union[dict[str, str], str]]:
         if team_id := self._get_team_id(league, team):
@@ -21,20 +21,26 @@ class Teams:
     def get_unidentified(self) -> Optional[set[str]]:
         return self.__r.smembers('teams:noid')
 
-    def _set_unidentified(self, *args) -> None:
-        self.__r.sadd('teams:noid', 'teams:{}:{}'.format(*args))
+    def _set_unidentified(self, league: str, team: str) -> None:
+        self.__r.sadd('teams:noid', f'{league}:{team}')
 
-    def _set_team_id(self, team_id: str, league: str, teams: list[str]) -> str:
-        t_id = utils.get_short_id(self.__r, 'teams')
-        self.__r.hset(f'teams:lookup:{league}', key=team_id, value=t_id)
-        for team in teams:
-            self.__r.hsetnx(f'teams:std:{league}', key=team, value=team_id)
+    def _set_team_id(self, league: str, teams: list[str]) -> Optional[str]:
+        if not self.__r.hget(f'teams:std:{league}', teams[0]):
+            t_id = utils.get_auto_id(self.__r, 'teams')
+            with self.__r.pipeline() as pipe:
+                pipe.multi()
+                for team in teams:
+                    pipe.hsetnx(f'teams:std:{league}', key=team, value=t_id)
 
-        return t_id
+                pipe.execute()
+
+            return t_id
+
+        print(f'Team: {teams[0]} already stored!')
 
     def store(self, league: str, team: str, std_team: str, full_team: str) -> None:
-        t_id = self._set_team_id(f'teams:{league}:{std_team}', league, teams=[team, std_team])
-        self.__r.hset(t_id, mapping={
-            'abbr_name': std_team,
-            'full_name': full_team
-        })
+        if t_id := self._set_team_id(league, teams=[team, std_team]):
+            self.__r.hset(t_id, mapping={
+                'abbr_name': std_team,
+                'full_name': full_team
+            })

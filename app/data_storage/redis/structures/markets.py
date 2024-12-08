@@ -7,19 +7,18 @@ class Markets:
     def __init__(self, r: redis.Redis):
         self.__r = r
 
-    def _set_unidentified(self, *args) -> None:
-        self.__r.sadd('markets:noid', 'markets:{}:{}'.format(*args))
+    def _set_unidentified(self, sport: str, market: str) -> None:
+        self.__r.sadd('markets:noid', f'{sport}:{market}')
 
     def get(self, sport: str, market: str) -> Optional[str]:
-        if market := self.__r.hget(f'markets:{sport}', market):
-            return market
+        if std_market := self.__r.hget(f'markets:std:{sport}', market):
+            return std_market
 
         self._set_unidentified(sport, market)
 
     def get_unidentified(self) -> Optional[set[str]]:
         return self.__r.smembers('markets:noid')
 
-    def store(self, sport: str, market: str, std_market: str, override: bool = False) -> None:
-        market_id = f'markets:{sport}'
-        self.__r.hset(market_id, key=market, value=std_market) if not override \
-            else self.__r.hsetnx(market_id, key=market, value=std_market)
+    def store(self, sport: str, market: str, std_market: str) -> None:
+        if not self.__r.hsetnx(f'markets:std:{sport}', key=market, value=std_market):
+            print(f"Market: '{sport}:{market}' already stored!")
