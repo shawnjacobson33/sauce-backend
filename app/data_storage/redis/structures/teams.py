@@ -1,3 +1,4 @@
+from collections import namedtuple
 from typing import Optional, Union
 
 import redis
@@ -8,39 +9,63 @@ from app.data_storage.redis.structures import utils
 class Teams:
     def __init__(self, r: redis.Redis):
         self.__r = r
+        self.__aid = utils.AutoId(r, 'teams')
 
     def _get_team_id(self, league: str, team: str) -> Optional[str]:
         return self.__r.hget(f'teams:std:{league}', key=team)
 
-    def get(self, league: str, team: str, key: str = None) -> Optional[Union[dict[str, str], str]]:
+    def get(self, league: str, team: str, key: str = None, report: bool = False) -> Optional[Union[dict[str, str], str]]:
         if team_id := self._get_team_id(league, team):
             return self.__r.hgetall(team_id) if not key else self.__r.hget(team_id, key=key)
 
-        self._set_unidentified(league, team)
+        if report:
+            self._set_unidentified(league, team)
 
-    def get_unidentified(self) -> Optional[set[str]]:
+    def getall(self, league: str = None) -> list:
+        if not league:
+            return [self.__r.hgetall(t_id) for t_id in self.__r.keys('team:*')]
+
+        lt_ids = set(self.__r.hgetall(f'teams:std:{league}').values())
+        return [self.__r.hgetall(lt_id) for lt_id in lt_ids]
+
+    def getnoid(self) -> Optional[set[str]]:
         return self.__r.smembers('teams:noid')
 
     def _set_unidentified(self, league: str, team: str) -> None:
         self.__r.sadd('teams:noid', f'{league}:{team}')
 
-    def _set_team_id(self, league: str, teams: list[str]) -> Optional[str]:
-        if not self.__r.hget(f'teams:std:{league}', teams[0]):
-            t_id = utils.get_auto_id(self.__r, 'teams')
-            with self.__r.pipeline() as pipe:
-                pipe.multi()
-                for team in teams:
-                    pipe.hsetnx(f'teams:std:{league}', key=team, value=t_id)
-
-                pipe.execute()
-
+    def _set_team_id(self, team: namedtuple) -> str:
+        tms_std_name = f'teams:std:{team.league}'
+        if t_id := self.__r.hget(tms_std_name, team.std_name):
+            self.__r.hsetnx(tms_std_name, key=team.name, value=t_id)
             return t_id
 
-        print(f'Team: {teams[0]} already stored!')
+        new_updates = 0
+        new_t_id = self.__aid.generate()
+        for team_name in {team.name, team.std_name}:
+            new_updates += self.__r.hsetnx(tms_std_name, key=team_name, value=new_t_id)
 
-    def store(self, league: str, team: str, std_team: str, full_team: str) -> None:
-        if t_id := self._set_team_id(league, teams=[team, std_team]):
-            self.__r.hset(t_id, mapping={
-                'abbr_name': std_team,
-                'full_name': full_team
-            })
+        if not new_updates:
+            self.__aid.decrement()
+
+        return new_t_id
+
+    def store(self, teams: set[namedtuple]) -> Optional[str]:
+        try:
+            for team in teams:
+                if t_id := self._set_team_id(team):
+                    if self.__r.hset(t_id, mapping={
+                        'abbr': team.std_name,
+                        'full': team.full_name
+                    }):
+
+                        print(f"[Teams]: Successfully stored '{team.league}:{team.std_name}'!")
+                        return t_id
+
+                    print(f"[Teams]: Failed to store '{team.league}:{team.std_name}'!")
+
+            print(f"[Teams]: Stored {len(teams)} teams!")
+
+        except AttributeError as e:
+            print("Error:", e)
+            self.__aid.decrement()
