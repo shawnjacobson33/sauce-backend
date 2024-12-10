@@ -14,25 +14,30 @@ def extract_league(data: dict) -> Optional[str]:
             return league
 
 
+def extract_subjects_dict_helper(data: dict) -> tuple[str, dict]:
+    # if the player data type is valid
+    if data.get('type') == 'new_player':
+        # get the player's id and attributes, if both exist keep going
+        if (player_id := data.get('id')) and (player_attributes := data.get('attributes')):
+            # get the subject name, if first doesn't exist then get other format
+            if subject_name := player_attributes.get('display_name', player_attributes.get('name')):
+                # store the player id corresponding to some of the subject's attributes
+                return player_id, {
+                    'subject': subject_name,
+                    'subject_team': player_attributes.get('team', player_attributes.get('team_name')),
+                    'position': player_attributes.get('position')
+                }
+
+
 def extract_subjects_dict(data: dict) -> dict:
     # initialize a players dictionary to hold player ids and player attributes
     players_dict = dict()
     # for each player in a dictionary of data
     for player_data in data.get('included', []):
-        # if the player data type is valid
-        if player_data.get('type') == 'new_player':
-            # get the player's id and attributes, if both exist keep going
-            if (player_id := player_data.get('id')) and (player_attributes := player_data.get('attributes')):
-                # get the subject name, if first doesn't exist then get other format
-                if subject_name := player_attributes.get('display_name', player_attributes.get('name')):
-                    # store the player id corresponding to some of the subject's attributes
-                    players_dict[player_id] = {
-                        'subject': subject_name,
-                        'subject_team': player_attributes.get('team', player_attributes.get('team_name')),
-                        'position': player_attributes.get('position')
-                    }
+        player_id, data = extract_subjects_dict_helper(player_data)
+        players_dict[player_id] = data
 
-    # return the dictionary with the player's info and ids
+        # return the dictionary with the player's info and ids
     return players_dict
 
 

@@ -49,22 +49,27 @@ def extract_opponent_ids(data: dict, league_aliases: dict) -> dict:
     return opponent_ids
 
 
+def extract_participants_helper(data: dict) -> tuple[str, dict]:
+    # get the participant id, and format, and get opponent id, if both exist continue executing
+    if (participant_id := data.get('id').split(':')[1]) and (opponent_id := data.get('opponentId')):
+        # if the player's data dictionary exists get it and execute
+        if player_data := data.get('player'):
+            # get the player's name, if exists then execute
+            if subject_name := player_data.get('displayName'):
+                # create key-value pair for participant id and relating attributes
+                return participant_id, {
+                    'subject': subject_name, 'position': player_data.get('position'),
+                    'opponent_id': opponent_id, 'jersey_number': player_data.get('number')
+                }
+
+
 def extract_participants(data: dict) -> dict:
     # holds the participant's id and their corresponding subject data
     participants = dict()
     # for each player dict in search's participants if they exist
     for player in data.get('participants', []):
-        # get the participant id, and format, and get opponent id, if both exist continue executing
-        if (participant_id := player.get('id').split(':')[1]) and (opponent_id := player.get('opponentId')):
-            # if the player's data dictionary exists get it and execute
-            if player_data := player.get('player'):
-                # get the player's name, if exists then execute
-                if subject_name := player_data.get('displayName'):
-                    # create key-value pair for participant id and relating attributes
-                    participants[participant_id] = {
-                        'subject': subject_name, 'position': player_data.get('position'),
-                        'opponent_id': opponent_id, 'jersey_number': player_data.get('number')
-                    }
+        participant_id, data = extract_participants_helper(player)
+        participants[participant_id] = data
 
     return participants
 

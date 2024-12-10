@@ -14,12 +14,15 @@ class Teams:
     def _get_team_id(self, league: str, team: str) -> Optional[str]:
         return self.__r.hget(f'teams:std:{league}', key=team)
 
-    def get(self, league: str, team: str, key: str = None, report: bool = False) -> Optional[Union[dict[str, str], str]]:
+    def getteam(self, league: str, team: str, key: str = None, report: bool = False) -> Optional[Union[dict[str, str], str]]:
         if team_id := self._get_team_id(league, team):
             return self.__r.hgetall(team_id) if not key else self.__r.hget(team_id, key=key)
 
         if report:
             self._set_unidentified(league, team)
+
+    def getid(self, league: str, team: str) -> Optional[str]:
+        return self._get_team_id(league, team)
 
     def getall(self, league: str = None) -> list:
         if not league:
@@ -50,21 +53,20 @@ class Teams:
 
         return new_t_id
 
-    def store(self, teams: set[namedtuple]) -> Optional[str]:
+    def store(self, teams: set[namedtuple]) -> None:
         try:
+            new_teams_stored = 0
             for team in teams:
                 if t_id := self._set_team_id(team):
-                    if self.__r.hset(t_id, mapping={
-                        'abbr': team.std_name,
-                        'full': team.full_name
-                    }):
+                    if (self.__r.hsetnx(t_id, 'abbr', team.std_name) and
+                            self.__r.hsetnx(t_id, 'full', team.full_name)):
 
+                        new_teams_stored += 1
                         print(f"[Teams]: Successfully stored '{team.league}:{team.std_name}'!")
-                        return t_id
 
-                    print(f"[Teams]: Failed to store '{team.league}:{team.std_name}'!")
+                    print(f"[Teams]: '{team.league}:{team.std_name}' already exists!")
 
-            print(f"[Teams]: Stored {len(teams)} teams!")
+            print(f"[Teams]: Stored {new_teams_stored} new teams!")
 
         except AttributeError as e:
             print("Error:", e)

@@ -1,5 +1,7 @@
 from collections import namedtuple
 
+import redis
+
 from app.data_storage.redis.client import Client
 import app.data_storage.redis.structures as strcs
 from app.database import TEAMS_COLLECTION_NAME
@@ -45,14 +47,16 @@ class Redis:
 # Team = namedtuple('team', ['name', 'league', 'std_name', 'full_name'])
 # # team = Team(name=)
 # # print(Redis.teams.get('NBA', 'DAL'))
-# teams = {Team(name=doc['abbr_name'], league=doc['league'], std_name=doc['abbr_name'], full_name=doc['full_name']) \
+# M_teams = {Team(name=doc['abbr_name'], league=doc['league'], std_name=doc['abbr_name'], full_name=doc['full_name']) \
 #     for doc in MongoDB.fetch_collection(TEAMS_COLLECTION_NAME).find()}
-
-# Redis.teams.store(teams)
+#
+# Redis.teams.store(M_teams)
 # print(sorted(Redis.client.r.keys('team:*'), key=lambda x: int(x.decode().split(':')[1])))
 # nba_teams = Redis.teams.getall('NBA')
 # print(len(nba_teams))
 # print(Redis.teams.get('NBA', 'MIN'))
 
-print(len({key: val for key, val in item for item in Redis.teams.getall('NBA')])
+# Redis.client.r.flushdb()
+# print(Redis.teams.getid('NBA', 'BOS'))
+# print(Redis.r.keys('*'))
 # Redis.client.r.delete(*subject_keys)

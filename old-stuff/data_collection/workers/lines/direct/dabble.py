@@ -16,14 +16,19 @@ def extract_league(data: dict) -> Optional[str]:
             return cleaned_league
 
 
+def extract_market_map_helper(markets: dict, market_name: str, data: dict) -> None:
+    for market in data.get('markets', []):
+        if market_id := market.get('id'):  # Ensure market_id exists
+            markets[market_id] = market_name
+
+
 def extract_market_map(data: dict) -> Optional[dict]:
-    return {
-        market.get('id'): market_data.get('name')
-        for market_data in data.get('marketGroupMappings', [])
-        if market_data.get('name')  # Ensure market_name exists
-        for market in market_data.get('markets', [])
-        if market.get('id')  # Ensure market_id exists
-    }
+    markets = dict()
+    for market_data in data.get('marketGroupMappings', []):
+        if market_name := market_data.get('name'):  # Ensure market_name exists
+            extract_market_map_helper(markets, market_name, market_data)
+
+    return markets
 
 
 def extract_market(bookmaker_name: str, data: dict, data_map: dict, league: str) -> Optional[dict[str, str]]:
