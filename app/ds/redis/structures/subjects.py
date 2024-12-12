@@ -3,7 +3,7 @@ from collections import namedtuple
 
 import redis
 
-from app.data_storage.redis.structures import utils
+from app.ds.redis.structures import utils
 
 
 class Subjects:
@@ -17,12 +17,12 @@ class Subjects:
         if subj_id := self._get_subject_id(league, subj_attr, subject):
             return self.__r.hgetall(subj_id) if not key else self.__r.hget(subj_id, key=key)
 
-        self._set_unidentified(league, subj_attr, subject)
+        self._set_noid(league, subj_attr, subject)
 
     def get_unidentified(self) -> Optional[set[str]]:
         return self.__r.smembers('subjects:noid')
 
-    def _set_unidentified(self, *args) -> None:
+    def _set_noid(self, *args) -> None:
         self.__r.sadd('subjects:noid', 'subjects:{}:{}:{}'.format(*args))
 
     def _set_subject_id(self, subj: namedtuple) -> Optional[str]:

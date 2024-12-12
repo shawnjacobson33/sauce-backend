@@ -2,7 +2,7 @@ from typing import Optional, Union, Any
 
 import redis
 
-from app.data_storage.redis.structures import utils
+from app.ds.redis.structures import utils
 
 
 class BettingLines:

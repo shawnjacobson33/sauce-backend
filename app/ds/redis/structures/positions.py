@@ -7,16 +7,17 @@ class Positions:
     def __init__(self, r: redis.Redis):
         self.__r = r
 
-    def get(self, sport: str, pos: str) -> Optional[str]:
+    def getpos(self, sport: str, pos: str, report: bool = False) -> Optional[str]:
         if position := self.__r.hget(f'positions:std:{sport}', pos):
             return position
+        
+        if report:
+            self._set_noid(sport, pos)
 
-        self._set_unidentified(sport, pos)
-
-    def get_unidentified(self) -> Optional[set[str]]:
+    def getnoid(self) -> Optional[set[str]]:
         return self.__r.smembers('positions:noid')
 
-    def _set_unidentified(self, sport: str, pos: str) -> None:
+    def _set_noid(self, sport: str, pos: str) -> None:
         self.__r.sadd('positions:noid', f'{sport}:{pos}')
 
     def store(self, sport: str, pos: str, std_pos: str) -> None:
