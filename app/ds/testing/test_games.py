@@ -1,3 +1,4 @@
+import pytest
 import random
 from datetime import datetime, timedelta
 
@@ -5,11 +6,8 @@ from app.ds.in_mem.main import Redis
 
 
 r = Redis()
+
 LEAGUES = ['NBA', 'NFL', 'NHL', 'MLB', 'WNBA', 'NCAA']
-
-
-def generate_random_league():
-    return random.choice(LEAGUES)
 
 
 def generate_random_matchups(league: str) -> tuple:
@@ -22,64 +20,48 @@ def generate_random_matchups(league: str) -> tuple:
 
 
 def generate_random_games():
-    r.games.flush()
-    league = generate_random_league()
-    for away_team, home_team in generate_random_matchups(league):
-        game_time = datetime.now() + timedelta(seconds=random.randint(15, 30))
-        mapping = {
-            "info": f'{league}_{game_time.strftime('%Y%m%d')}_{away_team}@{home_team}',
-            "game_time": game_time
-        }
-        r.games.store(league, mapping)
+    for league in LEAGUES:
+        for away_team, home_team in generate_random_matchups(league):
+            game_time = datetime.now() + timedelta(seconds=random.randint(15, 30))
+            mapping = {
+                "info": f'{league}_{game_time.strftime('%Y%m%d')}_{away_team}@{home_team}',
+                "game_time": game_time
+            }
+            r.games.store(league, mapping)
 
 
+@pytest.fixture
+def setup_environment():
+    r.games.flushall()
+    generate_random_games()
 
 
-def test_store_and_get_game():
+def test_store(setup_environment):
     """
     Test storing and retrieving a game.
     """
-    league = generate_random_league()
-    combined_teams = generate_random_teams(league)
-    for away_team, home_team in combined_teams:
-        game_time = datetime.now() + timedelta(seconds=random.randint(15, 30))
-        mapping = {
-            "info": f'{league}_{game_time.strftime('%Y%m%d')}_{away_team}@{home_team}',
-            "game_time": game_time
-        }
-        r.games.store(league, mapping)
-
-        # Retrieve the game from the system
-        game = r.games.getgame(league, r.teams.getteamid(league, away_team))
-        assert game, f"Failed to retrieve game for {away_team} vs {home_team}"
-
-        print(f"Retrieved game: {game['info']} in league {league} at {game_time}")
+    for league in LEAGUES:
+        for t_id in r.teams.getteamids(league):
+            game = r.games.getgame(league, t_id)
+            assert game, f"Failed to retrieve game for {game['info']}"
 
 
-def test_get_games_for_league():
+def test_store_unique_games(setup_environment):
     """
-    Test retrieving all games for a specific league.
+    Ensure no duplicate games are stored for a league.
     """
-    league = generate_random_league()
-    games = r.games.getgames(league)
-
-    assert isinstance(games, list), "Expected a list of games"
-    assert len(games) > 0, "No games found for the league"
-    print(f"Retrieved {len(games)} games for league {league}.")
+    for league in LEAGUES:
+        games = r.games.getgames(league)
+        unique_game_ids = {game['info'] for game in games}
+        assert len(unique_game_ids) == len(games), f"Duplicate games found in league {league}"
 
 
-def test_get_live_games():
+def test_flushall(setup_environment):
     """
-    Test retrieving live games for a specific league.
+    Test that all games are deleted after flushall.
     """
-    league = generate_random_league()
-    live_games = r.games.getlivegames(league)
-
-    if live_games:
-        assert isinstance(live_games, set), "Expected a set of live games"
-        print(f"Retrieved {len(live_games)} live games for league {league}.")
-    else:
-        print(f"No live games found for league {league}.")
-
-
+    r.games.flushall()
+    for league in LEAGUES:
+        games = r.games.getgames(league)
+        assert not games, f"Games still exist in league {league} after flushall"
 

@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Optional, Union
+from typing import Optional, Union, Iterable
 
 import redis
 
@@ -71,24 +71,39 @@ class Teams:
         if report:
             self._set_noid(league, team)
 
-    def getteams(self, league: str = None) -> list:
+    def getteamids(self, league: str = None) -> Iterable:
+        """
+        Retrieve team identifiers for all teams or for teams in a specific league.
+
+        Args:
+            league (str, optional): The league to filter teams by. If not specified,
+                                    returns identifiers for all teams. Defaults to None.
+
+        Returns:
+            Iterable: A generator that yields team identifiers or team details as dictionaries.
+        """
+        if not league:
+            return (t_key for t_key in self.__r.scan_iter('team:*'))
+
+        return (self.__r.hget(self._hstd, t_key) for t_key in self.__r.hscan_iter(self._hstd.format(league)))
+
+    def getteams(self, league: str = None) -> Iterable:
         """
         Retrieve details of all teams or teams in a specific league.
 
         Args:
-            league (str, optional): The league to filter by. Defaults to None.
+            league (str, optional): The league to filter teams by. If not specified,
+                                    returns details for all teams. Defaults to None.
 
         Returns:
-            list: List of dictionaries containing team details.
+            Iterable: A generator that yields dictionaries containing team details.
         """
         if not league:
-            return [self.__r.hgetall(t_id) for t_id in self.__r.keys('team:*')]
+            return (self.__r.hgetall(t_key) for t_key in self.__r.scan_iter('team:*'))
 
-        f_hstd_name = self._hstd.format(league)
-        lt_ids = set(self.__r.hgetall(f_hstd_name).values())
-        return [self.__r.hgetall(lt_id) for lt_id in lt_ids]
+        return (self.__r.hgetall(t_id) for t_id in self.__r.hscan_iter(self._hstd.format(league)))
 
-    def getnoid(self) -> Optional[set[str]]:
+    def getnoids(self) -> Optional[set[str]]:
         """
         Retrieve a set of unmapped teams.
 

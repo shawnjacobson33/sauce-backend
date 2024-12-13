@@ -168,11 +168,13 @@ class Games:
         self.__r.delete(*keys)
         print(f"[Games]: FOR {f_name} Deleted {keys[0]}, {keys[1]}, ...")
 
-    def flushall(self):
-        game_keys = list(self.__r.hscan_iter('game:*'))
-        self.__r.delete(*game_keys)
-
-        for namespace in NAMESPACE.values():
-            generic_name = namespace.replace('{}', '*')
-
-
+    def flushall(self) -> None:
+        hstd_keys = list(self.__r.hscan_iter('hstd'))
+        slive_keys = list(self.__r.sscan_iter('slive'))
+        zwatch_keys = list(self.__r.zscan_iter('zwatch'))
+        with self.__r.pipeline() as pipe:
+            pipe.multi()
+            self.__r.delete(*hstd_keys)
+            self.__r.delete(*slive_keys)
+            self.__r.delete(*zwatch_keys)
+            pipe.execute()
