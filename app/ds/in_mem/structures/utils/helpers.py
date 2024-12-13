@@ -9,21 +9,22 @@ def convert_to_timestamp(dt: datetime) -> int:
     return int(time.mktime(dt.timetuple()))
 
 
-def update_live_hash(r: redis.Redis, name: str, live_ids: set[str]) -> None:
+def _update_live_set(r: redis.Redis, slive: str, live_ids: set[str]) -> None:
     """Add to a set to index data that is live, and update the 'is_live' field to True"""
     for idx in live_ids:
-        r.sadd(name, idx)
+        r.sadd(slive, idx)
 
 
-def get_live_ids(r: redis.Redis, name: str):
+def get_live_ids(r: redis.Redis, slive: str, zwatch: str) -> set[str]:
     curr_ts = convert_to_timestamp(datetime.now())
     live_ids = r.zrange(
-        name=name,
+        name=zwatch,
         start=int(float('-inf')),
         end=curr_ts,
         byscore=True
     )
-    r.zrem(name, *live_ids)
+    r.zrem(zwatch, *live_ids)
+    _update_live_set(r, slive, live_ids)
     return live_ids
 
 

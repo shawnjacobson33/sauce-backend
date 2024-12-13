@@ -1,35 +1,13 @@
 from collections import namedtuple
 
-import redis
-
-from app.ds.redis.client import Client
-from app.ds.redis import structures as strcs
-from app.database import TEAMS_COLLECTION_NAME
-from app.database.mongo import MongoDB
+from app.database import MongoDB, TEAMS_COLLECTION_NAME
+from in_mem import Redis
 
 
 Team = namedtuple('team', ['name', 'league', 'std_name', 'full_name'])
 
 teams_collection = {Team(name=doc['abbr_name'], league=doc['league'], std_name=doc['abbr_name'], full_name=doc['full_name']) \
     for doc in MongoDB.fetch_collection(TEAMS_COLLECTION_NAME).find()}
-
-
-class Redis:
-    def __init__(self):
-        self.client = Client()
-        # Structures
-        self.markets = strcs.Markets(self.client.r)
-        self.teams = strcs.Teams(self.client.r)
-        self.positions = strcs.Positions(self.client.r)
-        self.bookmakers = strcs.Bookmakers(self.client.r)
-        self.games = strcs.Games(self.client.r)
-        self.subjects = strcs.Subjects(self.client.r)
-        self.betting_lines = strcs.BettingLines(self.client.r)
-        self.box_scores = strcs.BoxScores(self.client.r)
-
-    # TODO: At some point create tester methods with dummy data
-
-
 
 
 TEAMS_MAP = {
@@ -64,7 +42,7 @@ TEAMS_MAP = {
     'MLB': {},
     'NHL': {
         # CBJ - Columbus Blue Jackets
-          'CLS': 'CBJ',  # OwnersBox, SuperDraft
+          'CLS': 'CLB',  # OwnersBox, SuperDraft
         # LA - Los Angeles Kings
           'LA': 'LA',  # MoneyLine, SuperDraft, VividPicks, PrizePicks, OwnersBox
           'LAK': 'LA',  # ParlayPlay, DraftKingsPick6
@@ -75,7 +53,7 @@ TEAMS_MAP = {
         # SJ - San Jose Sharks
           'SJS': 'SJ',  # ParlayPlay
         # MTL - Montreal Canadiens
-          'MON': 'MTL',  # SuperDraft, OwnersBox
+          'MON': 'MON',  # SuperDraft, OwnersBox
         # VGK - Vegas Golden Knights
           'VGS': 'VGK',  # Payday
         # TB - Tampa Bay Lightning
@@ -174,7 +152,7 @@ TEAMS_MAP = {
         # TENN - Tennessee
           'TEN': 'TENN',  # VividPicks
         # NW - Northwestern
-          'NU': 'NW',  # Drafters
+          'NU': 'NW',  # Drafters  # TODO: ENDED HERE GOIN UP
         # TULN - Tulane
           'TUL': 'TULN',  # VividPicks
         # KSU - Kansas State
@@ -220,17 +198,17 @@ TEAMS_MAP = {
         # LT - Louisiana Tech
           'LOUTCH': 'LT',  # ParlayPlay
         # XAV - Xavier
-          'XAVIER': 'XAV',  # Dabble
+        #   'XAVIER': 'XAV',  # Dabble
         # USD - San Diego
-          'SD': 'USD',  # Dabble
-          'SAN DIEGO': 'USD', # Payday
-        # ORE - Oregon
+        #   'SD': 'USD',  # Dabble
+        #   'SAN DIEGO': 'USD', # Payday
+        # # ORE - Oregon
           'OREGON': 'ORE',  # Dabble
         # CREI - Creighton
-          'CRE': 'CREI',  # Dabble
-          'CREIGHTON': 'CREI',  # Payday
-        # POR - Portland
-          'PORT': 'POR',  # Underdog
+        #   'CRE': 'CREI',  # Dabble
+        #   'CREIGHTON': 'CREI',  # Payday
+        # # POR - Portland
+        #   'PORT': 'POR',  # Underdog
         # AUB - Auburn
           'AUBURN': 'AUB',  # Dabble
         # BAY - Baylor
@@ -242,56 +220,17 @@ TEAMS_MAP = {
         # ND - Notre Dame
           'NOTRE DAME': 'ND',  # Payday
         # GTOWN - Georgetown
-          'GEORGETOWN': 'GTOWN',  # Payday
-        # FAU - FAU
+          #'GEORGETOWN': 'GTOWN',  # Payday,
+        # FAU - FAU, ,
           'FLAATL': 'FAU',  # Dabble
 
     }
 }
 redis_instance = Redis()
-# teams = {Team(name='LA', league='NFL', std_name='LAR', full_name='Los Angeles Rams')}
+
+# TEAMS STANDARDIZATION WORK
+# teams = {Team(name='NW', league='NCAA', std_name='NWEST', full_name='')}
 # redis_instance.teams.store(teams)
-# print(redis_instance.teams.getteamid('NFL', 'LA'))
-# print(redis_instance.teams.getteaminfo('NFL', 'LA'))
+# print(redis_instance.teams.getteamid('NCAA', 'FLAATL'))
+# print(redis_instance.teams.getteaminfo('NCAA', 'FLAATL'))
 # print(redis_instance.teams.getall())
-
-
-
-# data = len(redis_instance.teams.getall())
-# print(data)
-# from collections import namedtuple
-# Subject = namedtuple('subject', ['name', 'std_name', 'league', 'team', 'pos', 'jersey_num'])
-# subject = Subject(name='Decobie Durant', std_name='Cobie Durant', league='NFL', team='LA', pos='CB', jersey_num='5')
-# # Redis.subjects.store(subject)
-# print(Redis.subjects.get('NFL', 'CB', 'Cobie Durant'))
-# # # # print(Redis.client.flushdb())
-# #
-# # # print(Redis.client.delete('subject:2'))
-# # print(Redis.client.hgetall('subject:4'))
-# # print(Redis.subjects.rollback(subject))
-# # print(Redis.client.r.hgetall('subject:3'))
-# # print(Redis.client.r.get('subjects:auto:id'))
-# # print(Redis.client.hgetall('subject:4'))
-# # print(Redis.client.hgetall('subject:2'))
-# # Redis.client.r.delete('subject:1')
-# # Redis.client.reset_auto_ids('subjects')
-
-
-# league: str, team: str, std_team: str, full_team: str
-
-# Team = namedtuple('team', ['name', 'league', 'std_name', 'full_name'])
-# # team = Team(name=)
-# # print(Redis.teams.get('NBA', 'DAL'))
-# M_teams = {Team(name=doc['abbr_name'], league=doc['league'], std_name=doc['abbr_name'], full_name=doc['full_name']) \
-#     for doc in MongoDB.fetch_collection(TEAMS_COLLECTION_NAME).find()}
-#
-# Redis.teams.store(M_teams)
-# print(sorted(Redis.client.r.keys('team:*'), key=lambda x: int(x.decode().split(':')[1])))
-# nba_teams = Redis.teams.getall('NBA')
-# print(len(nba_teams))
-# print(Redis.teams.get('NBA', 'MIN'))
-
-# Redis.client.r.flushdb()
-# print(Redis.teams.getid('NBA', 'BOS'))
-# print(Redis.r.keys('*'))
-# Redis.client.r.delete(*subject_keys)

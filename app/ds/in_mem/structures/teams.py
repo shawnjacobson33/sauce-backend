@@ -3,7 +3,7 @@ from typing import Optional, Union
 
 import redis
 
-from app.ds.redis.structures import utils
+from app.ds.in_mem.structures import utils
 
 
 NAMESPACE = {
@@ -49,7 +49,8 @@ class Teams:
         Returns:
             Optional[str]: The ID of the team, if available.
         """
-        return self.__r.hget(self._hstd.format(league), key=team)
+        f_hstd_name = self._hstd.format(league)
+        return self.__r.hget(f_hstd_name, key=team)
 
     def getteaminfo(self, league: str, team: str, key: str = None, report: bool = False) -> Optional[Union[dict[str, str], str]]:
         """
@@ -83,8 +84,8 @@ class Teams:
         if not league:
             return [self.__r.hgetall(t_id) for t_id in self.__r.keys('team:*')]
 
-        hello = self._hstd.format(league)
-        lt_ids = set(self.__r.hgetall(self._hstd.format(league)).values())
+        f_hstd_name = self._hstd.format(league)
+        lt_ids = set(self.__r.hgetall(f_hstd_name).values())
         return [self.__r.hgetall(lt_id) for lt_id in lt_ids]
 
     def getnoid(self) -> Optional[set[str]]:
@@ -116,9 +117,9 @@ class Teams:
         Returns:
             Optional[str]: The team ID if it exists; otherwise, None.
         """
-        f_hstd = self._hstd.format(team.league)
-        if t_id := self.__r.hget(f_hstd, team.std_name):
-            updated = self.__r.hsetnx(f_hstd, key=team.name, value=t_id)
+        f_hstd_name = self._hstd.format(team.league)
+        if t_id := self.__r.hget(f_hstd_name, team.std_name):
+            updated = self.__r.hsetnx(f_hstd_name, key=team.name, value=t_id)
             return updated, t_id
 
         return None, None
@@ -135,8 +136,9 @@ class Teams:
         """
         new_updates = 0
         new_t_id = self.__aid.generate()
+        f_hstd_name = self._hstd.format(team.league)
         for team_name in {team.name, team.std_name}:
-            new_updates += self.__r.hsetnx(self._hstd.format(team.league), key=team_name, value=new_t_id)
+            new_updates += self.__r.hsetnx(f_hstd_name, key=team_name, value=new_t_id)
 
         if not new_updates:
             self.__aid.decrement()
