@@ -52,7 +52,7 @@ class Teams:
         f_hstd_name = self._hstd.format(league)
         return self.__r.hget(f_hstd_name, key=team)
 
-    def getteaminfo(self, league: str, team: str, key: str = None, report: bool = False) -> Optional[Union[dict[str, str], str]]:
+    def getteam(self, league: str, team: str, key: str = None, report: bool = False) -> Optional[Union[dict[str, str], str]]:
         """
         Retrieve a team's details or a specific attribute.
 
@@ -71,7 +71,7 @@ class Teams:
         if report:
             self._set_noid(league, team)
 
-    def getall(self, league: str = None) -> list:
+    def getteams(self, league: str = None) -> list:
         """
         Retrieve details of all teams or teams in a specific league.
 
