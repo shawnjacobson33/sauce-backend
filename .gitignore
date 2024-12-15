@@ -2,3 +2,4 @@
 *.json
 *.txt
 .DS_Store
+.env

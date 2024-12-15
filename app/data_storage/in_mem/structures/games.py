@@ -1,5 +1,4 @@
 from typing import Optional, Union, Any
-from datetime import datetime
 
 import redis
 
