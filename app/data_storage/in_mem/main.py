@@ -2,8 +2,8 @@ from collections import namedtuple
 
 import redis
 
-from app.ds.in_mem.client import Client
-from app.ds.in_mem import structures as strcs
+from app.data_storage.in_mem.client import Client
+from app.data_storage.in_mem import structures as strcs
 from app.database import TEAMS_COLLECTION_NAME
 from app.database.mongo import MongoDB
 

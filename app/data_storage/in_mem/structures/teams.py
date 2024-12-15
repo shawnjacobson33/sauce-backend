@@ -3,7 +3,7 @@ from typing import Optional, Union, Iterable
 
 import redis
 
-from app.ds.in_mem.structures import utils
+from app.data_storage.in_mem.structures import utils
 
 
 NAMESPACE = {

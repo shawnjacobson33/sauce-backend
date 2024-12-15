@@ -3,7 +3,7 @@ from collections import namedtuple
 
 import redis
 
-from app.ds.in_mem.structures import utils
+from app.data_storage.in_mem.structures import utils
 
 
 class Subjects:

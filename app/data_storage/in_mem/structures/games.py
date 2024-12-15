@@ -3,7 +3,7 @@ from datetime import datetime
 
 import redis
 
-from app.ds.in_mem.structures import Teams, utils
+from app.data_storage.in_mem.structures import Teams, utils
 
 
 NAMESPACE = {
