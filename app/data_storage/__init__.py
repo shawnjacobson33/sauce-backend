@@ -1,2 +1,3 @@
-from .in_mem import *
-from .tests import *
+from .main import *
+
+__all__ = ['Redis']

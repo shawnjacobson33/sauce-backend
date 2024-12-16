@@ -2,7 +2,7 @@ from typing import Optional, Union, Any
 
 import redis
 
-from app.data_storage.in_mem.structures import Teams, utils
+from app.data_storage.stores import Teams, utils
 
 
 NAMESPACE = {

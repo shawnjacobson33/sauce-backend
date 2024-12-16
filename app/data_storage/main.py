@@ -2,27 +2,24 @@ from collections import namedtuple
 
 import redis
 
-from app.data_storage.in_mem.client import Client
-from app.data_storage.in_mem import structures as strcs
+from app.data_storage.client import Client
+from app.data_storage import stores as st
 from app.database import TEAMS_COLLECTION_NAME
 from app.database.mongo import MongoDB
-
-
-
 
 
 class Redis:
     def __init__(self):
         self.client = Client()
         # Structures
-        self.markets = strcs.Markets(self.client.r)
-        self.teams = strcs.Teams(self.client.r)
-        self.positions = strcs.Positions(self.client.r)
-        self.bookmakers = strcs.Bookmakers(self.client.r)
-        self.games = strcs.Games(self.client.r, self.teams)
-        self.subjects = strcs.Subjects(self.client.r)
-        self.betting_lines = strcs.BettingLines(self.client.r)
-        self.box_scores = strcs.BoxScores(self.client.r)
+        self.markets = st.L1StaticDataStore(self.client.r, 'markets')
+        self.positions = st.L1StaticDataStore(self.client.r, 'positions')
+        self.teams = st.Teams(self.client.r)
+        self.bookmakers = st.Bookmakers(self.client.r)
+        self.games = st.Games(self.client.r, self.teams)
+        self.subjects = st.Subjects(self.client.r)
+        self.betting_lines = st.BettingLines(self.client.r)
+        self.box_scores = st.BoxScores(self.client.r)
 
     # TODO: At some point create tester methods with dummy data
 

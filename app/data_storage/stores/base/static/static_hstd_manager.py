@@ -3,7 +3,8 @@ from typing import Optional
 
 import redis
 
-from app.data_storage.in_mem.structures.utils.auto_id import AutoId
+from app.data_storage.models import Entity
+from app.data_storage.stores.utils.auto_id_manager import AutoIdManager
 
 
 class StaticHSTDManager:
@@ -31,13 +32,12 @@ class StaticHSTDManager:
         self.r = r
         self.hstd = hstd
 
-        self.aid = AutoId(r, hstd)
+        self.aid = AutoIdManager(r, hstd)
 
-        self.entity: namedtuple = None
         self.performed_insert = False
         self.updates = 0
 
-    def search_hstd(self) -> Optional[str]:
+    def search_hstd(self, entity: Entity) -> Optional[str]:
         """
         Searches the hash structure for the entity's standardized name and attempts to link
         the entity's name to the same auto-generated ID if found.
@@ -46,11 +46,11 @@ class StaticHSTDManager:
             Optional[str]: The auto-generated ID if the entity's standardized name exists,
                            otherwise None.
         """
-        if auto_id := self.r.hget(self.hstd, self.entity.std_name):
-            self.updates = self.r.hsetnx(self.hstd, key=self.entity.name, value=auto_id)
-            return auto_id
+        if a_id := self.r.hget(self.hstd, entity.std_name):
+            self.updates = self.r.hsetnx(self.hstd, key=entity.name, value=a_id)
+            return a_id
 
-    def add_to_hstd(self) -> Optional[str]:
+    def add_to_hstd(self, entity: Entity) -> Optional[str]:
         """
         Adds the current entity to the hash structure, generating a new auto ID if necessary.
         Links both the entity's name and standardized name to the same ID.
@@ -58,9 +58,9 @@ class StaticHSTDManager:
         Returns:
             Optional[str]: The auto-generated ID if the insertion was successful, otherwise None.
         """
-        auto_id = self.aid.generate()
-        for entity_name in {self.entity.name, self.entity.std_name}:
-            if self.r.hsetnx(self.hstd, key=entity_name, value=auto_id):
+        a_id = self.aid.generate()
+        for entity_name in {entity.name, entity.std_name}:
+            if self.r.hsetnx(self.hstd, key=entity_name, value=a_id):
                 self.performed_insert = True
 
-        return auto_id if self.performed_insert else self.aid.decrement()
+        return a_id if self.performed_insert else self.aid.decrement()
