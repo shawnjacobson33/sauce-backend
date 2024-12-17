@@ -97,4 +97,4 @@ class Teams(L2StaticDataStore):
                 pipe.execute()
 
         except AttributeError as e:
-            self._attr_error_cleanup(e)
+            self._handle_error(e)

@@ -40,7 +40,7 @@ class Positions(L1StaticDataStore):
         Returns:
             Optional[str]: The unique identifier for the position if found, otherwise None.
         """
-        return self.getentity(sport, pos, report=report)
+        return self.getentity(pos, domain=sport, report=report)
 
     def getpositions(self, sport: str) -> Iterable:
         """
@@ -53,18 +53,33 @@ class Positions(L1StaticDataStore):
             Optional[list[str]]: A list of position identifiers for the sport if any exist,
                                  otherwise None.
         """
-        yield from self.getentities(sport)
+        yield from self.getentities(domain=sport)
 
     def store(self, sport: str, positions: list[Position]) -> None:
         """
-        Store a list of positions for a given sport in the data store.
+        Store a list of position data for a given sport in the Redis data store.
+
+        Each position is associated with the sport and stored using both its name
+        and standardized name for easy retrieval and lookup.
 
         Args:
             sport (str): The name of the sport (e.g., "baseball", "hockey").
-            positions (list[Position]): A list of `Position` objects representing the positions
-                                         to be stored.
+            positions (list[Position]): A list of `Position` objects to be stored.
 
-        Returns:
-            None: This method does not return a value.
+        Raises:
+            AssertionError: If the positions list is empty.
+            AttributeError: If any position object lacks required attributes.
         """
-        self._store(sport, positions)
+        assert positions, f"The list of {self.name} cannot be empty!"
+        try:
+            hstd_name = self.hstd_mngr.set_name(sport)
+            with self.__r.pipeline() as pipe:
+                pipe.multi()
+                for entity in positions:
+                    for entity_name in {entity.name, entity.std_name}:
+                        pipe.hsetnx(hstd_name, key=entity_name, value=entity.std_name)
+
+                pipe.execute()
+
+        except AttributeError as e:
+            self._log_error(e)

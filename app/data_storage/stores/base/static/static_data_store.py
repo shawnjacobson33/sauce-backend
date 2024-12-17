@@ -33,7 +33,8 @@ class StaticDataStore:
 
         self.snoid_mngr = SNOIDManager(self.__r, name)
         self.hstd_mngr = StaticHSTDManager(self.__r, name)
-        
+
+
     def _eval_entity(self, entity: Entity) -> Optional[str]:
         """
         Evaluate an entity by checking its existence in hashed static data.
@@ -51,7 +52,7 @@ class StaticDataStore:
         e_id = self.hstd_mngr.add_to_hstd(entity)
         return e_id
 
-    def _attr_error_cleanup(self, e: AttributeError) -> None:
+    def _log_error(self, e: Exception) -> None:
         """
         Handles error cleanup for attribute-related operations.
 
@@ -66,4 +67,3 @@ class StaticDataStore:
             None: This method does not return a value.
         """
         print(f"[{self.name.title()}]: ERROR --> {e}")
-        self.hstd_mngr.aid_mngr.decrement()

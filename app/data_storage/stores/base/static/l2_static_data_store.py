@@ -112,3 +112,20 @@ class L2StaticDataStore(StaticDataStore):
         for entity in entities:
             if e_id := self._eval_entity(entity):
                 yield e_id, entity
+
+    def _handle_error(self, e: Exception) -> None:
+        """
+        Handles error cleanup for attribute-related operations.
+
+        This method logs an error message with the current instance's name
+        and performs cleanup actions by decrementing a counter in the associated
+        `aid` object of the `_hstd_manager`.
+
+        Args:
+            e (Exception): The error message to be logged and displayed.
+
+        Returns:
+            None: This method does not return a value.
+        """
+        self._log_error(e)
+        self.hstd_mngr.aid_mngr.decrement()
