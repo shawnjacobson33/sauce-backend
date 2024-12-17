@@ -36,7 +36,8 @@ class L2StaticDataStore(StaticDataStore):
         Returns:
             Optional[str]: The entity ID if found, otherwise None.
         """
-        return self.__r.hget(self._hstd.format(domain), key=entity)
+        hstd_name = self.hstd_mngr.set_name(domain)
+        return self.__r.hget(hstd_name, key=entity)
     
     def getentity(self, domain: str, entity: str, key: str = None, report: bool = False) -> Optional[
         Union[dict[str, str], str]]:
@@ -56,7 +57,7 @@ class L2StaticDataStore(StaticDataStore):
             return self.__r.hgetall(e_id) if not key else self.__r.hget(e_id, key=key)
     
         if report:
-            self._set_noid(domain, entity)
+            self.snoid_mngr.store(domain, entity)
     
     def getentityids(self, domain: str = None) -> Iterable:
         """
@@ -72,7 +73,8 @@ class L2StaticDataStore(StaticDataStore):
             entity_type = get_entity_type(self.name)
             return (t_key for t_key in self.__r.scan_iter(f'{entity_type}:*'))
 
-        return (self.__r.hget(self._hstd, t_key) for t_key in self.__r.hscan_iter(self._hstd.format(domain)))
+        hstd_name = self.hstd_mngr.set_name(domain)
+        for t_key in self.__r.hscan_iter(hstd_name): yield self.__r.hget(hstd_name, t_key)
     
     def getentities(self, domain: str = None) -> Iterable:
         """
@@ -88,7 +90,8 @@ class L2StaticDataStore(StaticDataStore):
             entity_type = get_entity_type(self.name)
             return (self.__r.hgetall(t_key) for t_key in self.__r.scan_iter(f'{entity_type}:*'))
 
-        return (self.__r.hgetall(t_id) for t_id in self.__r.hscan_iter(self._hstd.format(domain)))
+        hstd_name = self.hstd_mngr.set_name(domain)
+        for t_id in self.__r.hscan_iter(hstd_name): yield self.__r.hgetall(t_id)
     
     def _get_eids(self, domain: str, entities: list[Entity]) -> Iterable:
         """
@@ -105,7 +108,7 @@ class L2StaticDataStore(StaticDataStore):
             AssertionError: If the `entities` list is empty.
         """
         assert entities, f"The list of {self.name} cannot be empty!"
-        self._set_hstd(domain)
+        self.hstd_mngr.set_name(domain)
         for entity in entities:
             if e_id := self._eval_entity(entity):
                 yield e_id, entity

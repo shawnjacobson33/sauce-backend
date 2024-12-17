@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Optional, Any, Iterable
 
 import redis
 
@@ -35,13 +35,13 @@ class L1StaticDataStore(StaticDataStore):
         Returns:
             Optional[str]: The standardized entity name if found, otherwise None.
         """
-        if std_entity := self.__r.hget(self._hstd.format(domain), entity):
+        if std_entity := self.__r.hget(self.hstd_mngr.set_name(domain), entity):
             return std_entity
 
         if report:
-            self._set_noid(domain, entity)
-            
-    def getentities(self, domain: str) -> Any:
+            self.snoid_mngr.store(domain, entity)
+
+    def getentities(self, domain: str) -> Iterable:
         """
         Retrieves all standardized entities for a given partition.
 
@@ -51,9 +51,9 @@ class L1StaticDataStore(StaticDataStore):
         Returns:
             Any: A collection of standardized entity names from the partition.
         """
-        return self.__r.hgetall(self._hstd.format(domain)).values()
+        for val in self.__r.hgetall(self.hstd_mngr.set_name(domain)).values(): yield val
 
-    def store(self, domain: str, entities: list[Entity]):
+    def _store(self, domain: str, entities: list[Entity]):
         """
         Stores a list of entities into the data store.
 
@@ -66,13 +66,13 @@ class L1StaticDataStore(StaticDataStore):
             AttributeError: If an entity's attribute is missing during storage.
         """
         assert entities, f"The list of {self.name} cannot be empty!"
-        self._set_hstd(domain)
+        hstd_name = self.hstd_mngr.set_name(domain)
         try:
             with self.__r.pipeline() as pipe:
                 pipe.multi()
                 for entity in entities:
                     for entity_name in {entity.name, entity.std_name}:
-                        pipe.hsetnx(self._hstd, key=entity_name, value=entity.std_name)
+                        pipe.hsetnx(hstd_name, key=entity_name, value=entity.std_name)
 
                 pipe.execute()
 

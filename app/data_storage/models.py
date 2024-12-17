@@ -11,3 +11,8 @@ class Entity:
 @dataclass
 class Team(Entity):
     full_name: str
+
+
+@dataclass
+class Position(Entity):
+    pass

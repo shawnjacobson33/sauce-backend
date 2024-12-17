@@ -8,6 +8,12 @@ from app.database import TEAMS_COLLECTION_NAME
 from app.database.mongo import MongoDB
 
 
+NAMESPACE_TEMPLATE = {
+    'hstd': '{}:std:{}',
+    'snoid': '{}:noid',
+}
+
+
 class Redis:
     def __init__(self):
         self.client = Client()
