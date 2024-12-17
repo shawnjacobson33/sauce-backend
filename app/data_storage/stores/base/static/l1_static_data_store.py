@@ -1,8 +1,8 @@
-from typing import Optional, Any, Iterable
+from typing import Optional, Iterable
 
 import redis
 
-from app.data_storage.models import Entity
+from app.data_storage.managers import L1HSTDManager
 from app.data_storage.stores.base import StaticDataStore
 
 
@@ -22,6 +22,7 @@ class L1StaticDataStore(StaticDataStore):
             name (str): The name of the data store.
         """
         super().__init__(r, name)
+        self.hstd_mngr = L1HSTDManager(self.__r, name)
     
     def getentity(self, entity: str, domain: str = None, report: bool = False) -> Optional[str]:
         """

@@ -1,9 +1,6 @@
-from typing import Optional
-
 import redis
 
-from app.data_storage.models import Entity
-from app.data_storage.stores.managers import SNOIDManager, StaticHSTDManager
+from app.data_storage.managers import SNOIDManager, HSTDManager
 
 
 class StaticDataStore:
@@ -17,7 +14,6 @@ class StaticDataStore:
     Attributes:
         __r (redis.Redis): Redis connection instance used for data storage.
         snoid_mngr (SNOIDManager): Manager for handling missing entity IDs (NOIDs).
-        hstd_mngr (StaticHSTDManager): Manager for handling hashed static data.
         name (str): The name associated with the static data store.
     """
     def __init__(self, r: redis.Redis, name: str):
@@ -32,25 +28,6 @@ class StaticDataStore:
         self.name = name
 
         self.snoid_mngr = SNOIDManager(self.__r, name)
-        self.hstd_mngr = StaticHSTDManager(self.__r, name)
-
-
-    def _eval_entity(self, entity: Entity) -> Optional[str]:
-        """
-        Evaluate an entity by checking its existence in hashed static data.
-        If not found, add the entity to the hashed static data.
-
-        Args:
-            entity (namedtuple): The entity to evaluate.
-
-        Returns:
-            Optional[str]: The identifier of the entity if found or created, otherwise None.
-        """
-        if e_id := self.hstd_mngr.search_hstd(entity):
-            return e_id
-
-        e_id = self.hstd_mngr.add_to_hstd(entity)
-        return e_id
 
     def _log_error(self, e: Exception) -> None:
         """

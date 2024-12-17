@@ -22,32 +22,42 @@ class Teams(L2StaticDataStore):
         """
         super().__init__(r, 'teams')
 
-    def getteamid(self, league: str, team: str) -> Optional[str]:
+    def getid(self, team: Team) -> Optional[str]:
         """
         Retrieve the unique identifier for a specific team within a league.
 
         Args:
-            league (str): The name of the league the team belongs to.
-            team (str): The standard name of the team.
+            team (Team): A team object.
 
         Returns:
             Optional[str]: The unique identifier for the team, or None if not found.
         """
-        return self.getentityid(league, team)
+        return self.geteid(team.domain, team.name)
 
-    def getteam(self, league: str, team: str, report: bool = False) -> Optional[str]:
+    def getids(self, league: str = None) -> Iterable:
+        """
+        Retrieve all unique identifiers for teams, optionally filtered by league.
+
+        Args:
+            league (str, optional): The league to filter by. If None, retrieves IDs across all leagues.
+
+        Yields:
+            str: Team identifiers.
+        """
+        yield from self.geteids(league)
+
+    def getteam(self, team: Team, report: bool = False) -> Optional[str]:
         """
         Retrieve details about a specific team within a league.
 
         Args:
-            league (str): The name of the league the team belongs to.
-            team (str): The standard name of the team.
+            team (Team): a team object
             report (bool, optional): Whether to log or report missing entries. Defaults to False.
 
         Returns:
             Optional[str]: Details of the team, or None if not found.
         """
-        return self.getentity(league, team, report=report)
+        return self.getentity(team.domain, team.name, report=report)
 
     def getteams(self, league: str) -> Iterable:
         """
@@ -60,18 +70,6 @@ class Teams(L2StaticDataStore):
             str: Team identifiers within the specified league.
         """
         yield from self.getentities(league)
-
-    def getteamids(self, league: str = None) -> Iterable:
-        """
-        Retrieve all unique identifiers for teams, optionally filtered by league.
-
-        Args:
-            league (str, optional): The league to filter by. If None, retrieves IDs across all leagues.
-
-        Yields:
-            str: Team identifiers.
-        """
-        yield from self.getentityids(league)
 
     def store(self, league: str, teams: list[Team]) -> None:
         """
@@ -91,8 +89,10 @@ class Teams(L2StaticDataStore):
             with self.__r.pipeline() as pipe:
                 pipe.multi()
                 for t_id, team in self._get_eids(league, teams):
-                    pipe.hsetnx(t_id, 'abbr', team.std_name)
-                    pipe.hsetnx(t_id, 'full', team.full_name)
+                    pipe.hset(t_id, mapping={
+                        'abbr': team.std_name,
+                        'full': team.full_name
+                    })
 
                 pipe.execute()
 

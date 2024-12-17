@@ -19,14 +19,20 @@ class SportsDataProvider(Entity):
 @dataclass
 class AttrEntity(Entity):
     domain: str
-    std_name: str
+    std_name: str = None
 
 
 @dataclass
 class Team(AttrEntity):
-    full_name: str
+    full_name: str = None
 
 
 @dataclass
 class Position(AttrEntity):
     pass
+
+
+@dataclass
+class Subject(AttrEntity):
+    position: Position
+    team: Team

@@ -2,7 +2,8 @@ from typing import Union, Optional, Iterable
 
 import redis
 
-from app.data_storage.models import Entity
+from app.data_storage.models import Entity, AttrEntity
+from app.data_storage.managers import L2HSTDManager
 from app.data_storage.stores.utils import get_entity_type
 from app.data_storage.stores.base.static import StaticDataStore
 
@@ -24,42 +25,43 @@ class L2StaticDataStore(StaticDataStore):
             name (str): The name of the data store.
         """
         super().__init__(r, name)
+        self.hstd_mngr = L2HSTDManager(self.__r, name)
     
-    def getentityid(self, domain: str, entity: str) -> Optional[str]:
+    def geteid(self, domain: str, key: str) -> Optional[str]:
         """
         Retrieves the entity ID for a given entity and domain.
 
         Args:
             domain (str): The domain or partition the entity belongs to.
-            entity (str): The entity name to retrieve the ID for.
+            key (str): The entity key to retrieve the ID for.
 
         Returns:
             Optional[str]: The entity ID if found, otherwise None.
         """
         hstd_name = self.hstd_mngr.set_name(domain)
-        return self.__r.hget(hstd_name, key=entity)
+        return self.__r.hget(hstd_name, key=key)
     
-    def getentity(self, domain: str, entity: str, key: str = None, report: bool = False) -> Optional[
+    def getentity(self, domain: str, key: str, item: str = None, report: bool = False) -> Optional[
         Union[dict[str, str], str]]:
         """
         Retrieves the data associated with an entity, either the entire entity or a specific field (key).
 
         Args:
             domain (str): The domain or partition the entity belongs to.
-            entity (str): The entity name to retrieve.
-            key (str, optional): The specific key within the entity to retrieve. Default is None.
+            key (str): The entity id to retrieve.
+            item (str, optional): The specific key within the entity to retrieve. Default is None.
             report (bool, optional): If True, will log and report missing entities. Default is False.
 
         Returns:
             Optional[Union[dict[str, str], str]]: The full entity data as a dictionary, or a specific field value as a string.
         """
-        if e_id := self.getentityid(domain, entity):
-            return self.__r.hgetall(e_id) if not key else self.__r.hget(e_id, key=key)
+        if e_id := self.geteid(domain, key):
+            return self.__r.hgetall(e_id) if not item else self.__r.hget(e_id, key=item)
     
         if report:
-            self.snoid_mngr.store(domain, entity)
+            self.snoid_mngr.store(domain, key)
     
-    def getentityids(self, domain: str = None) -> Iterable:
+    def geteids(self, domain: str = None) -> Iterable:
         """
         Retrieves the IDs of all entities in the specified domain or across all domains.
 
@@ -92,8 +94,25 @@ class L2StaticDataStore(StaticDataStore):
 
         hstd_name = self.hstd_mngr.set_name(domain)
         for t_id in self.__r.hscan_iter(hstd_name): yield self.__r.hgetall(t_id)
-    
-    def _get_eids(self, domain: str, entities: list[Entity]) -> Iterable:
+
+    def _eval_entity(self, entity: AttrEntity) -> Optional[str]:
+        """
+        Evaluate an entity by checking its existence in hashed static data.
+        If not found, add the entity to the hashed static data.
+
+        Args:
+            entity (namedtuple): The entity to evaluate.
+
+        Returns:
+            Optional[str]: The identifier of the entity if found or created, otherwise None.
+        """
+        if e_id := self.hstd_mngr.search_hstd(entity):
+            return e_id
+
+        e_id = self.hstd_mngr.add_to_hstd(entity)
+        return e_id
+
+    def _get_eids(self, domain: str, entities: list[AttrEntity]) -> Iterable:
         """
         Retrieves the entity IDs for a list of entities.
 
