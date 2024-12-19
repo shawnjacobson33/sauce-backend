@@ -14,7 +14,7 @@ class Bookmakers(L1StaticDataStore):
     retrieving specific bookmakers, fetching all bookmakers, and storing bookmaker data.
 
     Attributes:
-        __r (redis.Redis): The Redis client instance used for interacting with the database.
+        _r (redis.Redis): The Redis client instance used for interacting with the database.
     """
     def __init__(self, r: redis.Redis):
         """
@@ -61,10 +61,10 @@ class Bookmakers(L1StaticDataStore):
         """
         assert bookmakers, f"The {self.name} list cannot be empty!"
         try:
-            with self.__r.pipeline() as pipe:
+            with self._r.pipeline() as pipe:
                 pipe.multi()
                 for bkm in bookmakers:
-                    pipe.hsetnx(self.hstd_mngr.hstd, key=bkm.name, value=str(bkm.dflt_odds))
+                    pipe.hsetnx(self.std_mngr.std, key=bkm.name, value=str(bkm.dflt_odds))
 
                 pipe.execute()
 

@@ -7,40 +7,134 @@ from app.data_storage.stores.base import L2StaticDataStore
 
 
 class Subjects(L2StaticDataStore):
+    """
+    A data store class for managing Subject entities in a Redis database.
+    """
     def __init__(self, r: redis.Redis):
+        """
+        Initializes the Subjects data store.
+
+        Args:
+            r (redis.Redis): A Redis client instance.
+        """
         super().__init__(r, 'subjects')
 
     @staticmethod
     def _get_key(subject: Subject) -> str:
+        """
+        Generates a unique key for a given subject based on its attributes.
+
+        Args:
+            subject (Subject): The Subject instance to generate the key for.
+
+        Returns:
+            str: The generated key, which prioritizes `position` > `team` > `name`.
+        """
         if subj_attr := position if (position := subject.position) else team if (team := subject.team) else None:
             return f'{subj_attr}:{subject.name}'
 
         return subject.name
 
     def getid(self, subject: Subject) -> Optional[str]:
+        """
+        Retrieves the unique ID of a subject.
+
+        Args:
+            subject (Subject): The Subject instance to retrieve the ID for.
+
+        Returns:
+            Optional[str]: The unique ID of the subject if found, otherwise `None`.
+        """
         return self.geteid(subject.domain, Subjects._get_key(subject))
 
     def getids(self, league: str = None) -> Iterable:
+        """
+        Retrieves all unique IDs of subjects for a given league.
+
+        Args:
+           league (str, optional): The league name to filter subjects by.
+
+        Yields:
+           Iterable: An iterable of unique subject IDs.
+        """
         yield from self.geteids(league)
 
     def getsubj(self, subject: Subject, report: bool = False) -> Optional[str]:
+        """
+        Retrieves the detailed representation of a subject.
+
+        Args:
+            subject (Subject): The Subject instance to retrieve.
+            report (bool, optional): Whether to include reporting information.
+
+        Returns:
+            Optional[str]: The subject details if found, otherwise `None`.
+        """
         return self.getentity(subject.domain, Subjects._get_key(subject), report=report)
 
     def getsubjs(self, league: str) -> Iterable:
+        """
+        Retrieves detailed representations of all subjects in a league.
+
+        Args:
+            league (str): The league name to filter subjects by.
+
+        Yields:
+            Iterable: An iterable of detailed subject representations.
+        """
         yield from self.getentities(league)
 
-    # TODO: Yet to Implement
+    @staticmethod
+    def _get_keys(subject: Subject) -> tuple[str, str]:
+        """
+        Generates multiple keys for a subject based on its attributes.
+
+        Args:
+            subject (Subject): The Subject instance to generate keys for.
+
+        Returns:
+            Iterable: An iterable of generated keys.
+        """
+        if (position := subject.position) and (team := subject.team):
+            return f'{position}:{subject.name}', f'{team}:{subject.name}'
+
     def store(self, league: str, subjects: list[Subject]) -> None:
+        """
+        Stores a batch of subjects in the database for a given league.
+
+        Args:
+            league (str): The league name associated with the subjects.
+            subjects (list[Subject]): A list of Subject instances to store.
+
+        Raises:
+            AttributeError: If there is an issue with the subject attributes.
+        """
         try:
-            with self.__r.pipeline() as pipe:
+            with self._r.pipeline() as pipe:
                 pipe.multi()
-                for s_id, subj in self._get_eids(league, subjects):
+                for s_id, subj in self._get_eids(league, subjects, keys_func=Subjects._get_keys):
                     pipe.hset(s_id, mapping={
-                        'name': subj.std_name,
-                        'full': subj.full_name
+                        'name': subj.std_name.split(':')[-1],
+                        'team': subj.team,
                     })
 
                 pipe.execute()
 
         except AttributeError as e:
             self._handle_error(e)
+
+
+    # def rollback(self, subj: namedtuple):
+    #     del_keys = 0
+    #     subj_std_name = f'subjects:std:{subj.league}'
+    #     for subj_name in [subj.name, subj.std_name]:
+    #         del_keys += self._r.hdel(subj_std_name, f'{subj.team}:{subj_name}', f'{subj.pos}:{subj_name}')
+    #
+    #     if del_keys == 4:
+    #         curr_id = self._r.get('subjects:auto:id')
+    #         self._r.decrby('subjects:auto:id')
+    #         self._r.delete(f'subject:{int(curr_id)}')
+    #         print(f"Subjects: Successfully deleted {subj.name} and {subj.std_name}!")
+    #         return
+    #
+    #     print(f"Subjects: Failed to delete {subj.name} and {subj.std_name}...they don't exist!")

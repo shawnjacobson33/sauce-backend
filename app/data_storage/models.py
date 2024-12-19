@@ -23,6 +23,11 @@ class AttrEntity(Entity):
 
 
 @dataclass
+class Market(AttrEntity):
+    pass
+
+
+@dataclass
 class Team(AttrEntity):
     full_name: str = None
 
@@ -36,3 +41,11 @@ class Position(AttrEntity):
 class Subject(AttrEntity):
     position: Position
     team: Team
+
+
+@dataclass
+class Game(AttrEntity):
+    home_team: Team
+    away_team: Team
+    start_time: str = None
+    end_time: str = None

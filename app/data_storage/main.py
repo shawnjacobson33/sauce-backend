@@ -9,8 +9,8 @@ from app.database.mongo import MongoDB
 
 
 NAMESPACE_TEMPLATE = {
-    'hstd': '{}:std:{}',
-    'snoid': '{}:noid',
+    'std': '{}:std:{}',
+    'name': '{}:noid',
 }
 
 

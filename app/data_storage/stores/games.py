@@ -1,90 +1,45 @@
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, Iterable
 
 import redis
 
-from app.data_storage.stores import Teams, utils
-
+from app.data_storage.models import Team
+from app.data_storage.stores import utils
+from app.data_storage.stores.dynamic import L2DynamicDataStore as L2Dynamic
 
 NAMESPACE = {
-    'hstd': 'games:std:{}',
+    'std': 'games:std:{}',
     'slive': 'games:live:{}',
     'zwatch': 'games:watch:{}'
 }
 
 
-class Games:
+class Games(L2Dynamic):
     """
     A class to manage game-related operations in a Redis-backed storage system.
 
     Attributes:
-        __r (redis.Redis): The Redis connection object.
-        teams (Teams): An instance of the Teams class for team-related operations.
-        _hstd (str): Redis key pattern for standard games.
+        _r (redis.Redis): The Redis connection object.
         _slive (str): Redis key pattern for live games.
         _zwatch (str): Redis key pattern for games being watched.
-        __aid (utils.AutoId): Utility for generating unique game IDs.
     """
-    def __init__(self, r: redis.Redis, teams: Teams):
-        """
-        Initialize the Games class.
-
-        Args:
-            r (redis.Redis): Redis connection object.
-            teams (Teams): Teams instance for managing team information.
-        """
-        self.__r = r
-        self.teams = teams
-        self._hstd = NAMESPACE['hstd']
+    def __init__(self, r: redis.Redis, name: str):
+        super().__init__(r, 'games')
         self._slive = NAMESPACE['slive']
         self._zwatch = NAMESPACE['zwatch']
-        self.__aid = utils.AutoId(r, 'games')
 
-    def getgameid(self, league: str, t_id: str) -> Optional[str]:
-        """
-        Get the game ID associated with a team in a specific league.
+    def getid(self, team: Team) -> Optional[str]:
+        return self.geteid(team.domain, team.name)
 
-        Args:
-            league (str): The league name.
-            t_id (str): The team ID.
+    def getids(self, league: str = None, is_live: bool = False) -> Iterable:
+        yield from self.geteids(league)
 
-        Returns:
-            Optional[str]: The game ID if it exists, otherwise None.
-        """
-        return self.__r.hget(self._hstd.format(league), key=t_id)
+    def getgame(self, team: Team, report: bool = False) -> Optional[str]:
+        return self.getentity(team.domain, team.name, report=report)
 
-    def getgame(self, league: str, t_id: str, key: str = None) -> Optional[Union[dict[str, str], str]]:
-        """
-        Retrieve information about a game.
+    def getgames(self, league: str, is_live: bool = False) -> Iterable:
+        yield from self.getentities(league)
 
-        Args:
-            league (str): The league name.
-            t_id (str): The team ID.
-            key (str, optional): Specific key to fetch from the game info. Defaults to None.
-
-        Returns:
-            Optional[Union[dict[str, str], str]]: The game information as a dictionary or specific field value.
-        """
-        if game_id := self.getgameid(league, t_id):
-            return self.__r.hgetall(game_id) if not key else self.__r.hget(game_id, key=key)
-
-    def getgames(self, league: str = None) -> list:
-        """
-        Retrieve details of all teams or teams in a specific league.
-
-        Args:
-            league (str, optional): The league to filter by. Defaults to None.
-
-        Returns:
-            list: List of dictionaries containing team details.
-        """
-        if not league:
-            return [self.__r.hgetall(t_id) for t_id in self.__r.keys('game:*')]
-
-        f_hstd_name = self._hstd.format(league)
-        lt_ids = set(self.__r.hgetall(f_hstd_name).values())
-        return [self.__r.hgetall(lt_id) for lt_id in lt_ids]
-
-    def getlivegameids(self, league: str) -> Optional[set[str]]:
+    def getliveids(self, league: str) -> Optional[set[str]]:
         """
         Get IDs of live games currently in play for a league.
 
@@ -95,7 +50,7 @@ class Games:
         Returns:
             Optional[set[str]]: Set of live game IDs, or None if none are found.
         """
-        return utils.get_live_ids(self.__r, self._slive.format(league), self._zwatch.format(league))
+        return utils.get_live_ids(self._r, self._slive.format(league), self._zwatch.format(league))
 
     def getlivegames(self, league: str) -> Optional[set[Union[str, dict[str, Any]]]]:
         """
@@ -108,7 +63,7 @@ class Games:
         Optional[set[Union[str, dict[str, Any]]]]: Set of game details or game IDs if no details are available.
         """
         if g_ids := self.getlivegameids(league):
-            return {self.__r.hgetall(g_id) for g_id in g_ids}
+            return {self._r.hgetall(g_id) for g_id in g_ids}
 
     def _set_game_id(self, league: str, g_id: str, team: str) -> None:
         """
@@ -120,7 +75,7 @@ class Games:
            team (str): The team name.
         """
         t_id = self.teams.getteamid(league, team)
-        self.__r.hsetnx(self._hstd.format(league), key=t_id, value=g_id)
+        self._r.hsetnx(self._std.format(league), key=t_id, value=g_id)
 
     def _set_hash_and_watch(self, league: str, g_id: str, mapping: dict) -> None:
         """
@@ -131,11 +86,11 @@ class Games:
             g_id (str): The game ID.
             mapping (dict): Contains game details.
         """
-        self.__r.hset(g_id, mapping={
+        self._r.hset(g_id, mapping={
             'info': mapping['info'],
             'game_time': mapping['game_time']
         })
-        utils.watch_game_time(self.__r, self._zwatch.format(league), key=g_id, game_time=mapping['game_time'])
+        utils.watch_game_time(self._r, self._zwatch.format(league), key=g_id, game_time=mapping['game_time'])
 
     def store(self, league: str, mapping: dict) -> None:
         """
@@ -162,18 +117,18 @@ class Games:
 
     def flush(self, name: str, league: str) -> None:
         f_name = NAMESPACE[name].format(league)
-        iter_keys = self.__r.hscan_iter(f_name) if 'std' in f_name else self.__r.sscan_iter(f_name)
+        iter_keys = self._r.hscan_iter(f_name) if 'std' in f_name else self._r.sscan_iter(f_name)
         keys = list(iter_keys)
-        self.__r.delete(*keys)
+        self._r.delete(*keys)
         print(f"[Games]: FOR {f_name} Deleted {keys[0]}, {keys[1]}, ...")
 
     def flushall(self) -> None:
-        hstd_keys = list(self.__r.hscan_iter('hstd'))
-        slive_keys = list(self.__r.sscan_iter('slive'))
-        zwatch_keys = list(self.__r.zscan_iter('zwatch'))
-        with self.__r.pipeline() as pipe:
+        std_keys = list(self._r.hscan_iter('std'))
+        slive_keys = list(self._r.sscan_iter('slive'))
+        zwatch_keys = list(self._r.zscan_iter('zwatch'))
+        with self._r.pipeline() as pipe:
             pipe.multi()
-            self.__r.delete(*hstd_keys)
-            self.__r.delete(*slive_keys)
-            self.__r.delete(*zwatch_keys)
+            self._r.delete(*std_keys)
+            self._r.delete(*slive_keys)
+            self._r.delete(*zwatch_keys)
             pipe.execute()

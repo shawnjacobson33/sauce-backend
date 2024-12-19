@@ -3,10 +3,10 @@ from typing import Optional, Iterable
 import redis
 
 from app.data_storage.models import Team
-from app.data_storage.stores.base import L2StaticDataStore
+from app.data_storage.stores.static import L2StaticDataStore as L2Static
 
 
-class Teams(L2StaticDataStore):
+class Teams(L2Static):
     """
     A class that manages the storage and retrieval of team data in a Redis-backed data store.
 
@@ -86,9 +86,9 @@ class Teams(L2StaticDataStore):
             AttributeError: If any expected attribute is missing or incorrectly set.
         """
         try:
-            with self.__r.pipeline() as pipe:
+            with self._r.pipeline() as pipe:
                 pipe.multi()
-                for t_id, team in self._get_eids(league, teams):
+                for t_id, team in self._get_eids(league, teams, keys_func=lambda tm: (tm.name, tm.std_name)):
                     pipe.hset(t_id, mapping={
                         'abbr': team.std_name,
                         'full': team.full_name

@@ -2,27 +2,27 @@ from typing import Optional, Iterable
 
 import redis
 
-from app.data_storage.managers import L1HSTDManager
-from app.data_storage.stores.base import StaticDataStore
+from app.data_storage.managers import L1STDManager
+from app.data_storage.stores.base import DataStore
 
 
-class L1StaticDataStore(StaticDataStore):
+class L1StaticDataStore(DataStore):
     """
     A class that manages static data for entities stored in a Redis database.
 
-    This class extends `StaticDataStore` to provide specialized methods for
+    This class extends `DataStore` to provide specialized methods for
     storing and retrieving standardized entity names and their mappings.
     """
     def __init__(self, r: redis.Redis, name: str):
         """
-        Initializes the SimpleStaticDataStore instance.
+        Initializes the SimpleDataStore instance.
 
         Args:
             r (redis.Redis): A Redis connection instance.
             name (str): The name of the data store.
         """
         super().__init__(r, name)
-        self.hstd_mngr = L1HSTDManager(self.__r, name)
+        self.std_mngr = L1STDManager(self._r, name)
     
     def getentity(self, entity: str, domain: str = None, report: bool = False) -> Optional[str]:
         """
@@ -36,12 +36,12 @@ class L1StaticDataStore(StaticDataStore):
         Returns:
             Optional[str]: The standardized entity name if found, otherwise None.
         """
-        hstd_name = self.hstd_mngr.set_name(domain) if domain else self.hstd_mngr.hstd
-        if entity_match := self.__r.hget(hstd_name, entity):
+        std_name = self.std_mngr.set_name(domain) if domain else self.std_mngr.name
+        if entity_match := self._r.hget(std_name, entity):
             return entity_match
 
         if report:
-            self.snoid_mngr.store(domain, entity)
+            self.id_mngr.storenoid(domain, entity)
 
     def getentities(self, domain: str = None) -> Iterable:
         """
@@ -53,5 +53,5 @@ class L1StaticDataStore(StaticDataStore):
         Returns:
             Any: A collection of standardized entity names from the partition.
         """
-        hstd_name = self.hstd_mngr.set_name(domain) if domain else self.hstd_mngr.hstd
-        for val in self.__r.hgetall(hstd_name).values(): yield val
+        std_name = self.std_mngr.set_name(domain) if domain else self.std_mngr.name
+        for val in self._r.hgetall(std_name).values(): yield val

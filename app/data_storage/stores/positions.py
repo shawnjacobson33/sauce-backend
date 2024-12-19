@@ -15,7 +15,7 @@ class Positions(L1StaticDataStore):
     and storing position data in a structured way.
 
     Attributes:
-        __r (redis.Redis): The Redis client used for data storage and retrieval.
+        _r (redis.Redis): The Redis client used for data storage and retrieval.
         name (str): The base name used to create Redis keys for storing position data.
     """
     def __init__(self, r: redis.Redis, name: str):
@@ -72,12 +72,12 @@ class Positions(L1StaticDataStore):
         """
         assert positions, f"The list of {self.name} cannot be empty!"
         try:
-            hstd_name = self.hstd_mngr.set_name(sport)
-            with self.__r.pipeline() as pipe:
+            std_name = self.std_mngr.set_name(sport)
+            with self._r.pipeline() as pipe:
                 pipe.multi()
                 for entity in positions:
                     for entity_name in {entity.name, entity.std_name}:
-                        pipe.hsetnx(hstd_name, key=entity_name, value=entity.std_name)
+                        pipe.hsetnx(std_name, key=entity_name, value=entity.std_name)
 
                 pipe.execute()
 

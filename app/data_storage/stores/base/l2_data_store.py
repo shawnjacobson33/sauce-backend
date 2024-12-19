@@ -1,32 +1,32 @@
-from typing import Union, Optional, Iterable
+from typing import Optional, Union, Iterable, Any
 
 import redis
 
-from app.data_storage.models import Entity, AttrEntity
-from app.data_storage.managers import L2HSTDManager
+from app.data_storage.models import AttrEntity
+from app.data_storage.managers import L2STDManager
+from app.data_storage.stores.base import DataStore
 from app.data_storage.stores.utils import get_entity_type
-from app.data_storage.stores.base.static import StaticDataStore
 
 
-class L2StaticDataStore(StaticDataStore):
+class L2DataStore(DataStore):
     """
-    A class that manages static data for entities with an additional layer of entity retrieval and
-    organization, using Redis as a storage backend.
+    L2DataStore is a data store that provides higher-level storage capabilities for managing
+    and interacting with hierarchical structured data.
 
-    This class extends `StaticDataStore` to provide methods for retrieving entity data based on
-    domain and entity identifiers, and also supports retrieval by specific keys and bulk retrieval.
+    Attributes:
+        std_mngr (L2STDManager): A manager for handling standardized data (STD).
     """
     def __init__(self, r: redis.Redis, name: str):
         """
-        Initializes the L2StaticDataStore instance.
+        Initialize the L2DataStore instance.
 
         Args:
-            r (redis.Redis): A Redis connection instance.
-            name (str): The name of the data store.
+            r (redis.Redis): Redis connection instance.
+            name (str): Name of the data store.
         """
         super().__init__(r, name)
-        self.hstd_mngr = L2HSTDManager(self.__r, name)
-    
+        self.std_mngr = L2STDManager(self._r, name, self.id_mngr)
+
     def geteid(self, domain: str, key: str) -> Optional[str]:
         """
         Retrieves the entity ID for a given entity and domain.
@@ -38,9 +38,9 @@ class L2StaticDataStore(StaticDataStore):
         Returns:
             Optional[str]: The entity ID if found, otherwise None.
         """
-        hstd_name = self.hstd_mngr.set_name(domain)
-        return self.__r.hget(hstd_name, key=key)
-    
+        std_name = self.std_mngr.set_name(domain)
+        return self._r.hget(std_name, key=key)
+
     def getentity(self, domain: str, key: str, item: str = None, report: bool = False) -> Optional[
         Union[dict[str, str], str]]:
         """
@@ -56,11 +56,11 @@ class L2StaticDataStore(StaticDataStore):
             Optional[Union[dict[str, str], str]]: The full entity data as a dictionary, or a specific field value as a string.
         """
         if e_id := self.geteid(domain, key):
-            return self.__r.hgetall(e_id) if not item else self.__r.hget(e_id, key=item)
-    
+            return self._r.hgetall(e_id) if not item else self._r.hget(e_id, key=item)
+
         if report:
-            self.snoid_mngr.store(domain, key)
-    
+            self.id_mngr.storenoid(domain, key)
+
     def geteids(self, domain: str = None) -> Iterable:
         """
         Retrieves the IDs of all entities in the specified domain or across all domains.
@@ -73,11 +73,11 @@ class L2StaticDataStore(StaticDataStore):
         """
         if not domain:
             entity_type = get_entity_type(self.name)
-            return (t_key for t_key in self.__r.scan_iter(f'{entity_type}:*'))
+            return (t_key for t_key in self._r.scan_iter(f'{entity_type}:*'))
 
-        hstd_name = self.hstd_mngr.set_name(domain)
-        for t_key in self.__r.hscan_iter(hstd_name): yield self.__r.hget(hstd_name, t_key)
-    
+        std_name = self.std_mngr.set_name(domain)
+        for t_key in self._r.hscan_iter(std_name): yield self._r.hget(std_name, t_key)
+
     def getentities(self, domain: str = None) -> Iterable:
         """
         Retrieves the data for all entities in the specified domain or across all domains.
@@ -90,12 +90,12 @@ class L2StaticDataStore(StaticDataStore):
         """
         if not domain:
             entity_type = get_entity_type(self.name)
-            return (self.__r.hgetall(t_key) for t_key in self.__r.scan_iter(f'{entity_type}:*'))
+            return (self._r.hgetall(t_key) for t_key in self._r.scan_iter(f'{entity_type}:*'))
 
-        hstd_name = self.hstd_mngr.set_name(domain)
-        for t_id in self.__r.hscan_iter(hstd_name): yield self.__r.hgetall(t_id)
+        std_name = self.std_mngr.set_name(domain)
+        for t_id in self._r.hscan_iter(std_name): yield self._r.hgetall(t_id)
 
-    def _eval_entity(self, entity: AttrEntity) -> Optional[str]:
+    def _eval_entity(self, entity: AttrEntity, keys: tuple[Any, ...]) -> Optional[str]:
         """
         Evaluate an entity by checking its existence in hashed static data.
         If not found, add the entity to the hashed static data.
@@ -106,31 +106,11 @@ class L2StaticDataStore(StaticDataStore):
         Returns:
             Optional[str]: The identifier of the entity if found or created, otherwise None.
         """
-        if e_id := self.hstd_mngr.search_hstd(entity):
+        if e_id := self.std_mngr.search(entity):
             return e_id
 
-        e_id = self.hstd_mngr.add_to_hstd(entity)
+        e_id = self.std_mngr.insert(entity, *keys)
         return e_id
-
-    def _get_eids(self, domain: str, entities: list[AttrEntity]) -> Iterable:
-        """
-        Retrieves the entity IDs for a list of entities.
-
-        Args:
-            domain (str): The domain to look for entities in.
-            entities (list[Entity]): A list of `Entity` objects to retrieve IDs for.
-
-        Yields:
-            Tuple: Yields a tuple of entity ID and corresponding `Entity` object.
-
-        Raises:
-            AssertionError: If the `entities` list is empty.
-        """
-        assert entities, f"The list of {self.name} cannot be empty!"
-        self.hstd_mngr.set_name(domain)
-        for entity in entities:
-            if e_id := self._eval_entity(entity):
-                yield e_id, entity
 
     def _handle_error(self, e: Exception) -> None:
         """
@@ -138,7 +118,7 @@ class L2StaticDataStore(StaticDataStore):
 
         This method logs an error message with the current instance's name
         and performs cleanup actions by decrementing a counter in the associated
-        `aid` object of the `_hstd_manager`.
+        `aid` object of the `_std_manager`.
 
         Args:
             e (Exception): The error message to be logged and displayed.
@@ -147,4 +127,4 @@ class L2StaticDataStore(StaticDataStore):
             None: This method does not return a value.
         """
         self._log_error(e)
-        self.hstd_mngr.aid_mngr.decrement()
+        self.id_mngr.decrement()
