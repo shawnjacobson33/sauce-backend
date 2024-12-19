@@ -1,26 +1,26 @@
-from typing import Optional
+from typing import Iterable, Optional
 
 import redis
 
-from app.data_storage.managers import Manager
-from app.data_storage.models import AttrEntity, Entity
+from app.data_storage.managers.manager import Manager
+from app.data_storage.managers.base import GTManager
 
 
 class LIVEManager(Manager):
     def __init__(self, r: redis.Redis, name: str):
-        super().__init__(r, f'{name}:slive')
+        super().__init__(r, f'{name}:live')
+        self.gt_mngr = GTManager(r, name)
 
-    def getall(self) -> Optional[str]:
-        curr_ts = convert_to_timestamp(datetime.now())
-        live_ids = r.zrange(
-            name=zwatch,
-            start=int(float('-inf')),
-            end=curr_ts,
-            byscore=True
-        )
-        r.zrem(zwatch, *live_ids)
-        _update_live_set(r, slive, live_ids)
+    def getgameids(self, league: str) -> Optional[set[str]]:
+        live_ids = self.gt_mngr.getactive(league)
+        self.set_name(league)
+        self.store(live_ids)
         return live_ids
 
-    def insert(self, entity: Entity) -> Optional[str]:
-       raise NotImplementedError("Must implement!")
+    def store(self, live_ids: set[str]) -> None:
+        with self._r.pipeline() as pipe:
+            pipe.watch(self.name)
+            pipe.multi()
+            for idx in live_ids:
+                pipe.sadd(self.name, idx)
+            pipe.execute()

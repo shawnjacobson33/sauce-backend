@@ -1,3 +1,5 @@
+from typing import Optional
+
 import redis
 
 from app.data_storage.stores.base import L2DataStore

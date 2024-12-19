@@ -36,34 +36,17 @@ class Games(L2Dynamic):
     def getgame(self, team: Team, report: bool = False) -> Optional[str]:
         return self.getentity(team.domain, team.name, report=report)
 
+    def _getlivegames(self, league: str) -> Optional[set[Union[str, dict[str, Any]]]]:
+        if g_ids := self.live_mngr.getgameids(league):
+            for g_id in g_ids: yield self._r.hgetall(g_id)
+
     def getgames(self, league: str, is_live: bool = False) -> Iterable:
-        yield from self.getentities(league)
+        yield from (self._getlivegames(league) if is_live else self.getentities(league))
 
     def getliveids(self, league: str) -> Optional[set[str]]:
-        """
-        Get IDs of live games currently in play for a league.
+        return self.live_mngr.getall(league)
 
-        Args:0.
 
-            league (str): The league name.
-
-        Returns:
-            Optional[set[str]]: Set of live game IDs, or None if none are found.
-        """
-        return utils.get_live_ids(self._r, self._slive.format(league), self._zwatch.format(league))
-
-    def getlivegames(self, league: str) -> Optional[set[Union[str, dict[str, Any]]]]:
-        """
-        Get details of games currently in play for a league.
-
-        Args:
-        league (str): The league name.
-
-        Returns:
-        Optional[set[Union[str, dict[str, Any]]]]: Set of game details or game IDs if no details are available.
-        """
-        if g_ids := self.getlivegameids(league):
-            return {self._r.hgetall(g_id) for g_id in g_ids}
 
     def _set_game_id(self, league: str, g_id: str, team: str) -> None:
         """

@@ -2,9 +2,8 @@ from typing import Optional
 
 import redis
 
-from app.data_storage.managers import IDManager
 from app.data_storage.models import AttrEntity
-from app.data_storage.managers.base import STDManager
+from app.data_storage.managers.base import STDManager, IDManager
 
 
 class L1STDManager(STDManager):
