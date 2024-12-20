@@ -1,38 +1,53 @@
-from typing import Optional
+from typing import Optional, Callable, Iterable
 
 import redis
 
-from app.data_storage.models import AttrEntity, Entity
-from app.data_storage.managers import Manager, IDManager
+from app.data_storage.models import Entity
+from app.data_storage.managers.manager import Manager
+from app.data_storage.managers.base import IDManager
+from app.data_storage.stores.utils import get_entity_type
 
 
 class STDManager(Manager):
-    """
-    A manager class for handling static hashed standardization maps in Redis.
-
-    Inherits from `STDManager` to manage the operations of interacting with
-    hashed static data storage in Redis. This manager is specialized to work
-    with static data, including inserting and updating entities.
-
-    Attributes:
-        id_mngr (IDManager): Manager for handling entity IDs.
-    """
     def __init__(self, r: redis.Redis, name: str, id_mngr: IDManager):
         super().__init__(r, f'{name}:std')
         self.id_mngr = id_mngr
 
-    def search(self, entity: AttrEntity) -> Optional[str]:
-        """
-        Searches the hash structure for the entity's standardized name and attempts to link
-        the entity's name to the same auto-generated ID if found.
+    def get_eid(self, domain: str, key: str) -> Optional[str]:
+        self.name = domain
+        return self._r.hget(self.name, key)
+    
+    def get_eids(self, domain: str = None) -> Iterable:
+        if not domain:
+            entity_type = get_entity_type(self.name)
+            return (t_key for t_key in self._r.scan_iter(f'{entity_type}:*'))
+        
+        self.name = domain
+        for t_key in self._r.hscan_iter(self.name): yield self._r.hget(self.name, t_key)
+        
+    def _find_eid(self, entity: Entity, keys: Callable) -> Optional[str]:
+        e_id = None
+        for key in keys(entity):
+            if match := self._r.hget(self.name, key):
+                e_id = match
+                continue
+                
+            if e_id: self._r.hsetnx(self.name, key=key, value=e_id)
+        
+        return e_id
+    
+    def _map_entity(self, entity: Entity, keys: Callable) -> Optional[str]:
+        e_id = self.id_mngr.generate()
+        for key in keys(entity):
+            self.performed_insert = True if self._r.hsetnx(self.name, key=key, value=e_id) else False
 
-        Returns:
-            Optional[str]: The auto-generated ID if the entity's standardized name exists,
-                           otherwise None.
-        """
-        if e_id := self._r.hget(self.name, entity.std_name):
-            self.updates = self._r.hsetnx(self.name, key=entity.name, value=e_id)
-            return e_id
+        return e_id if self.performed_insert else self.id_mngr.decr()
 
-    def insert(self, entity: Entity) -> Optional[str]:
-       raise NotImplementedError("Must implement!")
+    def store_eids(self, domain: str, entities: list[Entity], keys: Callable) -> Iterable:
+        self.name = domain
+        for entity in entities:
+            if not (e_id := self._find_eid(entity, keys)):
+                e_id = self._map_entity(entity, keys)
+            
+            yield e_id, entity
+        

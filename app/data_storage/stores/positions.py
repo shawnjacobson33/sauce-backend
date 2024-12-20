@@ -3,10 +3,10 @@ from typing import Optional, Iterable
 import redis
 
 from app.data_storage.models import Position
-from app.data_storage.stores import L1StaticDataStore
+from app.data_storage.stores.static import StaticDataStore
 
 
-class Positions(L1StaticDataStore):
+class Positions(StaticDataStore):
     """
     A Redis-backed manager for handling sports-related position data.
 
@@ -18,15 +18,14 @@ class Positions(L1StaticDataStore):
         _r (redis.Redis): The Redis client used for data storage and retrieval.
         name (str): The base name used to create Redis keys for storing position data.
     """
-    def __init__(self, r: redis.Redis, name: str):
+    def __init__(self, r: redis.Redis):
         """
         Initialize the Positions manager with a Redis client and a base name.
 
         Args:
             r (redis.Redis): A Redis client instance for interacting with the database.
-            name (str): The base name to create Redis keys for managing position data.
         """
-        super().__init__(r, name)
+        super().__init__(r, 'positions')
 
     def getpos(self, sport: str, pos: str, report: bool = False) -> Optional[str]:
         """
@@ -40,7 +39,7 @@ class Positions(L1StaticDataStore):
         Returns:
             Optional[str]: The unique identifier for the position if found, otherwise None.
         """
-        return self.getentity(pos, domain=sport, report=report)
+        return self.get_entity('direct', sport, pos, report=report)
 
     def getpositions(self, sport: str) -> Iterable:
         """
@@ -53,7 +52,7 @@ class Positions(L1StaticDataStore):
             Optional[list[str]]: A list of position identifiers for the sport if any exist,
                                  otherwise None.
         """
-        yield from self.getentities(domain=sport)
+        yield from self.get_entities(domain=sport)
 
     def store(self, sport: str, positions: list[Position]) -> None:
         """
@@ -72,12 +71,12 @@ class Positions(L1StaticDataStore):
         """
         assert positions, f"The list of {self.name} cannot be empty!"
         try:
-            std_name = self.std_mngr.set_name(sport)
+            self.std_mngr.name = sport
             with self._r.pipeline() as pipe:
                 pipe.multi()
                 for entity in positions:
                     for entity_name in {entity.name, entity.std_name}:
-                        pipe.hsetnx(std_name, key=entity_name, value=entity.std_name)
+                        pipe.hsetnx(self.std_mngr.name, key=entity_name, value=entity.std_name)
 
                 pipe.execute()
 

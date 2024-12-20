@@ -3,10 +3,10 @@ from typing import Optional, Iterable
 import redis
 
 from app.data_storage.models import Team
-from app.data_storage.stores.static import L2StaticDataStore as L2Static
+from app.data_storage.stores.static import StaticDataStore
 
 
-class Teams(L2Static):
+class Teams(StaticDataStore):
     """
     A class that manages the storage and retrieval of team data in a Redis-backed data store.
 
@@ -32,7 +32,7 @@ class Teams(L2Static):
         Returns:
             Optional[str]: The unique identifier for the team, or None if not found.
         """
-        return self.geteid(team.domain, team.name)
+        return self.std_mngr.get_eid(team.domain, team.name)
 
     def getids(self, league: str = None) -> Iterable:
         """
@@ -44,7 +44,7 @@ class Teams(L2Static):
         Yields:
             str: Team identifiers.
         """
-        yield from self.geteids(league)
+        yield from self.std_mngr.get_eids(league)
 
     def getteam(self, team: Team, report: bool = False) -> Optional[str]:
         """
@@ -57,7 +57,7 @@ class Teams(L2Static):
         Returns:
             Optional[str]: Details of the team, or None if not found.
         """
-        return self.getentity(team.domain, team.name, report=report)
+        return self.get_entity('secondary', team.domain, team.name, report=report)
 
     def getteams(self, league: str) -> Iterable:
         """
@@ -69,7 +69,7 @@ class Teams(L2Static):
         Yields:
             str: Team identifiers within the specified league.
         """
-        yield from self.getentities(league)
+        yield from self.get_entities(league)
 
     def store(self, league: str, teams: list[Team]) -> None:
         """
@@ -88,7 +88,7 @@ class Teams(L2Static):
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                for t_id, team in self._get_eids(league, teams, keys_func=lambda tm: (tm.name, tm.std_name)):
+                for t_id, team in self.std_mngr.store_eids(league, teams, keys=lambda tm: (tm.name, tm.std_name)):
                     pipe.hset(t_id, mapping={
                         'abbr': team.std_name,
                         'full': team.full_name

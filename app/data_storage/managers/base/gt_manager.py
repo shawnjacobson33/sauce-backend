@@ -3,7 +3,7 @@ from typing import Optional
 
 import redis
 
-from app.data_storage.managers import Manager
+from app.data_storage.managers.manager import Manager
 from app.data_storage.stores.utils import convert_to_timestamp
 
 

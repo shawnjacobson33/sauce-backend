@@ -20,12 +20,17 @@ class Manager:
             name (str): The initial name associated with this Manager.
         """
         self._r = r
-        self.name = name
+        self._name = name
 
         self.performed_insert = False
         self.updates = 0
 
-    def set_name(self, domain: str) -> str:
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, domain: str = None) -> None:
         """
         Modifies the current `name` by appending or replacing the domain.
 
@@ -38,10 +43,9 @@ class Manager:
         Returns:
             str: The modified `name` with the domain included.
         """
-        if self.name.count(':') == 2:
-            self.name = f'{self.name}:{domain}'
-        else:
-            partial_name = ':'.join(self.name.split(':')[:-1])
-            self.name = f'{partial_name}:{domain}'
-
-        return self.name
+        if domain:
+            if self._name.count(':') == 2:
+                self._name = f'{self._name}:{domain}'
+            else:
+                partial_name = ':'.join(self._name.split(':')[:-1])
+                self._name = f'{partial_name}:{domain}'

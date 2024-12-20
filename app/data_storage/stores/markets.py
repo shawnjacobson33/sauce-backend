@@ -3,20 +3,19 @@ from typing import Optional, Iterable
 import redis
 
 from app.data_storage.models import Market
-from app.data_storage.stores import L1StaticDataStore
+from app.data_storage.stores.static import StaticDataStore
 
 
-class Markets(L1StaticDataStore):
+class Markets(StaticDataStore):
     """
     A data store class for managing Market entities in a Redis database.
     """
-    def __init__(self, r: redis.Redis, name: str):
+    def __init__(self, r: redis.Redis):
         """
         Initializes the Markets data store.
 
         Args:
             r (redis.Redis): A Redis client instance.
-            name (str): The name of the data store (e.g., 'markets').
         """
         super().__init__(r, 'markets')
 
@@ -32,7 +31,7 @@ class Markets(L1StaticDataStore):
         Returns:
             Optional[str]: The market details if found, otherwise `None`.
         """
-        return self.getentity(market, domain=sport, report=report)
+        return self.get_entity('direct', sport, market, report=report)
 
     def getmarkets(self, sport: str) -> Iterable:
         """
@@ -44,7 +43,7 @@ class Markets(L1StaticDataStore):
         Yields:
             Iterable: An iterable of detailed market representations.
         """
-        yield from self.getentities(domain=sport)
+        yield from self.get_entities(domain=sport)
 
     def store(self, sport: str, markets: list[Market]) -> None:
         """
@@ -60,12 +59,12 @@ class Markets(L1StaticDataStore):
         """
         assert markets, f"The list of {self.name} cannot be empty!"
         try:
-            std_name = self.std_mngr.set_name(sport)
+            self.std_mngr.name = sport
             with self._r.pipeline() as pipe:
                 pipe.multi()
                 for entity in markets:
                     for entity_name in {entity.name, entity.std_name}:
-                        pipe.hsetnx(std_name, key=entity_name, value=entity.std_name)
+                        pipe.hsetnx(self.std_mngr.name, key=entity_name, value=entity.std_name)
 
                 pipe.execute()
 

@@ -22,7 +22,7 @@ class Games(L2Dynamic):
         _slive (str): Redis key pattern for live games.
         _zwatch (str): Redis key pattern for games being watched.
     """
-    def __init__(self, r: redis.Redis, name: str):
+    def __init__(self, r: redis.Redis):
         super().__init__(r, 'games')
         self._slive = NAMESPACE['slive']
         self._zwatch = NAMESPACE['zwatch']
@@ -46,29 +46,11 @@ class Games(L2Dynamic):
     def getliveids(self, league: str) -> Optional[set[str]]:
         return self.live_mngr.getall(league)
 
-
-
     def _set_game_id(self, league: str, g_id: str, team: str) -> None:
-        """
-        Associate a game ID with a team ID in a specific league.
-
-        Args:
-           league (str): The league name.
-           g_id (str): The game ID.
-           team (str): The team name.
-        """
         t_id = self.teams.getteamid(league, team)
         self._r.hsetnx(self._std.format(league), key=t_id, value=g_id)
 
     def _set_hash_and_watch(self, league: str, g_id: str, mapping: dict) -> None:
-        """
-        Store game information and add the game to the watch list.
-
-        Args:
-            league (str): The league name.
-            g_id (str): The game ID.
-            mapping (dict): Contains game details.
-        """
         self._r.hset(g_id, mapping={
             'info': mapping['info'],
             'game_time': mapping['game_time']
@@ -76,16 +58,6 @@ class Games(L2Dynamic):
         utils.watch_game_time(self._r, self._zwatch.format(league), key=g_id, game_time=mapping['game_time'])
 
     def store(self, league: str, mapping: dict) -> None:
-        """
-        Store a new game's data in the system.
-
-        Args:
-            league (str): The league name.
-            mapping (dict): Game information including teams and additional details.
-
-        Raises:
-            KeyError: If required keys are missing from the mapping.
-        """
         try:
             new_g_id = self.__aid.generate()
             for team in mapping['info'].split('_')[2].split('@'):
@@ -96,7 +68,7 @@ class Games(L2Dynamic):
 
         except KeyError as e:
             print("Error: ", e)
-            self.__aid.decrement()
+            self.__aid.decr()
 
     def flush(self, name: str, league: str) -> None:
         f_name = NAMESPACE[name].format(league)

@@ -3,10 +3,10 @@ from typing import Optional
 import redis
 
 from app.data_storage.models import Bookmaker
-from app.data_storage.stores.base import L1StaticDataStore
+from app.data_storage.stores.static import StaticDataStore
 
 
-class Bookmakers(L1StaticDataStore):
+class Bookmakers(StaticDataStore):
     """
     A Redis-backed manager for handling bookmaker data.
 
@@ -35,7 +35,7 @@ class Bookmakers(L1StaticDataStore):
         Returns:
             Optional[str]: The unique identifier for the bookmaker if found, otherwise None.
         """
-        return self.getentity(bookmaker)
+        return self.get_entity('direct', bookmaker)
 
     def getbookmakers(self):
         """
@@ -44,7 +44,7 @@ class Bookmakers(L1StaticDataStore):
         Returns:
             Iterable: A generator yielding all bookmaker identifiers.
         """
-        return self.getentities()
+        return self.get_entities()
 
     def store(self, bookmakers: list[Bookmaker]):
         """
@@ -64,7 +64,7 @@ class Bookmakers(L1StaticDataStore):
             with self._r.pipeline() as pipe:
                 pipe.multi()
                 for bkm in bookmakers:
-                    pipe.hsetnx(self.std_mngr.std, key=bkm.name, value=str(bkm.dflt_odds))
+                    pipe.hsetnx(self.std_mngr.name, key=bkm.name, value=str(bkm.dflt_odds))
 
                 pipe.execute()
 

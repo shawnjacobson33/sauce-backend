@@ -2,18 +2,18 @@ from typing import Optional
 
 import redis
 
-from app.data_storage.managers import Manager
+from app.data_storage.managers.manager import Manager
 from app.data_storage.stores.utils import get_entity_type
 
 
 class IDManager(Manager):
     """
-    Manages the automatic generation, resetting, and decrementing of IDs
+    Manages the automatic generation, resetting, and decring of IDs
     in a Redis-backed system.
 
     The class uses a Redis instance to maintain and manipulate an auto-incremented
     ID associated with a given name. It supports resetting the ID counter,
-    decrementing it, and generating new IDs in a consistent format.
+    decring it, and generating new IDs in a consistent format.
     """
     def __init__(self, r: redis.Redis, name: str):
         """
@@ -43,7 +43,7 @@ class IDManager(Manager):
         new_id = self._r.incrby(self.name)
         return f'{get_entity_type(self.name)}:{new_id}'
 
-    def decrement(self) -> None:
+    def decr(self) -> None:
         """
         Decrements the ID counter in Redis by 1.
 

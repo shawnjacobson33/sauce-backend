@@ -3,10 +3,10 @@ from typing import Optional, Iterable
 import redis
 
 from app.data_storage.models import Subject
-from app.data_storage.stores.base import L2StaticDataStore
+from app.data_storage.stores.static import StaticDataStore
 
 
-class Subjects(L2StaticDataStore):
+class Subjects(StaticDataStore):
     """
     A data store class for managing Subject entities in a Redis database.
     """
@@ -45,7 +45,7 @@ class Subjects(L2StaticDataStore):
         Returns:
             Optional[str]: The unique ID of the subject if found, otherwise `None`.
         """
-        return self.geteid(subject.domain, Subjects._get_key(subject))
+        return self.std_mngr.get_eid(subject.domain, Subjects._get_key(subject))
 
     def getids(self, league: str = None) -> Iterable:
         """
@@ -57,7 +57,7 @@ class Subjects(L2StaticDataStore):
         Yields:
            Iterable: An iterable of unique subject IDs.
         """
-        yield from self.geteids(league)
+        yield from self.std_mngr.get_eids(league)
 
     def getsubj(self, subject: Subject, report: bool = False) -> Optional[str]:
         """
@@ -70,7 +70,7 @@ class Subjects(L2StaticDataStore):
         Returns:
             Optional[str]: The subject details if found, otherwise `None`.
         """
-        return self.getentity(subject.domain, Subjects._get_key(subject), report=report)
+        return self.get_entity('secondary', subject.domain, Subjects._get_key(subject), report=report)
 
     def getsubjs(self, league: str) -> Iterable:
         """
@@ -82,7 +82,7 @@ class Subjects(L2StaticDataStore):
         Yields:
             Iterable: An iterable of detailed subject representations.
         """
-        yield from self.getentities(league)
+        yield from self.get_entities(league)
 
     @staticmethod
     def _get_keys(subject: Subject) -> tuple[str, str]:
@@ -112,7 +112,7 @@ class Subjects(L2StaticDataStore):
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                for s_id, subj in self._get_eids(league, subjects, keys_func=Subjects._get_keys):
+                for s_id, subj in self.std_mngr.store_eids(league, subjects, keys=Subjects._get_keys):
                     pipe.hset(s_id, mapping={
                         'name': subj.std_name.split(':')[-1],
                         'team': subj.team,

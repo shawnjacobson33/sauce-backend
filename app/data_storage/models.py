@@ -17,35 +17,35 @@ class SportsDataProvider(Entity):
 
 
 @dataclass
-class AttrEntity(Entity):
+class Market(Entity):
     domain: str
-    std_name: str = None
+    std_name: str
 
 
 @dataclass
-class Market(AttrEntity):
-    pass
+class Position(Entity):
+    domain: str
+    std_name: str
 
 
 @dataclass
-class Team(AttrEntity):
+class Team(Entity):
+    domain: str
+    std_name: str
     full_name: str = None
 
 
 @dataclass
-class Position(AttrEntity):
-    pass
+class Subject(Entity):
+    domain: str
+    std_name: str
+    position: str
+    team: str
 
 
 @dataclass
-class Subject(AttrEntity):
-    position: Position
-    team: Team
-
-
-@dataclass
-class Game(AttrEntity):
-    home_team: Team
-    away_team: Team
+class Game(Entity):
+    home_team: str
+    away_team: str
     start_time: str = None
     end_time: str = None

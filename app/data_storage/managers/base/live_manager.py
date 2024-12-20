@@ -1,4 +1,4 @@
-from typing import Iterable, Optional
+from typing import Optional
 
 import redis
 

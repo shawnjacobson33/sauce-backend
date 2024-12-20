@@ -2,7 +2,7 @@ from typing import Optional, Union, Iterable, Any
 
 import redis
 
-from app.data_storage.models import AttrEntity
+from app.data_storage.models import Entity
 from app.data_storage.managers import L2STDManager
 from app.data_storage.stores.base import DataStore
 from app.data_storage.stores.utils import get_entity_type
@@ -71,12 +71,9 @@ class L2DataStore(DataStore):
         Returns:
             Iterable: An iterable of entity IDs.
         """
-        if not domain:
-            entity_type = get_entity_type(self.name)
-            return (t_key for t_key in self._r.scan_iter(f'{entity_type}:*'))
 
-        std_name = self.std_mngr.set_name(domain)
-        for t_key in self._r.hscan_iter(std_name): yield self._r.hget(std_name, t_key)
+
+
 
     def getentities(self, domain: str = None) -> Iterable:
         """
@@ -95,7 +92,7 @@ class L2DataStore(DataStore):
         std_name = self.std_mngr.set_name(domain)
         for t_id in self._r.hscan_iter(std_name): yield self._r.hgetall(t_id)
 
-    def _eval_entity(self, entity: AttrEntity, keys: tuple[Any, ...]) -> Optional[str]:
+    def _eval_entity(self, entity: Entity, keys: tuple[Any, ...]) -> Optional[str]:
         """
         Evaluate an entity by checking its existence in hashed static data.
         If not found, add the entity to the hashed static data.
@@ -106,25 +103,10 @@ class L2DataStore(DataStore):
         Returns:
             Optional[str]: The identifier of the entity if found or created, otherwise None.
         """
+        self.std_mngr.set_name(entity.domain)
         if e_id := self.std_mngr.search(entity):
             return e_id
 
         e_id = self.std_mngr.insert(entity, *keys)
         return e_id
 
-    def _handle_error(self, e: Exception) -> None:
-        """
-        Handles error cleanup for attribute-related operations.
-
-        This method logs an error message with the current instance's name
-        and performs cleanup actions by decrementing a counter in the associated
-        `aid` object of the `_std_manager`.
-
-        Args:
-            e (Exception): The error message to be logged and displayed.
-
-        Returns:
-            None: This method does not return a value.
-        """
-        self._log_error(e)
-        self.id_mngr.decrement()
