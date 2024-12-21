@@ -1,9 +1,7 @@
-from typing import Optional
-
 import redis
 
 from app.data_storage.managers.manager import Manager
-from app.data_storage.managers.base import GTManager
+from app.data_storage.managers import GTManager
 
 
 class LIVEManager(Manager):
@@ -11,11 +9,14 @@ class LIVEManager(Manager):
         super().__init__(r, f'{name}:live')
         self.gt_mngr = GTManager(r, name)
 
-    def getgameids(self, league: str) -> Optional[set[str]]:
-        live_ids = self.gt_mngr.getactive(league)
-        self.set_name(league)
+    def getgameids(self, domain: str) -> str:
+        live_ids = self.gt_mngr.getactive(domain)
+        self.name = domain
         self.store(live_ids)
-        return live_ids
+        for live_id in live_ids: yield live_id
+
+    def track_game(self, domain: str, key: str, gt) -> None:
+        self.gt_mngr.store(domain, key, gt)
 
     def store(self, live_ids: set[str]) -> None:
         with self._r.pipeline() as pipe:

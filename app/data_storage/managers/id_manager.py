@@ -7,30 +7,12 @@ from app.data_storage.stores.utils import get_entity_type
 
 
 class IDManager(Manager):
-    """
-    Manages the automatic generation, resetting, and decring of IDs
-    in a Redis-backed system.
-
-    The class uses a Redis instance to maintain and manipulate an auto-incremented
-    ID associated with a given name. It supports resetting the ID counter,
-    decring it, and generating new IDs in a consistent format.
-    """
     def __init__(self, r: redis.Redis, name: str):
-        """
-        Initializes the IdManager with a Redis instance and a name.
-
-        Args:
-            r (redis.Redis): A Redis connection instance for ID management.
-            name (str): The base name for the ID key in Redis. The name must end with 's'.
-
-        Raises:
-            AssertionError: If the provided name does not end with 's'.
-        """
-        assert name and name[-1] == 's'
         super().__init__(r, f'{name}:id')
-        self.noid_name = f'{name}:noid'
+        self.noid_name = '{}:noid'
 
     def generate(self) -> str:
+
         """
         Generates a new ID by incrementing the counter in Redis.
 

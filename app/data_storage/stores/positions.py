@@ -3,7 +3,7 @@ from typing import Optional, Iterable
 import redis
 
 from app.data_storage.models import Position
-from app.data_storage.stores.static import StaticDataStore
+from app.data_storage.stores.base import StaticDataStore
 
 
 class Positions(StaticDataStore):

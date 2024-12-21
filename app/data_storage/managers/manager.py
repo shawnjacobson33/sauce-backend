@@ -7,7 +7,7 @@ class Manager:
 
     Attributes:
         _r (redis.Redis): The Redis connection instance used to interact with the database.
-        name (str): The name associated with this manager, used to generate keys or manage the domain.
+        _name (str): The name associated with this manager, used to generate keys or manage the domain.
         performed_insert (bool): A flag indicating whether an insert operation has been performed.
         updates (int): A counter to track the number of updates performed.
     """
@@ -45,7 +45,7 @@ class Manager:
         """
         if domain:
             if self._name.count(':') == 2:
-                self._name = f'{self._name}:{domain}'
+                self._name = f'{self._name}:{domain.lower()}'
             else:
                 partial_name = ':'.join(self._name.split(':')[:-1])
-                self._name = f'{partial_name}:{domain}'
+                self._name = f'{partial_name}:{domain.lower()}'

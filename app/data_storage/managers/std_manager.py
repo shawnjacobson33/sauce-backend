@@ -3,8 +3,8 @@ from typing import Optional, Callable, Iterable
 import redis
 
 from app.data_storage.models import Entity
+from app.data_storage.managers import IDManager
 from app.data_storage.managers.manager import Manager
-from app.data_storage.managers.base import IDManager
 from app.data_storage.stores.utils import get_entity_type
 
 

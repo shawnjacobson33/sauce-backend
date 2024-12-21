@@ -3,7 +3,7 @@ from typing import Optional
 import redis
 
 from app.data_storage.models import Bookmaker
-from app.data_storage.stores.static import StaticDataStore
+from app.data_storage.stores.base import StaticDataStore
 
 
 class Bookmakers(StaticDataStore):

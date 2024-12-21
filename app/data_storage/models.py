@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Union
 
 
 @dataclass
@@ -45,7 +47,5 @@ class Subject(Entity):
 
 @dataclass
 class Game(Entity):
-    home_team: str
-    away_team: str
-    start_time: str = None
-    end_time: str = None
+    info: str
+    game_time: Union[datetime, int]

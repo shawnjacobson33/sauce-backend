@@ -12,14 +12,14 @@ class GTManager(Manager):
         super().__init__(r, f'{name}:gt')
 
     def getactive(self, league: str) -> Optional[set[str]]:
-        self.set_name(league)
+        self.name = league
         curr_ts = convert_to_timestamp(datetime.now())
         with self._r.pipeline() as pipe:
             pipe.watch(self.name)
             pipe.multi()
             pipe.zrange(
                 name=self.name,
-                start=int(float('-inf')),
+                start=-10000000000,
                 end=curr_ts,
                 byscore=True
             )
@@ -31,5 +31,6 @@ class GTManager(Manager):
             live_ids, _ = pipe.execute()
             return live_ids
 
-    def store(self, key: str, gt: int) -> None:
+    def store(self, domain: str, key: str, gt) -> None:
+        self.name = domain
         self._r.zadd(self.name, mapping={key: gt})
