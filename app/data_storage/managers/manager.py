@@ -45,7 +45,7 @@ class Manager:
         """
         if domain:
             if self._name.count(':') == 2:
-                self._name = f'{self._name}:{domain.lower()}'
-            else:
                 partial_name = ':'.join(self._name.split(':')[:-1])
                 self._name = f'{partial_name}:{domain.lower()}'
+            else:
+                self._name = f'{self._name}:{domain.lower()}'

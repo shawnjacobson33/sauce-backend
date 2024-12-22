@@ -39,7 +39,7 @@ class TestGames(unittest.TestCase):
         return wrapper
 
     def setUp(self):
-        self.redis = Redis()
+        self.redis = Redis()p
         self.client = self.redis.client
         self.games = self.redis.games
 

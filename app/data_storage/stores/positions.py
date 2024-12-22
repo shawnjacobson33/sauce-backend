@@ -39,7 +39,7 @@ class Positions(StaticDataStore):
         Returns:
             Optional[str]: The unique identifier for the position if found, otherwise None.
         """
-        return self.get_entity('direct', sport, pos, report=report)
+        return self.get_entity('direct', pos, sport, report=report)
 
     def getpositions(self, sport: str) -> Iterable:
         """

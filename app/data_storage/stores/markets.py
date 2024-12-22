@@ -31,7 +31,7 @@ class Markets(StaticDataStore):
         Returns:
             Optional[str]: The market details if found, otherwise `None`.
         """
-        return self.get_entity('direct', sport, market, report=report)
+        return self.get_entity('direct', market, sport, report=report)
 
     def getmarkets(self, sport: str) -> Iterable:
         """
