@@ -6,7 +6,7 @@ from app.data_storage.main import Redis
 
 @pytest.fixture
 def setup_redis():
-    redis = Redis()
+    redis = Redis(db='dev')
     redis.client.hset('positions:std:nba', 'PG', 'G')
     redis.client.hset('positions:std:nba', 'SG', 'G')
     redis.client.hset('positions:std:nba', 'G', 'G')
@@ -14,7 +14,7 @@ def setup_redis():
     redis.client.hset('positions:std:nba', 'PF', 'F')
     redis.client.hset('positions:std:nba', 'F', 'F')
     yield redis.positions
-    redis.client.delete('positions:std:nba')
+    redis.client.flushdb()
 
 
 def test_getpos(setup_redis):

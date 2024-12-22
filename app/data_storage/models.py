@@ -10,7 +10,7 @@ class Entity:
 
 @dataclass
 class Bookmaker(Entity):
-    dflt_odds: float
+    dflt_odds: str
 
 
 @dataclass

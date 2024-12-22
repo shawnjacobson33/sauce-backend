@@ -12,8 +12,8 @@ dotenv.load_dotenv('../../.env')
 
 
 class Redis:
-    def __init__(self):
-        self.client = redis.Redis(password=os.getenv('REDIS_PASSWORD'))
+    def __init__(self, db: str = 'prod'):
+        self.client = redis.Redis(db=0 if 'prod' else 1, password=os.getenv('REDIS_PASSWORD'))
         # Structures
         self.markets = st.Markets(self.client)
         self.positions = st.Positions(self.client)

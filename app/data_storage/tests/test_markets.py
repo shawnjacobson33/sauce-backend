@@ -6,12 +6,12 @@ from app.data_storage.main import Redis
 
 @pytest.fixture
 def setup_redis():
-    redis = Redis()
+    redis = Redis(db='dev')
     redis.client.hset('markets:std:nba', 'player_points', 'Points')
     redis.client.hset('markets:std:nba', 'POINTS', 'Points')
     redis.client.hset('markets:std:nba', 'Points', 'Points')
     yield redis.markets
-    redis.client.delete('markets:std:nba')
+    redis.client.flushdb()
 
 
 def test_getmarket(setup_redis):
