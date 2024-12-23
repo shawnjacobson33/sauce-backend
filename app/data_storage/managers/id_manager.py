@@ -45,6 +45,8 @@ class IDManager(Manager):
             return 't'
         elif entity_type == 'subjects':
             return 's'
+        elif entity_type == 'games':
+            return 'g'
 
         raise ValueError(f"Invalid entity type: {entity_type}")
 
@@ -60,7 +62,7 @@ class IDManager(Manager):
             str: The newly generated ID.
         """
         new_id = self._r.incrby(self.name)
-        return f'{self._get_id_prefix()}:{new_id}'
+        return f'{self._get_id_prefix()}{new_id}'
 
     def decr(self) -> None:
         """

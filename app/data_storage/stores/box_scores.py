@@ -1,16 +1,19 @@
-from typing import Optional, Any, Union
+from typing import Optional, Iterable
 
 import redis
 
+from app.data_storage.models import Team, Game
+from app.data_storage.stores.base import DynamicDataStore
 
-class BoxScores:
+
+class BoxScores(DynamicDataStore):
     def __init__(self, r: redis.Redis):
-        self._r = r
+        super().__init__(r, 'box_scores')
 
-    def get(self, subj_id: str, stat: str = None) -> Optional[Union[str, dict[str, Any]]]:
-        bx_id = f'box_scores:{subj_id}'
-        if box_score := self._r.hgetall(bx_id) if not stat else self._r.hget(bx_id, stat):
-            return box_score
+    def getboxscore(self, league: str, s_id: str = None, subj: str = None) -> Optional[Union[str, dict[str, Any]]]:
+        if subj: s_id = self.std_mngr.get_eid(league, subj)
+        if not s_id: raise ValueError(f'No id found for {subj} in {league}.')
+        return self.get_entity('direct', s_id, league)
 
     def get_completed(self) -> Optional[set[str]]:
         return self._r.smembers('box_scores:index:completed')

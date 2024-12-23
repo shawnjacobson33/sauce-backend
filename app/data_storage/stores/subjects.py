@@ -30,10 +30,11 @@ class Subjects(StaticDataStore):
         Returns:
             str: The generated key, which prioritizes `position` > `team` > `name`.
         """
+        condensed_name = subject.name.replace(' ', '')
         if subj_attr := position if (position := subject.position) else team if (team := subject.team) else None:
-            return f'{subj_attr}:{subject.name}'
+            return f'{subj_attr}:{condensed_name}'
 
-        return subject.name
+        return condensed_name
 
     def getid(self, subject: Subject) -> Optional[str]:
         """
@@ -82,7 +83,7 @@ class Subjects(StaticDataStore):
         Yields:
             Iterable: An iterable of detailed subject representations.
         """
-        yield from self.get_entities(league)
+        yield from self.get_entities('secondary', league)
 
     @staticmethod
     def _get_keys(subject: Subject) -> tuple[str, str]:
@@ -96,7 +97,8 @@ class Subjects(StaticDataStore):
             Iterable: An iterable of generated keys.
         """
         if (position := subject.position) and (team := subject.team):
-            return f'{position}:{subject.name}', f'{team}:{subject.name}'
+            condensed_name = subject.name.replace(' ', '')
+            return f'{position}:{condensed_name}', f'{team}:{condensed_name}'
 
     def store(self, league: str, subjects: list[Subject]) -> None:
         """

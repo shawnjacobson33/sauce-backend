@@ -7,11 +7,14 @@ from app.data_storage.main import Redis
 @pytest.fixture
 def setup_redis():
     redis = Redis(db='dev')
-    redis.client.hset('teams:std:nba', 'PHO', 't1')
-    redis.client.hset('teams:std:nba', 'PHX', 't1')
-    redis.client.hset('teams:std:nba', 'LAL', 't2')
-    redis.client.hset('teams:std:nba', 'SAS', 't3')
-    redis.client.hset('teams:std:nba', 'SA', 't3')
+    t_id = redis.teams.id_mngr.generate()
+    redis.client.hset('teams:std:nba', 'PHO', t_id)
+    redis.client.hset('teams:std:nba', 'PHX', t_id)
+    t_id = redis.teams.id_mngr.generate()
+    redis.client.hset('teams:std:nba', 'LAL', t_id)
+    t_id = redis.teams.id_mngr.generate()
+    redis.client.hset('teams:std:nba', 'SAS', t_id)
+    redis.client.hset('teams:std:nba', 'SA', t_id)
 
     redis.client.hset('t1', mapping={'abbr': 'PHO', 'full': 'Phoenix Suns'})
     redis.client.hset('t2', mapping={'abbr': 'LAL', 'full': 'Los Angeles Lakers'})
@@ -41,13 +44,16 @@ def test_getteams(setup_redis):
 
 
 def test_store(setup_redis):
-    team1 = Team(domain='NBA', name='PHX', std_name='PHO', full_name='Phoenix Suns')
-    team2 = Team(domain='NBA', name='SA', std_name='SAS', full_name='San Antonio Spurs')
+    team1 = Team(domain='NBA', name='MN', std_name='MIN', full_name='Minnesota Timberwolves')
+    team2 = Team(domain='NBA', name='MIN', std_name='MIN', full_name='Minnesota Timberwolves')
     setup_redis.store("NBA", [team1, team2])
 
-    result = setup_redis.getteam('NBA', 'PHX')
-    assert result == {b'abbr': b'PHO', b'full': b'Phoenix Suns'}
-    result = setup_redis.getteam('NBA', 'SA')
-    assert result == {b'abbr': b'SAS', b'full': b'San Antonio Spurs'}
-    result = list(setup_redis.getteams('NBA'))
-    assert result == [{b'abbr': b'PHO', b'full': b'Phoenix Suns'}, {b'abbr': b'SAS', b'full': b'San Antonio Spurs'}]
+    result = setup_redis.getid(team1.domain, team1.name)
+    assert result == b't4'
+    result = setup_redis.getid(team2.domain, team2.name)
+    assert result == b't4'
+
+    result = setup_redis.getteam('NBA', 'MN')
+    assert result == {b'abbr': b'MIN', b'full': b'Minnesota Timberwolves'}
+    result = setup_redis.getteam('NBA', 'MIN')
+    assert result == {b'abbr': b'MIN', b'full': b'Minnesota Timberwolves'}

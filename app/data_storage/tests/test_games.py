@@ -1,104 +1,71 @@
-import unittest
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock
-from app.data_storage.models import Team
+
+import pytest
 
 from app.data_storage.main import Redis
-from app.data_storage.stores.utils import convert_to_timestamp
+from app.data_storage.models import Game
+
+now = datetime.now()
+one_hour_from_now = datetime.now() + timedelta(hours=1)
 
 
-class TestGames(unittest.TestCase):
-    def _prepare_redis(self):
-        # set up some team keys to map to game ids
-        self.client.hset('games:std:nba', 'LAL', '1')
-        self.client.hset('games:std:nba', 'GSW', '1')
-        self.client.hset('games:std:nba', 'BOS', '2')
-        self.client.hset('games:std:nba', 'BKN', '2')
-        # set up some actual game data
-        now = datetime.now()
-        self.client.hset('1', mapping={
-            'info': f'NBA_{now.strftime('%Y%m%d')}_LAL@GSW',
-            'game_time': now.strftime('%Y%m%d'),
-        })
-        self.client.zadd('nba:gt', mapping={'1': convert_to_timestamp(now)})
-        one_hour_from_now = datetime.now() + timedelta(hours=1)
-        self.client.hset('2', mapping={
-            'info': f'NBA_{one_hour_from_now.strftime('%Y%m%d')}_BOS@BKN',
-            'game_time': one_hour_from_now.strftime('%Y%m%d'),
-        })
-        self.client.zadd('nba:gt', mapping={'2': convert_to_timestamp(one_hour_from_now)})
+@pytest.fixture
+def setup_redis():
+    redis = Redis(db='dev')
+    redis.client.hset('games:std:nba', 'LAL', 'g1')
+    redis.client.hset('games:std:nba', 'GSW', 'g1')
+    redis.client.hset('games:std:nba', 'BOS', 'g2')
+    redis.client.hset('games:std:nba', 'BKN', 'g2')
 
-    @staticmethod
-    def fixture(func):
-        def wrapper(self, *args, **kwargs):
-            self._prepare_redis()
-            result = func(self, *args, **kwargs)
-            self.client.flushall()
-            return result
+    redis.client.hset('g1', mapping={
+        'info': f'NBA_{now.strftime('%Y%m%d')}_LAL@GSW',
+        'game_time': now.strftime("%Y-%m-%d %H:%M"),
+    })
+    redis.client.zadd('games:gt:nba', mapping={'g1': int(now.timestamp())})
+    redis.client.hset('g2', mapping={
+        'info': f'NBA_{one_hour_from_now.strftime('%Y%m%d')}_BOS@BKN',
+        'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M"),
+    })
+    redis.client.zadd('games:gt:nba', mapping={'g2': int(one_hour_from_now.timestamp())})
+    yield redis.games
+    redis.client.flushdb()
 
-        return wrapper
 
-    def setUp(self):
-        self.redis = Redis()
-        self.client = self.redis.client
-        self.games = self.redis.games
+def test_getgame(setup_redis):
+    result = setup_redis.getgame('NBA', 'LAL')
+    assert result == {b'info': b'NBA_20241223_LAL@GSW', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    result = setup_redis.getgame('NBA', 'GSW')
+    assert result == {b'info': b'NBA_20241223_LAL@GSW', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    result = setup_redis.getgame('NBA', 'BOS')
+    assert result == {b'info': b'NBA_20241223_BOS@BKN', b'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    result = setup_redis.getgame('NBA', 'BKN')
+    assert result == {b'info': b'NBA_20241223_BOS@BKN', b'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
 
-    @fixture
-    def test_getid(self):
-        team = Team(domain='NBA', name='LAL', std_name='LAL', full_name='Los Angeles Lakers')
-        self.games.std_mngr.get_eid = MagicMock(return_value='1')
-        result = self.games.getid(team)
-        self.assertEqual(result, '1')
-        self.games.std_mngr.get_eid.assert_called_once_with('NBA', 'LAL')
 
-    @fixture
-    def test_getids(self):
-        result = list(self.games.getids('NBA', is_live=True))
-        self.assertEqual(result, ['1'])
-        self.games.live_mngr.getgameids.assert_called_once_with('NBA')
+def test_getgames(setup_redis):
+    result = list(setup_redis.getgames('NBA'))
+    assert result == [{b'info': b'NBA_20241223_LAL@GSW', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')},
+                      {b'info': b'NBA_20241223_BOS@BKN', b'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}]
 
-        result = list(self.games.getids('NBA', is_live=False))
-        self.assertEqual(result, ['1', '2'])
-        self.games.std_mngr.get_eids.assert_called_once_with('NBA')
 
-    # @fixture
-    # def test_getgame(self):
-    #     team = Team(domain='nba', name='Lakers')
-    #     self.games.get_entity = MagicMock(return_value='game_entity')
-    #     result = self.games.getgame(team, report=True)
-    #     self.assertEqual(result, 'game_entity')
-    #     self.games.get_entity.assert_called_once_with('secondary', 'nba', 'Lakers', report=True)
-    #
-    # @fixture
-    # def test_getgames(self):
-    #     self.games.get_live_entities = MagicMock(return_value=iter(['game1', 'game2']))
-    #     self.games.get_entities = MagicMock(return_value=iter(['game3', 'game4']))
-    #
-    #     result = list(self.games.getgames('nba', is_live=True))
-    #     self.assertEqual(result, ['game1', 'game2'])
-    #     self.games.get_live_entities.assert_called_once_with('nba')
-    #
-    #     result = list(self.games.getgames('nba', is_live=False))
-    #     self.assertEqual(result, ['game3', 'game4'])
-    #     self.games.get_entities.assert_called_once_with('nba')
-    #
-    # @fixture
-    # def test_store(self):
-    #     game1 = Game(info='NBA_20241113_BOS@BKN', game_time='2024-11-13T19:00:00Z')
-    #     game2 = Game(info='NBA_20241114_LAL@GSW', game_time='2024-11-14T19:00:00Z')
-    #     games = [game1, game2]
-    #
-    #     self.games.std_mngr.store_eids = MagicMock(return_value=[('game_id1', game1), ('game_id2', game2)])
-    #     self.games._r.hset = MagicMock()
-    #     self.games.live_mngr.track_game = MagicMock()
-    #
-    #     self.games.store('nba', games, to_timestamp=False)
-    #
-    #     self.games.std_mngr.store_eids.assert_called_once_with('nba', games, Games._get_keys)
-    #     self.games._r.hset.assert_any_call('game_id1', mapping={'info': 'NBA_20241113_BOS@BKN', 'game_time': '2024-11-13T19:00:00Z'})
-    #     self.games._r.hset.assert_any_call('game_id2', mapping={'info': 'NBA_20241114_LAL@GSW', 'game_time': '2024-11-14T19:00:00Z'})
-    #     self.games.live_mngr.track_game.assert_any_call('nba', 'game_id1', '2024-11-13T19:00:00Z')
-    #     self.games.live_mngr.track_game.assert_any_call('nba', 'game_id2', '2024-11-14T19:00:00Z')
+def test_getlivegames(setup_redis):
+    result = list(setup_redis.getgames('NBA', is_live=True))
+    assert result == [{b'info': b'NBA_20241223_LAL@GSW', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}]
 
-if __name__ == '__main__':
-    unittest.main()
+
+def test_store(setup_redis):
+    game1 = Game(domain='NBA', info='NBA_20241223_MIN@ATL', game_time=now.strftime("%Y-%m-%d %H:%M"))
+    game2 = Game(domain='NBA', info='NBA_20241223_SAC@NYK', game_time= one_hour_from_now.strftime("%Y-%m-%d %H:%M"))
+    setup_redis.store('NBA', [game1, game2])
+
+    result = setup_redis.getgame('NBA', 'MIN')
+    assert result == {b'info': b'NBA_20241223_MIN@ATL', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    result = setup_redis.getgame('NBA', 'ATL')
+    assert result == {b'info': b'NBA_20241223_MIN@ATL', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    result = setup_redis.getgame('NBA', 'SAC')
+    assert result == {b'info': b'NBA_20241223_SAC@NYK', b'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    result = setup_redis.getgame('NBA', 'NYK')
+    assert result == {b'info': b'NBA_20241223_SAC@NYK', b'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+
+    result = list(setup_redis.getgames('NBA', is_live=True))
+    assert result == [{b'info': b'NBA_20241223_MIN@ATL', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}]

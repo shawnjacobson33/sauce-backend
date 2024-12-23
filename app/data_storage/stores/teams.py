@@ -22,17 +22,18 @@ class Teams(StaticDataStore):
         """
         super().__init__(r, 'teams')
 
-    def getid(self, team: Team) -> Optional[str]:
+    def getid(self, league: str, team: str) -> Optional[str]:
         """
         Retrieve the unique identifier for a specific team within a league.
 
         Args:
-            team (Team): A team object.
+            league (str): The league or domain to search within.
+            team (str): A team name.
 
         Returns:
             Optional[str]: The unique identifier for the team, or None if not found.
         """
-        return self.std_mngr.get_eid(team.domain, team.name)
+        return self.std_mngr.get_eid(league, team)
 
     def getids(self, league: str = None) -> Iterable:
         """

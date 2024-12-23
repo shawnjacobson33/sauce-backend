@@ -3,7 +3,6 @@ from typing import Optional, Iterable
 import redis
 
 from app.data_storage.models import Team, Game
-from app.data_storage.stores.utils import convert_to_timestamp
 from app.data_storage.stores.base import DynamicDataStore
 
 
@@ -23,17 +22,18 @@ class Games(DynamicDataStore):
         """
         super().__init__(r, 'games')
 
-    def getid(self, team: Team) -> Optional[str]:
+    def getid(self, league: str, team: str) -> Optional[str]:
         """
         Retrieves the unique identifier (ID) for a team.
 
         Args:
-            team (Team): The team object containing domain and name attributes.
+            league (str): The name of the league to filter by.
+            team (str): The name of the team to retrieve the ID for.
 
         Returns:
             Optional[str]: The ID of the team if it exists, otherwise None.
         """
-        return self.std_mngr.get_eid(team.domain, team.name)
+        return self.std_mngr.get_eid(league, team)
 
     def getids(self, league: str = None, is_live: bool = False) -> Iterable:
         """
@@ -50,18 +50,19 @@ class Games(DynamicDataStore):
         reg_iter = self.std_mngr.get_eids(league)
         yield from (live_iter if is_live else reg_iter)
 
-    def getgame(self, team: Team, report: bool = False) -> Optional[str]:
+    def getgame(self, league: str, team: str, report: bool = False) -> Optional[str]:
         """
         Retrieves a specific game for a given team.
 
         Args:
-            team (Team): The team object containing domain and name attributes.
+            league (str): The name of the league to filter by.
+            team (str): The name of the team to filter by.
             report (bool, optional): Whether to include a report in the result. Defaults to False.
 
         Returns:
             Optional[str]: The game entity ID, or None if the game could not be found.
         """
-        return self.get_entity('secondary', team.domain, team.name, report=report)
+        return self.get_entity('secondary', league, team, report=report)
 
     def getgames(self, league: str, is_live: bool = False) -> Iterable:
         """
@@ -74,7 +75,7 @@ class Games(DynamicDataStore):
         Yields:
             Iterable: A generator yielding game entities based on the provided criteria.
         """
-        yield from (self.get_live_entities(league) if is_live else self.get_entities(league))
+        yield from (self.get_live_entities(league) if is_live else self.get_entities('secondary', league))
 
     @staticmethod
     def _get_keys(game: Game) -> tuple[str, str]:
@@ -95,46 +96,24 @@ class Games(DynamicDataStore):
         except IndexError as e:
             raise Exception(f"Error extracting team names from game info url (correct ex: NBA_20241113_BOS@BKN): {e}")
 
-    def store(self, league: str, games: list[Game], to_timestamp: bool = False) -> None:
+    def store(self, league: str, games: list[Game]) -> None:
         """
         Stores game data in Redis, optionally converting game times to timestamps.
 
         Args:
             league (str): The league to which the games belong.
             games (list[Game]): A list of Game objects to store.
-            to_timestamp (bool, optional): Whether to convert game times to timestamps. Defaults to False.
 
         Raises:
             KeyError: If a KeyError occurs during the storage process.
         """
         try:
-            if to_timestamp:
-                for game in games: game.game_time = convert_to_timestamp(game.game_time)
-
             for g_id, game in self.std_mngr.store_eids(league, games, Games._get_keys):
                 self._r.hset(g_id, mapping={
                     'info': game.info,
-                    'game_time': game.game_time
+                    'game_time': game.game_time.strftime("%Y-%m-%d %H:%M")
                 })
                 self.live_mngr.track_game(league, g_id, game.game_time)
 
         except KeyError as e:
             self._handle_error(e)
-
-    # def flush(self, name: str, league: str) -> None:
-    #     f_name = NAMESPACE[name].format(league)
-    #     iter_keys = self._r.hscan_iter(f_name) if 'std' in f_name else self._r.sscan_iter(f_name)
-    #     keys = list(iter_keys)
-    #     self._r.delete(*keys)
-    #     print(f"[Games]: FOR {f_name} Deleted {keys[0]}, {keys[1]}, ...")
-
-    # def flushall(self) -> None:
-    #     std_keys = list(self._r.hscan_iter('std'))
-    #     slive_keys = list(self._r.sscan_iter('slive'))
-    #     zwatch_keys = list(self._r.zscan_iter('zwatch'))
-    #     with self._r.pipeline() as pipe:
-    #         pipe.multi()
-    #         self._r.delete(*std_keys)
-    #         self._r.delete(*slive_keys)
-    #         self._r.delete(*zwatch_keys)
-    #         pipe.execute()
