@@ -82,7 +82,7 @@ class StaticDataStore(DataStore):
                 raise ValueError("A key must be provided to retrieve an entity.")
 
 
-    def get_entity(self, method: str, *args, **kwargs) -> Optional[str]:
+    def get_entity(self, method: str, *args, **kwargs) -> Optional[Union[str, dict]]:
         """
         Retrieves an entity based on the specified method (either 'direct' or 'secondary').
 
@@ -92,7 +92,7 @@ class StaticDataStore(DataStore):
             **kwargs: Additional keyword arguments to pass to the respective indexing method.
 
         Returns:
-            Optional[str]: The entity's data, or None if not found.
+            Optional[Union[str, dict]]: The entity's data if found, otherwise None.
         """
         if method == 'direct': return next(iter(self._direct_index(*args, **kwargs)), None)
         if method == 'secondary': return next(iter(self._secondary_index(*args, **kwargs)), None)
