@@ -113,7 +113,7 @@ class Games(DynamicDataStore):
                     'info': game.info,
                     'game_time': game.game_time.strftime("%Y-%m-%d %H:%M")
                 })
-                self.live_mngr.track_game(league, g_id, game.game_time)
+                self.live_mngr.track(league, g_id, game.game_time)
 
         except KeyError as e:
             self._handle_error(e)

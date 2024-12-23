@@ -100,6 +100,10 @@ class Subjects(StaticDataStore):
             condensed_name = subject.name.replace(' ', '')
             return f'{position}:{condensed_name}', f'{team}:{condensed_name}'
 
+    @staticmethod
+    def setactive(r: redis.Redis, s_id: str) -> None:
+        r.sadd(f'subjects:active', s_id)
+
     def store(self, league: str, subjects: list[Subject]) -> None:
         """
         Stores a batch of subjects in the database for a given league.
@@ -124,19 +128,3 @@ class Subjects(StaticDataStore):
 
         except AttributeError as e:
             self._handle_error(e)
-
-
-    # def rollback(self, subj: namedtuple):
-    #     del_keys = 0
-    #     subj_std_name = f'subjects:std:{subj.league}'
-    #     for subj_name in [subj.name, subj.std_name]:
-    #         del_keys += self._r.hdel(subj_std_name, f'{subj.team}:{subj_name}', f'{subj.pos}:{subj_name}')
-    #
-    #     if del_keys == 4:
-    #         curr_id = self._r.get('subjects:auto:id')
-    #         self._r.decrby('subjects:auto:id')
-    #         self._r.delete(f'subject:{int(curr_id)}')
-    #         print(f"Subjects: Successfully deleted {subj.name} and {subj.std_name}!")
-    #         return
-    #
-    #     print(f"Subjects: Failed to delete {subj.name} and {subj.std_name}...they don't exist!")

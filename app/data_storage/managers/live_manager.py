@@ -40,7 +40,7 @@ class LIVEManager(Manager):
         self.store(live_ids)
         for live_id in live_ids: yield live_id
 
-    def track_game(self, domain: str, key: str, gt: str) -> None:
+    def track(self, domain: str, key: str, gt: str) -> None:
         """
         Track a game by storing its game time in the `GTManager`.
 
