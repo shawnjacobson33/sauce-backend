@@ -6,7 +6,11 @@ import redis
 
 
 def get_entity_type(name: str) -> str:
-    return name.split(':')[0][:-1]
+    if name == 'teams': return 't'
+    elif name == 'subjects': return 's'
+
+    raise ValueError(f"Invalid entity type: {name}")
+
 
 
 def convert_to_timestamp(dt: datetime) -> int:

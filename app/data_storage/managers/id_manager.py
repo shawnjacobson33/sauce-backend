@@ -7,9 +7,46 @@ from app.data_storage.stores.utils import get_entity_type
 
 
 class IDManager(Manager):
+    """
+    A class for managing ID generation, resetting, and retrieval using Redis.
+
+    This class provides functionality to manage counters and sets in Redis,
+    enabling the generation of unique identifiers, resetting counters, and
+    managing unmapped entities.
+
+    Attributes:
+       noid_name (str): A Redis key used to store unmapped identifiers.
+    """
     def __init__(self, r: redis.Redis, name: str):
+        """
+        Initializes an IDManager instance.
+
+        Args:
+            r (redis.Redis): The Redis client instance.
+            name (str): The base name for the Redis key.
+        """
         super().__init__(r, f'{name}:id')
         self.noid_name = '{}:noid'
+
+    def _get_id_prefix(self) -> Optional[str]:
+        """
+        Retrieve the prefix for the ID based on the entity type.
+
+        The prefix is determined by the entity type (e.g., 'teams', 'subjects').
+
+        Returns:
+            Optional[str]: The prefix for the ID ('t' for teams, 's' for subjects).
+
+        Raises:
+            ValueError: If the entity type is invalid.
+        """
+        entity_type = get_entity_type(self.name)
+        if entity_type == 'teams':
+            return 't'
+        elif entity_type == 'subjects':
+            return 's'
+
+        raise ValueError(f"Invalid entity type: {entity_type}")
 
     def generate(self) -> str:
 
@@ -23,7 +60,7 @@ class IDManager(Manager):
             str: The newly generated ID.
         """
         new_id = self._r.incrby(self.name)
-        return f'{get_entity_type(self.name)}:{new_id}'
+        return f'{self._get_id_prefix()}:{new_id}'
 
     def decr(self) -> None:
         """

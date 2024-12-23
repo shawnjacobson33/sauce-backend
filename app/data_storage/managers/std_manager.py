@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Optional, Callable, Iterable
 
 import redis
@@ -16,15 +17,24 @@ class STDManager(Manager):
     def get_eid(self, domain: str, key: str) -> Optional[str]:
         self.name = domain
         return self._r.hget(self.name, key)
-    
+
+    def _scan_keys(self) -> Iterable:
+        e_ids_counter = defaultdict(int)
+        for std_key in self._r.hscan_iter(self.name, no_values=True):
+            e_id = self._r.hget(self.name, std_key)
+            if not e_ids_counter[e_id]:
+                e_ids_counter[e_id] += 1
+                yield e_id
+
     def get_eids(self, domain: str = None) -> Iterable:
         if not domain:
             entity_type = get_entity_type(self.name)
             return (t_key for t_key in self._r.scan_iter(f'{entity_type}:*'))
-        
+
         self.name = domain
-        for t_key in self._r.hscan_iter(self.name): yield self._r.hget(self.name, t_key)
-        
+
+        yield from self._scan_keys()
+
     def _find_eid(self, entity: Entity, keys: Callable) -> Optional[str]:
         e_id = None
         for key in keys(entity):

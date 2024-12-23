@@ -46,18 +46,19 @@ class Teams(StaticDataStore):
         """
         yield from self.std_mngr.get_eids(league)
 
-    def getteam(self, team: Team, report: bool = False) -> Optional[str]:
+    def getteam(self, league: str, team: str, report: bool = False) -> Optional[str]:
         """
         Retrieve details about a specific team within a league.
 
         Args:
-            team (Team): a team object
+            league (str): The league or domain to search within.
+            team (str): a team name
             report (bool, optional): Whether to log or report missing entries. Defaults to False.
 
         Returns:
             Optional[str]: Details of the team, or None if not found.
         """
-        return self.get_entity('secondary', team.domain, team.name, report=report)
+        return self.get_entity('secondary', league, team, report=report)
 
     def getteams(self, league: str) -> Iterable:
         """
@@ -69,7 +70,7 @@ class Teams(StaticDataStore):
         Yields:
             str: Team identifiers within the specified league.
         """
-        yield from self.get_entities(league)
+        yield from self.get_entities('secondary', league)
 
     def store(self, league: str, teams: list[Team]) -> None:
         """
