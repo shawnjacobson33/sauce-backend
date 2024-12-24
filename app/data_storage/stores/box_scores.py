@@ -2,7 +2,6 @@ from typing import Optional, Union
 
 import redis
 
-from app.data_storage.stores import Subjects
 from app.data_storage.stores.base import DynamicDataStore
 
 
@@ -41,6 +40,11 @@ class BoxScores(DynamicDataStore):
 
         raise ValueError('No id or subj provided to retrieve box score.')
 
+    def remove(self, s_id: str) -> None:
+        # will be called by the betting lines class when notified that a game is over and the betting line labelling
+        # process is complete
+        pass
+
     def store(self, box_scores: list[dict]) -> None:
         """
         Store a list of box scores for a specific league.
@@ -57,7 +61,7 @@ class BoxScores(DynamicDataStore):
                 pipe.multi()
                 for box_score in box_scores:
                     pipe.hset(f'b{box_score["s_id"]}', mapping=box_score)
-
+                    # need to track the current period/game time state for the game in progress
                 pipe.execute()
 
         except KeyError as e:

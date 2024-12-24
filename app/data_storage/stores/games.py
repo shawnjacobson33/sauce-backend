@@ -64,18 +64,34 @@ class Games(DynamicDataStore):
         """
         return self.get_entity('secondary', league, team, report=report)
 
-    def getgames(self, league: str, is_live: bool = False) -> Iterable:
+    def getgames(self, league: str = None, g_ids: list[str] = None) -> Iterable:
         """
         Retrieves all games for a given league, optionally filtering by live status.
 
         Args:
             league (str): The name of the league to filter by.
-            is_live (bool, optional): Whether to retrieve live games. Defaults to False.
-
+            g_ids (list[str]): A list of game IDs to retrieve.
         Yields:
             Iterable: A generator yielding game entities based on the provided criteria.
         """
-        yield from (self.get_live_entities(league) if is_live else self.get_entities('secondary', league))
+        if g_ids:
+            for g_id in g_ids: yield self._r.hgetall(g_id)
+        elif league:
+            yield from self.get_entities('secondary', league)
+        else:
+            raise ValueError("Either league or game IDs must be provided.")
+
+    def getlivegameids(self, league: str) -> Iterable:
+        """
+        Retrieves all live games for a given league.
+
+        Args:
+            league (str): The name of the league to filter by.
+
+        Yields:
+            Iterable: A generator yielding live game entities based on the provided criteria.
+        """
+        yield from self.get_live_entities(league)
 
     @staticmethod
     def _get_keys(game: Game) -> tuple[str, str]:
@@ -117,3 +133,15 @@ class Games(DynamicDataStore):
 
         except KeyError as e:
             self._handle_error(e)
+
+    def setlive(self, league: str, g_ids: list[str]) -> None:
+        # transfer the game to a live game store if the game is active
+        # have a default expire time of 6 hours
+        live_games = self.getgames(league, g_ids)
+        self.live_mngr.store(league, g_ids, live_games)
+
+    @staticmethod
+    def check_is_completed(league: str, game_id: str) -> None:
+        # if a games is over then, start some process to label all betting lines using their corresponding
+        # box scores. Then remove the game from the live game store. Default expire after 6 hours.
+        pass

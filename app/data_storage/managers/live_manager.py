@@ -1,3 +1,5 @@
+from typing import Iterable
+
 import redis
 
 from app.data_storage.managers.manager import Manager
@@ -51,18 +53,22 @@ class LIVEManager(Manager):
         """
         self.gt_mngr.store(domain, key, int(gt.timestamp()))
 
-    def store(self, live_ids: set[str]) -> None:
+    def store(self, domain: str, l_ids: list[str], l_entities: Iterable) -> None:
         """
         Store a set of live game identifiers in Redis.
 
         This method adds the provided live game IDs to a Redis set identified by the domain name.
 
         Args:
-            live_ids (set[str]): A set of live game identifiers to store.
+            domain (str): The domain (e.g., league name) to store the live game IDs for.
+            l_ids (list[str]): A list of live game identifiers to store.
+            l_entities (Iterable): An iterable of live game entities to store.
         """
+        self.name = domain
         with self._r.pipeline() as pipe:
             pipe.watch(self.name)
             pipe.multi()
-            for idx in live_ids:
-                pipe.sadd(self.name, idx)
+            for l_id, l_entity in zip(l_ids, l_entities):
+                pipe.zadd(self.name, mapping={ l_id: l_entity.game_time })
+                # Todo: needs continually updating of time score trackers as box scores are collected
             pipe.execute()

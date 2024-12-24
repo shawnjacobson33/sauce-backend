@@ -36,8 +36,7 @@ class DynamicDataStore(StaticDataStore):
             league (str): The league identifier to retrieve live entities for.
 
         Yields:
-            Optional[dict[str, Any]]: A dictionary containing live entity data for
-            each game ID, or None if no game IDs are found.
+            Optional[str]: An id for a live entity in the specified league.
         """
-        for g_id in self.live_mngr.getgameids(league): yield self._r.hgetall(g_id)
+        for e_id in self.live_mngr.getgameids(league): yield e_id
 

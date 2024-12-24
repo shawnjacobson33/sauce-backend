@@ -13,6 +13,17 @@ class BettingLines(DynamicDataStore):
     def getbettinglines(self, league: str, is_live: bool = False) -> Iterable:
         yield from (self.get_live_entities(league) if is_live else self.get_entities('secondary', league))
 
+    def evaluate(self):
+        # will be called when a game is complete to label betting lines in relation to game outcomes.
+        # will need to gather all betting lines associated with the game.
+        # will call the box scores class to retrieve the box score data for the game.
+        pass
+
+    def remove(self):
+        # will be called when done evaluating betting lines and then sending them to a transformer before
+        # being sent to long-term storage.
+        pass
+
     @staticmethod
     def get_key(betting_line: dict):
         return f"{betting_line['league']}:{betting_line['market']}:{betting_line['s_id']}"
