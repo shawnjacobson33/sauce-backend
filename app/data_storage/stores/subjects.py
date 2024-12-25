@@ -100,9 +100,8 @@ class Subjects(StaticDataStore):
             condensed_name = subject.name.replace(' ', '')
             return f'{position}:{condensed_name}', f'{team}:{condensed_name}'
 
-    @staticmethod
-    def setactive(r: redis.Redis, s_id: str) -> None:
-        r.sadd(f'subjects:active', s_id)
+    def setsubjactive(self, s_id: str) -> None:
+        self._r.sadd(f'{self.name}:active', s_id)
 
     def store(self, league: str, subjects: list[Subject]) -> None:
         """

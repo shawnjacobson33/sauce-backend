@@ -43,7 +43,7 @@ class BoxScores(DynamicDataStore):
     def remove(self, s_id: str) -> None:
         # will be called by the betting lines class when notified that a game is over and the betting line labelling
         # process is complete
-        pass
+        self._r.delete(f'b{s_id}')
 
     def store(self, box_scores: list[dict]) -> None:
         """
@@ -60,8 +60,10 @@ class BoxScores(DynamicDataStore):
             with self._r.pipeline() as pipe:
                 pipe.multi()
                 for box_score in box_scores:
+                    if box_score['is_completed']:
+                        pipe.sadd('games:completed', box_score['g_id'])
+                        continue
                     pipe.hset(f'b{box_score["s_id"]}', mapping=box_score)
-                    # need to track the current period/game time state for the game in progress
                 pipe.execute()
 
         except KeyError as e:

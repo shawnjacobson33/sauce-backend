@@ -24,7 +24,7 @@ class LIVEManager(Manager):
         super().__init__(r, f'{name}:live')
         self.gt_mngr = GTManager(r, name)
 
-    def getgameids(self, domain: str) -> str:
+    def getlivegameids(self, domain: str) -> str:
         """
         Retrieve active game identifiers for a specific domain.
 
@@ -37,7 +37,8 @@ class LIVEManager(Manager):
         Yields:
             str: A live game identifier for the given domain.
         """
-        live_ids = self.gt_mngr.getactive(domain)
+        live_ids = self.gt_mngr.getliveeids(domain)
+        live_entities = self.
         self.name = domain
         self.store(live_ids)
         for live_id in live_ids: yield live_id
@@ -53,7 +54,7 @@ class LIVEManager(Manager):
         """
         self.gt_mngr.store(domain, key, int(gt.timestamp()))
 
-    def store(self, domain: str, l_ids: list[str], l_entities: Iterable) -> None:
+    def store(self, domain: str, l_ids: list[str]) -> None:
         """
         Store a set of live game identifiers in Redis.
 
@@ -68,7 +69,8 @@ class LIVEManager(Manager):
         with self._r.pipeline() as pipe:
             pipe.watch(self.name)
             pipe.multi()
-            for l_id, l_entity in zip(l_ids, l_entities):
+            for l_id in l_ids:
+                if l_entity := self.
                 pipe.zadd(self.name, mapping={ l_id: l_entity.game_time })
                 # Todo: needs continually updating of time score trackers as box scores are collected
             pipe.execute()

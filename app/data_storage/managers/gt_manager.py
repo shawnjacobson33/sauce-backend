@@ -21,7 +21,7 @@ class GTManager(Manager):
         """
         super().__init__(r, f'{name}:gt')
 
-    def getactive(self, league: str) -> Optional[set[str]]:
+    def getliveeids(self, league: str) -> Optional[set[str]]:
         """
         Retrieve active game IDs for a specified league.
 

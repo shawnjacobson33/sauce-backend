@@ -2,7 +2,7 @@ from typing import Optional, Iterable
 
 import redis
 
-from app.data_storage.models import Team, Game
+from app.data_storage.models import Game
 from app.data_storage.stores.base import DynamicDataStore
 
 
@@ -93,6 +93,17 @@ class Games(DynamicDataStore):
         """
         yield from self.get_live_entities(league)
 
+    def getcompletedgames(self) -> Iterable:
+        # if a games is over then, start some process to label all betting lines using their corresponding
+        # box scores. Then remove the game from the live game store. Default expire after 6 hours.
+        yield from self._r.sscan_iter('games:completed')
+
+    def setlive(self, league: str, g_ids: list[str]) -> None:
+        # transfer the game to a live game store if the game is active
+        # have a default expire time of 6 hours
+        live_games = self.getgames(league, g_ids)
+        self.live_mngr.store(league, g_ids, live_games)
+
     @staticmethod
     def _get_keys(game: Game) -> tuple[str, str]:
         """
@@ -133,15 +144,3 @@ class Games(DynamicDataStore):
 
         except KeyError as e:
             self._handle_error(e)
-
-    def setlive(self, league: str, g_ids: list[str]) -> None:
-        # transfer the game to a live game store if the game is active
-        # have a default expire time of 6 hours
-        live_games = self.getgames(league, g_ids)
-        self.live_mngr.store(league, g_ids, live_games)
-
-    @staticmethod
-    def check_is_completed(league: str, game_id: str) -> None:
-        # if a games is over then, start some process to label all betting lines using their corresponding
-        # box scores. Then remove the game from the live game store. Default expire after 6 hours.
-        pass
