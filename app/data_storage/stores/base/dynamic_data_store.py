@@ -25,18 +25,4 @@ class DynamicDataStore(StaticDataStore):
         super().__init__(r, name)
         self.live_mngr = LIVEManager(r, name)
 
-    def get_live_entities(self, league: str) -> Optional[Iterable]:
-        """
-        Retrieve live entities for a given league.
-
-        This method fetches game IDs for the specified league using the LIVEManager
-        and yields all data associated with each game ID from the Redis store.
-
-        Args:
-            league (str): The league identifier to retrieve live entities for.
-
-        Yields:
-            Optional[str]: An id for a live entity in the specified league.
-        """
-        for e_id in self.live_mngr.getgameids(league): yield e_id
-
+    def get_live_entities(self):

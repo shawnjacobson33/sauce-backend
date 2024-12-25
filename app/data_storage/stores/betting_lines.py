@@ -19,7 +19,7 @@ class BettingLines(DynamicDataStore):
         if g_id:
             yield from self._getbettinglinesforgame(g_id)
         elif is_live:
-            yield from self.get_live_entities(league)
+            yield from self.live_mngr.get_live_entities(league)
         else:
             self.get_entities('secondary', league)
 

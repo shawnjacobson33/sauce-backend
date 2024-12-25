@@ -50,6 +50,23 @@ class Games(DynamicDataStore):
         reg_iter = self.std_mngr.get_eids(league)
         yield from (live_iter if is_live else reg_iter)
 
+    def getliveids(self, league: str) -> Iterable:
+        """
+        Retrieves all live games for a given league.
+
+        Args:
+            league (str): The name of the league to filter by.
+
+        Yields:
+            Iterable: A generator yielding live game entities based on the provided criteria.
+        """
+        yield from self.live_mngr.get_and_store_live_ids(league)
+
+    def getcompletedgameids(self) -> Iterable:
+        # if a games is over then, start some process to label all betting lines using their corresponding
+        # box scores. Then remove the game from the live game store. Default expire after 6 hours.
+        yield from self._r.sscan_iter(f'{self.name}:completed')
+
     def getgame(self, league: str, team: str, report: bool = False) -> Optional[str]:
         """
         Retrieves a specific game for a given team.
@@ -81,23 +98,6 @@ class Games(DynamicDataStore):
         else:
             raise ValueError("Either league or game IDs must be provided.")
 
-    def getlivegameids(self, league: str) -> Iterable:
-        """
-        Retrieves all live games for a given league.
-
-        Args:
-            league (str): The name of the league to filter by.
-
-        Yields:
-            Iterable: A generator yielding live game entities based on the provided criteria.
-        """
-        yield from self.get_live_entities(league)
-
-    def getcompletedgames(self) -> Iterable:
-        # if a games is over then, start some process to label all betting lines using their corresponding
-        # box scores. Then remove the game from the live game store. Default expire after 6 hours.
-        yield from self._r.sscan_iter('games:completed')
-
     def setlive(self, league: str, g_ids: list[str]) -> None:
         # transfer the game to a live game store if the game is active
         # have a default expire time of 6 hours
@@ -123,7 +123,7 @@ class Games(DynamicDataStore):
         except IndexError as e:
             raise Exception(f"Error extracting team names from game info url (correct ex: NBA_20241113_BOS@BKN): {e}")
 
-    def store(self, league: str, games: list[Game]) -> None:
+    def storegames(self, league: str, games: list[Game]) -> None:
         """
         Stores game data in Redis, optionally converting game times to timestamps.
 
@@ -135,12 +135,15 @@ class Games(DynamicDataStore):
             KeyError: If a KeyError occurs during the storage process.
         """
         try:
-            for g_id, game in self.std_mngr.store_eids(league, games, Games._get_keys):
-                self._r.hset(g_id, mapping={
-                    'info': game.info,
-                    'game_time': game.game_time.strftime("%Y-%m-%d %H:%M")
-                })
-                self.live_mngr.track(league, g_id, game.game_time)
+            with self._r.pipeline() as pipe:
+                pipe.multi()
+                for g_id, game in self.std_mngr.store_eids(league, games, Games._get_keys):
+                    pipe.hset(g_id, mapping={
+                        'info': game.info,
+                        'game_time': game.game_time.strftime("%Y-%m-%d %H:%M")
+                    })
+                    pipe.hexpireat(g_id, game.game_time)
+                pipe.execute()
 
         except KeyError as e:
             self._handle_error(e)

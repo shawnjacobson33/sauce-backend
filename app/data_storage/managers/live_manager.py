@@ -1,9 +1,9 @@
+from datetime import datetime
 from typing import Iterable
 
 import redis
 
 from app.data_storage.managers.manager import Manager
-from app.data_storage.managers import GTManager
 
 
 class LIVEManager(Manager):
@@ -22,9 +22,27 @@ class LIVEManager(Manager):
             name (str): The base name for identifying the keys in Redis.
         """
         super().__init__(r, f'{name}:live')
-        self.gt_mngr = GTManager(r, name)
 
-    def getlivegameids(self, domain: str) -> str:
+    def _get_live_ids(self) -> Iterable[str]:
+        curr_ts = int(datetime.now().timestamp())
+        with self._r.pipeline() as pipe:
+            pipe.watch(self.name)
+            pipe.multi()
+            pipe.zrange(
+                name=self.name,
+                start=-10000000000,
+                end=curr_ts,
+                byscore=True
+            )
+            pipe.zremrangebyscore(
+                name=self.name,
+                min='-inf',
+                max=curr_ts
+            )
+            live_ids, _ = pipe.execute()
+            return live_ids
+
+    def get_and_store_live_game_ids(self, domain: str) -> str:
         """
         Retrieve active game identifiers for a specific domain.
 
@@ -37,24 +55,14 @@ class LIVEManager(Manager):
         Yields:
             str: A live game identifier for the given domain.
         """
-        live_ids = self.gt_mngr.getliveeids(domain)
-        live_entities = self.
         self.name = domain
-        self.store(live_ids)
-        for live_id in live_ids: yield live_id
+        if live_ids := self._get_live_ids():
+            self.store_live_ids(domain, live_ids)
+            for live_id in live_ids: yield live_id
+        else:
+            print(f'No live games found for {domain}.')
 
-    def track(self, domain: str, key: str, gt: str) -> None:
-        """
-        Track a game by storing its game time in the `GTManager`.
-
-        Args:
-            domain (str): The domain (e.g., league name) to associate the game with.
-            key (str): The identifier of the game.
-            gt (int): The game time to be stored, typically as a Unix timestamp.
-        """
-        self.gt_mngr.store(domain, key, int(gt.timestamp()))
-
-    def store(self, domain: str, l_ids: list[str]) -> None:
+    def store_live_ids(self, domain: str, l_ids: Iterable[str]) -> None:
         """
         Store a set of live game identifiers in Redis.
 
@@ -63,14 +71,15 @@ class LIVEManager(Manager):
         Args:
             domain (str): The domain (e.g., league name) to store the live game IDs for.
             l_ids (list[str]): A list of live game identifiers to store.
-            l_entities (Iterable): An iterable of live game entities to store.
         """
         self.name = domain
         with self._r.pipeline() as pipe:
             pipe.watch(self.name)
             pipe.multi()
             for l_id in l_ids:
-                if l_entity := self.
-                pipe.zadd(self.name, mapping={ l_id: l_entity.game_time })
+                if game_time := self._r.hget(l_id, 'game_time'):
+                    game_datetime = datetime.strptime(game_time, '%Y-%m-%d %H:%M:%S')
+                    pipe.zadd(self.name, mapping={ l_id: int(game_datetime.timestamp()) })
+
                 # Todo: needs continually updating of time score trackers as box scores are collected
             pipe.execute()

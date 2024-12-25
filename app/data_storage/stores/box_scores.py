@@ -1,6 +1,7 @@
 from typing import Optional, Union
 
 import redis
+from redis.client import Pipeline
 
 from app.data_storage.stores.base import DynamicDataStore
 
@@ -45,7 +46,15 @@ class BoxScores(DynamicDataStore):
         # process is complete
         self._r.delete(f'b{s_id}')
 
-    def store(self, box_scores: list[dict]) -> None:
+    @staticmethod
+    def _evaluate_game_state(pipe: Pipeline, box_score: dict):
+        if box_score['is_completed']:
+            pipe.sadd('games:completed', box_score['g_id'])
+            pipe.srem('games:live', box_score['g_id'])
+            return True
+        return False
+
+    def storeboxscores(self, box_scores: list[dict]) -> None:
         """
         Store a list of box scores for a specific league.
 
@@ -60,9 +69,7 @@ class BoxScores(DynamicDataStore):
             with self._r.pipeline() as pipe:
                 pipe.multi()
                 for box_score in box_scores:
-                    if box_score['is_completed']:
-                        pipe.sadd('games:completed', box_score['g_id'])
-                        continue
+                    if self._evaluate_game_state(pipe, box_score): continue
                     pipe.hset(f'b{box_score["s_id"]}', mapping=box_score)
                 pipe.execute()
 
