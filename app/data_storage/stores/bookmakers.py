@@ -64,7 +64,7 @@ class Bookmakers(StaticDataStore):
             with self._r.pipeline() as pipe:
                 pipe.multi()
                 for bkm in bookmakers:
-                    pipe.hsetnx(self.std_mngr.name, key=bkm.name, value=str(bkm.dflt_odds))
+                    pipe.hsetnx(self.lookup_mngr.name, key=bkm.name, value=str(bkm.dflt_odds))
 
                 pipe.execute()
 

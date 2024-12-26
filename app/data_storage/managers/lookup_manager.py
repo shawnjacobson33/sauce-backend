@@ -9,7 +9,7 @@ from app.data_storage.managers.manager import Manager
 from app.data_storage.stores.utils import get_entity_type
 
 
-class STDManager(Manager):
+class LookupManager(Manager):
     """
     STDManager handles the management of standardized entities in a Redis store. It provides methods
     to retrieve, map, and store entity IDs (EIDs) associated with specific domains or keys.
@@ -26,10 +26,10 @@ class STDManager(Manager):
             name (str): Name of the Redis keyspace for storing standardized entities.
             id_mngr (IDManager): IDManager instance for generating unique entity IDs.
         """
-        super().__init__(r, f'{name}:std')
+        super().__init__(r, f'{name}:lookup')
         self.id_mngr = id_mngr
 
-    def get_eid(self, domain: str, key: str) -> Optional[str]:
+    def get_entity_id(self, domain: str, key: str) -> Optional[str]:
         """
         Retrieve the entity ID (EID) associated with a given key in the specified domain.
 
@@ -57,7 +57,7 @@ class STDManager(Manager):
                 e_ids_counter[e_id] += 1
                 yield e_id
 
-    def get_eids(self, domain: str = None) -> Iterable:
+    def get_entity_ids(self, domain: str = None) -> Iterable:
         """
         Retrieve all entity IDs for a specific domain or all domains.
 
@@ -73,16 +73,16 @@ class STDManager(Manager):
             return (t_key for t_key in self._r.scan_iter(f'{entity_type}:*'))
 
         self.name = domain
-
         yield from self._scan_keys()
 
-    def _find_eid(self, entity: Entity, keys: Callable) -> Optional[str]:
+    def _find_eid(self, entity: Entity, keys: Callable, expireat: Callable = None) -> Optional[str]:
         """
         Attempt to find an entity ID (EID) for a given entity by checking its keys.
 
         Args:
             entity (Entity): The entity to look up.
             keys (Callable): A callable that generates keys for the entity.
+            expireat (Callable): A callable that generates expiration timestamps for each key.
 
         Returns:
             Optional[str]: The entity ID if found, otherwise None.
@@ -93,17 +93,21 @@ class STDManager(Manager):
                 e_id = match
                 continue
                 
-            if e_id: self._r.hsetnx(self.name, key=key, value=e_id)
+            if e_id:
+                self._r.hsetnx(self.name, key=key, value=e_id)
+                if expireat:
+                    self._r.hexpireat(self.name, expireat(entity), key)
         
         return e_id
     
-    def _map_entity(self, entity: Entity, keys: Callable) -> Optional[str]:
+    def _map_entity(self, entity: Entity, keys: Callable, expireat: Callable = None) -> Optional[str]:
         """
         Map a new entity to a unique ID (EID) and store its keys.
 
         Args:
             entity (Entity): The entity to map.
             keys (Callable): A callable that generates keys for the entity.
+            expireat (Callable): A callable that generates expiration timestamps for each key.
 
         Returns:
             Optional[str]: The generated EID if the mapping is successful, otherwise None.
@@ -111,10 +115,12 @@ class STDManager(Manager):
         e_id = self.id_mngr.generate()
         for key in keys(entity):
             self.performed_insert = True if self._r.hsetnx(self.name, key=key, value=e_id) else False
+            if expireat:
+                self._r.hexpireat(self.name, expireat(entity), key)
 
         return e_id if self.performed_insert else self.id_mngr.decr()
 
-    def store_eids(self, domain: str, entities: list[Entity], keys: Callable) -> Iterable:
+    def store_entity_ids(self, domain: str, entities: list[Entity], keys: Callable, expireat: Callable = None) -> Iterable:
         """
         Store entity IDs (EIDs) for a list of entities in the specified domain.
 
@@ -122,14 +128,15 @@ class STDManager(Manager):
             domain (str): The domain in which to store the entities.
             entities (list[Entity]): A list of entities to store.
             keys (Callable): A callable that generates keys for each entity.
+            expireat (Callable): A callable that generates expiration timestamps for each key.
 
         Yields:
             Tuple[str, Entity]: A tuple of the stored EID and the corresponding entity.
         """
         self.name = domain
         for entity in entities:
-            if not (e_id := self._find_eid(entity, keys)):
-                e_id = self._map_entity(entity, keys)
+            if not (e_id := self._find_eid(entity, keys, expireat=expireat)):
+                e_id = self._map_entity(entity, keys, expireat=expireat)
             
             yield e_id, entity
         

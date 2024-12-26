@@ -46,7 +46,7 @@ class Subjects(StaticDataStore):
         Returns:
             Optional[str]: The unique ID of the subject if found, otherwise `None`.
         """
-        return self.std_mngr.get_eid(subject.domain, Subjects._get_key(subject))
+        return self.lookup_mngr.get_entity_id(subject.domain, Subjects._get_key(subject))
 
     def getids(self, league: str = None) -> Iterable:
         """
@@ -58,7 +58,7 @@ class Subjects(StaticDataStore):
         Yields:
            Iterable: An iterable of unique subject IDs.
         """
-        yield from self.std_mngr.get_eids(league)
+        yield from self.lookup_mngr.get_entity_ids(league)
 
     def getsubj(self, subject: Subject, report: bool = False) -> Optional[str]:
         """
@@ -117,7 +117,7 @@ class Subjects(StaticDataStore):
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                for s_id, subj in self.std_mngr.store_eids(league, subjects, keys=Subjects._get_keys):
+                for s_id, subj in self.lookup_mngr.store_entity_ids(league, subjects, keys=Subjects._get_keys):
                     pipe.hset(s_id, mapping={
                         'name': subj.std_name.split(':')[-1],
                         'team': subj.team,

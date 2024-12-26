@@ -59,12 +59,12 @@ class Markets(StaticDataStore):
         """
         assert markets, f"The list of {self.name} cannot be empty!"
         try:
-            self.std_mngr.name = sport
+            self.lookup_mngr.name = sport
             with self._r.pipeline() as pipe:
                 pipe.multi()
                 for entity in markets:
                     for entity_name in {entity.name, entity.std_name}:
-                        pipe.hsetnx(self.std_mngr.name, key=entity_name, value=entity.std_name)
+                        pipe.hsetnx(self.lookup_mngr.name, key=entity_name, value=entity.std_name)
 
                 pipe.execute()
 

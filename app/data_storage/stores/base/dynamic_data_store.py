@@ -1,8 +1,9 @@
-from typing import Any, Optional, Iterable
+from typing import Any, Iterable
+from datetime import datetime
 
 import redis
+from redis.client import PubSub
 
-from app.data_storage.managers import LIVEManager
 from app.data_storage.stores.base import StaticDataStore
 
 
@@ -23,6 +24,3 @@ class DynamicDataStore(StaticDataStore):
             name (str): The name identifier for this data store.
         """
         super().__init__(r, name)
-        self.live_mngr = LIVEManager(r, name)
-
-    def get_live_entities(self):

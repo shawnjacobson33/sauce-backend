@@ -2,10 +2,7 @@ import dotenv
 import os
 import redis
 
-from app.data_storage.client import Client
 from app.data_storage import stores as st
-from app.database import TEAMS_COLLECTION_NAME
-from app.database.mongo import MongoDB
 
 
 dotenv.load_dotenv('../../.env')
@@ -13,7 +10,7 @@ dotenv.load_dotenv('../../.env')
 
 class Redis:
     def __init__(self, db: str = 'prod'):
-        self.client = redis.Redis(db=0 if 'prod' else 1, password=os.getenv('REDIS_PASSWORD'))
+        self.client = redis.Redis(db=0 if db == 'prod' else 1, password=os.getenv('REDIS_PASSWORD'))
         # Structures
         self.markets = st.Markets(self.client)
         self.positions = st.Positions(self.client)
@@ -26,4 +23,5 @@ class Redis:
 
     # TODO: At some point create tester methods with dummy data
 
-ri = Redis()
+if __name__ == '__main__':
+    ri = Redis()

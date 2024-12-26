@@ -33,7 +33,7 @@ class Teams(StaticDataStore):
         Returns:
             Optional[str]: The unique identifier for the team, or None if not found.
         """
-        return self.std_mngr.get_eid(league, team)
+        return self.lookup_mngr.get_entity_id(league, team)
 
     def getids(self, league: str = None) -> Iterable:
         """
@@ -45,7 +45,7 @@ class Teams(StaticDataStore):
         Yields:
             str: Team identifiers.
         """
-        yield from self.std_mngr.get_eids(league)
+        yield from self.lookup_mngr.get_entity_ids(league)
 
     def getteam(self, league: str, team: str, report: bool = False) -> Optional[str]:
         """
@@ -90,7 +90,7 @@ class Teams(StaticDataStore):
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                for t_id, team in self.std_mngr.store_eids(league, teams, keys=lambda tm: (tm.name, tm.std_name)):
+                for t_id, team in self.lookup_mngr.store_entity_ids(league, teams, keys=lambda tm: (tm.name, tm.std_name)):
                     pipe.hset(t_id, mapping={
                         'abbr': team.std_name,
                         'full': team.full_name

@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 
 import pytest
@@ -12,34 +13,34 @@ one_hour_from_now = datetime.now() + timedelta(hours=1)
 @pytest.fixture
 def setup_redis():
     redis = Redis(db='dev')
-    redis.client.hset('games:std:nba', 'LAL', 'g1')
-    redis.client.hset('games:std:nba', 'GSW', 'g1')
-    redis.client.hset('games:std:nba', 'BOS', 'g2')
-    redis.client.hset('games:std:nba', 'BKN', 'g2')
+    redis.client.hset('games:lookup:nba', 'LAL', 'g1')
+    redis.client.hset('games:lookup:nba', 'GSW', 'g1')
+    redis.client.hset('games:lookup:nba', 'BOS', 'g2')
+    redis.client.hset('games:lookup:nba', 'BKN', 'g2')
 
-    redis.client.hset('g1', mapping={
+    game_json = json.dumps({
         'info': f'NBA_{now.strftime('%Y%m%d')}_LAL@GSW',
         'game_time': now.strftime("%Y-%m-%d %H:%M"),
     })
-    redis.client.zadd('games:gt:nba', mapping={'g1': int(now.timestamp())})
-    redis.client.hset('g2', mapping={
+    redis.client.hset('games:nba', 'g1', game_json)
+    game_json = json.dumps({
         'info': f'NBA_{one_hour_from_now.strftime('%Y%m%d')}_BOS@BKN',
         'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M"),
     })
-    redis.client.zadd('games:gt:nba', mapping={'g2': int(one_hour_from_now.timestamp())})
+    redis.client.hset('games:nba', 'g2', game_json)
     yield redis.games
     redis.client.flushdb()
 
 
 def test_getgame(setup_redis):
     result = setup_redis.getgame('NBA', 'LAL')
-    assert result == {b'info': b'NBA_20241223_LAL@GSW', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    assert result == {'info': 'NBA_20241223_LAL@GSW', 'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
     result = setup_redis.getgame('NBA', 'GSW')
-    assert result == {b'info': b'NBA_20241223_LAL@GSW', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    assert result == {'info': b'NBA_20241223_LAL@GSW', 'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
     result = setup_redis.getgame('NBA', 'BOS')
-    assert result == {b'info': b'NBA_20241223_BOS@BKN', b'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    assert result == {'info': b'NBA_20241223_BOS@BKN', 'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
     result = setup_redis.getgame('NBA', 'BKN')
-    assert result == {b'info': b'NBA_20241223_BOS@BKN', b'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    assert result == {'info': b'NBA_20241223_BOS@BKN', 'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
 
 
 def test_getgames(setup_redis):
