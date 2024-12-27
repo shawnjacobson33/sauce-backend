@@ -50,10 +50,10 @@ class StaticDataStore(DataStore):
         if report: self.id_mngr.storenoid(domain, key)
 
     def _secondary_index_every(self, domain: str) -> Iterable:
-        if e_ids := self.lookup_mngr.get_entity_ids(domain):
-            for e_id in e_ids: yield self._r.hgetall(e_id)
+        if entity_ids := self.lookup_mngr.get_entity_ids(domain):
+            for entity_id in entity_ids: yield self._r.hget(f'{self.name}:{domain.lower()}', entity_id)
 
-    def _secondary_index(self, domain: str, key: str = None, item: str = None, every: bool = False, report: bool = False) -> \
+    def _secondary_index(self, domain: str, key: str = None, every: bool = False, report: bool = False) -> \
         Optional[Iterable]:
         """
         Retrieves an entity via a secondary index, which may return either an entire entity or a specific item.
@@ -61,7 +61,6 @@ class StaticDataStore(DataStore):
         Args:
             domain (str): The domain used to identify the store.
             key (str): The key associated with the entity to retrieve.
-            item (str, optional): A specific item within the entity to retrieve. Defaults to None.
             every (bool, optional): Whether to retrieve all entities in the store. Defaults to False.
             report (bool, optional): Whether to store the entity ID if not found. Defaults to False.
 
@@ -75,7 +74,7 @@ class StaticDataStore(DataStore):
         else:
             if key:
                 if entity_id := self.lookup_mngr.get_entity_id(domain, key):
-                    yield self._r.hgetall(entity_id) if not item else self._r.hget(entity_id, key=item)
+                    yield self._r.hget(f'{self.name}:{domain.lower()}', entity_id)
 
                 if report: self.id_mngr.storenoid(domain, key)
             else:

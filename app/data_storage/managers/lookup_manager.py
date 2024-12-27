@@ -87,18 +87,18 @@ class LookupManager(Manager):
         Returns:
             Optional[str]: The entity ID if found, otherwise None.
         """
-        e_id = None
+        entity_id = None
         for key in keys(entity):
             if match := self._r.hget(self.name, key):
-                e_id = match
+                entity_id = match
                 continue
                 
-            if e_id:
-                self._r.hsetnx(self.name, key=key, value=e_id)
+            if entity_id:
+                self._r.hsetnx(self.name, key=key, value=entity_id)
                 if expireat:
                     self._r.hexpireat(self.name, expireat(entity), key)
         
-        return e_id
+        return entity_id
     
     def _map_entity(self, entity: Entity, keys: Callable, expireat: Callable = None) -> Optional[str]:
         """
@@ -112,13 +112,13 @@ class LookupManager(Manager):
         Returns:
             Optional[str]: The generated EID if the mapping is successful, otherwise None.
         """
-        e_id = self.id_mngr.generate()
+        entity_id = self.id_mngr.generate()
         for key in keys(entity):
-            self.performed_insert = True if self._r.hsetnx(self.name, key=key, value=e_id) else False
+            self.performed_insert = True if self._r.hset(self.name, key=key, value=entity_id) else False
             if expireat:
                 self._r.hexpireat(self.name, expireat(entity), key)
 
-        return e_id if self.performed_insert else self.id_mngr.decr()
+        return entity_id if self.performed_insert else self.id_mngr.decr()
 
     def store_entity_ids(self, domain: str, entities: list[Entity], keys: Callable, expireat: Callable = None) -> Iterable:
         """
@@ -135,8 +135,8 @@ class LookupManager(Manager):
         """
         self.name = domain
         for entity in entities:
-            if not (e_id := self._find_eid(entity, keys, expireat=expireat)):
-                e_id = self._map_entity(entity, keys, expireat=expireat)
+            if not (entity_id := self._find_eid(entity, keys, expireat=expireat)):
+                entity_id = self._map_entity(entity, keys, expireat=expireat)
             
-            yield e_id, entity
+            yield entity_id, entity
         

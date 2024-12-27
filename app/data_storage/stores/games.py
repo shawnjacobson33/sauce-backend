@@ -18,7 +18,7 @@ class Games(DynamicDataStore):
         """
         super().__init__(r, 'games')
 
-    def getgame(self, league: str, team: str, report: bool = False) -> Optional[str]:
+    def getgame(self, league: str, team: str, report: bool = False) -> Optional[dict]:
         """
         Retrieves a specific game for a given team.
 
@@ -28,9 +28,10 @@ class Games(DynamicDataStore):
             report (bool, optional): Whether to include a report in the result. Defaults to False.
 
         Returns:
-            Optional[str]: The game entity ID, or None if the game could not be found.
+            Optional[dict]: The game data if found, otherwise None.
         """
-        return self.get_entity('secondary', league, team, report=report)
+        if result_json := self.get_entity('secondary', league, team, report=report):
+            return json.loads(result_json)
 
     def getgames(self, league: str = None, game_ids: list[str] = None) -> Iterable:
         if game_ids:
@@ -41,13 +42,13 @@ class Games(DynamicDataStore):
             raise ValueError("Either league or game IDs must be provided.")
 
     def _scan_for_live_games(self, league: str, threshold: int = 30) -> Iterable:
-        for g_id in self._r.hscan_iter(f'{self.name}:{league.lower()}'):
-            if game_json := self._r.hget(f'{self.name}:{league.lower()}', g_id):
-                game_dict = json.loads(game_json)
-                if (game_dict['game_time'] - int(datetime.now().timestamp())) < threshold:
-                    self._r.hset(f'{self.name}:live:{league}', g_id, game_json)
-                    self._r.hdel(f'{self.name}:{league.lower()}', g_id)
-                    yield game_dict
+        for game_id, game_json in self._r.hscan_iter(f'{self.name}:{league.lower()}'):
+            game_dict = json.loads(game_json)
+            game_datetime = datetime.strptime(game_dict['game_time'], "%Y-%m-%d %H:%M:%S")
+            if (int(game_datetime.timestamp()) - int(datetime.now().timestamp())) < threshold:
+                self._r.hset(f'{self.name}:live:{league.lower()}', game_id, game_json)
+                self._r.hdel(f'{self.name}:{league.lower()}', game_id)
+                yield game_dict
 
     def getlivegames(self, league: str) -> Iterable:
         for game in self._scan_for_live_games(league, threshold=30): yield game
@@ -85,7 +86,7 @@ class Games(DynamicDataStore):
                 for game_id, game in self.lookup_mngr.store_entity_ids(league, games, self._get_keys, self._get_expiration):
                     pipe.hset(f'{self.name}:{league.lower()}', game_id, json.dumps({
                         'info': game.info,
-                        'game_time': game.game_time.strftime("%Y-%m-%d %H:%M")
+                        'game_time': game.game_time.strftime("%Y-%m-%d %H:%M:%S")
                     }))
                 pipe.execute()
 

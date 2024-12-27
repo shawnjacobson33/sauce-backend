@@ -40,10 +40,10 @@ class Game:
 
     def __post_init__(self):
         try:
-            self.game_time = datetime.strptime(self.game_time, "%Y-%m-%d %H:%M") \
+            self.game_time = datetime.strptime(self.game_time, "%Y-%m-%d %H:%M:%S") \
                 if isinstance(self.game_time, str) else self.game_time
         except ValueError:
-            raise ValueError("Incorrect data format, should be YYYY-MM-DD HH:MM")
+            raise ValueError("Incorrect data format, should be YYYY-MM-DD HH:MM:SS")
 
 
 @dataclass

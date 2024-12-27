@@ -71,5 +71,7 @@ def test_storeboxscores(setup_redis):
         'Rebounds': 3,
         'is_completed': False
     }
+
+
     result = setup_redis.getboxscore("NBA", 's2', stat='Points')
     assert result == 10

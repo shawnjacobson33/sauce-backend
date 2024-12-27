@@ -34,39 +34,46 @@ def setup_redis():
 
 def test_getgame(setup_redis):
     result = setup_redis.getgame('NBA', 'LAL')
-    assert result == {'info': 'NBA_20241223_LAL@GSW', 'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    assert result == {'info': f'NBA_{now.strftime('%Y%m%d')}_LAL@GSW', 'game_time': now.strftime("%Y-%m-%d %H:%M")}
     result = setup_redis.getgame('NBA', 'GSW')
-    assert result == {'info': b'NBA_20241223_LAL@GSW', 'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    assert result == {'info': f'NBA_{now.strftime('%Y%m%d')}_LAL@GSW', 'game_time': now.strftime("%Y-%m-%d %H:%M")}
     result = setup_redis.getgame('NBA', 'BOS')
-    assert result == {'info': b'NBA_20241223_BOS@BKN', 'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    assert result == {'info': f'NBA_{now.strftime('%Y%m%d')}_BOS@BKN', 'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M")}
     result = setup_redis.getgame('NBA', 'BKN')
-    assert result == {'info': b'NBA_20241223_BOS@BKN', 'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    assert result == {'info': f'NBA_{now.strftime('%Y%m%d')}_BOS@BKN', 'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M")}
 
 
 def test_getgames(setup_redis):
-    result = list(setup_redis.getgames('NBA'))
-    assert result == [{b'info': b'NBA_20241223_LAL@GSW', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')},
-                      {b'info': b'NBA_20241223_BOS@BKN', b'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}]
+    result_json = list(setup_redis.getgames('NBA'))
+    result = [json.loads(r) for r in result_json]
+    assert result == [{'info': f'NBA_{now.strftime('%Y%m%d')}_LAL@GSW', 'game_time': now.strftime("%Y-%m-%d %H:%M")},
+                      {'info': f'NBA_{now.strftime('%Y%m%d')}_BOS@BKN', 'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M")}]
 
 
 def test_getlivegames(setup_redis):
-    result = list(setup_redis.getgames('NBA', is_live=True))
-    assert result == [{b'info': b'NBA_20241223_LAL@GSW', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}]
+    result = list(setup_redis.getlivegames('NBA'))
+    live_games = [{'info': f'NBA_{now.strftime('%Y%m%d')}_LAL@GSW', 'game_time': now.strftime("%Y-%m-%d %H:%M")}]
+    assert result == live_games
+
+    live_game = setup_redis._r.hget('games:live:nba', 'g1')
+    assert live_game
+    result = json.loads(live_game)
+    assert result == live_games[0]
+
+    assert not setup_redis._r.hget('games:nba', 'g1')
 
 
-def test_store(setup_redis):
-    game1 = Game(domain='NBA', info='NBA_20241223_MIN@ATL', game_time=now.strftime("%Y-%m-%d %H:%M"))
-    game2 = Game(domain='NBA', info='NBA_20241223_SAC@NYK', game_time= one_hour_from_now.strftime("%Y-%m-%d %H:%M"))
-    setup_redis.store('NBA', [game1, game2])
+def test_storegames(setup_redis):
+    game_time = (now + timedelta(seconds=1)).strftime("%Y-%m-%d %H:%M:%S")
+    game1 = Game(domain='NBA', info=f'NBA_{now.strftime('%Y%m%d')}_MIN@ATL', game_time=game_time)
+    game2 = Game(domain='NBA', info=f'NBA_{now.strftime('%Y%m%d')}_SAC@NYK', game_time=game_time)
+    setup_redis.storegames('NBA', [game1, game2])
 
     result = setup_redis.getgame('NBA', 'MIN')
-    assert result == {b'info': b'NBA_20241223_MIN@ATL', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    assert result == {'info': f'NBA_{now.strftime('%Y%m%d')}_MIN@ATL', 'game_time': game_time}
     result = setup_redis.getgame('NBA', 'ATL')
-    assert result == {b'info': b'NBA_20241223_MIN@ATL', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    assert result == {'info': f'NBA_{now.strftime('%Y%m%d')}_MIN@ATL', 'game_time': game_time}
     result = setup_redis.getgame('NBA', 'SAC')
-    assert result == {b'info': b'NBA_20241223_SAC@NYK', b'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
+    assert result == {'info': f'NBA_{now.strftime('%Y%m%d')}_SAC@NYK', 'game_time': game_time}
     result = setup_redis.getgame('NBA', 'NYK')
-    assert result == {b'info': b'NBA_20241223_SAC@NYK', b'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}
-
-    result = list(setup_redis.getgames('NBA', is_live=True))
-    assert result == [{b'info': b'NBA_20241223_MIN@ATL', b'game_time': now.strftime("%Y-%m-%d %H:%M").encode('utf-8')}]
+    assert result == {'info': f'NBA_{now.strftime('%Y%m%d')}_SAC@NYK', 'game_time': game_time}
