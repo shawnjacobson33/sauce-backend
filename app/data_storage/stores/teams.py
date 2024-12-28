@@ -1,3 +1,5 @@
+import json
+from collections import defaultdict
 from typing import Optional, Iterable
 
 import redis
@@ -23,79 +25,50 @@ class Teams(StaticDataStore):
         super().__init__(r, 'teams')
 
     def getid(self, league: str, team: str) -> Optional[str]:
-        """
-        Retrieve the unique identifier for a specific team within a league.
+        return self._r.hget(f'{self.name}:lookup:{league.lower()}', team)
 
-        Args:
-            league (str): The league or domain to search within.
-            team (str): A team name.
+    def _scan_team_ids(self, league: str) -> Iterable:
+        counter = defaultdict(int)
+        for _, team_id in self._r.hscan_iter(f'{self.name}:lookup:{league.lower()}'):
+            if not counter[team_id]:
+                counter[team_id] += 1
+                yield team_id
 
-        Returns:
-            Optional[str]: The unique identifier for the team, or None if not found.
-        """
-        return self.lookup_mngr.get_entity_id(league, team)
-
-    def getids(self, league: str = None) -> Iterable:
-        """
-        Retrieve all unique identifiers for teams, optionally filtered by league.
-
-        Args:
-            league (str, optional): The league to filter by. If None, retrieves IDs across all leagues.
-
-        Yields:
-            str: Team identifiers.
-        """
-        yield from self.lookup_mngr.get_entity_ids(league)
+    def getids(self, league: str) -> Iterable:
+        yield from self._scan_team_ids(league)
 
     def getteam(self, league: str, team: str, report: bool = False) -> Optional[str]:
-        """
-        Retrieve details about a specific team within a league.
-
-        Args:
-            league (str): The league or domain to search within.
-            team (str): a team name
-            report (bool, optional): Whether to log or report missing entries. Defaults to False.
-
-        Returns:
-            Optional[str]: Details of the team, or None if not found.
-        """
-        return self.get_entity('secondary', league, team, report=report)
+        if team_id := self.getid(league, team):
+            team = self._r.hget(f'{self.name}:info:{league.lower()}', team_id)
+            return json.loads(team)
 
     def getteams(self, league: str) -> Iterable:
-        """
-        Retrieve all teams within a specific league.
+        if team_ids := self.getids(league):
+            for team_id in team_ids:
+                yield self._r.hget(f'{self.name}:info:{league.lower()}', team_id)
 
-        Args:
-            league (str): The name of the league.
+    def _store_in_lookup(self, league: str, team: Team) -> Optional[str]:
+        try:
+            inserts = 0
+            team_id = self.id_mngr.generate()
+            for team_name in {team.name, team.std_name}:
+                inserts += self._r.hsetnx(f'{self.name}:lookup:{league.lower()}', team_name, team_id)
 
-        Yields:
-            str: Team identifiers within the specified league.
-        """
-        yield from self.get_entities('secondary', league)
+            return team_id if inserts else self.id_mngr.decr()
 
-    def store(self, league: str, teams: list[Team]) -> None:
-        """
-        Stores a list of teams into the Redis data store, associating each team with its domain.
+        except IndexError as e:
+            self._handle_error(e)
 
-        The method uses Redis pipelines for efficient batch operations, ensuring that each team's
-        abbreviation and full name are stored with a unique identifier.
-
-        Args:
-            league (str): The domain (partition) to associate the teams with.
-            teams (list[Team]): A list of `Team` objects to store.
-
-        Raises:
-            AttributeError: If any expected attribute is missing or incorrectly set.
-        """
+    def storeteams(self, league: str, teams: list[Team]) -> None:
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                for t_id, team in self.lookup_mngr.store_entity_ids(league, teams, keys=lambda tm: (tm.name, tm.std_name)):
-                    pipe.hset(t_id, mapping={
-                        'abbr': team.std_name,
-                        'full': team.full_name
-                    })
-
+                for team in teams:
+                    if team_id := self._store_in_lookup(league, team):
+                        pipe.hset(f'{self.name}:info:{league.lower()}', team_id, json.dumps({
+                            'abbr': team.std_name,
+                            'full': team.full_name
+                        }))
                 pipe.execute()
 
         except AttributeError as e:

@@ -1,8 +1,9 @@
 from typing import Optional, Iterable
 
 import redis
+from redis.client import Pipeline
 
-from app.data_storage.models import Position
+from app.data_storage.models import Position, Market
 from app.data_storage.stores.base import StaticDataStore
 
 
@@ -27,57 +28,22 @@ class Positions(StaticDataStore):
         """
         super().__init__(r, 'positions')
 
-    def getpos(self, sport: str, pos: str, report: bool = False) -> Optional[str]:
-        """
-        Retrieve the unique identifier for a specific position in a given sport.
-
-        Args:
-            sport (str): The name of the sport (e.g., "basketball", "soccer").
-            pos (str): The name of the position to retrieve (e.g., "goalkeeper", "center").
-            report (bool, optional): Whether to log the retrieval operation. Defaults to False.
-
-        Returns:
-            Optional[str]: The unique identifier for the position if found, otherwise None.
-        """
-        return self.get_entity('direct', pos, sport, report=report)
+    def getposition(self, sport: str, position: str, report: bool = False) -> Optional[str]:
+        return self._r.hget(f'{self.name}:lookup:{sport.lower()}', position)
 
     def getpositions(self, sport: str) -> Iterable:
-        """
-        Retrieve all position identifiers for a given sport.
+        yield from self._r.hscan_iter(f'{self.name}:lookup:{sport.lower()}')
 
-        Args:
-            sport (str): The name of the sport (e.g., "football", "tennis").
+    def _store_in_lookup(self, sport: str, pipe: Pipeline, position: Position) -> None:
+        for position_name in {position.name, position.std_name}:
+            pipe.hset(f'{self.name}:lookup:{sport.lower()}', key=position_name, value=position.std_name)
 
-        Returns:
-            Optional[list[str]]: A list of position identifiers for the sport if any exist,
-                                 otherwise None.
-        """
-        yield from self.get_entities(domain=sport)
-
-    def store(self, sport: str, positions: list[Position]) -> None:
-        """
-        Store a list of position data for a given sport in the Redis data store.
-
-        Each position is associated with the sport and stored using both its name
-        and standardized name for easy retrieval and lookup.
-
-        Args:
-            sport (str): The name of the sport (e.g., "baseball", "hockey").
-            positions (list[Position]): A list of `Position` objects to be stored.
-
-        Raises:
-            AssertionError: If the positions list is empty.
-            AttributeError: If any position object lacks required attributes.
-        """
-        assert positions, f"The list of {self.name} cannot be empty!"
+    def storepositions(self, sport: str, positions: list[Position]) -> None:
         try:
-            self.lookup_mngr.name = sport
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                for entity in positions:
-                    for entity_name in {entity.name, entity.std_name}:
-                        pipe.hsetnx(self.lookup_mngr.name, key=entity_name, value=entity.std_name)
-
+                for position in positions:
+                    self._store_in_lookup(sport, pipe, position)
                 pipe.execute()
 
         except AttributeError as e:

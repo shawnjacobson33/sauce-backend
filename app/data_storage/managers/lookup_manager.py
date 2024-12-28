@@ -40,7 +40,6 @@ class LookupManager(Manager):
         Returns:
             Optional[str]: The entity ID if found, otherwise None.
         """
-        self.name = domain
         return self._r.hget(self.name, key)
 
     def _scan_keys(self) -> Iterable:
@@ -72,10 +71,9 @@ class LookupManager(Manager):
             entity_type = get_entity_type(self.name)
             return (t_key for t_key in self._r.scan_iter(f'{entity_type}:*'))
 
-        self.name = domain
         yield from self._scan_keys()
 
-    def _find_eid(self, entity: Entity, keys: Callable, expireat: Callable = None) -> Optional[str]:
+    def _find_entity_id(self, entity: Entity, keys: Callable, expireat: Callable = None) -> Optional[str]:
         """
         Attempt to find an entity ID (EID) for a given entity by checking its keys.
 
@@ -135,7 +133,7 @@ class LookupManager(Manager):
         """
         self.name = domain
         for entity in entities:
-            if not (entity_id := self._find_eid(entity, keys, expireat=expireat)):
+            if not (entity_id := self._find_entity_id(entity, keys, expireat=expireat)):
                 entity_id = self._map_entity(entity, keys, expireat=expireat)
             
             yield entity_id, entity

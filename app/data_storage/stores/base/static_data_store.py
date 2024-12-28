@@ -21,9 +21,8 @@ class StaticDataStore(DataStore):
         """
         super().__init__(r, name)
 
-    def _direct_index_every(self, domain: str) -> Iterable:
-        self.lookup_mngr.name = domain
-        yield from self._r.hscan_iter(self.lookup_mngr.name)
+    def _direct_index_every(self) -> Iterable:
+        yield from self._r.hscan_iter(f'{self.name}:lookup')
 
     def _direct_index(self, key: str, domain: str = None, every: bool = False, report: bool = False) -> Optional[str]:
         """
@@ -40,18 +39,17 @@ class StaticDataStore(DataStore):
 
         If the entity is not found and the `report` argument is True, the entity ID is stored.
         """
-        self.lookup_mngr.name = domain
         if every:
-            yield from self._direct_index_every(domain)
+            yield from self._direct_index_every()
         else:
-            if entity_match := self._r.hget(self.lookup_mngr.name, key):
+            if entity_match := self._r.hget(f'{self.name}:lookup', key):
                 return entity_match
 
         if report: self.id_mngr.storenoid(domain, key)
 
     def _secondary_index_every(self, domain: str) -> Iterable:
         if entity_ids := self.lookup_mngr.get_entity_ids(domain):
-            for entity_id in entity_ids: yield self._r.hget(f'{self.name}:{domain.lower()}', entity_id)
+            for entity_id in entity_ids: yield self._r.hget(f'{self.name}:lookup', entity_id)
 
     def _secondary_index(self, domain: str, key: str = None, every: bool = False, report: bool = False) -> \
         Optional[Iterable]:
@@ -74,7 +72,7 @@ class StaticDataStore(DataStore):
         else:
             if key:
                 if entity_id := self.lookup_mngr.get_entity_id(domain, key):
-                    yield self._r.hget(f'{self.name}:{domain.lower()}', entity_id)
+                    yield self._r.hget(f'{self.name}:info', entity_id)
 
                 if report: self.id_mngr.storenoid(domain, key)
             else:

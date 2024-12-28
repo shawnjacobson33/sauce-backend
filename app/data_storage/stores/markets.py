@@ -1,6 +1,7 @@
 from typing import Optional, Iterable
 
 import redis
+from redis.client import Pipeline
 
 from app.data_storage.models import Market
 from app.data_storage.stores.base import StaticDataStore
@@ -20,52 +21,21 @@ class Markets(StaticDataStore):
         super().__init__(r, 'markets')
 
     def getmarket(self, sport: str, market: str, report: bool = False) -> Optional[str]:
-        """
-        Retrieves the detailed representation of a market for a specific sport.
-
-        Args:
-            sport (str): The sport associated with the market.
-            market (str): The name of the market to retrieve.
-            report (bool, optional): Whether to include reporting information.
-
-        Returns:
-            Optional[str]: The market details if found, otherwise `None`.
-        """
-        return self.get_entity('direct', market, sport, report=report)
+        return self._r.hget(f'{self.name}:lookup:{sport.lower()}', market)
 
     def getmarkets(self, sport: str) -> Iterable:
-        """
-        Retrieves detailed representations of all markets for a specific sport.
+        yield from self._r.hscan_iter(f'{self.name}:lookup:{sport.lower()}')
 
-        Args:
-            sport (str): The sport to filter markets by.
+    def _store_in_lookup(self, sport: str, pipe: Pipeline, market: Market) -> None:
+        for market_name in {market.name, market.std_name}:
+            pipe.hset(f'{self.name}:lookup:{sport.lower()}', key=market_name, value=market.std_name)
 
-        Yields:
-            Iterable: An iterable of detailed market representations.
-        """
-        yield from self.get_entities(domain=sport)
-
-    def store(self, sport: str, markets: list[Market]) -> None:
-        """
-        Stores a batch of markets in the database for a given sport.
-
-        Args:
-            sport (str): The sport associated with the markets.
-            markets (list[Market]): A list of Market instances to store.
-
-        Raises:
-            AssertionError: If the list of markets is empty.
-            AttributeError: If there is an issue with the market attributes or Redis pipeline.
-        """
-        assert markets, f"The list of {self.name} cannot be empty!"
+    def storemarkets(self, sport: str, markets: list[Market]) -> None:
         try:
-            self.lookup_mngr.name = sport
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                for entity in markets:
-                    for entity_name in {entity.name, entity.std_name}:
-                        pipe.hsetnx(self.lookup_mngr.name, key=entity_name, value=entity.std_name)
-
+                for market in markets:
+                    self._store_in_lookup(sport, pipe, market)
                 pipe.execute()
 
         except AttributeError as e:

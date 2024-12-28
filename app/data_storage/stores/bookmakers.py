@@ -25,47 +25,18 @@ class Bookmakers(StaticDataStore):
         """
         super().__init__(r, 'bookmakers')
 
-    def getbkm(self, bookmaker: str) -> Optional[str]:
-        """
-        Retrieve the unique identifier for a specific bookmaker.
-
-        Args:
-            bookmaker (str): The name of the bookmaker (e.g., "Bet365", "DraftKings").
-
-        Returns:
-            Optional[str]: The unique identifier for the bookmaker if found, otherwise None.
-        """
-        return self.get_entity('direct', bookmaker)
+    def getbookmaker(self, bookmaker: str) -> Optional[str]:
+        return self._r.hget(f'{self.name}:info', bookmaker)
 
     def getbookmakers(self):
-        """
-        Retrieve all bookmaker identifiers from the data store.
+        yield from self._r.hscan_iter(f'{self.name}:info')
 
-        Returns:
-            Iterable: A generator yielding all bookmaker identifiers.
-        """
-        return self.get_entities()
-
-    def store(self, bookmakers: list[Bookmaker]):
-        """
-        Store a list of bookmakers in the Redis data store.
-
-        Each bookmaker is stored with its name as the key and its default odds as the value.
-
-        Args:
-            bookmakers (list[Bookmaker]): A list of `Bookmaker` objects to be stored.
-
-        Raises:
-            AssertionError: If the bookmakers list is empty.
-            AttributeError: If any bookmaker object lacks required attributes.
-        """
-        assert bookmakers, f"The {self.name} list cannot be empty!"
+    def storebookmakers(self, bookmakers: list[Bookmaker]):
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                for bkm in bookmakers:
-                    pipe.hsetnx(self.lookup_mngr.name, key=bkm.name, value=str(bkm.dflt_odds))
-
+                for bookmaker in bookmakers:
+                    pipe.hset(f'{self.name}:info', key=bookmaker.name, value=str(bookmaker.dflt_odds))
                 pipe.execute()
 
         except AttributeError as e:

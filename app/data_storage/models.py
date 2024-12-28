@@ -27,9 +27,9 @@ class Team(Entity):
 
 @dataclass
 class Subject(Entity):
-    std_name: str
-    position: str
-    team: str
+    std_name: str = None
+    position: str = None
+    team: str = None
 
 
 @dataclass

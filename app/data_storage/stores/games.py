@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 from typing import Optional, Iterable
 
@@ -18,76 +19,61 @@ class Games(DynamicDataStore):
         """
         super().__init__(r, 'games')
 
+
+    def getid(self, league: str, team: str) -> Optional[str]:
+        return self._r.hget(f'{self.name}:lookup:{league.lower()}', team)
+
+    def _scan_game_ids(self, league: str) -> Iterable:
+        counter = defaultdict(int)
+        for _, subj_id in self._r.hscan_iter(f'{self.name}:lookup:{league.lower()}'):
+            if not counter[subj_id]:
+                counter[subj_id] += 1
+                yield subj_id
+
+    def getids(self, league: str) -> Iterable:
+        yield from self._scan_game_ids(league)
+
     def getgame(self, league: str, team: str, report: bool = False) -> Optional[dict]:
-        """
-        Retrieves a specific game for a given team.
+        if game_id := self.getid(league, team):
+            return self._r.hget(f'{self.name}:info:{league.lower()}', game_id)
 
-        Args:
-            league (str): The name of the league to filter by.
-            team (str): The name of the team to filter by.
-            report (bool, optional): Whether to include a report in the result. Defaults to False.
+    def getgames(self, league: str) -> Iterable:
+        if subj_ids := self.getids(league):
+            for subj_id in subj_ids: yield self._r.hget(f'{self.name}:lookup:{league.lower()}', subj_id)
 
-        Returns:
-            Optional[dict]: The game data if found, otherwise None.
-        """
-        if result_json := self.get_entity('secondary', league, team, report=report):
-            return json.loads(result_json)
+    def putqueue(self, league: str, queue_type: str, game_id: str, game_time: datetime) -> None:
+        self._r.zadd(f'{self.name}:{queue_type}:queue:{league.lower()}', {game_id: int(game_time.timestamp())})
 
-    def getgames(self, league: str = None, game_ids: list[str] = None) -> Iterable:
-        if game_ids:
-            for game_id in game_ids: yield self._r.hget(f'{self.name}:{league.lower()}', game_id)
-        elif league:
-            yield from self.get_entities('secondary', league)
-        else:
-            raise ValueError("Either league or game IDs must be provided.")
+    def checkqueue(self, league: str, queue_type: str) -> Optional[str]:
+        return self._r.zrange(f'{self.name}:{queue_type}:queue:{league.lower()}', 0, 0)
 
-    def _scan_for_live_games(self, league: str, threshold: int = 30) -> Iterable:
-        for game_id, game_json in self._r.hscan_iter(f'{self.name}:{league.lower()}'):
-            game_dict = json.loads(game_json)
-            game_datetime = datetime.strptime(game_dict['game_time'], "%Y-%m-%d %H:%M:%S")
-            if (int(game_datetime.timestamp()) - int(datetime.now().timestamp())) < threshold:
-                self._r.hset(f'{self.name}:live:{league.lower()}', game_id, game_json)
-                self._r.hdel(f'{self.name}:{league.lower()}', game_id)
-                yield game_dict
+    def popqueue(self, league: str, queue_type: str) -> Optional[str]:
+        return self._r.zpopmin(f'{self.name}:{queue_type}:queue:{league.lower()}')
 
-    def getlivegames(self, league: str) -> Iterable:
-        for game in self._scan_for_live_games(league, threshold=30): yield game
-
-    def getcompletedgames(self, league: str) -> Iterable:
-        for game in self._r.sscan_iter(f'games:completed:{league}'): yield game
-
-    @staticmethod
-    def _get_keys(game: Game) -> tuple[str, str]:
-        """
-        Extracts the away and home team names from a game entity's info field.
-
-        Args:
-            game (Game): The game entity containing the game information.
-
-        Returns:
-            tuple[str, str]: A tuple containing the away and home team names.
-        Raises:
-            IndexError: If an error occurs while extracting the team names from the game info.
-        """
+    def _store_in_lookup(self, league: str, game: Game) -> Optional[str]:
         try:
-            away_team, home_team = game.info.split('_')[2].split('@')
-            return away_team, home_team
-        except IndexError as e:
-            raise Exception(f"Error extracting team names from game info url (correct ex: NBA_20241113_BOS@BKN): {e}")
+            game_id = self.id_mngr.generate()
+            teams = game.info.split('_')[2].split('@')
+            for team in teams:
+                self._r.hset(f'{self.name}:lookup:{league.lower()}', team, game_id)
 
-    @staticmethod
-    def _get_expiration(game: Game) -> int:
-        return int(game.game_time.timestamp())
+            return game_id
+
+        except IndexError as e:
+            self.id_mngr.decr()
+            print(f"Error extracting team keys: {game} -> {e}")
 
     def storegames(self, league: str, games: list[Game]) -> None:
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                for game_id, game in self.lookup_mngr.store_entity_ids(league, games, self._get_keys, self._get_expiration):
-                    pipe.hset(f'{self.name}:{league.lower()}', game_id, json.dumps({
+                for game in games:
+                    game_id = self._store_in_lookup(league, game)
+                    pipe.hset(f'{self.name}:info:{league.lower()}', game_id, json.dumps({
                         'info': game.info,
                         'game_time': game.game_time.strftime("%Y-%m-%d %H:%M:%S")
                     }))
+                    self.putqueue(game.domain, 'upcoming', game_id, game.game_time)
                 pipe.execute()
 
         except KeyError as e:

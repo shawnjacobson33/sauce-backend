@@ -17,32 +17,28 @@ class BoxScores(DynamicDataStore):
         """
         super().__init__(r, 'box_scores')
 
-    def getboxscore(self, league: str, subj_id: str, stat: str = None, expire: bool = False) -> \
+    def getboxscore(self, league: str, subj_id: str, stat: str = None) -> \
             Optional[Union[str, dict]]:
-        name = f'{self.name}:{league.lower()}'
-        if box_score_json := self._r.hget(name, f'b{subj_id}'):
+        if box_score_json := self._r.hget(f'{self.name}:info:{league.lower()}', f'b{subj_id}'):
             box_score_dict = json.loads(box_score_json)
-            if stat:
-                return box_score_dict[stat]
-            if expire:
-                self._r.hdel(name, f'b{subj_id}')
-
+            if stat: return box_score_dict[stat]
             return box_score_dict
 
     @staticmethod
-    def _evaluate_game_state(pipe: Pipeline, box_score: dict) -> None:
+    def _evaluate_game_state(league: str, pipe: Pipeline, box_score: dict) -> None:
         if box_score['is_completed']:
-            league, game_id = box_score['league'], box_score['game_id']
-            pipe.sadd(f'games:completed:{league}', game_id)
-            pipe.hdel(f'games:live:{league}', game_id)
+            if game_json := pipe.hget(f'games:info:{league.lower()}', box_score['game_id']):
+                game_dict = json.loads(game_json)
+                game_dict['is_completed'] = True
+                pipe.hset(f'games:info:{league.lower()}', box_score['game_id'], json.dumps(game_dict))
 
-    def storeboxscores(self, box_scores: list[dict]) -> None:
+    def storeboxscores(self, league: str, box_scores: list[dict]) -> None:
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
                 for box_score in box_scores:
-                    self._evaluate_game_state(pipe, box_score)
-                    pipe.hset(f'{self.name}:{box_score["league"].lower()}', f'b{box_score["subj_id"]}',
+                    self._evaluate_game_state(league, pipe, box_score)
+                    pipe.hset(f'{self.name}:info:{league.lower()}', f'b{box_score["subj_id"]}',
                               json.dumps(box_score))
                 pipe.execute()
 
