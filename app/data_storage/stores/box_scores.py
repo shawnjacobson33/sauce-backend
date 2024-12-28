@@ -24,21 +24,20 @@ class BoxScores(DynamicDataStore):
             if stat: return box_score_dict[stat]
             return box_score_dict
 
-    @staticmethod
-    def _evaluate_game_state(league: str, pipe: Pipeline, box_score: dict) -> None:
+    def _evaluate_game_state(self, league: str, pipe: Pipeline, box_score: dict) -> None:
         if box_score['is_completed']:
-            if game_json := pipe.hget(f'games:info:{league.lower()}', box_score['game_id']):
+            if game_json := self._r.hget(f'games:info:{league.lower()}', box_score['game_id']):
                 game_dict = json.loads(game_json)
                 game_dict['is_completed'] = True
                 pipe.hset(f'games:info:{league.lower()}', box_score['game_id'], json.dumps(game_dict))
 
-    def storeboxscores(self, league: str, box_scores: list[dict]) -> None:
+    def storeboxscores(self, box_scores: list[dict]) -> None:
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
                 for box_score in box_scores:
-                    self._evaluate_game_state(league, pipe, box_score)
-                    pipe.hset(f'{self.name}:info:{league.lower()}', f'b{box_score["subj_id"]}',
+                    self._evaluate_game_state(box_score['league'], pipe, box_score)
+                    pipe.hset(f'{self.name}:info:{box_score['league'].lower()}', f'b{box_score["subj_id"]}',
                               json.dumps(box_score))
                 pipe.execute()
 

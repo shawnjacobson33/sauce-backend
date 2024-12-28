@@ -29,8 +29,8 @@ class Subjects(StaticDataStore):
 
         return condensed_name
 
-    def getid(self, league: str, subject: Subject) -> Optional[str]:
-        return self._r.hget(f'{self.name}:lookup:{league.lower()}', self._get_key(subject))
+    def getid(self, subject: Subject) -> Optional[str]:
+        return self._r.hget(f'{self.name}:lookup:{subject.domain.lower()}', self._get_key(subject))
 
     def _scan_subj_ids(self, league: str) -> Iterable:
         counter = defaultdict(int)
@@ -49,7 +49,10 @@ class Subjects(StaticDataStore):
 
     def getsubjs(self, league: str) -> Iterable:
         if subj_ids := self.getids(league):
-            for subj_id in subj_ids: yield self._r.hget(f'{self.name}:lookup:{league.lower()}', subj_id)
+            for subj_id in subj_ids:
+                if subj_json := self._r.hget(f'{self.name}:info:{league.lower()}', subj_id):
+                    yield json.loads(subj_json)
+
 
     def setsubjactive(self, league: str, subj_id: str) -> None:
         self._r.sadd(f'{self.name}:active:{league.lower()}', subj_id)
@@ -62,11 +65,12 @@ class Subjects(StaticDataStore):
 
     def _store_in_lookup(self, league: str, subj: Subject) -> Optional[str]:
         try:
+            inserts = 0
             subj_id = self.id_mngr.generate()
             for subj_key in self._get_keys(subj):
-                self._r.hset(f'{self.name}:lookup:{league.lower()}', subj_key, subj_id)
+                inserts += self._r.hsetnx(f'{self.name}:lookup:{league.lower()}', subj_key, subj_id)
 
-            return subj_id
+            return subj_id if inserts else self.id_mngr.decr()
 
         except IndexError as e:
             self.id_mngr.decr()
@@ -77,8 +81,8 @@ class Subjects(StaticDataStore):
             with self._r.pipeline() as pipe:
                 pipe.multi()
                 for subj in subjects:
-                    subj_id = self._store_in_lookup(league, subj)
-                    pipe.hset(f'{self.name}:info:{league.lower()}', subj_id, json.dumps({
+                    if subj_id := self._store_in_lookup(league, subj):
+                        pipe.hset(f'{self.name}:info:{league.lower()}', subj_id, json.dumps({
                         'name': subj.std_name.split(':')[-1],
                         'team': subj.team,
                     }))

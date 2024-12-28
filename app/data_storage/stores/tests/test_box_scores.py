@@ -11,13 +11,13 @@ from app.data_storage.models import Game, Subject
 def setup_redis():
     redis = Redis(db='dev')
 
-    redis.subjects.storesubjects([
+    redis.subjects.storesubjects("NBA", [
         Subject(domain='NBA', name='Lebron James', team='LAL', position='F', std_name='LeBron James'),
         Subject(domain='NBA', name='Ant Edwards', team='MIN', position='G', std_name='Anthony Edwards')
     ])
 
 
-    redis.games.storegames([
+    redis.games.storegames("NBA", [
         Game(domain='NBA', info=f'NBA_{datetime.now().strftime('%Y%m%d')}_MIN@LAL',
              game_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
     ])
@@ -28,19 +28,18 @@ def setup_redis():
 
 def test_getboxscore(setup_redis):
     subj_id = setup_redis.subjects.getid(Subject(domain='NBA', name='Lebron James', team='LAL'))
-    box_score_json = json.dumps({
+    setup_redis.client.hset('box_scores:info:nba', f'b{subj_id}', json.dumps({
         'league': 'NBA',
-        'subj_id': subj_id,
+        'subj_id': str(subj_id),
         'Points': 25,
         'Assists': 5,
         'Rebounds': 10
-    })
-    setup_redis.client.hset('box_scores:nba', f'b{subj_id}', box_score_json)
+    }))
 
     result = setup_redis.box_scores.getboxscore('NBA', subj_id)
     assert result == {
         'league': 'NBA',
-        'subj_id': subj_id,
+        'subj_id': str(subj_id),
         'Points': 25,
         'Assists': 5,
         'Rebounds': 10
@@ -57,16 +56,16 @@ def test_storeboxscores(setup_redis):
     game_id = setup_redis.games.getid("NBA", 'LAL')
     setup_redis.box_scores.storeboxscores([{
         'league': 'NBA',
-        'game_id': game_id,
-        'subj_id': subj_id_1,
+        'game_id': str(game_id),
+        'subj_id': str(subj_id_1),
         'Points': 10,
         'Assists': 2,
         'Rebounds': 3,
         'is_completed': False
     }, {
         'league': 'NBA',
-        'game_id': game_id,
-        'subj_id': subj_id_2,
+        'game_id': str(game_id),
+        'subj_id': str(subj_id_2),
         'Points': 15,
         'Assists': 5,
         'Rebounds': 8,
@@ -76,8 +75,8 @@ def test_storeboxscores(setup_redis):
     result = setup_redis.box_scores.getboxscore("NBA", subj_id_1)
     assert result == {
         'league': 'NBA',
-        'game_id': game_id,
-        'subj_id': subj_id_1,
+        'game_id': str(game_id),
+        'subj_id': str(subj_id_1),
         'Points': 10,
         'Assists': 2,
         'Rebounds': 3,
@@ -85,8 +84,15 @@ def test_storeboxscores(setup_redis):
     }
 
     result = setup_redis.box_scores.getboxscore("NBA", subj_id_2)
+    assert result == {
+        'league': 'NBA',
+        'game_id': str(game_id),
+        'subj_id': str(subj_id_2),
+        'Points': 15,
+        'Assists': 5,
+        'Rebounds': 8,
+        'is_completed': True
+    }
 
-
-
-    result = setup_redis.box_scores.getboxscore("NBA", 's2', stat='Points')
-    assert result == 10
+    result = setup_redis.box_scores.getboxscore("NBA", subj_id_2, stat='Points')
+    assert result == 15

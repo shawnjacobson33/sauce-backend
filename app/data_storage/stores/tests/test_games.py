@@ -13,21 +13,23 @@ one_hour_from_now = datetime.now() + timedelta(hours=1)
 @pytest.fixture
 def setup_redis():
     redis = Redis(db='dev')
-    redis.client.hset('games:lookup:nba', 'LAL', 'g1')
-    redis.client.hset('games:lookup:nba', 'GSW', 'g1')
-    redis.client.hset('games:lookup:nba', 'BOS', 'g2')
-    redis.client.hset('games:lookup:nba', 'BKN', 'g2')
 
-    game_json = json.dumps({
+    lookup_name = 'games:lookup:nba'
+    redis.client.hset(lookup_name, 'LAL', 'g1')
+    redis.client.hset(lookup_name, 'GSW', 'g1')
+    redis.client.hset(lookup_name, 'BOS', 'g2')
+    redis.client.hset(lookup_name, 'BKN', 'g2')
+
+    info_name = 'games:info:nba'
+    redis.client.hset(info_name, 'g1', json.dumps({
         'info': f'NBA_{now.strftime('%Y%m%d')}_LAL@GSW',
         'game_time': now.strftime("%Y-%m-%d %H:%M"),
-    })
-    redis.client.hset('games:nba', 'g1', game_json)
-    game_json = json.dumps({
+    }))
+    redis.client.hset(info_name, 'g2', json.dumps({
         'info': f'NBA_{one_hour_from_now.strftime('%Y%m%d')}_BOS@BKN',
         'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M"),
-    })
-    redis.client.hset('games:nba', 'g2', game_json)
+    }))
+
     yield redis.games
     redis.client.flushdb()
 
@@ -44,23 +46,9 @@ def test_getgame(setup_redis):
 
 
 def test_getgames(setup_redis):
-    result_json = list(setup_redis.getgames('NBA'))
-    result = [json.loads(r) for r in result_json]
+    result = list(setup_redis.getgames('NBA'))
     assert result == [{'info': f'NBA_{now.strftime('%Y%m%d')}_LAL@GSW', 'game_time': now.strftime("%Y-%m-%d %H:%M")},
                       {'info': f'NBA_{now.strftime('%Y%m%d')}_BOS@BKN', 'game_time': one_hour_from_now.strftime("%Y-%m-%d %H:%M")}]
-
-
-def test_getlivegames(setup_redis):
-    result = list(setup_redis.getlivegames('NBA'))
-    live_games = [{'info': f'NBA_{now.strftime('%Y%m%d')}_LAL@GSW', 'game_time': now.strftime("%Y-%m-%d %H:%M")}]
-    assert result == live_games
-
-    live_game = setup_redis._r.hget('games:live:nba', 'g1')
-    assert live_game
-    result = json.loads(live_game)
-    assert result == live_games[0]
-
-    assert not setup_redis._r.hget('games:nba', 'g1')
 
 
 def test_storegames(setup_redis):

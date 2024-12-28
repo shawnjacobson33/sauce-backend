@@ -9,6 +9,7 @@ from app.data_storage.main import Redis
 @pytest.fixture
 def setup_redis():
     redis = Redis(db='dev')
+
     lookup_name = 'teams:lookup:nba'
     team_id_1 = redis.teams.id_mngr.generate()
     redis.client.hset(lookup_name, 'PHO', team_id_1)
@@ -23,6 +24,7 @@ def setup_redis():
     redis.client.hset(info_name, team_id_1, json.dumps({'abbr': 'PHO', 'full': 'Phoenix Suns'}))
     redis.client.hset(info_name, team_id_2, json.dumps({'abbr': 'LAL', 'full': 'Los Angeles Lakers'}))
     redis.client.hset(info_name, team_id_3, json.dumps({'abbr': 'SAS', 'full': 'San Antonio Spurs'}))
+
     yield redis.teams
     redis.client.flushdb()
 

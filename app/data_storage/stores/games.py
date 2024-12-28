@@ -25,21 +25,24 @@ class Games(DynamicDataStore):
 
     def _scan_game_ids(self, league: str) -> Iterable:
         counter = defaultdict(int)
-        for _, subj_id in self._r.hscan_iter(f'{self.name}:lookup:{league.lower()}'):
-            if not counter[subj_id]:
-                counter[subj_id] += 1
-                yield subj_id
+        for _, game_id in self._r.hscan_iter(f'{self.name}:lookup:{league.lower()}'):
+            if not counter[game_id]:
+                counter[game_id] += 1
+                yield game_id
 
     def getids(self, league: str) -> Iterable:
         yield from self._scan_game_ids(league)
 
     def getgame(self, league: str, team: str, report: bool = False) -> Optional[dict]:
         if game_id := self.getid(league, team):
-            return self._r.hget(f'{self.name}:info:{league.lower()}', game_id)
+            if game_json := self._r.hget(f'{self.name}:info:{league.lower()}', game_id):
+                return json.loads(game_json)
 
     def getgames(self, league: str) -> Iterable:
-        if subj_ids := self.getids(league):
-            for subj_id in subj_ids: yield self._r.hget(f'{self.name}:lookup:{league.lower()}', subj_id)
+        if game_ids := self.getids(league):
+            for game_id in game_ids:
+                if game_json := self._r.hget(f'{self.name}:info:{league.lower()}', game_id):
+                    yield json.loads(game_json)
 
     def putqueue(self, league: str, queue_type: str, game_id: str, game_time: datetime) -> None:
         self._r.zadd(f'{self.name}:{queue_type}:queue:{league.lower()}', {game_id: int(game_time.timestamp())})

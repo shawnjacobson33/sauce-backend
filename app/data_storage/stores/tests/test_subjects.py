@@ -23,9 +23,9 @@ def setup_redis():
     redis.client.hset(lookup_name, 'G:AntEdwards', subj_id_2)
     redis.client.hset(lookup_name, 'MIN:AntEdwards', subj_id_2)
 
-    info_name = 'teams:info:nba'
-    redis.client.hset(info_name, subj_id_1, json.dumps({'name': 'LeBron James', 'team': 'Los Angeles Lakers'}))
-    redis.client.hset(info_name, subj_id_2, json.dumps({'name': 'Anthony Edwards', 'team': 'Minnesota Timberwolves'}))
+    info_name = 'subjects:info:nba'
+    redis.client.hset(info_name, subj_id_1, json.dumps({'name': 'LeBron James', 'team': 'LAL'}))
+    redis.client.hset(info_name, subj_id_2, json.dumps({'name': 'Anthony Edwards', 'team': 'MIN'}))
 
     yield redis.subjects
     redis.client.flushdb()
@@ -36,22 +36,22 @@ def test_getsubj(setup_redis):
     subj2 = Subject(domain='NBA', name='Ant Edwards', std_name='Anthony Edwards', position='G', team='MIN')
 
     result = setup_redis.getsubj("NBA", subj1)
-    assert result == {'name': 'LeBron James', 'team': 'Los Angeles Lakers'}
+    assert result == {'name': 'LeBron James', 'team': 'LAL'}
     result = setup_redis.getsubj("NBA", subj2)
-    assert result == {'name': 'Anthony Edwards', 'team': 'Minnesota Timberwolves'}
+    assert result == {'name': 'Anthony Edwards', 'team': 'MIN'}
 
 
 def test_getsubjs(setup_redis):
     result = list(setup_redis.getsubjs('NBA'))
-    assert result == [{'name': 'LeBron James', 'team': 'Los Angeles Lakers'},
-                      {'name': 'Anthony Edwards', 'team': 'Minnesota Timberwolves'}]
+    assert result == [{'name': 'LeBron James', 'team': 'LAL'},
+                      {'name': 'Anthony Edwards', 'team': 'MIN'}]
 
 
 def test_storesubjs(setup_redis):
     subj1 = Subject(domain='NBA', name='Lebron James', std_name='LeBron James', position='F', team='LAL')
     subj2 = Subject(domain='NBA', name='Ant Edwards', std_name='Anthony Edwards', position='G', team='MIN')
 
-    setup_redis.store("NBA", [subj1, subj2])
+    setup_redis.storesubjects("NBA", [subj1, subj2])
 
     result = setup_redis.getid("NBA", subj1)
     assert result == b's1'
