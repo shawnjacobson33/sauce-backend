@@ -52,7 +52,7 @@ def setup_redis():
 
 
 def test_getlines(setup_redis):
-    result = list(setup_redis.betting_lines.getlines('PrizePicks'))
+    result = list(setup_redis.lines.getlines('PrizePicks'))
     assert result == [
         {
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -80,7 +80,7 @@ def test_getlines(setup_redis):
         }
     ]
 
-    result = list(setup_redis.betting_lines.getlines('DraftKings'))
+    result = list(setup_redis.lines.getlines('DraftKings'))
     assert result == [
         {
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -95,7 +95,7 @@ def test_getlines(setup_redis):
         }
     ]
 
-    result = list(setup_redis.betting_lines.getlines('PrizePicks', match='s5'))
+    result = list(setup_redis.lines.getlines('PrizePicks', match='s5'))
     assert result == [
         {
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -118,7 +118,7 @@ def test_storelines(setup_redis):
 
     game_id = setup_redis.games.getid("NBA", 'LAL')
 
-    setup_redis.betting_lines.storelines([{
+    setup_redis.lines.storelines([{
         'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         'bookmaker': 'BoomFantasy',
         'league': 'NBA',
@@ -129,37 +129,72 @@ def test_storelines(setup_redis):
         'line': '10.5',
         'odds': 1.15,
     }, {
+        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'bookmaker': 'BoomFantasy',
         'league': 'NBA',
-        'game_id': str(game_id),
-        'subj_id': str(subj_id_2),
-        'Points': 15,
-        'Assists': 5,
-        'Rebounds': 8,
-        'is_completed': True
+        'game_id': game_id.decode('utf-8'),
+        'subj_id': subj_id_2.decode('utf-8'),
+        'market': 'Points',
+        'label': 'Under',
+        'line': '10.5',
+        'odds': 1.15,
+    }, {
+        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'bookmaker': 'ParlayPlay',
+        'league': 'NBA',
+        'game_id': game_id.decode('utf-8'),
+        'subj_id': subj_id_2.decode('utf-8'),
+        'market': 'Points',
+        'label': 'Under',
+        'line': '10.5',
+        'odds': 1.15,
     }])
 
-    result = setup_redis.box_scores.getboxscore("NBA", subj_id_1)
-    assert result == {
+    result = list(setup_redis.lines.getlines('BoomFantasy'))
+    assert result == [{
+        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'bookmaker': 'BoomFantasy',
         'league': 'NBA',
-        'game_id': str(game_id),
-        'subj_id': str(subj_id_1),
-        'Points': 10,
-        'Assists': 2,
-        'Rebounds': 3,
-        'is_completed': False
-    }
-
-    result = setup_redis.box_scores.getboxscore("NBA", subj_id_2)
-    assert result == {
+        'game_id': game_id.decode('utf-8'),
+        'subj_id': subj_id_1.decode('utf-8'),
+        'market': 'Points',
+        'label': 'Under',
+        'line': '10.5',
+        'odds': 1.15,
+    }, {
+        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'bookmaker': 'BoomFantasy',
         'league': 'NBA',
-        'game_id': str(game_id),
-        'subj_id': str(subj_id_2),
-        'Points': 15,
-        'Assists': 5,
-        'Rebounds': 8,
-        'is_completed': True
-    }
+        'game_id': game_id.decode('utf-8'),
+        'subj_id': subj_id_2.decode('utf-8'),
+        'market': 'Points',
+        'label': 'Under',
+        'line': '10.5',
+        'odds': 1.15,
+    }]
 
-    result = setup_redis.box_scores.getboxscore("NBA", subj_id_2, stat='Points')
-    assert result == 15
+    result = list(setup_redis.lines.getlines("ParlayPlay"))
+    assert result == [{
+        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'bookmaker': 'ParlayPlay',
+        'league': 'NBA',
+        'game_id': game_id.decode('utf-8'),
+        'subj_id': subj_id_2.decode('utf-8'),
+        'market': 'Points',
+        'label': 'Under',
+        'line': '10.5',
+        'odds': 1.15,
+    }]
 
+    result = list(setup_redis.lines.getlines("BoomFantasy", match='s2'))
+    assert result == [{
+        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'bookmaker': 'BoomFantasy',
+        'league': 'NBA',
+        'game_id': game_id.decode('utf-8'),
+        'subj_id': subj_id_2.decode('utf-8'),
+        'market': 'Points',
+        'label': 'Under',
+        'line': '10.5',
+        'odds': 1.15,
+    }]

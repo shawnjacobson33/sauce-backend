@@ -2,11 +2,10 @@ from typing import Optional
 
 import redis
 
-from app.data_storage.managers.manager import Manager
 from app.data_storage.stores.utils import get_entity_type
 
 
-class IDManager(Manager):
+class IDManager:
     """
     A class for managing ID generation, resetting, and retrieval using Redis.
 

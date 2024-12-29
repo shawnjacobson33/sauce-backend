@@ -4,14 +4,14 @@ import redis
 from redis.client import Pipeline
 
 from app.data_storage.models import Position, Market
-from app.data_storage.stores.base import StaticDataStore
+from app.data_storage.stores.base import DataStore
 
 
-class Positions(StaticDataStore):
+class Positions(DataStore):
     """
     A Redis-backed manager for handling sports-related position data.
 
-    This class extends `L1StaticDataStore` to provide functionality for managing
+    This class extends `L1DataStore` to provide functionality for managing
     positions in a sports context, such as retrieving specific positions, fetching all positions,
     and storing position data in a structured way.
 
@@ -29,14 +29,14 @@ class Positions(StaticDataStore):
         super().__init__(r, 'positions')
 
     def getposition(self, sport: str, position: str, report: bool = False) -> Optional[str]:
-        return self._r.hget(f'{self.name}:lookup:{sport.lower()}', position)
+        return self._r.hget(f'{self.lookup_name}:{sport.lower()}', position)
 
     def getpositions(self, sport: str) -> Iterable:
-        yield from self._r.hscan_iter(f'{self.name}:lookup:{sport.lower()}')
+        yield from self._r.hscan_iter(f'{self.lookup_name}:{sport.lower()}')
 
     def _store_in_lookup(self, sport: str, pipe: Pipeline, position: Position) -> None:
         for position_name in {position.name, position.std_name}:
-            pipe.hset(f'{self.name}:lookup:{sport.lower()}', key=position_name, value=position.std_name)
+            pipe.hset(f'{self.lookup_name}:{sport.lower()}', key=position_name, value=position.std_name)
 
     def storepositions(self, sport: str, positions: list[Position]) -> None:
         try:

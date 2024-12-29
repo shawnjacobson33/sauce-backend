@@ -4,22 +4,16 @@ from typing import Optional, Union
 import redis
 from redis.client import Pipeline
 
-from app.data_storage.stores.base import DynamicDataStore
+from app.data_storage.stores.base import DataStore
 
 
-class BoxScores(DynamicDataStore):
+class BoxScores(DataStore):
     def __init__(self, r: redis.Redis):
-        """
-        Initialize the BoxScores store.
-
-        Args:
-            r (redis.Redis): Redis client instance for interacting with the database.
-        """
         super().__init__(r, 'box_scores')
 
     def getboxscore(self, league: str, subj_id: str, stat: str = None) -> \
             Optional[Union[str, dict]]:
-        if box_score_json := self._r.hget(f'{self.name}:info:{league.lower()}', f'b{subj_id}'):
+        if box_score_json := self._r.hget(f'{self.info_name}:{league.lower()}', f'b{subj_id}'):
             box_score_dict = json.loads(box_score_json)
             if stat: return box_score_dict[stat]
             return box_score_dict
@@ -37,7 +31,7 @@ class BoxScores(DynamicDataStore):
                 pipe.multi()
                 for box_score in box_scores:
                     self._evaluate_game_state(box_score['league'], pipe, box_score)
-                    pipe.hset(f'{self.name}:info:{box_score['league'].lower()}', f'b{box_score["subj_id"]}',
+                    pipe.hset(f'{self.info_name}:{box_score['league'].lower()}', f'b{box_score["subj_id"]}',
                               json.dumps(box_score))
                 pipe.execute()
 

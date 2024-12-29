@@ -4,31 +4,22 @@ import redis
 from redis.client import Pipeline
 
 from app.data_storage.models import Market
-from app.data_storage.stores.base import StaticDataStore
+from app.data_storage.stores.base import DataStore
 
 
-class Markets(StaticDataStore):
-    """
-    A data store class for managing Market entities in a Redis database.
-    """
+class Markets(DataStore):
     def __init__(self, r: redis.Redis):
-        """
-        Initializes the Markets data store.
-
-        Args:
-            r (redis.Redis): A Redis client instance.
-        """
         super().__init__(r, 'markets')
 
     def getmarket(self, sport: str, market: str, report: bool = False) -> Optional[str]:
-        return self._r.hget(f'{self.name}:lookup:{sport.lower()}', market)
+        return self._r.hget(f'{self.lookup_name}:{sport.lower()}', market)
 
     def getmarkets(self, sport: str) -> Iterable:
-        yield from self._r.hscan_iter(f'{self.name}:lookup:{sport.lower()}')
+        yield from self._r.hscan_iter(f'{self.lookup_name}:{sport.lower()}')
 
     def _store_in_lookup(self, sport: str, pipe: Pipeline, market: Market) -> None:
         for market_name in {market.name, market.std_name}:
-            pipe.hset(f'{self.name}:lookup:{sport.lower()}', key=market_name, value=market.std_name)
+            pipe.hset(f'{self.lookup_name}:{sport.lower()}', key=market_name, value=market.std_name)
 
     def storemarkets(self, sport: str, markets: list[Market]) -> None:
         try:
