@@ -1,37 +1,41 @@
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Union
 
 from requests import Response
 
 from app.cache import redis_cache as r
 
 
-LOGISTICS = r.data_providers.getprovider('BoomFantasy')
+logistics = r.data_providers.getprovider('BoomFantasy')
 
 
-def _get_url() -> str:
-    for url in ['https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/contests/multiLine/99708fb7-167a-4314-b69d-e38dc782a63a',
-    'https://production-api.boomfantasy.com/api/v1/sessions']:
-        yield url
+def _get_url(url_type: str) -> Optional[str]:
+    return logistics['urls'].get(url_type)
 
 
-def _get_headers() -> dict:
-    pass
+def _get_headers(headers_type: str) -> Optional[dict]:
+    headers = logistics['headers'][headers_type]
+    if headers_type == 'prop_lines':
+        headers['Authorization'] = f'Bearer {_read_tokens("access_token")}'
 
+    return headers
 
 def _get_params() -> dict:
-    pass
+    return logistics['params']
 
 
 def _get_json_data() -> dict:
-    pass
+    return logistics['json_data']
 
 
-def _read_tokens() -> tuple[str, str, str]:
-    pass
+def _read_tokens(token_type: str = None) -> Optional[Union[str, dict]]:
+    return logistics['tokens'].get(token_type) if token_type else logistics['tokens']
 
 
-def _request_prop_lines() -> None:
-    pass
+async def _request_prop_lines() -> None:
+    url = _get_url('prop_lines')
+    headers = _get_headers('prop_lines')
+    params = _get_params()
+
 
 
 def _get_sections(response: Response) -> Iterable:
