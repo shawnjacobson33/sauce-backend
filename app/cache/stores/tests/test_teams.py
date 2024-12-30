@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from app.data_storage.models import Team
-from app.data_storage.main import Redis
+from app.cache.models import Team
+from app.cache.main import Redis
 
 
 @pytest.fixture

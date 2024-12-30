@@ -1,6 +1,6 @@
 from typing import Optional
 
-from app.data_storage.in_mem import Redis
+from app.cache.in_mem import Redis
 
 
 def get_team(source_name: str, league: str, team: str) -> Optional[dict]:

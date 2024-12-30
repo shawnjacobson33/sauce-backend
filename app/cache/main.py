@@ -2,15 +2,17 @@ import dotenv
 import os
 import redis
 
-from app.data_storage import stores
+from app.cache import stores
 
 
 dotenv.load_dotenv('../../.env')
 
 
-class Redis:
+class RedisCache:
     def __init__(self, db: str = 'prod'):
         self.client = redis.Redis(db=0 if db == 'prod' else 1, password=os.getenv('REDIS_PASSWORD'))
+        self.data_providers = stores.DataProviders(self.client)
+        self.leagues = stores.Leagues(self.client)
         self.markets = stores.Markets(self.client)
         self.positions = stores.Positions(self.client)
         self.teams = stores.Teams(self.client)
@@ -21,4 +23,4 @@ class Redis:
         self.box_scores = stores.BoxScores(self.client)
 
 
-Redis = Redis()
+redis_cache = RedisCache()

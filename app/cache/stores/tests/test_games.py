@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.data_storage.main import Redis
-from app.data_storage.models import Game
+from app.cache.main import Redis
+from app.cache.models import Game
 
 now = datetime.now()
 one_hour_from_now = datetime.now() + timedelta(hours=1)

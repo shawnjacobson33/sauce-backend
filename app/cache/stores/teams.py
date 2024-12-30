@@ -4,27 +4,15 @@ from typing import Optional, Iterable
 
 import redis
 
-from app.data_storage.models import Team
-from app.data_storage.stores.base import DataStore
+from app.cache.models import Team
+from app.cache.stores.base import DataStore
 
 
 class Teams(DataStore):
-    """
-    A class that manages the storage and retrieval of team data in a Redis-backed data store.
-
-    This class extends `L2DataStore` to handle operations specific to teams, such as storing team
-    information (like abbreviations and full names) and retrieving team data by domain.
-    """
     def __init__(self, r: redis.Redis):
-        """
-        Initializes the Teams instance.
-
-        Args:
-            r (redis.Redis): A Redis connection instance.
-        """
         super().__init__(r, 'teams')
 
-    def getid(self, league: str, team: str) -> Optional[str]:
+    def getid(self, league: str, team: str, report: bool = True) -> Optional[str]:
         return self._r.hget(f'{self.lookup_name}:{league.lower()}', team)
 
     def _scan_team_ids(self, league: str) -> Iterable:

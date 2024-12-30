@@ -1,6 +1,6 @@
 import redis
 
-from app.data_storage.managers import IDManager
+from app.cache.managers import IDManager
 
 
 class DataStore:

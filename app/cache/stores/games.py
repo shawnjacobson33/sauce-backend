@@ -5,8 +5,8 @@ from typing import Optional, Iterable
 import json
 import redis
 
-from app.data_storage.models import Game
-from app.data_storage.stores.base import DataStore
+from app.cache.models import Game
+from app.cache.stores.base import DataStore
 
 
 class Games(DataStore):

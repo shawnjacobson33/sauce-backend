@@ -2,7 +2,7 @@ import pytest
 import random
 from datetime import datetime, timedelta
 
-from app.data_storage.in_mem import Redis
+from app.cache.in_mem import Redis
 
 
 r = Redis()

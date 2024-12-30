@@ -3,8 +3,8 @@ from datetime import datetime
 
 import pytest
 
-from app.data_storage.main import Redis
-from app.data_storage.models import Game, Subject, Market
+from app.cache.main import Redis
+from app.cache.models import Game, Subject, Market
 
 
 @pytest.fixture

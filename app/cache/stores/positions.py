@@ -3,8 +3,8 @@ from typing import Optional, Iterable
 import redis
 from redis.client import Pipeline
 
-from app.data_storage.models import Position, Market
-from app.data_storage.stores.base import DataStore
+from app.cache.models import Position, Market
+from app.cache.stores.base import DataStore
 
 
 class Positions(DataStore):

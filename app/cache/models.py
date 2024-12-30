@@ -10,6 +10,12 @@ class Entity:
 
 
 @dataclass
+class League:
+    name: str
+    std_name: str
+
+
+@dataclass
 class Market(Entity):
     std_name: str
 

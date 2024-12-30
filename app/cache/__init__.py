@@ -1,3 +1,3 @@
 from .main import *
 
-__all__ = ['Redis']
+__all__ = ['redis_cache']

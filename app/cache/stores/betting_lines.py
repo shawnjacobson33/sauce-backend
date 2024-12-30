@@ -1,9 +1,9 @@
 import json
-from typing import Iterable
+from typing import Iterable, Callable
 
 import redis
 
-from app.data_storage.stores.base import DataStore
+from app.cache.stores.base import DataStore
 
 
 LINE_ID_ORDERED_FIELDS = ['league', 'game_id', 'subj_id', 'market', 'label', 'line']
@@ -46,11 +46,12 @@ class BettingLines(DataStore):
     def _get_key(line: dict) -> str:
         return f'{line['league']}:{line['game_id']}:{line['subj_id']}:{line['market']}:{line['label']}:{line['line']}'
 
-    def storelines(self, lines: list[dict]) -> None:
+    def storelines(self, lines: list[dict] = None, func: Callable = None) -> None:
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                for line in lines:
+                data = lines if lines else func()
+                for line in data:
                     novel_line_info = json.dumps({k: v for k, v in line.items() if k in ['timestamp', 'dflt_odds',
                                                                                          'odds', 'multiplier']})
                     pipe.hset(f'{self.info_name}:{line['bookmaker']}', self._get_key(line),

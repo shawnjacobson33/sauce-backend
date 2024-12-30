@@ -4,8 +4,8 @@ from typing import Optional, Iterable
 
 import redis
 
-from app.data_storage.models import Subject
-from app.data_storage.stores.base import DataStore
+from app.cache.models import Subject
+from app.cache.stores.base import DataStore
 
 
 class Subjects(DataStore):

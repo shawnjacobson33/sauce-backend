@@ -2,7 +2,7 @@ from typing import Optional
 
 import redis
 
-from app.data_storage.stores.utils import get_entity_type
+from app.cache.stores.utils import get_entity_type
 
 
 class IDManager:

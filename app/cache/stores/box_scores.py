@@ -4,7 +4,7 @@ from typing import Optional, Union
 import redis
 from redis.client import Pipeline
 
-from app.data_storage.stores.base import DataStore
+from app.cache.stores.base import DataStore
 
 
 class BoxScores(DataStore):
