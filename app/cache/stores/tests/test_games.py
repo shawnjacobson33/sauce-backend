@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.cache.main import Redis
+from app.cache.main import RedisCache
 from app.cache.models import Game
 
 now = datetime.now()
@@ -12,7 +12,7 @@ one_hour_from_now = datetime.now() + timedelta(hours=1)
 
 @pytest.fixture
 def setup_redis():
-    redis = Redis(db='dev')
+    redis = RedisCache(db='dev')
 
     lookup_name = 'games:lookup:nba'
     redis.client.hset(lookup_name, 'LAL', 'g1')

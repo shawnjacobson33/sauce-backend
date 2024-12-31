@@ -3,13 +3,13 @@ from datetime import datetime
 
 import pytest
 
-from app.cache.main import Redis
+from app.cache.main import RedisCache
 from app.cache.models import Game, Subject
 
 
 @pytest.fixture
 def setup_redis():
-    redis = Redis(db='dev')
+    redis = RedisCache(db='dev')
 
     redis.subjects.storesubjects("NBA", [
         Subject(domain='NBA', name='Lebron James', team='LAL', position='F', std_name='LeBron James'),

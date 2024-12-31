@@ -46,12 +46,11 @@ class BettingLines(DataStore):
     def _get_key(line: dict) -> str:
         return f'{line['league']}:{line['game_id']}:{line['subj_id']}:{line['market']}:{line['label']}:{line['line']}'
 
-    def storelines(self, lines: list[dict] = None, func: Callable = None) -> None:
+    def storelines(self, lines: Iterable) -> None:
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                data = lines if lines else func()
-                for line in data:
+                for line in lines:
                     novel_line_info = json.dumps({k: v for k, v in line.items() if k in ['timestamp', 'dflt_odds',
                                                                                          'odds', 'multiplier']})
                     pipe.hset(f'{self.info_name}:{line['bookmaker']}', self._get_key(line),
@@ -60,3 +59,6 @@ class BettingLines(DataStore):
 
         except KeyError as e:
             self._log_error(e)
+
+        except Exception as e:
+            raise e

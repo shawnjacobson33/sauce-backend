@@ -1,12 +1,12 @@
 import pytest
 
 from app.cache.models import Market
-from app.cache.main import Redis
+from app.cache.main import RedisCache
 
 
 @pytest.fixture
 def setup_redis():
-    redis = Redis(db='dev')
+    redis = RedisCache(db='dev')
     lookup_name = 'markets:lookup:basketball'
     redis.client.hset(lookup_name, 'player_points', 'Points')
     redis.client.hset(lookup_name, 'POINTS', 'Points')

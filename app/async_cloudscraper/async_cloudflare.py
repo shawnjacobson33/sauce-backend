@@ -4,6 +4,7 @@ import time
 from copy import deepcopy
 from urllib.parse import urlparse
 
+import aiohttp
 from cloudscraper import Cloudflare
 from cloudscraper.exceptions import CloudflareCaptchaProvider, CloudflareIUAMError, CloudflareSolveError
 
@@ -12,8 +13,27 @@ class AsyncCloudFlare(Cloudflare):
     def __init__(self, cloudscraper):
         super().__init__(cloudscraper)
 
-    async def Challenge_Response(self, resp, **kwargs):
-        if self.is_Captcha_Challenge(resp):
+    @staticmethod
+    def is_captcha_challenge(resp: aiohttp.ClientResponse, resp_text: str):
+        try:
+            return (
+                    resp.headers.get('Server', '').startswith('cloudflare')
+                    and resp.status == 403
+                    and re.search(r'/cdn-cgi/images/trace/(captcha|managed)/', resp_text, re.M | re.S)
+                    and re.search(
+                r'''<form .*?="challenge-form" action="/\S+__cf_chl_f_tk=''',
+                resp_text,
+                re.M | re.S
+            )
+            )
+        except AttributeError:
+            pass
+
+        return False
+
+    async def challenge_response(self, resp: aiohttp.ClientResponse, **kwargs):
+        resp_text = await resp.text()
+        if self.is_captcha_challenge(resp, resp_text):
             # ------------------------------------------------------------------------------- #
             # double down on the request as some websites are only checking
             # if cfuid is populated before issuing Captcha.
@@ -21,10 +41,10 @@ class AsyncCloudFlare(Cloudflare):
 
             if self.cloudscraper.doubleDown:
                 # CHANGED
-                resp = await self.cloudscraper.perform_request(resp.request.method, resp.url, **kwargs)
+                resp = self.cloudscraper.perform_request(resp.request_info.method, resp.url, **kwargs)
 
-            if not self.is_Captcha_Challenge(resp):
-                return resp
+            if not self.is_captcha_challenge(resp, resp_text):
+                return resp_text
 
             # ------------------------------------------------------------------------------- #
             # if no captcha provider raise a runtime error.
@@ -46,7 +66,7 @@ class AsyncCloudFlare(Cloudflare):
             # ------------------------------------------------------------------------------- #
 
             if self.cloudscraper.captcha.get('provider') == 'return_response':
-                return resp
+                return resp_text
 
             # ------------------------------------------------------------------------------- #
             # Submit request to parser wrapper to solve captcha
@@ -55,7 +75,7 @@ class AsyncCloudFlare(Cloudflare):
             submit_url = self.captcha_Challenge_Response(
                 self.cloudscraper.captcha.get('provider'),
                 self.cloudscraper.captcha,
-                resp.text,
+                resp_text,
                 resp.url
             )
         else:
@@ -68,7 +88,7 @@ class AsyncCloudFlare(Cloudflare):
                     delay = float(
                         re.search(
                             r'submit\(\);\r?\n\s*},\s*([0-9]+)',
-                            resp.text
+                            resp_text
                         ).group(1)
                     ) / float(1000)
                     if isinstance(delay, (int, float)):
@@ -85,7 +105,7 @@ class AsyncCloudFlare(Cloudflare):
             # ------------------------------------------------------------------------------- #
 
             submit_url = self.IUAM_Challenge_Response(
-                resp.text,
+                resp_text,
                 resp.url,
                 self.cloudscraper.interpreter
             )
@@ -96,41 +116,42 @@ class AsyncCloudFlare(Cloudflare):
 
         if submit_url:
 
-            def updateAttr(obj, name, newValue):
+            def update_attr(obj, name, new_value):
                 try:
-                    obj[name].update(newValue)
+                    obj[name].update(new_value)
                     return obj[name]
                 except (AttributeError, KeyError):
                     obj[name] = {}
-                    obj[name].update(newValue)
+                    obj[name].update(new_value)
                     return obj[name]
 
             cloudflare_kwargs = deepcopy(kwargs)
             cloudflare_kwargs['allow_redirects'] = False
-            cloudflare_kwargs['data'] = updateAttr(
+            cloudflare_kwargs['data'] = update_attr(
                 cloudflare_kwargs,
                 'data',
                 submit_url['data']
             )
 
-            urlParsed = urlparse(resp.url)
-            cloudflare_kwargs['headers'] = updateAttr(
+
+            # CHANGED
+            cloudflare_kwargs['headers'] = update_attr(
                 cloudflare_kwargs,
                 'headers',
                 {
-                    'Origin': f'{urlParsed.scheme}://{urlParsed.netloc}',
-                    'Referer': resp.url
+                    'Origin': f'{resp.url.scheme}://{resp.url.host}:{resp.url.port}',
+                    'Referer': str(resp.url)
                 }
             )
 
             # CHANGED
-            challengeSubmitResponse = await self.cloudscraper.request(
+            challenge_submit_response = await self.cloudscraper.request(
                 'POST',
                 submit_url['url'],
                 **cloudflare_kwargs
             )
 
-            if challengeSubmitResponse.status_code == 400:
+            if challenge_submit_response.status == 400:
                 self.cloudscraper.simpleException(
                     CloudflareSolveError,
                     'Invalid challenge answer detected, Cloudflare broken?'
@@ -141,24 +162,26 @@ class AsyncCloudFlare(Cloudflare):
             # else request with redirect URL also handle protocol scheme change http -> https
             # ------------------------------------------------------------------------------- #
 
-            if not challengeSubmitResponse.is_redirect:
-                return challengeSubmitResponse
+            # CHANGED
+            if not challenge_submit_response.is_redirect:
+                return await challenge_submit_response.text()
 
             else:
                 cloudflare_kwargs = deepcopy(kwargs)
-                cloudflare_kwargs['headers'] = updateAttr(
+                # CHANGED
+                cloudflare_kwargs['headers'] = update_attr(
                     cloudflare_kwargs,
                     'headers',
-                    {'Referer': challengeSubmitResponse.url}
+                    {'Referer': str(challenge_submit_response.url)}
                 )
 
-                if not urlparse(challengeSubmitResponse.headers['Location']).netloc:
+                if not urlparse(challenge_submit_response.headers['Location']).netloc:
                     redirect_location = urljoin(
-                        challengeSubmitResponse.url,
-                        challengeSubmitResponse.headers['Location']
+                        challenge_submit_response.url,
+                        challenge_submit_response.headers['Location']
                     )
                 else:
-                    redirect_location = challengeSubmitResponse.headers['Location']
+                    redirect_location = challenge_submit_response.headers['Location']
 
                 return self.cloudscraper.request(
                     resp.request.method,

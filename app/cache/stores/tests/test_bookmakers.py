@@ -1,12 +1,12 @@
 import pytest
 
 from app.cache.models import Bookmaker
-from app.cache.main import Redis
+from app.cache.main import RedisCache
 
 
 @pytest.fixture
 def setup_redis():
-    redis = Redis(db='dev')
+    redis = RedisCache(db='dev')
     info_name = 'bookmakers:info'
     redis.client.hset(info_name, 'PrizePicks', "1.73")
     redis.client.hset(info_name, 'UnderdogFantasy', "1.65")

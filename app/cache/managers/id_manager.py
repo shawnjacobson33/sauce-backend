@@ -24,7 +24,8 @@ class IDManager:
             r (redis.Redis): The Redis client instance.
             name (str): The base name for the Redis key.
         """
-        super().__init__(r, f'{name}:id')
+        self._r = r
+        self.name = f'{name}:id'
         self.noid_name = '{}:noid'
 
     def _get_id_prefix(self) -> Optional[str]:

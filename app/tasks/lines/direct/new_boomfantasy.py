@@ -1,45 +1,173 @@
+import json
+import sys
 from typing import Optional, Iterable, Union
 
-from requests import Response
+import aiohttp
 
 from app.cache import redis_cache as r
+
+# r.data_providers.storeproviders([
+#     {
+#         'name': 'BoomFantasy',
+#         'urls': {
+#             'contest_id': 'https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/graphql',
+#             'tokens': 'https://production-api.boomfantasy.com/api/v1/sessions',
+#             'prop_lines': 'https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/contests/multiLine/{}'
+#         },
+#         'headers': {
+#             'prop_lines': {
+#                 'Host': 'production-boom-dfs-backend-api.boomfantasy.com',
+#                 'access-control-allow-origin': '*',
+#                 'accept': 'application/json, text/plain, */*',
+#                 'x-product-id': 'boom_dfs',
+#                 'authorization': 'Bearer {}',
+#                 'x-app-name': 'Boom',
+#                 'accept-language': 'en-US,en;q=0.9',
+#                 'user-agent': 'BoomDFS/3 CFNetwork/1568.100.1.2.1 Darwin/24.0.0',
+#                 'x-device-id': 'D03577BA-B845-4E42-ADE3-59BB344E4AA9',
+#                 'x-app-build': '3',
+#                 'x-platform': 'ios',
+#             },
+#             'contest_id': {
+#                 'Host': 'production-boom-dfs-backend-api.boomfantasy.com',
+#                 'content-type': 'application/json',
+#                 'access-control-allow-origin': '*',
+#                 'accept': 'application/json, text/plain, */*',
+#                 'x-product-id': 'boom_dfs',
+#                 'authorization': 'Bearer {}',
+#                 'x-app-name': 'Boom',
+#                 'accept-language': 'en-US,en;q=0.9',
+#                 'user-agent': 'BoomDFS/1 CFNetwork/1568.200.51 Darwin/24.1.0',
+#                 'x-device-id': 'D03577BA-B845-4E42-ADE3-59BB344E4AA9',
+#                 'x-app-build': '1',
+#                 'x-app-version': '32.2',
+#                 'x-platform': 'ios',
+#             },
+#             'tokens': {
+#                 'Host': 'production-api.boomfantasy.com',
+#                 'content-type': 'application/json',
+#                 'accept': 'application/json',
+#                 'x-product-id': 'boom_dfs',
+#                 'authorization': 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXIiOjIsInR5cCI6ImFub24iLCJ0aWQiOiJib29tLWRmcyIsInBpZCI6ImJvb21fZGZzIiwiaWF0IjoxNjYxMjgyMjg3fQ.Cty9gHSp0dDdNR5iy1csmb98iSFdebBupQ4kRnGblI5irfdWlQScZ-BGEiHmUD7CCL3g8N5ji2vKkwAc40tQAHY0WDHpbCEJ9ebLZ0r5HfQeeBN9HjdYj9aCjkx_gtWbHBKQuoJ5zllZR2JG69G-ptxgtw8dvffiyfjphXOGdg7am6WnxcYNx4GiJkdrN1_IEcrKqyDNFmyQVV2hg1xDwa_Al7_YQZosYtgMU9rWMAGM3gz3nB2WlP_Fv9ZcJTvp65ZBSutSRxVWHu-sQze8WLh6VyTzHaUzGStrsTmiv0_i8fhoABerZvg7srkUp17ITwPWSd2LTcS--mhpI64IhSiF-Hqq_9yk6mGX7cs9c-dkiO0aSWrdtIrkscr6HgxtwaH8HQCOpRBfPq0ev_PABpnbGLy7lxJ6G3LPtq2si_vJyOnLfXX08qL93OexfTm-QYIglUAuoVJPRZaoRVhcTlw5Jkbp96HY763gRpmLhhp41IClJQI75UKXgTi937m-ZgSL2VE6ypd4xSkrl46LSchkzdf3jh3ArELsTGws9Fi_eY1-_ivcbJaZdM_tw0QE-sId1kyx2noQvyW8C4ETeAfmy_G3xkn_6tECV1dZ4ppMKzkXMr7o1dIOLraYYdwzDXRWzoyDQ4kujnGzGPoROSlzp3fdeoRpyEPcsiIbxwc',
+#                 'x-app-name': 'Boom',
+#                 'accept-language': 'en-US,en;q=0.9',
+#                 'user-agent': 'BoomDFS/1 CFNetwork/1568.200.51 Darwin/24.1.0',
+#                 'x-device-id': 'D03577BA-B845-4E42-ADE3-59BB344E4AA9',
+#                 'x-app-build': '1',
+#                 'x-app-version': '32.2',
+#                 'x-platform': 'ios',
+#             }
+#         },
+#         'params': {
+#             'prop_lines': {
+#                 'questionStatus': 'available',
+#             }
+#         },
+#         'json_data': {
+#             'contest_id': {
+#                 "query": "\n        query GetLobbyData(\n            $contestStatuses: [ContestStatus!]!\n            $imageType: ContestLobbyImageType!\n            $userId: ID\n        ) {\n            contests(statuses: $contestStatuses) {\n                _id\n                title\n                status\n                type\n                renderType\n                lobby(imageType: $imageType) {\n                    title {\n                        i18nKey\n                        additionalOptions\n                    }\n                    image {\n                        type\n                        path\n                        source\n                    }\n                }\n            }\n            lobbyHeroes(contestStatuses: $contestStatuses) {\n                type\n                status\n                priority\n                action\n                isUrlExternal\n                url\n                image {\n                    path\n                    source\n                    type\n                }\n                button {\n                    marginTop\n                    width\n                    height\n                }\n                contest {\n                    _id\n                    title\n                    type\n                    # navigation props\n                    renderType\n                    section\n                    league\n                    periodClassifier\n                    statistic\n                }\n            }\n            depositCTA {\n                image {\n                    type\n                    source\n                    path\n                }\n            }\n            depositHistory(userId: $userId) {\n                hasDeposited\n            }\n        }\n    ",
+#                 "variables": {
+#                     "contestStatuses": ["active", "upcoming"],
+#                     "userId": "f69bbfae-6677-4075-a011-0fa48625da67",
+#                     "imageType": "wide"
+#                 },
+#                 "operationName": "GetLobbyData"
+#             },
+#             'tokens': {
+#                 'authentication': {
+#                     'type': 'refresh',
+#                     'credentials': {
+#                         'refreshToken': 'f2349693266bff556fdb27180920733f438a73654e6e134696d75f53edb5c3c2a174de02fac6cebd7a0780aadf8a4b67b0979811ffb415aa400a850733a8a457',
+#                         'accessToken': 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXIiOjMsInR5cCI6ImF1dGgiLCJ1aWQiOiJmNjliYmZhZS02Njc3LTQwNzUtYTAxMS0wZmE0ODYyNWRhNjciLCJzaWQiOiJkMjM1OTQyNy0zZjU1LTRkNGEtOTQ3ZC0xOTdlODc4ODZlYTEiLCJ0aWQiOiJib29tLWRmcyIsInBpZCI6ImJvb21fZGZzIiwicm9sZXMiOlsxMDMsMTA0XSwiY29ob3J0Ijo0MCwiZXhwIjoxNzM1NjYwMTg3LCJpYXQiOjE3MzU2NTk1ODd9.RdWtfjnoZx2kKvgHM85aYsxOnwf2GdTk3DPZu9fQU3UOoJaF-J8FI5SgmloWOE3C8OemOlSJGq0eLoyYN5egap9tlJSEcw8jXz6pmTNdJWFpfQq7aI3Llc8HdzzivjZgCoRWSdM3p8lc-R2khXT0u0-aeRVR12QX2yvA56vDImwY-wKNb0ZNTWm1ScIKB-BCcon9qR-EpK6z17Au_QQ4M2YcwU386du45SqOhPqk7SXH_luLNRsygWTWVFrBXzFv4bWihlvva62n_H8TGM9f22Lx2ZAh-UYmoEDjUZO7ygCyQdzKLbZMzl9lrm5XhfYUkmdYqow4JUb_2B5Q1Udq-KeZfd7TtdtA7eQc6wl7wRrLXCGeauNQxUth-nHCF-CdrsD3yyhMBDy3zp_6XQMejVRDkpu4xB61vO_LAKZc_9DtfWWNkoxTrj2R6tlblpUKue7ccRI1iN2Fsx41NgrCE59o1576zwzQOR3D7fwWVTgUC8Zc_LANhLPwWEmyrw9GAYlt82iUe_wXMwNci9QBqTVhQJNaF9wq6jPgWssNqDUsAaZY6z_aO772JnKOPKnEC2wrpu57gfHphKs-Q-Iq-2P-v5HihoQvk6IASf7Mn_b7VlLSvtx0jNJ7P1M4ASQV9Voc0j0qXd4W9UGee6-Omf1ceNK_lZs0l_JUcIGQKCc',
+#                     },
+#                 },
+#                 'eventInfo': {},
+#             }
+#         }
+#     }
+# ])
 
 
 logistics = r.data_providers.getprovider('BoomFantasy')
 
-
-def _get_url(url_type: str) -> Optional[str]:
-    return logistics['urls'].get(url_type)
+def _get_tokens(token_type: str = None) -> Optional[Union[str, dict]]:
+    credentials = logistics['json_data']['tokens']['authentication']['credentials']
+    return credentials.get(token_type, credentials)
 
 
 def _get_headers(headers_type: str) -> Optional[dict]:
-    headers = logistics['headers'][headers_type]
-    if headers_type == 'prop_lines':
-        headers['Authorization'] = f'Bearer {_read_tokens("access_token")}'
-
-    return headers
-
-def _get_params() -> dict:
-    return logistics['params']
+    return logistics['headers'].get(headers_type)
 
 
-def _get_json_data() -> dict:
-    return logistics['json_data']
+async def post(url: str, **kwargs) -> dict:
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, **kwargs) as resp:
+            if resp.status == 200:
+                return await resp.json()
+
+            print(f"Failed to retrieve {url} with status code {resp.status}")
+            print("ERROR: ", end='')
+            async for chunk in resp.content.iter_chunked(1024):
+                print(chunk.decode())
 
 
-def _read_tokens(token_type: str = None) -> Optional[Union[str, dict]]:
-    return logistics['tokens'].get(token_type) if token_type else logistics['tokens']
+def _update_tokens(tokens: dict) -> None:
+    logistics['json_data']['tokens']['authentication']['credentials'].update(tokens)
+    headers = logistics['headers']
+    headers['prop_lines']['authorization'] = f'Bearer {tokens["accessToken"]}'
+    headers['contest_id']['authorization'] = f'Bearer {tokens["accessToken"]}'
 
 
-async def _request_prop_lines() -> None:
-    url = _get_url('prop_lines')
+async def _request_new_tokens() -> bool:
+    url = logistics['urls'].get('tokens')
+    headers = _get_headers('tokens')
+    json_data = logistics['json_data'].get('tokens')
+    if resp_json := await post(url, headers=headers, json=json_data):
+        relevant_tokens = {k: v for k, v in resp_json.items() if k in ['accessToken', 'refreshToken']}
+        _update_tokens(relevant_tokens)
+        return True
+
+    return False
+
+
+async def _request_contest_id() -> Optional[str]:
+    url = logistics['urls'].get('contest_id')
+    headers = _get_headers('contest_id')
+    json_data = logistics['json_data'].get('contest_id')
+    if resp_json := await post(url, headers=headers, json=json_data):
+        return _parse_contest_id(resp_json)
+
+
+def _parse_contest_id(resp: dict) -> Optional[str]:
+    if data := resp.get('data'):
+        for contest in data.get('contests', []):
+            if contest.get('title') == "Pick' Em":
+                return contest.get('_id')
+
+
+async def fetch(url: str, **kwargs) -> Optional[dict]:
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, **kwargs) as resp:
+            if resp.status == 200:
+                return await resp.json()
+
+            print(f"Failed to retrieve {url} with status code {resp.status}")
+            print("ERROR: ", end='')
+            async for chunk in resp.content.iter_chunked(1024):
+                print(chunk.decode())
+
+
+async def _request_prop_lines(contest_id: str) -> Iterable:
+    url = logistics['urls']['prop_lines'].format(contest_id)
     headers = _get_headers('prop_lines')
-    params = _get_params()
+    params = logistics['params'].get('prop_lines')
+    if resp_json := await fetch(url, headers=headers, params=params):
+        print("PROP LINES RESPONSE MEMORY SIZE:", round(sys.getsizeof(resp_json) / 1024, 2), "KB")
+        return _parse_prop_lines(resp_json)
 
 
-
-def _get_sections(response: Response) -> Iterable:
-    if (json_data := response.json()) and (data := json_data.get('data')):
+def _get_sections(resp: dict) -> Iterable:
+    if data := resp.get('data'):
         if contest := data.get('multiLineContest'):
             for section in contest.get('sections', []):
                 yield section
@@ -57,7 +185,7 @@ def _get_qgs(section: dict) -> Iterable:
             yield qg
 
 
-def _get_qg_data(response: Response) -> Iterable:
+def _get_qg_data(response: dict) -> Iterable:
     for section in _get_sections(response):
         yield _extract_league(section)
         for qg in _get_qgs(section):
@@ -83,7 +211,7 @@ def _extract_period(qg: dict) -> Optional[str]:
         return period
 
 
-def _get_qs_data(league: str, qg: dict) -> Iterable:
+def _get_q_data(league: str, qg: dict) -> Iterable:
     if team_name := _extract_team(league, qg):
         yield r.games.getgame(league, team_name)
         yield _extract_subject(league, team_name, qg)
@@ -98,14 +226,14 @@ def _extract_market(sport: str, qg: dict, q: dict) -> Optional[dict[str, str]]:
         return r.markets.getmarket(sport, raw_market_name)
 
 
-def _get_cs_data(league: str, qg: dict, q: dict) -> Iterable:
+def _get_c_data(league: str, qg: dict, q: dict) -> Iterable:
     yield _extract_market(league, qg, q)
     if c_data := q.get('c', []):
         for c in c_data:
             yield c
 
 
-def _get_cs_data_2(c: dict) -> Iterable:
+def _get_c_data_2(c: dict) -> Iterable:
     yield c.get('l')
     for c_2_data in c.get('c', []):
         yield c_2_data
@@ -117,20 +245,20 @@ def _extract_label_and_odds(c_2: list) -> Optional[tuple[str, float]]:
             return label.title(), float(odds)
 
 
-def _parse_prop_lines(response: Response) -> None:
-    qg_data_iter = iter(_get_qg_data(response))
+def _parse_prop_lines(resp: dict) -> Iterable:
+    qg_data_iter = iter(_get_qg_data(resp))
     if league := next(qg_data_iter):
         for qg in qg_data_iter:
-           qs_data_iter = iter(_get_qs_data(league, qg))
-           if game := next(qs_data_iter):
-               if subject := next(qs_data_iter):
-                    for q in qs_data_iter:
-                        cs_data_iter = iter(_get_cs_data(league, qg, q))
-                        if market := next(cs_data_iter):
-                            for c in cs_data_iter:
-                                cs_2_data_iter = iter(_get_cs_data_2(c))
-                                if line := next(cs_2_data_iter):
-                                    for c_2 in cs_2_data_iter:
+           q_data_iter = iter(_get_q_data(league, qg))
+           if game := next(q_data_iter):
+               if subject := next(q_data_iter):
+                    for q in q_data_iter:
+                        c_data_iter = iter(_get_c_data(league, qg, q))
+                        if market := next(c_data_iter):
+                            for c in c_data_iter:
+                                c_2_data_iter = iter(_get_c_data_2(c))
+                                if line := next(c_2_data_iter):
+                                    for c_2 in c_2_data_iter:
                                         label, odds = _extract_label_and_odds(c_2)
                                         if label and odds:
                                             yield {
@@ -142,124 +270,25 @@ def _parse_prop_lines(response: Response) -> None:
                                                 'label': label,
                                                 'line': line,
                                                 'odds': odds,
-                                                'implied_probability': round(1 / odds, 4)
+                                                'impl_prob': round(1 / odds, 4)
                                             }
 
 
-def _store_prop_lines():
-    r.lines.storelines(func=_parse_prop_lines)
+async def run():
+    # Todo: don't get new tokens every time...randomize every three requests
+    try:
+        if await _request_new_tokens():
+            if contest_id := await _request_contest_id():
+                if lines_parser := await _request_prop_lines(contest_id):
+                    r.lines.storelines(lines_parser)
+
+    except Exception as e:
+        print(e)
+
+    finally:
+        r.client.hset('providers', logistics['name'], json.dumps(logistics))
 
 
-def _request_new_tokens() -> None:
-    pass
-
-
-def _parse_new_tokens() -> tuple[str, str]:
-    pass
-
-
-
-
-
-def extract_team(bookmaker_name: str, league: str, data: dict) -> Optional[tuple[str, str]]:
-    # get a dictionary, if exists keep going
-    if player_image_data := data.get('playerImage'):
-        # get the team name if it exists
-        if team_name := player_image_data.get('abbreviation'):
-            # get the team id and team name from the database
-            return dc_utils.get_team(bookmaker_name, league, team_name)
-
-
-def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> Optional[dict[str, str]]:
-    # gets the league section's title and options from that title, executes if they both exist
-    if (title := data.get('title')) and (options := title.get('o')):
-        # gets the first and last name of the player, executes if both exist
-        if (first_name := options.get('firstName')) and (last_name := options.get('lastName')):
-            # get subject name
-            subject_name = ' '.join([first_name, last_name])
-            # DATA LOOKS LIKE --> {'id': 123asd, 'name': 'Jayson Tatum'} POSSIBLY WITH 'team': 'BOS'
-            return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
-
-
-def extract_line(data: dict) -> Optional[tuple[str, str]]:
-    # get the pick selection data, execute if exists
-    if pick_selection_title := data.get('pickSelectionTitle'):
-        # get additional data from pick selection, execute if exists
-        if additional_options := pick_selection_title.get('additionalOptions'):
-            # get market data and get numeric over/under line, execute if both exist
-            if (stat_text := additional_options.get('statText')) and (line := additional_options.get('line')):
-                # return the numeric line for the prop line and some additional market data
-                return line, stat_text
-
-
-def extract_period(data: dict) -> Optional[str]:
-    # gets the period (fullGame, firstQuarter, etc.), keep executing if it exists and if it isn't fullGame
-    if (period := data.get('periodClassifier')) and (period != 'fullGame'):
-        # return the period classifier
-        return period
-
-
-def extract_market(bookmaker_name: str, data: dict, league: str, period_type: Optional[str] = None) -> Optional[dict[str, str]]:
-    # get the market name, if exists keep going
-    if market_name := data.get("statistic"):
-        # gets the market id
-        market = dc_utils.get_market(bookmaker_name, league, market_name, period_type=period_type)
-        # return both market id and cleaned market
-        return market
-
-
-def extract_label_and_odds(data: list) -> Optional[tuple[str, float]]:
-    # check if the data list has the expected number of elements
-    if len(data) == 3:
-        # return a capitalized label and the odds
-        return data[1].title(), float(data[2])
-
-
-class BoomFantasy(ln_utils.LinesRetriever):
-    def __init__(self, batch_id: str, bookmaker: ln_utils.LinesSource):
-        super().__init__(batch_id, bookmaker)
-
-    async def retrieve(self) -> None:
-        url = ln_utils.get_url(self.name)
-        headers = ln_utils.get_headers(self.name)
-        params = ln_utils.get_params(self.name)
-        tokens_data = {
-            'url': ln_utils.get_url(self.name, name='tokens'),
-            'headers': ln_utils.get_headers(self.name, name='tokens'),
-            'json_data': ln_utils.get_json_data(self.name, name='tokens')
-        }
-        await self.req_mngr.get_bf(url, tokens_data, self._parse_lines, headers=headers, params=params)
-
-    async def _parse_lines(self, response) -> None:
-        if (json_data := response.json()) and (data := json_data.get('data')):
-            if contest := data.get('multiLineContest'):
-                for section_data in contest.get('sections', []):
-                    if section_data.get('status') == 'active':
-                        if league := extract_league(self.name, section_data):
-                            sport = dc_utils.LEAGUE_SPORT_MAP[league]
-                            for qg_data in section_data.get('qG', []):
-                                if team_id := extract_team(self.name, league, qg_data):
-                                    if game := dc_utils.get_game(team_id):
-                                        if subject := extract_subject(self.name, qg_data, league, team_id[1]):
-                                            period = extract_period(qg_data)
-                                            for q_data in qg_data.get('q', []):
-                                                if market := extract_market(self.name, q_data, league, period):
-                                                    for c_data in q_data.get('c', []):
-                                                        if line := c_data.get('l'):
-                                                            for more_c_data in c_data.get('c', []):
-                                                                label, odds = extract_label_and_odds(more_c_data)
-                                                                if label and odds:
-                                                                    self.store({
-                                                                        'bookmaker': self.name,
-                                                                        'sport': sport,
-                                                                        'league': league,
-                                                                        'game_time': game['game_time'],
-                                                                        'game': game['info'],
-                                                                        'market': market['name'],
-                                                                        'subject_id': subject['id'],
-                                                                        'subject': subject['name'],
-                                                                        'label': label,
-                                                                        'line': line,
-                                                                        'odds': odds,
-                                                                        'im_prb': round(1 / odds, 4)
-                                                                    })
+if __name__ == '__main__':
+    import asyncio
+    asyncio.run(run())

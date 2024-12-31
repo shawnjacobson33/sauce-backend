@@ -6,14 +6,27 @@ from aiohttp import ClientResponse
 from cloudscraper import CloudScraper, Cloudflare, CloudflareLoopProtection
 
 
+REDIRECT_CODES = (
+    301,  # moved
+    302,  # found
+    303,  # other
+    307,  # temporary redirect
+    308,  # permanent redirect
+)
+
+
 class AsyncCloudScraper(CloudScraper):
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
 
-    async def perform_request(self, method, url, *args, **kwargs):
+    def perform_request(self, method, url, *args, **kwargs) -> aiohttp.ClientResponse:
         async with aiohttp.ClientSession() as session:
             async with session.request(method, url, *args, **kwargs) as resp:
-                return await resp.text()
+                return resp
+
+    @staticmethod
+    def _is_redirect(resp: aiohttp.ClientResponse):
+        return 'location' in resp.headers and resp.status in REDIRECT_CODES
 
     async def request(self, method, url, *args, **kwargs):
         # pylint: disable=E0203
@@ -34,10 +47,10 @@ class AsyncCloudScraper(CloudScraper):
             )
 
         # ------------------------------------------------------------------------------- #
-        # Make the request via requests.
+        # Make the request via aiohttp.
         # ------------------------------------------------------------------------------- #
 
-        response = await self.perform_request(method, url, *args, **kwargs)
+        response = self.perform_request(method, url, *args, **kwargs)
 
         # ------------------------------------------------------------------------------- #
         # Debug the request via the Response object.
@@ -59,13 +72,13 @@ class AsyncCloudScraper(CloudScraper):
         # ------------------------------------------------------------------------------- #
 
         if not self.disableCloudflareV1:
-            cloudflareV1 = Cloudflare(self)
+            cloudflare_v1 = Cloudflare(self)
 
             # ------------------------------------------------------------------------------- #
             # Check if Cloudflare v1 anti-bot is on
             # ------------------------------------------------------------------------------- #
 
-            if cloudflareV1.is_Challenge_Request(response):
+            if cloudflare_v1.is_Challenge_Request(response):
                 # ------------------------------------------------------------------------------- #
                 # Try to solve the challenge and send it back
                 # ------------------------------------------------------------------------------- #
@@ -79,12 +92,14 @@ class AsyncCloudScraper(CloudScraper):
 
                 self._solveDepthCnt += 1
 
-                response = cloudflareV1.Challenge_Response(response, **kwargs)
+
+                response_text = cloudflare_v1.Challenge_Response(response, **kwargs)
             else:
-                if not response.is_redirect and response.status_code not in [429, 503]:
+                # CHANGED
+                if not self._is_redirect(response) and response.status not in [429, 503]:
                     self._solveDepthCnt = 0
 
-        return response
+        return
 
     async def get(self, url: str, *args, **kwargs):
         return await self.request('GET', url, *args, **kwargs)
