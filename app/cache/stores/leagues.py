@@ -14,6 +14,10 @@ class Leagues(DataStore):
     def getleague(self, league: str, report: bool = True) -> Optional[str]:
         return self._r.hget(self.lookup_name, league)
 
+    # Todo: New method to test
+    def getsport(self, league: str) -> Optional[str]:
+        return self._r.hget(f'{self.lookup_name}:sports', league)
+
     def getleagues(self) -> Iterable:
         yield from self._r.hscan_iter(self.lookup_name)
 
@@ -31,3 +35,5 @@ class Leagues(DataStore):
 
         except AttributeError as e:
             self._log_error(e)
+
+

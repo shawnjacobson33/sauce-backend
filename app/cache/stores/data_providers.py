@@ -11,7 +11,7 @@ class DataProviders(DataStore):
         super().__init__(r, 'providers')
 
     def getprovider(self, provider_name: str) -> Optional[Union[str, dict]]:
-        if provider_data := self._r.hget(f'{self.info_name}', provider_name):
+        if provider_data := self._r.hget(self.info_name, provider_name):
             return json.loads(provider_data)
 
     def updateprovider(self, provider_name: str, key: str, value: Union[str, dict]) -> None:

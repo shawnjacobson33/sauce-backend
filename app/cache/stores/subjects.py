@@ -9,16 +9,7 @@ from app.cache.stores.base import DataStore
 
 
 class Subjects(DataStore):
-    """
-    A data store class for managing Subject entities in a Redis database.
-    """
     def __init__(self, r: redis.Redis):
-        """
-        Initializes the Subjects data store.
-
-        Args:
-            r (redis.Redis): A Redis client instance.
-        """
         super().__init__(r, 'subjects')
 
     @staticmethod
@@ -42,8 +33,8 @@ class Subjects(DataStore):
     def getids(self, league: str) -> Iterable:
         yield from self._scan_subj_ids(league)
 
-    def getsubj(self, league: str, subject: Subject, report: bool = False) -> Optional[dict]:
-        if subj_id := self.getid(league, subject):
+    def getsubject(self, league: str, subject: Subject, report: bool = False) -> Optional[dict]:
+        if subj_id := self.getid(subject):
             if subj := self._r.hget(f'{self.info_name}:{league.lower()}', subj_id):
                 return json.loads(subj)
 
