@@ -1,4 +1,3 @@
-from .oddsshopper import OddsShopper
 from .propprofessor import PropProfessor
 
 

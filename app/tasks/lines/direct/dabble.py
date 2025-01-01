@@ -153,6 +153,7 @@ def _parse_prop_lines(league: str, resp: dict) -> None:
 async def run():
     try:
         await _request_competitions()
+        # Todo: make sure that the _id for game and subject are both collected
         r.data_lines.storelines(prop_lines)
 
     except Exception as e:

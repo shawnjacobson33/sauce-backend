@@ -44,7 +44,7 @@ class BettingLines(DataStore):
 
     @staticmethod
     def _get_key(line: dict) -> str:
-        return f'{line['league']}:{line['game_id']}:{line['subj_id']}:{line['market']}:{line['label']}:{line['line']}'
+        return f'{line['league']}:{line['game']['_id']}:{line['subject']['_id']}:{line['market']}:{line['label']}:{line['line']}'
 
     def storelines(self, lines: Iterable) -> None:
         try:
@@ -52,7 +52,8 @@ class BettingLines(DataStore):
                 pipe.multi()
                 for line in lines:
                     novel_line_info = json.dumps({k: v for k, v in line.items() if k in ['timestamp', 'dflt_odds',
-                                                                                         'odds', 'multiplier']})
+                                                                                         'odds', 'multiplier', 'ev',
+                                                                                         'impl_prb', 'tw_prb']})
                     pipe.hset(f'{self.info_name}:{line['bookmaker']}', self._get_key(line),
                               novel_line_info)
                 pipe.execute()
