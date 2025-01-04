@@ -1,7 +1,7 @@
 import asyncio
 import time
 
-import app.prop_lines.data_collection.management.load as ld
+import app.services.betting_lines_service.data_collection.management.load as ld
 from app import Lines, Games, BoxScores, Subjects
 
 

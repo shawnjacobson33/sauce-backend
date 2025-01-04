@@ -1,59 +1,19 @@
-version: '3.8'
-
 services:
   redis:
     image: redis
-    container_name: redis
-    command: redis-server --requirepass MGhVF6pNVygiy392JFyW
-    volumes:
-      - redis_vol_data:/data
+    container_name: redis-instance
+    command: redis-server
     ports:
       - "6379:6379"
-    environment:
-      - REDIS_PASSWORD=MGhVF6pNVygiy392JFyW
 
-  postgres:
-    image: postgres:13
-    environment:
-      - POSTGRES_USER=airflow_user
-      - POSTGRES_PASSWORD=Gx9MJ8WEbrmDiTcoQMjF
-      - POSTGRES_DB=POSTGRES_DB=airflow_db
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app-instance
+    ports:
+        - "8000:8000"
+    depends_on:
+        - redis
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  airflow-webserver:
-    image: apache/airflow:2.5.0
-    environment:
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow_user:Gx9MJ8WEbrmDiTcoQMjF@postgres:5432/airflow_db
-      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
-      - AIRFLOW__CELERY__BROKER=redis://:MGhVF6pNVygiy392JFyW@redis:6379/0
-      - AIRFLOW__CELERY__RESULT_BACKEND=redis://:MGhVF6pNVygiy392JFyW@redis:6379/0
-
-  airflow-scheduler:
-    image: apache/airflow:2.5.0
-    container_name: airflow-scheduler
-    environment:
-      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow_user:Gx9MJ8WEbrmDiTcoQMjF@postgres:5432/airflow_db
-      - AIRFLOW__CELERY__BROKER=redis://:MGhVF6pNVygiy392JFyW@redis:6379/0
-      - AIRFLOW__CELERY__RESULT_BACKEND=redis://:MGhVF6pNVygiy392JFyW@redis:6379/0
-    depends_on:
-      - redis
-      - postgres
-
-  airflow-worker:
-    image: celery:latest
-    environment:
-      - AIRFLOW__CELERY__BROKER=redis://:MGhVF6pNVygiy392JFyW@redis:6379/0
-      - AIRFLOW__CELERY__RESULT_BACKEND=redis://:MGhVF6pNVygiy392JFyW@redis:6379/0
-
-    depends_on:
-      - redis
-      - airflow-scheduler
-
-  db:
-    image: mongo:latest
-
-volumes:
-  postgres_data:
-  redis_vol_data:
+        - app:/app

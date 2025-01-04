@@ -2,5 +2,5 @@
 *.json
 *.txt
 .DS_Store
-.env
+old-functionality/.env
 redis.conf
