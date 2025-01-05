@@ -2,24 +2,20 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, Iterable
 
-import pandas as pd
-
-from app.services.betting_lines_service.data_collection.utils import fetch, get_payload
-
-
-payload = get_payload('OddsShopper')
-betting_lines = []
+from app.cache import session
+from app.services.betting_lines.data_collection.utils import fetch, get_payload
 
 
+PAYLOAD = get_payload('OddsShopper')
 IN_SEASON_AND_VALID_LEAGUES = { 'NBA', 'NFL', 'NHL' }
 
 
-async def _request_matchups() -> None:
-    url = payload['urls']['matchups']
-    headers = payload['headers']
-    cookies = payload['cookies']
+async def _request_matchups() -> dict | None:
+    url = PAYLOAD['urls']['matchups']
+    headers = PAYLOAD['headers']
+    cookies = PAYLOAD['cookies']
     if resp_json := await fetch(url, headers=headers, cookies=cookies):
-        await _parse_matchups(resp_json)
+        return resp_json
 
 
 def _get_offers(resp: dict) -> Iterable:
@@ -35,14 +31,10 @@ def _extract_league(offer: dict) -> Optional[str]:
             return raw_league_name.strip().upper()
 
 
-async def _parse_matchups(resp: dict) -> None:
-    tasks = []
+def _parse_matchups(resp: dict) -> tuple[str, str] | None:
     for offer in _get_offers(resp):
         if (league := _extract_league(offer)) and (offer_id := offer.get('id')):
-            tasks.append(_request_betting_lines(league, offer_id))
-
-    await asyncio.gather(*tasks)
-
+            yield league, offer_id
 
 def _get_dates() -> tuple[str, str]:
     date_format = '%Y-%m-%dT%H:%M:%S.%f'
@@ -51,17 +43,17 @@ def _get_dates() -> tuple[str, str]:
 
 
 def _get_params():
-    params = payload['params']['prop_lines']
+    params = PAYLOAD['params']['prop_lines']
     start_date, end_date = _get_dates()
     return {**params, 'startDate': start_date, 'endDate': end_date}
 
 
-async def _request_betting_lines(league: str, offer_id: str) -> None:
-    url = payload['urls']['prop_lines'].format(offer_id)
-    headers = payload['headers']
+async def _request_betting_lines(league: str, offer_id: str, collected_betting_lines: list[dict]) -> None:
+    url = PAYLOAD['urls']['prop_lines'].format(offer_id)
+    headers = PAYLOAD['headers']
     params = _get_params()
     if resp_json := await fetch(url, headers=headers, params=params):
-        _parse_betting_lines(league, resp_json)
+        _parse_betting_lines(league, resp_json, collected_betting_lines)
 
 
 def _extract_subject(event: dict) -> Optional[dict]:
@@ -92,8 +84,7 @@ def extract_ev(data: dict) -> Optional[float]:
         return round(ev, 3)
 
 
-def _parse_betting_lines(league: str, resp: dict) -> None:
-    global betting_lines
+def _parse_betting_lines(league: str, resp: dict, collected_betting_lines: list[dict]) -> None:
     for event in resp:
         if market := event.get('offerName'):
             if subject := _extract_subject(event):
@@ -102,7 +93,8 @@ def _parse_betting_lines(league: str, resp: dict) -> None:
                         for outcome in side.get('outcomes', []):
                             if bookmaker_name := _extract_bookmaker(outcome):
                                 if odds := _extract_odds(outcome):
-                                    betting_lines.append({
+                                    collected_betting_lines.append({
+                                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                                         'bookmaker': bookmaker_name,
                                         'league': league,
                                         'market': market,
@@ -113,15 +105,26 @@ def _parse_betting_lines(league: str, resp: dict) -> None:
                                         'impl_prb': 1 / odds
                                     })
 
-async def run_oddsshopper_scraper():
+async def run_oddsshopper_collector(collected_betting_lines: list) -> None:
     try:
-        # Todo: modify the process above and below so that this method acts more as a controller
-        await _request_matchups()
-        return pd.DataFrame(betting_lines)
+        print('[Oddsshopper]: Running collector...')
+        print('[Oddsshopper]: Requesting matchups...')
+        if matchups_resp := await _request_matchups():
+            print('[OddsShopper]: Matchups received...')
+            betting_lines_tasks = []
+            for event_data in _parse_matchups(matchups_resp):
+                if event_data:
+                    league, offer_id = event_data
+                    betting_lines_tasks.append(_request_betting_lines(league, offer_id, collected_betting_lines))
+
+            print('[Oddsshopper]: Requesting betting lines...')
+            await asyncio.gather(*betting_lines_tasks)
+            print('[Oddsshopper]: Betting lines received...')
 
     except Exception as e:
         print(e)
 
 
 if __name__ == '__main__':
-    asyncio.run(run_oddsshopper_scraper())
+    session.client.delete('lines:info')
+    asyncio.run(run_oddsshopper_collector())

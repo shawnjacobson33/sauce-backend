@@ -2,6 +2,7 @@ import json
 from typing import Iterable
 
 import redis
+import pandas as pd
 
 from app.cache.stores.base import DataStore
 
@@ -17,16 +18,23 @@ class BettingLines(DataStore):
         yield from self._r.hscan_iter(f'{self.info_name}:{bookmaker}', no_values=True)
 
     @staticmethod
-    def _add_id_info_to_dict(bookmaker: str, line_id: str, line: dict) -> None:
-        line['bookmaker'] = bookmaker
+    def _add_id_info_to_dict(line_id: str, line: dict) -> None:
         for line_id_field, line_id_attr in zip(LINE_ID_ORDERED_FIELDS, line_id.split(':')):
             line[line_id_field] = line_id_attr
 
-    def getlines(self, bookmaker: str, match: str = None) -> Iterable:
-        pattern = f'*{match}*' if match else '*'
-        for line_id, line_json in self._r.hscan_iter(f'{self.info_name}:{bookmaker}', match=pattern):
+    @staticmethod
+    def _get_query(query: list) -> str:
+        pattern = '*'
+        for q in query:
+            pattern += f'{q}*'
+
+        return pattern
+
+    async def getlines(self, query: list[str] = None) -> Iterable:
+        pattern = self._get_query(query) if query else '*'
+        async for line_id, line_json in self._r.hscan(f'{self.info_name}', match=pattern):
             line_dict = json.loads(line_json)
-            self._add_id_info_to_dict(bookmaker, line_id.decode('utf-8'), line_dict)
+            self._add_id_info_to_dict(line_id.decode('utf-8'), line_dict)
             yield line_dict
 
     # def labellines(self, bookmaker: str, box_score: dict) -> Iterable:
@@ -44,18 +52,20 @@ class BettingLines(DataStore):
 
     @staticmethod
     def _get_key(line: dict) -> str:
-        return f'{line['league']}:{line['subject']['_id']}:{line['market']}:{line['label']}:{line['line']}'
+        return (
+            f'{line['bookmaker']}:{line['league']}:{line['subject']}:{line['market']}:{line['label']}:{line['line']}'
+        )
 
-    def storelines(self, lines: Iterable) -> None:
+    def storelines(self, lines: pd.DataFrame) -> None:
         try:
             with self._r.pipeline() as pipe:
                 pipe.multi()
-                for line in lines:
+                for line in lines.to_dict(orient='records'):
                     novel_line_info = json.dumps({k: v for k, v in line.items() if k in ['timestamp', 'dflt_odds',
                                                                                          'odds', 'multiplier', 'ev',
                                                                                          'impl_prb', 'tw_prb']})
-                    pipe.hset(f'{self.info_name}:{line['bookmaker']}', self._get_key(line),
-                              novel_line_info)
+                    pipe.hset(f'{self.info_name}', self._get_key(line), novel_line_info)
+
                 pipe.execute()
 
         except KeyError as e:

@@ -3,7 +3,7 @@ import json
 from typing import Optional
 
 from app.cache import redis_cache as r
-from app.services.betting_lines_service.data_collection.utils import fetch
+from app.services.betting_lines.data_collection.utils import fetch
 
 
 r.data_providers.storeproviders([

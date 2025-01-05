@@ -1,9 +1,5 @@
 import asyncio
-
 import pandas as pd
-
-from app.cache import session
-from app.services.betting_lines_service.data_collection import run_oddsshopper_scraper
 
 
 SHARP_PROP_BOOKMAKERS_WEIGHTS = {
@@ -11,12 +7,6 @@ SHARP_PROP_BOOKMAKERS_WEIGHTS = {
     'FanDuel': 0.3,
     'Caesars': 0.1
 }
-
-
-async def _get_betting_lines() -> pd.DataFrame:
-    betting_lines = await run_oddsshopper_scraper()
-    return betting_lines
-    # return pd.read_csv('oddsshopper-betting-lines-sample.csv')
 
 
 def _get_true_prb(df: pd.DataFrame) -> pd.DataFrame:
@@ -34,7 +24,7 @@ def _get_true_prb(df: pd.DataFrame) -> pd.DataFrame:
 
         if len(matching_prop_lines) == 1:
             matching_prop_line = matching_prop_lines.iloc[0]
-            row['true_prb'] = row['impl_prb'] / (matching_prop_line['impl_prb'] + row['impl_prb'])
+            row['tw_prb'] = row['impl_prb'] / (matching_prop_line['impl_prb'] + row['impl_prb'])
 
         return row
 
@@ -46,9 +36,9 @@ def _get_true_prb(df: pd.DataFrame) -> pd.DataFrame:
             for _, row in grouped_df.iterrows():
                 weights = SHARP_PROP_BOOKMAKERS_WEIGHTS[row['bookmaker']]
                 weights_sum += weights
-                weighted_market_total += weights * row['true_prb']
+                weighted_market_total += weights * row['tw_prb']
 
-            weighted_market_avg_betting_line_df['true_prb'] = weighted_market_total / weights_sum
+            weighted_market_avg_betting_line_df['tw_prb'] = weighted_market_total / weights_sum
 
         return weighted_market_avg_betting_line_df
 
@@ -77,7 +67,7 @@ def _calculate_ev(betting_lines: pd.DataFrame, sharp_betting_lines: pd.DataFrame
             (sharp_betting_lines['label'] == row['label'])
         ]
         if len(matching_sharp_prop_line) == 1:
-            prb_of_winning = matching_sharp_prop_line.iloc[0]['true_prb']
+            prb_of_winning = matching_sharp_prop_line.iloc[0]['tw_prb']
             potential_winnings = row['odds'] - 1
             row['true_prb'] = prb_of_winning
             row['ev'] = round((prb_of_winning * potential_winnings) - (1 - prb_of_winning), 4)
@@ -93,14 +83,13 @@ def _calculate_ev(betting_lines: pd.DataFrame, sharp_betting_lines: pd.DataFrame
     return betting_lines_with_ev
 
 
-async def run_ev_calculator(betting_lines: pd.DataFrame = None):
-    if betting_lines is None:
-        betting_lines = await _get_betting_lines()
-    sharp_betting_lines = _get_true_prb(betting_lines)
-    evaluated_betting_lines = _calculate_ev(betting_lines, sharp_betting_lines)
-    session.betting_lines.storelines(evaluated_betting_lines)
-    return evaluated_betting_lines
+async def run_processors(betting_lines: list[dict]):
+    betting_lines_df = pd.DataFrame(betting_lines)
+    sharp_betting_lines_df = _get_true_prb(betting_lines_df)
+    evaluated_betting_lines_df = _calculate_ev(betting_lines_df, sharp_betting_lines_df)
+    return evaluated_betting_lines_df
 
 
 if __name__ == '__main__':
-    asyncio.run(run_ev_calculator())
+    betting_lines_data = pd.read_csv('data-samples/oddsshopper-betting-lines-sample.csv').to_dict(orient='records')
+    asyncio.run(run_processors(betting_lines_data))

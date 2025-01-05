@@ -1,0 +1,2 @@
+from .boomfantasy import run_boomfantasy_collector
+from .oddsshopper import run_oddsshopper_collector

@@ -16,4 +16,4 @@ services:
     depends_on:
         - redis
     volumes:
-        - app:/app
+        - ./app:/app
