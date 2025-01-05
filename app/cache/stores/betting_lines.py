@@ -7,7 +7,7 @@ import pandas as pd
 from app.cache.stores.base import DataStore
 
 
-LINE_ID_ORDERED_FIELDS = ['league', 'game_id', 'subj_id', 'market', 'label', 'line']
+LINE_ID_ORDERED_FIELDS = ['bookmaker', 'league', 'subject', 'market', 'label', 'line']
 
 
 class BettingLines(DataStore):
@@ -23,16 +23,16 @@ class BettingLines(DataStore):
             line[line_id_field] = line_id_attr
 
     @staticmethod
-    def _get_query(query: list) -> str:
+    def _get_query(query: dict[str, str]) -> str:
         pattern = '*'
-        for q in query:
+        for q in query.values():
             pattern += f'{q}*'
 
         return pattern
 
-    async def getlines(self, query: list[str] = None) -> Iterable:
-        pattern = self._get_query(query) if query else '*'
-        async for line_id, line_json in self._r.hscan(f'{self.info_name}', match=pattern):
+    def getlines(self, query: dict[str, str] = None):
+        pattern = self._get_query(query) if query else '*'  # Todo: limitation...can only query for one value per field
+        for line_id, line_json in self._r.hscan_iter(self.info_name, match=pattern):
             line_dict = json.loads(line_json)
             self._add_id_info_to_dict(line_id.decode('utf-8'), line_dict)
             yield line_dict
@@ -64,7 +64,7 @@ class BettingLines(DataStore):
                     novel_line_info = json.dumps({k: v for k, v in line.items() if k in ['timestamp', 'dflt_odds',
                                                                                          'odds', 'multiplier', 'ev',
                                                                                          'impl_prb', 'tw_prb']})
-                    pipe.hset(f'{self.info_name}', self._get_key(line), novel_line_info)
+                    pipe.hset(self.info_name, self._get_key(line), novel_line_info)
 
                 pipe.execute()
 
