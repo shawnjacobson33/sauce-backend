@@ -10,15 +10,15 @@ async def run_betting_lines_pipeline():
     while True:
         start_time = time.time()
         print('Running betting lines pipeline...')
-        print('Starting data collection...')
+        print('Starting data collectors...')
         collected_betting_lines = await run_collectors()
         print('Finished data collection...')
-        print('Starting data processing...')
-        betting_lines_df_pr = await run_processors(collected_betting_lines) # Todo: should be multi-processed
+        print('Starting data processors...')
+        betting_lines_pr = run_processors(collected_betting_lines) # Todo: should be multi-processed
         print('Finished data processing...')
-        print('Saving processed betting lines...')
-        await db.betting_lines.store_betting_lines(betting_lines_df_pr)
-        print(f'Saved {len(betting_lines_df_pr)} processed betting lines...')
+        print('Storing processed betting lines...')
+        await db.betting_lines.store_betting_lines(betting_lines_pr)
+        print(f'Stored {len(betting_lines_pr)} processed betting lines...')
         end_time = time.time()
         print(f'Pipeline completed in {round(end_time - start_time, 2)} seconds. Sleeping for 60 seconds...')
         await asyncio.sleep(60)

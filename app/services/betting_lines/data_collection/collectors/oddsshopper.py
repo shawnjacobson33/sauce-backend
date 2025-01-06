@@ -2,7 +2,6 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, Iterable
 
-from app.cache import main
 from app.services.betting_lines.data_collection.utils import fetch, get_payload
 
 
@@ -126,5 +125,4 @@ async def run_oddsshopper_collector(collected_betting_lines: list) -> None:
 
 
 if __name__ == '__main__':
-    session.client.delete('lines:info')
-    asyncio.run(run_oddsshopper_collector())
+    asyncio.run(run_oddsshopper_collector([]))

@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Optional, Iterable, Union
 
-from app.cache import main
 from app.services.betting_lines.data_collection.utils import post, fetch, get_payload
 
 
@@ -181,5 +180,4 @@ async def run_boomfantasy_collector(collected_betting_lines: list) -> None:
 
 if __name__ == '__main__':
     import asyncio
-    session.client.delete('lines:info')
     asyncio.run(run_boomfantasy_collector([]))

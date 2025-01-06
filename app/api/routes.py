@@ -19,8 +19,9 @@ async def start_betting_lines_pipeline():
 
 @router.get('/betting_lines')
 async def betting_lines():
-    curr_betting_lines = await db.betting_lines.get_betting_lines()
-    curr_betting_lines_df = pd.DataFrame(curr_betting_lines)
+    curr_betting_lines_list = await db.betting_lines.get_betting_lines()
+    # await db.betting_lines.delete_betting_lines()  # todo: temporary
+    curr_betting_lines_df = pd.DataFrame(curr_betting_lines_list)
     curr_betting_lines_df['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     return (
         curr_betting_lines_df.head(20).to_dict(orient='records')

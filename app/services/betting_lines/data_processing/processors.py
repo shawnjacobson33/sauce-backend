@@ -83,11 +83,11 @@ def _calculate_ev(betting_lines: pd.DataFrame, sharp_betting_lines: pd.DataFrame
     return betting_lines_with_ev
 
 
-async def run_processors(betting_lines: list[dict]):
+def run_processors(betting_lines: list[dict]):
     betting_lines_df = pd.DataFrame(betting_lines)
     sharp_betting_lines_df = _get_true_prb(betting_lines_df)
     evaluated_betting_lines_df = _calculate_ev(betting_lines_df, sharp_betting_lines_df)
-    return evaluated_betting_lines_df
+    return evaluated_betting_lines_df.to_dict(orient='records')
 
 
 if __name__ == '__main__':
