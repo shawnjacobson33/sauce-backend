@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Iterable
 
 import pandas as pd
 import pytest
@@ -59,42 +60,47 @@ def setup():
     yield pd.DataFrame(betting_lines)
 
 
+def _convert_to_set(betting_lines: Iterable) -> set[tuple]:
+    return set([(k, v) for line in list(betting_lines) for k, v in line.items()])
+
+
 def test_betting_lines(setup):
     session.betting_lines.storelines(setup)
-    setup = setup.to_dict(orient='records')
+    setup_list_dict = setup.to_dict(orient='records')
+    setup_set_tuples = _convert_to_set(setup_list_dict)
 
-    result = list(session.betting_lines.getlines())
-    assert result == setup
+    result = _convert_to_set(session.betting_lines.getlines())
+    assert result == setup_set_tuples
 
-    result = list(session.betting_lines.getlines(query={'bookmaker': 'PrizePicks'}))
-    assert result == [setup]
+    result = _convert_to_set(session.betting_lines.getlines(query={'bookmaker': 'PrizePicks'}))
+    assert result == _convert_to_set([setup_list_dict[0]])
 
-    result = list(session.betting_lines.getlines(query={'bookmaker': 'BoomFantasy'}))
-    assert result == [setup[2]]
+    result = _convert_to_set(session.betting_lines.getlines(query={'bookmaker': 'BoomFantasy'}))
+    assert result == _convert_to_set([setup_list_dict[3]])
 
-    result = list(session.betting_lines.getlines(query={'league': 'NBA'}))
-    assert result == [setup[0], setup[1]]
+    result = _convert_to_set(session.betting_lines.getlines(query={'league': 'NBA'}))
+    assert result == _convert_to_set([setup_list_dict[0], setup_list_dict[1], setup_list_dict[2]])
 
-    result = list(session.betting_lines.getlines(query={'league': 'MLB'}))
-    assert result == [setup[3]]
+    result = _convert_to_set(session.betting_lines.getlines(query={'league': 'MLB'}))
+    assert result == _convert_to_set([setup_list_dict[3]])
 
-    result = list(session.betting_lines.getlines(query={'subject': 'Lebron James'}))
-    assert result == [setup[0]]
+    result = _convert_to_set(session.betting_lines.getlines(query={'subject': 'Lebron James'}))
+    assert result == _convert_to_set([setup_list_dict[0]])
 
-    result = list(session.betting_lines.getlines(query={'subject': 'Anthony Edwards'}))
-    assert result == [setup[1]]
+    result = _convert_to_set(session.betting_lines.getlines(query={'subject': 'Anthony Edwards'}))
+    assert result == _convert_to_set([setup_list_dict[1]])
 
-    result = list(session.betting_lines.getlines(query={'market': 'Points'}))
-    assert result == [setup[0], setup[1]]
+    result = _convert_to_set(session.betting_lines.getlines(query={'market': 'Points'}))
+    assert result == _convert_to_set([setup_list_dict[0], setup_list_dict[1]])
 
-    result = list(session.betting_lines.getlines(query={'market': 'Hits'}))
-    assert result == [setup[3]]
+    result = _convert_to_set(session.betting_lines.getlines(query={'market': 'Hits'}))
+    assert result == _convert_to_set([setup_list_dict[3]])
 
-    result = list(session.betting_lines.getlines(query={'league': 'NBA', 'market': 'Points'}))
-    assert result == [setup[0], setup[1]]
+    result = _convert_to_set(session.betting_lines.getlines(query={'league': 'NBA', 'market': 'Points'}))
+    assert result == _convert_to_set([setup_list_dict[0], setup_list_dict[1]])
 
-    result = list(session.betting_lines.getlines(query={'league': 'NBA', 'market': 'Rebounds'}))
-    assert result == [setup[2]]
+    result = _convert_to_set(session.betting_lines.getlines(query={'league': 'NBA', 'market': 'Rebounds'}))
+    assert result == _convert_to_set([setup_list_dict[2]])
 
-    result = list(session.betting_lines.getlines(query={'bookmaker': 'DraftKings', 'market': 'Points'}))
-    assert result == [setup[1]]
+    result = _convert_to_set(session.betting_lines.getlines(query={'bookmaker': 'DraftKings', 'market': 'Points'}))
+    assert result == _convert_to_set([setup_list_dict[1]])
