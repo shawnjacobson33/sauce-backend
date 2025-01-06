@@ -4,12 +4,11 @@ from typing import Iterable
 import pandas as pd
 import pytest
 
-from app.cache import session
+from app.cache import main
 
 
 @pytest.fixture
 def setup():
-    session.client.delete('lines:info')
     betting_lines = [
         {
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

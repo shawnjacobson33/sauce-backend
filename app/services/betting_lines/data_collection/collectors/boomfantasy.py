@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, Iterable, Union
 
-from app.cache import session
+from app.cache import main
 from app.services.betting_lines.data_collection.utils import post, fetch, get_payload
 
 

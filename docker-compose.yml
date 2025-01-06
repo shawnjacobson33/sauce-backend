@@ -1,10 +1,9 @@
 services:
-  redis:
-    image: redis
-    container_name: redis-instance
-    command: redis-server
+  db:
+    image: mongo
+    container_name: mongo-instance
     ports:
-      - "6379:6379"
+      - "27017:27017"
 
   app:
     build:
@@ -14,6 +13,6 @@ services:
     ports:
         - "8000:8000"
     depends_on:
-        - redis
+        - db
     volumes:
         - ./app:/app

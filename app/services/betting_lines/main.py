@@ -1,8 +1,7 @@
 import asyncio
 import time
 
-from app.cache import session
-
+from app.db import db
 from app.services.betting_lines.data_collection import run_collectors
 from app.services.betting_lines.data_processing import run_processors
 
@@ -18,7 +17,7 @@ async def run_betting_lines_pipeline():
         betting_lines_df_pr = await run_processors(collected_betting_lines) # Todo: should be multi-processed
         print('Finished data processing...')
         print('Saving processed betting lines...')
-        session.betting_lines.storelines(betting_lines_df_pr)
+        await db.betting_lines.store_betting_lines(betting_lines_df_pr)
         print(f'Saved {len(betting_lines_df_pr)} processed betting lines...')
         end_time = time.time()
         print(f'Pipeline completed in {round(end_time - start_time, 2)} seconds. Sleeping for 60 seconds...')
