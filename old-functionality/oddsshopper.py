@@ -12,7 +12,7 @@ BOOKMAKER_MAP = {
 }
 
 
-def extract_league(data: dict) -> Optional[str]:
+def extract_league(data: dict) -> str | None:
     # get league and only execute if exists
     if league := data.get('leagueCode'):
         # clean the league name
@@ -48,7 +48,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
             return dc_utils.get_subject(bookmaker_name, league, subject_name)
 
 
-def extract_bookmaker(data: dict) -> Optional[str]:
+def extract_bookmaker(data: dict) -> str | None:
     # get the bookmaker from the dictionary
     if bookmaker := data.get('sportsbookCode'):
         # return the bookmaker after checking if it needs formatting...to standardize across other plugs

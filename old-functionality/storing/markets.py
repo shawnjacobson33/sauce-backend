@@ -22,5 +22,5 @@ class Markets:
         return cls._markets
 
     @classmethod
-    def get_market(cls, sport: str, market: str) -> Optional[str]:
+    def get_market(cls, sport: str, market: str) -> str | None:
         return cls._markets.get((sport, market))

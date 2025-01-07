@@ -4,14 +4,14 @@ from app import utils as dc_utils
 from app import utils as ln_utils
 
 
-def extract_game_info(data: dict) -> Optional[str]:
+def extract_game_info(data: dict) -> str | None:
     # get the game info and check if this isn't a Futures prop line, if so then keep executing
     if (game_info := data.get('gameInfo')) and ('Futures' not in game_info):
         # return the game info
         return game_info
 
 
-def extract_league(data: dict) -> Optional[str]:
+def extract_league(data: dict) -> str | None:
     # get the league name from dictionary, if it exists keep executing
     if league := data.get('league'):
         # clean the league name

@@ -14,7 +14,7 @@ class Games(DataStore):
         super().__init__(r, 'games')
 
 
-    def getid(self, league: str, team: str) -> Optional[str]:
+    def getid(self, league: str, team: str) -> str | None:
         return self._r.hget(f'{self.lookup_name}:{league.lower()}', team)
 
     def _scan_game_ids(self, league: str) -> Iterable:
@@ -41,13 +41,13 @@ class Games(DataStore):
     def putqueue(self, league: str, queue_type: str, game_id: str, game_time: datetime) -> None:
         self._r.zadd(f'{self.name}:{queue_type}:{league.lower()}', {game_id: int(game_time.timestamp())})
 
-    def checkqueue(self, league: str, queue_type: str) -> Optional[str]:
+    def checkqueue(self, league: str, queue_type: str) -> str | None:
         return self._r.zrange(f'{self.name}:{queue_type}:{league.lower()}', 0, 0)
 
-    def popqueue(self, league: str, queue_type: str) -> Optional[str]:
+    def popqueue(self, league: str, queue_type: str) -> str | None:
         return self._r.zpopmin(f'{self.name}:{queue_type}:{league.lower()}')
 
-    def _store_in_lookup(self, league: str, game: Game) -> Optional[str]:
+    def _store_in_lookup(self, league: str, game: Game) -> str | None:
         try:
             game_id = self.id_mngr.generate()
             teams = game.info.split('_')[2].split('@')

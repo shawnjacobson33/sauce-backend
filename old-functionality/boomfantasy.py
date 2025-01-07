@@ -4,7 +4,7 @@ from app import utils as dc_utils
 from app import utils as ln_utils
 
 
-def extract_league(name: str, data: dict) -> Optional[str]:
+def extract_league(name: str, data: dict) -> str | None:
     # get name of league, executes if exists
     if league := data.get('league'):
         # clean the league name
@@ -48,14 +48,14 @@ def extract_line(data: dict) -> Optional[tuple[str, str]]:
                 return line, stat_text
 
 
-def extract_period(data: dict) -> Optional[str]:
+def extract_period(data: dict) -> str | None:
     # gets the period (fullGame, firstQuarter, etc.), keep executing if it exists and if it isn't fullGame
     if (period := data.get('periodClassifier')) and (period != 'fullGame'):
         # return the period classifier
         return period
 
 
-def extract_market(bookmaker_name: str, data: dict, league: str, period_type: Optional[str] = None) -> Optional[dict[str, str]]:
+def extract_market(bookmaker_name: str, data: dict, league: str, period_type: str | None = None) -> Optional[dict[str, str]]:
     # get the market name, if exists keep going
     if market_name := data.get("statistic"):
         # gets the market id

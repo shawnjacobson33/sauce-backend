@@ -10,7 +10,7 @@ class Bookmakers(DataStore):
     def __init__(self, r: redis.Redis):
         super().__init__(r, 'bookmakers')
 
-    def getdfltodds(self, bookmaker: str) -> Optional[str]:
+    def getdfltodds(self, bookmaker: str) -> str | None:
         return self._r.hget(self.info_name, bookmaker)
 
     def getbookmakers(self):

@@ -11,7 +11,7 @@ class Markets(DataStore):
     def __init__(self, r: redis.Redis):
         super().__init__(r, 'markets')
 
-    def getmarket(self, sport: str, market: str, report: bool = False) -> Optional[str]:
+    def getmarket(self, sport: str, market: str, report: bool = False) -> str | None:
         return self._r.hget(f'{self.lookup_name}:{sport.lower()}', market)
 
     def getmarkets(self, sport: str) -> Iterable:

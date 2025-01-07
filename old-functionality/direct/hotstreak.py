@@ -91,7 +91,7 @@ def extract_participant_id(data: dict) -> Union[tuple[str, list[str]], tuple[Non
     return None, None
 
 
-def extract_league(data: dict, opponent_ids: dict) -> Optional[str]:
+def extract_league(data: dict, opponent_ids: dict) -> str | None:
     # get opponent id and then league from opponent ids dict, if both exist then execute
     if (opponent_id := data.get('opponent_id')) and (league := opponent_ids.get(opponent_id)):
         # clean the league name
@@ -102,14 +102,14 @@ def extract_league(data: dict, opponent_ids: dict) -> Optional[str]:
             return cleaned_league
 
 
-def extract_position(data: dict) -> Optional[str]:
+def extract_position(data: dict) -> str | None:
     # get position from data, if exists then execute
     if position := data.get('position'):
         # return the cleaned up position
         return dc_utils.clean_position(position)
 
 
-def extract_jersey_number(data: dict) -> Optional[str]:
+def extract_jersey_number(data: dict) -> str | None:
     # get the jersey number from the data, if exists then execute
     if jersey_number := data.get('jersey_number'):
         # cast it to a string and return it
@@ -136,7 +136,7 @@ def extract_market(bookmaker_name: str, data: list, league: str) -> Optional[dic
         return market
 
 
-def extract_line(data: dict) -> Optional[str]:
+def extract_line(data: dict) -> str | None:
     # get the lines and probabilities from the dictionary, if they both exist then keep going
     if lines := data.get('lines'):
         # for each line

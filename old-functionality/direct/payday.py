@@ -5,7 +5,7 @@ from app import utils as dc_utils
 from app import utils as ln_utils
 
 
-def extract_league(data: dict) -> Optional[str]:
+def extract_league(data: dict) -> str | None:
     # get the league name, if it exists keep going
     if league := data.get('slug'):
         # check if the cleaned league is valid...still need originally formatted league for params
@@ -14,7 +14,7 @@ def extract_league(data: dict) -> Optional[str]:
             return league
 
 
-def extract_contest_id(data: list) -> Optional[str]:
+def extract_contest_id(data: list) -> str | None:
     # get dictionary
     data_dict = data[0]
     # get the first contest name and check whether it is a parlay contest (player props) or not
@@ -47,7 +47,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
         return market
 
 
-def extract_position(data: dict) -> Optional[str]:
+def extract_position(data: dict) -> str | None:
     # get the player's position, if exists keep executing
     if position := data.get('position'):
         # return the cleaned position

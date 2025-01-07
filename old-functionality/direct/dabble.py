@@ -51,7 +51,7 @@ async def _request_competitions() -> None:
         await _parse_competitions(resp_json)
 
 
-def _extract_league(competition: dict) -> Optional[str]:
+def _extract_league(competition: dict) -> str | None:
     if raw_league_name := competition.get('displayName'):
         return r.leagues.getleague(raw_league_name)
 
@@ -104,7 +104,7 @@ def _extract_market_map(data: dict) -> Optional[dict]:
     return markets
 
 
-def _extract_market(league: str, player_prop: dict, markets_map: dict) -> Optional[str]:
+def _extract_market(league: str, player_prop: dict, markets_map: dict) -> str | None:
     if (market_id := player_prop.get('marketId')) and (raw_market_name := markets_map.get(market_id)):
         if sport := r.leagues.getsport(league):
             return r.markets.getmarket(raw_market_name, sport)

@@ -5,7 +5,7 @@ from app import utils as dc_utils
 from app import utils as ln_utils
 
 
-def extract_league(data: dict) -> Optional[str]:
+def extract_league(data: dict) -> str | None:
     # get league name and the competition id, if both exist then execute
     if league := data.get('displayName'):
         # clean the league name
@@ -42,7 +42,7 @@ def extract_market(bookmaker_name: str, data: dict, data_map: dict, league: str)
             return market
 
 
-def extract_position(data: dict) -> Optional[str]:
+def extract_position(data: dict) -> str | None:
     # get the player's position, if exists keep going
     if position := data.get('position'):
         # return the cleaned position
@@ -63,7 +63,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> 
         return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
-def extract_label(data: dict) -> Optional[str]:
+def extract_label(data: dict) -> str | None:
     # get the label, if exists keep going
     if label := data.get('lineType'):
         # return the label capitalized
@@ -100,25 +100,25 @@ class Dabble(ln_utils.LinesRetriever):
             and prop line attributes. Updates shared betting line data if valid entries are found.
 
     Helper Functions:
-        extract_league(data: dict) -> Optional[str]:
+        extract_league(data: dict) -> str | None:
             Extracts and cleans the league name from competition data.
 
         extract_market_map(data: dict) -> Optional[dict]:
             Builds a map of market IDs to names for easier lookup in subsequent line processing.
 
-        extract_market(bookmaker_name: str, data: dict, data_map: dict, league: str) -> Optional[tuple[Optional[str], str]]:
+        extract_market(bookmaker_name: str, data: dict, data_map: dict, league: str) -> Optional[tuple[str | None, str]]:
             Cleans and validates market names, returning the market ID and name if valid.
 
-        extract_position(data: dict) -> Optional[str]:
+        extract_position(data: dict) -> str | None:
             Extracts and cleans a player’s position information.
 
-        extract_team(data: dict) -> Optional[str]:
+        extract_team(data: dict) -> str | None:
             Extracts and standardizes the player's team abbreviation.
 
         extract_subject(bookmaker_name: str, data: dict, league: str) -> Union[tuple[Any, Any], tuple[None, None]]:
             Cleans player (subject) data, retrieving the player ID if it exists in the database.
 
-        extract_label(data: dict) -> Optional[str]:
+        extract_label(data: dict) -> str | None:
             Standardizes the label for player props (e.g., over/under).
     """
 

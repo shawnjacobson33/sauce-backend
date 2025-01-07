@@ -66,14 +66,14 @@ def extract_solo_games_dict(data: dict) -> dict:
     return solo_games_dict
 
 
-def extract_subject_team(data: dict, teams_dict: dict) -> Optional[str]:
+def extract_subject_team(data: dict, teams_dict: dict) -> str | None:
     # get the team id from the dictionary, if exists keep going
     if team_id := data.get('team_id'):
         # return the team name from the dictionary if it exists
         return teams_dict.get(team_id)
 
 
-def extract_player_name(data: dict) -> Optional[str]:
+def extract_player_name(data: dict) -> str | None:
     # get the player's first and last name, if either exist then keep executing
     if (first_name := data.get('first_name', '**')) and (last_name := data.get('last_name', '**')):
         # return the full player name (the stars are only to ease conditional logic, if one of the names is empty)
@@ -111,7 +111,7 @@ def extract_match_data(a_id: str, game_ids_dict: dict, games_dict: dict, solo_ga
         return games_dict.get(g_id, solo_games_dict.get(g_id))
 
 
-def extract_league(a_id: str, game_ids_dict: dict, games_dict: dict, solo_games_dict: dict) -> Optional[str]:
+def extract_league(a_id: str, game_ids_dict: dict, games_dict: dict, solo_games_dict: dict) -> str | None:
     # get the match data associated with some ids, if exists then keep executing
     if match_data := extract_match_data(a_id, game_ids_dict, games_dict, solo_games_dict):
         # get the league name, if exists then keep executing
@@ -147,7 +147,7 @@ def extract_subject(bookmaker_name: str, league: str, data: dict, team: str) -> 
         return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
-def extract_label(data: dict) -> Optional[str]:
+def extract_label(data: dict) -> str | None:
     # get the choice (label), if it exists then keep executing
     if choice := data.get('choice'):
         # Over equates to higher and Under equates to lower for label formatting

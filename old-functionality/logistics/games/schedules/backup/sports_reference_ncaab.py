@@ -57,7 +57,7 @@ def extract_home_team_and_game_time(source_name: str, league: str, rows, date: d
     return None, None
 
 
-def extract_league(rows) -> Optional[str]:
+def extract_league(rows) -> str | None:
     if len(rows) > 2:
         if td_elem := rows[2].find('td'):
             return 'NCAAM' if 'Men' in td_elem.text else 'NCAAW'

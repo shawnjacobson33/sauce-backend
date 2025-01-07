@@ -11,11 +11,11 @@ class Leagues(DataStore):
     def __init__(self, r: redis.Redis):
         super().__init__(r, 'leagues')
 
-    def getleague(self, league: str, report: bool = True) -> Optional[str]:
+    def getleague(self, league: str, report: bool = True) -> str | None:
         return self._r.hget(self.lookup_name, league)
 
     # Todo: New method to test
-    def getsport(self, league: str) -> Optional[str]:
+    def getsport(self, league: str) -> str | None:
         return self._r.hget(f'{self.lookup_name}:sports', league)
 
     def getleagues(self) -> Iterable:

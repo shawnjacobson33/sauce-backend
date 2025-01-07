@@ -26,13 +26,13 @@ def convert_to_datetime(date_str, time_str):
     return combined_datetime
 
 
-def extract_game_date(tr_elem) -> Optional[str]:
+def extract_game_date(tr_elem) -> str | None:
     # extracts the date from the row element if it exists
     if th_elem := tr_elem.find('th'):
         return th_elem.text
 
 
-def extract_data(tr_elem, attr_name: str) -> Optional[str]:
+def extract_data(tr_elem, attr_name: str) -> str | None:
     # extracts any text from a data cell in the row for a given attribute name
     if td_elem := tr_elem.find('td', {'data-stat': attr_name}):
         return td_elem.text
@@ -58,7 +58,7 @@ def extract_game_time(row, valid_dates: list[datetime]) -> Optional[datetime]:
             return game_datetime
 
 
-def extract_box_score_url(tr_elem) -> Optional[str]:
+def extract_box_score_url(tr_elem) -> str | None:
     # extracts the url pointing to the corresponding box score for this game
     if th_elem := tr_elem.find('th', {'data-stat': 'date_game'}):
         # get the link holding box score url

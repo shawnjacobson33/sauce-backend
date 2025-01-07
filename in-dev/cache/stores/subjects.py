@@ -20,7 +20,7 @@ class Subjects(DataStore):
 
         return condensed_name
 
-    def getid(self, subject: Subject) -> Optional[str]:
+    def getid(self, subject: Subject) -> str | None:
         return self._r.hget(f'{self.lookup_name}:{subject.domain.lower()}', self._get_key(subject))
 
     def _scan_subj_ids(self, league: str) -> Iterable:
@@ -54,7 +54,7 @@ class Subjects(DataStore):
             condensed_name = subject.name.replace(' ', '')
             return f'{position}:{condensed_name}', f'{team}:{condensed_name}'
 
-    def _store_in_lookup(self, league: str, subj: Subject) -> Optional[str]:
+    def _store_in_lookup(self, league: str, subj: Subject) -> str | None:
         try:
             inserts = 0
             subj_id = self.id_mngr.generate()

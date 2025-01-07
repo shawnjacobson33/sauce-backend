@@ -533,7 +533,7 @@ PERIOD_CLASSIFIER_MAP = {
 }  # for boom fantasy
 
 
-def clean_period_classifier(period_classifier: Optional[str]) -> Optional[str]:
+def clean_period_classifier(period_classifier: str | None) -> str | None:
     # if it exists in the dictionary map, get it and keep executing
     cleaned_period_classifier = PERIOD_CLASSIFIER_MAP.get(period_classifier)
     # get the cleaned period classifier

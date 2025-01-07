@@ -5,7 +5,7 @@ from app import utils as dc_utils
 from app import utils as ln_utils
 
 
-def extract_league(data: dict) -> Optional[str]:
+def extract_league(data: dict) -> str | None:
     # get the attributes that hold league data along with the league name, if both exist
     if (attributes := data.get('attributes')) and (league := attributes.get('name')):
         # don't want futures or leagues that aren't currently available, check if this league is active
@@ -73,7 +73,7 @@ def extract_market(bookmaker_name: str, data: dict, league: dict) -> Optional[di
         return market
 
 
-def extract_position(data: dict) -> Optional[str]:
+def extract_position(data: dict) -> str | None:
     # get the player's position, if exists then execute
     if position := data.get('position'):
         # return the cleaned position, with some logic for when a secondary position is included (ex: PG-SG)

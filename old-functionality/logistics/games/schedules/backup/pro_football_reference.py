@@ -34,7 +34,7 @@ def convert_to_datetime(date_str, time_str) -> datetime:
     return result
 
 
-def extract_data(tr_elem, attr_name: str) -> Optional[str]:
+def extract_data(tr_elem, attr_name: str) -> str | None:
     # extracts any text from a data cell in the row for a given attribute name
     if td_elem := tr_elem.find('td', {'data-stat': attr_name}):
         return td_elem.text
@@ -66,7 +66,7 @@ def extract_teams(source_name: str, league: str, row) -> Union[tuple[dict, dict]
     return None, None
 
 
-def extract_box_score_url(tr_elem) -> Optional[str]:
+def extract_box_score_url(tr_elem) -> str | None:
     # extracts the url pointing to the corresponding box score for this game
     if td_elem := tr_elem.find('td', {'data-stat': 'boxscore_word'}):
         if a_elem := td_elem.find('a'):

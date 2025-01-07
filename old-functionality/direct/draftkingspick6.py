@@ -16,7 +16,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
         return market
 
 
-def extract_line(data: dict) -> Optional[str]:
+def extract_line(data: dict) -> str | None:
     # get dictionary of data, if exists then execute
     if active_market := data.get('activeMarket'):
         # return the over/under numeric line for the prop line
@@ -30,7 +30,7 @@ def extract_team(bookmaker_name: str, league: str, data: list[dict]) -> Optional
         return dc_utils.get_team(bookmaker_name, league, abbr_team_name)
 
 
-def extract_position(data: list[dict]) -> Optional[str]:
+def extract_position(data: list[dict]) -> str | None:
     # get the position, execute if it exists
     if position := data[0].get('positionName'):
         # clean the position, conditional is for when secondary positions are also given

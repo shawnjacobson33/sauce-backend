@@ -15,7 +15,7 @@ LEAGUE_MAP = {
 LEAGUES = [LEAGUE_MAP.get(league, league).lower() for league in dc_utils.IN_SEASON_LEAGUES if league != 'NCAAW']
 
 
-def extract_league(data: dict) -> Optional[str]:
+def extract_league(data: dict) -> str | None:
     # get the league from the data, if exists keep executing
     if league := data.get('sport'):
         # clean the league name
@@ -26,7 +26,7 @@ def extract_league(data: dict) -> Optional[str]:
             return cleaned_league
 
 
-def extract_position(data: dict) -> Optional[str]:
+def extract_position(data: dict) -> str | None:
     # get the player's position from the dictionary, if exists keep going
     if position := data.get('position'):
         # return the clean player position
@@ -67,7 +67,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
         return market
 
 
-def extract_label(data: dict) -> Optional[str]:
+def extract_label(data: dict) -> str | None:
     # get the label from the dictionary
     if label := data.get('outcome'):
         # return the label capitalized

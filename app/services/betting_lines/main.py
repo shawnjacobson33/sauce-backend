@@ -7,7 +7,7 @@ from app.services.betting_lines.data_processing import run_processors
 
 
 async def run_betting_lines_pipeline():
-    while True:
+    # while True:
         start_time = time.time()
         print('Running betting lines pipeline...')
         print('Starting data collectors...')

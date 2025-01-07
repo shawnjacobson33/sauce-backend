@@ -2,8 +2,6 @@ services:
   db:
     image: mongo
     container_name: mongo-instance
-    ports:
-      - "27017:27017"
 
   app:
     build:

@@ -28,7 +28,7 @@ class Positions(DataStore):
         """
         super().__init__(r, 'positions')
 
-    def getposition(self, sport: str, position: str, report: bool = False) -> Optional[str]:
+    def getposition(self, sport: str, position: str, report: bool = False) -> str | None:
         return self._r.hget(f'{self.lookup_name}:{sport.lower()}', position)
 
     def getpositions(self, sport: str) -> Iterable:

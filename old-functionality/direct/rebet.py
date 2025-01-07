@@ -5,7 +5,7 @@ from app import utils as dc_utils
 from app import utils as ln_utils
 
 
-def extract_league(data: dict) -> Optional[str]:
+def extract_league(data: dict) -> str | None:
     # get the league name if it exists then execute
     if league := data.get('league_name'):
         # clean the league

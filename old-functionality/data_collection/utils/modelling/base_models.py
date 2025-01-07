@@ -14,13 +14,13 @@ class Source:
 
 @dataclass
 class Team:
-    league: Optional[str] = None
-    abbr_name: Optional[str] = None
-    full_name: Optional[str] = None
+    league: str | None = None
+    abbr_name: str | None = None
+    full_name: str | None = None
 
 
 class Market:
-    def __init__(self, name: str, league: Optional[str] = None, sport: Optional[str] = None):
+    def __init__(self, name: str, league: str | None = None, sport: str | None = None):
         self.name = name
         self.sport = LEAGUE_SPORT_MAP.get(league) if not sport else sport
 
@@ -29,7 +29,7 @@ class Market:
 
 
 class Subject:
-    def __init__(self, name: str, league: str, team: Optional[str] = None, position: Optional[dict] = None, jersey_number: Optional[dict] = None):
+    def __init__(self, name: str, league: str, team: str | None = None, position: Optional[dict] = None, jersey_number: Optional[dict] = None):
         self.name = name
         self.league = league
         self.team = team

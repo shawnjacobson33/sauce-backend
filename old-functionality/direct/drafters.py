@@ -37,7 +37,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
             return market
 
 
-def extract_position(data: dict) -> Optional[str]:
+def extract_position(data: dict) -> str | None:
     # get position from data if it exists and doesn't equal 'G'
     if (position := data.get('player_position')) and (position != 'G'):
         # return the position cleaned

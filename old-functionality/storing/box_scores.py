@@ -8,7 +8,7 @@ class BoxScores:
     _lock1: threading.Lock = threading.Lock()
 
     @classmethod
-    def get_box_scores(cls, league: Optional[str] = None):
+    def get_box_scores(cls, league: str | None = None):
         return cls._box_scores
 
     @classmethod

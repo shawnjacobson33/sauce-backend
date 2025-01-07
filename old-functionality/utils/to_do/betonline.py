@@ -59,7 +59,7 @@ LEAGUE_MAP = {
 LEAGUES = [LEAGUE_MAP.get(league, league).lower() for league in dc_utils.IN_SEASON_LEAGUES if league not in UNAVAILABLE_LEAGUES]
 
 
-def extract_game_id(data: dict) -> Optional[str]:
+def extract_game_id(data: dict) -> str | None:
     # for each dictionary in data's providers, if they exist
     for provider_data in data.get('providers', []):
         # will get the first occurrence of id for a provider with the name 'nix'
@@ -91,7 +91,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
         return market
 
 
-def extract_position(data: dict) -> Optional[str]:
+def extract_position(data: dict) -> str | None:
     # gets the position of a player if it exists and the cleans it.
     if (position_data := data.get('position')) and (position := position_data.get('title')):
         # return the cleaned player's position
@@ -120,7 +120,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str) -> Optional[di
         return subject
 
 
-def extract_label(data: dict) -> Optional[str]:
+def extract_label(data: dict) -> str | None:
     # get the condition for the prop line, if exists keep going
     if condition := data.get('condition'):
         # if equals 1 then label type for the prop line is Over, else Under.

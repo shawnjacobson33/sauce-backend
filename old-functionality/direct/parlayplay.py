@@ -5,7 +5,7 @@ from app import utils as dc_utils
 from app import utils as ln_utils
 
 
-def extract_position(data: dict) -> Optional[str]:
+def extract_position(data: dict) -> str | None:
     # get the player's position, if exists then execute
     if position := data.get('position'):
         # return the cleaned position

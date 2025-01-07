@@ -21,7 +21,7 @@ def extract_sports_dict(data: dict) -> dict:
     return sports_dict
 
 
-def extract_league(data: dict, sports_dict: dict) -> Optional[str]:
+def extract_league(data: dict, sports_dict: dict) -> str | None:
     # only wanting individual subject prop lines
     if data.get('type') != 'matchup-prop':
         # get the sport id and league from dictionaries, if both exist then keep going
@@ -44,7 +44,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
                 return market
 
 
-def extract_position(data: dict) -> Optional[str]:
+def extract_position(data: dict) -> str | None:
     # get the abbreviated player's position, if exists keep going
     if position := data.get('posAbbr'):
         # return the cleaned player's position

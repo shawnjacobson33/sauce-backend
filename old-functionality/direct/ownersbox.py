@@ -5,7 +5,7 @@ from app import utils as dc_utils
 from app import utils as ln_utils
 
 
-def extract_league(data: dict) -> Optional[str]:
+def extract_league(data: dict) -> str | None:
     # get the league, if exists then execute
     if league := data.get('sport'):
         # return the cleaned league name
@@ -21,7 +21,7 @@ def extract_market(bookmaker_name: str, data: dict, league: str) -> Optional[dic
         return market
 
 
-def extract_position(data: dict) -> Optional[str]:
+def extract_position(data: dict) -> str | None:
     # get the player's position, if exists keep executing
     if position := data.get('position'):
         # return the cleaned position string
@@ -44,7 +44,7 @@ def extract_subject(bookmaker_name: str, data: dict, league: str, team: str) -> 
         return dc_utils.get_subject(bookmaker_name, league, subject_name, team=team)
 
 
-def extract_line(data: dict) -> Optional[str]:
+def extract_line(data: dict) -> str | None:
     # get some dictionary that holds the numeric line, if exists then execute
     if balanced_line := data.get('line'):
         # return the numeric over/under line
@@ -71,7 +71,7 @@ def extract_labels(label: str) -> Optional[list[str]]:
             return [formatted_label]
 
 
-def get_label(data: dict) -> Optional[str]:
+def get_label(data: dict) -> str | None:
     # get some dictionary holding data about whether the prop line is over/under type of pick, if exists then execute
     if pick_options := data.get('pickOptions'):
         # iterate over each general label for a prop line

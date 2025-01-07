@@ -1,19 +1,22 @@
 import asyncio
+import time
 from datetime import datetime, timedelta
 from typing import Optional, Iterable
 
-from app.services.betting_lines.data_collection.utils import fetch, get_payload
+from app.services.betting_lines.data_collection import utils
+from app.services.betting_lines.data_collection.configs import CONFIGS
 
 
-PAYLOAD = get_payload('OddsShopper')
-IN_SEASON_AND_VALID_LEAGUES = { 'NBA', 'NFL', 'NHL' }
+PAYLOAD = utils.requester.get_payload('OddsShopper')
+
+num_betting_lines_collected = 0
 
 
 async def _request_matchups() -> dict | None:
     url = PAYLOAD['urls']['matchups']
     headers = PAYLOAD['headers']
     cookies = PAYLOAD['cookies']
-    if resp_json := await fetch(url, headers=headers, cookies=cookies):
+    if resp_json := await utils.requester.fetch(url, headers=headers, cookies=cookies):
         return resp_json
 
 
@@ -24,10 +27,11 @@ def _get_offers(resp: dict) -> Iterable:
                 yield offer
 
 
-def _extract_league(offer: dict) -> Optional[str]:
+def _extract_league(offer: dict) -> str | None:
     if raw_league_name := offer.get('leagueCode'):
-        if raw_league_name in IN_SEASON_AND_VALID_LEAGUES:
-            return raw_league_name.strip().upper()
+        cleaned_league_name = raw_league_name.strip().upper()
+        if cleaned_league_name in CONFIGS['leagues_to_collect_from']:
+            return cleaned_league_name
 
 
 def _parse_matchups(resp: dict) -> tuple[str, str] | None:
@@ -51,48 +55,64 @@ async def _request_betting_lines(league: str, offer_id: str, collected_betting_l
     url = PAYLOAD['urls']['prop_lines'].format(offer_id)
     headers = PAYLOAD['headers']
     params = _get_params()
-    if resp_json := await fetch(url, headers=headers, params=params):
+    if resp_json := await utils.requester.fetch(url, headers=headers, params=params):
         _parse_betting_lines(league, resp_json, collected_betting_lines)
 
 
+def _extract_market(event: dict, league: str) -> str | None:
+    try:
+        if raw_market_name := event.get('offerName'):
+            sport = utils.standardizer.get_sport(league)
+            std_market_name = utils.standardizer.standardize_market_name(raw_market_name, sport)
+            return std_market_name
+
+    except Exception as e:
+        print('[OddsShopper]: !! ERROR -', e, '!!')
+
+
 def _extract_subject(event: dict) -> Optional[dict]:
-    if (participants := event.get('participants')) and (first_participants := participants[0]):
-        if raw_subject_name := first_participants.get('name'):
-            return raw_subject_name
+    try:
+        if (participants := event.get('participants')) and (first_participants := participants[0]):
+            if raw_subject_name := first_participants.get('name'):
+                return raw_subject_name
 
-        raise ValueError(f'No subject name found in event participants: {event}')
+            raise ValueError(f"No subject name found in event participants: '{event}'")
+
+    except Exception as e:
+        print('[OddsShopper]: !! ERROR -', e, '!!')
 
 
-def _extract_bookmaker(outcome: dict) -> Optional[str]:
+def _extract_bookmaker(outcome: dict) -> str | None:
     if bookmaker := outcome.get('sportsbookCode'):
         return bookmaker
 
 
 def _extract_odds(outcome: dict) -> Optional[float]:
     if odds := outcome.get('odds'):
-        return round(odds, 2)
+        return odds
 
 
 def _extract_tw_prb(data: dict) -> Optional[float]:
     if tw_prob := data.get('trueWinProbability'):
-        return round(tw_prob, 3)
+        return tw_prob
 
 
 def extract_ev(data: dict) -> Optional[float]:
     if ev := data.get('ev'):
-        return round(ev, 3)
+        return ev
 
 
 def _parse_betting_lines(league: str, resp: dict, collected_betting_lines: list[dict]) -> None:
+    global num_betting_lines_collected
     for event in resp:
-        if market := event.get('offerName'):
+        if market := _extract_market(event, league):
             if subject := _extract_subject(event):
                 for side in event.get('sides', []):
                     if label := side.get('label'):
                         for outcome in side.get('outcomes', []):
                             if bookmaker_name := _extract_bookmaker(outcome):
                                 if odds := _extract_odds(outcome):
-                                    collected_betting_lines.append({
+                                    betting_line_doc = {
                                         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                                         'bookmaker': bookmaker_name,
                                         'league': league,
@@ -101,11 +121,18 @@ def _parse_betting_lines(league: str, resp: dict, collected_betting_lines: list[
                                         'label': label,
                                         'line': float(outcome.get('line', 0.5)),
                                         'odds': odds,
-                                        'impl_prb': 1 / odds
-                                    })
+                                    }
+                                    betting_line_doc_key = utils.get_betting_line_key(betting_line_doc)
+                                    betting_line_unique_id = utils.generate_unique_id(betting_line_doc_key)
+                                    betting_line_doc['_id'] = betting_line_unique_id
+                                    collected_betting_lines.append(betting_line_doc)
+                                    num_betting_lines_collected += 1
+
 
 async def run_oddsshopper_collector(collected_betting_lines: list) -> None:
+    global num_betting_lines_collected
     try:
+        start_time = time.time()
         print('[Oddsshopper]: Running collector...')
         print('[Oddsshopper]: Requesting matchups...')
         if matchups_resp := await _request_matchups():
@@ -119,6 +146,10 @@ async def run_oddsshopper_collector(collected_betting_lines: list) -> None:
             print('[Oddsshopper]: Requesting betting lines...')
             await asyncio.gather(*betting_lines_tasks)
             print('[Oddsshopper]: Betting lines received...')
+            print(f'[Oddsshopper]: Collected {num_betting_lines_collected} betting lines...')
+            num_betting_lines_collected = 0
+            end_time = time.time()
+            print(f'[Oddsshopper]: Time taken: {round(end_time - start_time, 2)} seconds')
 
     except Exception as e:
         print(e)

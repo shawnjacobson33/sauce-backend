@@ -28,14 +28,14 @@ class IDManager:
         self.name = f'{name}:id'
         self.noid_name = '{}:noid'
 
-    def _get_id_prefix(self) -> Optional[str]:
+    def _get_id_prefix(self) -> str | None:
         """
         Retrieve the prefix for the ID based on the entity type.
 
         The prefix is determined by the entity type (e.g., 'teams', 'subjects').
 
         Returns:
-            Optional[str]: The prefix for the ID ('t' for teams, 's' for subjects).
+            str | None: The prefix for the ID ('t' for teams, 's' for subjects).
 
         Raises:
             ValueError: If the entity type is invalid.

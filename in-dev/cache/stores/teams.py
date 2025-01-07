@@ -12,7 +12,7 @@ class Teams(DataStore):
     def __init__(self, r: redis.Redis):
         super().__init__(r, 'teams')
 
-    def getid(self, league: str, team: str, report: bool = True) -> Optional[str]:
+    def getid(self, league: str, team: str, report: bool = True) -> str | None:
         return self._r.hget(f'{self.lookup_name}:{league.lower()}', team)
 
     def _scan_team_ids(self, league: str) -> Iterable:
@@ -25,7 +25,7 @@ class Teams(DataStore):
     def getids(self, league: str) -> Iterable:
         yield from self._scan_team_ids(league)
 
-    def getteam(self, league: str, team: str, report: bool = False) -> Optional[str]:
+    def getteam(self, league: str, team: str, report: bool = False) -> str | None:
         if team_id := self.getid(league, team):
             team = self._r.hget(f'{self.info_name}:{league.lower()}', team_id)
             return json.loads(team)
@@ -35,7 +35,7 @@ class Teams(DataStore):
             for team_id in team_ids:
                 yield self._r.hget(f'{self.info_name}:{league.lower()}', team_id)
 
-    def _store_in_lookup(self, league: str, team: Team) -> Optional[str]:
+    def _store_in_lookup(self, league: str, team: Team) -> str | None:
         try:
             inserts = 0
             team_id = self.id_mngr.generate()
