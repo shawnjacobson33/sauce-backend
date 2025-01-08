@@ -31,7 +31,7 @@ class BettingLines:
             'impl_prb': 1 / line['odds'],
             'tw_prb': line.get('tw_prb'),
             'ev': line.get('ev'),
-            'timestamp': [line['timestamp']]
+            'timestamps': [line['timestamp']]
         }
 
     async def store_betting_lines(self, betting_lines: list[dict]) -> None:
@@ -46,13 +46,17 @@ class BettingLines:
                     new_record = self._create_record(betting_line_dict)
                     records.append(new_record)
 
-                most_recent_record['timestamp'].append(betting_line_dict['timestamp'])
-                update_op = self.update_betting_line(betting_line_dict['_id'], return_op=True, records=records)  # Todo: do you need to replace the entire records field?
+                else:
+                    most_recent_record['timestamps'].append(betting_line_dict['timestamp'])
+
+                update_op = await self.update_betting_line(betting_line_dict['_id'], return_op=True,
+                                                           records=records)  # Todo: do you need to replace the entire records field?
                 requests.append(update_op)
 
-            new_betting_line_doc = self._create_doc(betting_line_dict)
-            insert_op = InsertOne(new_betting_line_doc)
-            requests.append(insert_op)
+            else:
+                new_betting_line_doc = self._create_doc(betting_line_dict)
+                insert_op = InsertOne(new_betting_line_doc)
+                requests.append(insert_op)
 
         await self.collection.bulk_write(requests)
 

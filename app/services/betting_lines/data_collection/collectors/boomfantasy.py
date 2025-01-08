@@ -172,7 +172,7 @@ def _parse_betting_lines(resp: dict, collected_betting_lines: list[dict]) -> Non
                                         label, odds = _extract_label_and_odds(c_2)
                                         if label and odds:
                                             betting_line_doc = {
-                                                'timestamp': datetime.now(),
+                                                'timestamp': datetime.now().isoformat(),
                                                 'bookmaker': 'BoomFantasy',
                                                 'league': league,
                                                 'subject': subject,
