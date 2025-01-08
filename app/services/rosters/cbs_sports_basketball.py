@@ -1,7 +1,25 @@
 from bs4 import BeautifulSoup
 
-from app import utils as gm_utils
-from app import utils as rs_utils
+from app.services.utils import utilities as utils
+
+
+PAYLOAD = utils.requester.get_payload('CBSSportsBasketball')
+TEAMS = []
+
+
+async def _request_rosters(league: str, team: dict) -> dict | None:
+    base_url = PAYLOAD['urls'][league]
+    headers = PAYLOAD['headers']
+    cookies = PAYLOAD['cookies']
+    url = base_url.format(team['abbr_name'], team['full_name'])
+    if resp_json := await utils.requester.fetch(url, headers=headers, cookies=cookies):
+        return resp_json
+
+
+
+
+
+
 
 
 class BasketballRosterRetriever(rs_utils.RosterRetriever):

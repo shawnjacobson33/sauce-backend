@@ -3,8 +3,9 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional, Iterable
 
-from app.services.betting_lines.data_collection import utils
+from app.services.utils import utilities as utils
 from app.services.betting_lines.data_collection.configs import CONFIGS
+from app.services.betting_lines.data_collection.helpers import generate_unique_id, get_betting_line_key
 
 
 PAYLOAD = utils.requester.get_payload('OddsShopper')
@@ -46,13 +47,13 @@ def _get_dates() -> tuple[str, str]:
 
 
 def _get_params():
-    params = PAYLOAD['params']['prop_lines']
+    params = PAYLOAD['params']['betting_lines']
     start_date, end_date = _get_dates()
     return {**params, 'startDate': start_date, 'endDate': end_date}
 
 
 async def _request_betting_lines(league: str, offer_id: str, collected_betting_lines: list[dict]) -> None:
-    url = PAYLOAD['urls']['prop_lines'].format(offer_id)
+    url = PAYLOAD['urls']['betting_lines'].format(offer_id)
     headers = PAYLOAD['headers']
     params = _get_params()
     if resp_json := await utils.requester.fetch(url, headers=headers, params=params):
@@ -122,8 +123,8 @@ def _parse_betting_lines(league: str, resp: dict, collected_betting_lines: list[
                                         'line': float(outcome.get('line', 0.5)),
                                         'odds': odds,
                                     }
-                                    betting_line_doc_key = utils.get_betting_line_key(betting_line_doc)
-                                    betting_line_unique_id = utils.generate_unique_id(betting_line_doc_key)
+                                    betting_line_doc_key = get_betting_line_key(betting_line_doc)
+                                    betting_line_unique_id = generate_unique_id(betting_line_doc_key)
                                     betting_line_doc['_id'] = betting_line_unique_id
                                     collected_betting_lines.append(betting_line_doc)
                                     num_betting_lines_collected += 1

@@ -163,3 +163,5 @@ async def test_betting_lines(setup):
 
     stored_docs = await db.betting_lines.get_betting_lines({})
     assert stored_docs == setup_batch_3_docs
+
+    await betting_lines_test_collection.delete_many({})

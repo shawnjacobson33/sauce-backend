@@ -2,17 +2,19 @@ from typing import Optional
 
 import aiohttp
 
-from app.services.betting_lines.data_collection.utils.requesting.maps import PAYLOAD_MAP
+from app.services.utils.requesting.maps import PAYLOAD_MAP
 
 
 class Requesting:
 
     @staticmethod
-    def get_payload(source_name: str):
-        if payload := PAYLOAD_MAP.get(source_name):
-            return payload
+    def get_payload(domain: str, source_name: str):
+        if payload_domain := PAYLOAD_MAP.get(domain):
+            if payload := payload_domain.get(source_name):
+                return payload
 
-        raise ValueError(f"Payload for {source_name} not found")
+            raise ValueError(f"Payload for {source_name} not found")
+        raise ValueError(f"Payload domain {domain} not found")
 
     @staticmethod
     async def post(url: str, **kwargs) -> dict:

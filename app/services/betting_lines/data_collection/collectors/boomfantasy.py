@@ -2,8 +2,9 @@ from datetime import datetime
 from typing import Optional, Iterable, Union
 import time
 
-from app.services.betting_lines.data_collection import utils
+from app.services.utils import utilities as utils
 from app.services.betting_lines.data_collection.configs import CONFIGS
+from app.services.betting_lines.data_collection.helpers import generate_unique_id, get_betting_line_key
 
 
 PAYLOAD = utils.requester.get_payload('BoomFantasy')
@@ -19,7 +20,7 @@ def _get_tokens(token_type: str = None) -> Optional[Union[str, dict]]:
 def _update_tokens(tokens: dict) -> None:
     PAYLOAD['json_data']['tokens']['authentication']['credentials'].update(tokens)
     headers = PAYLOAD['headers']
-    headers['prop_lines']['authorization'] = f'Bearer {tokens["accessToken"]}'
+    headers['betting_lines']['authorization'] = f'Bearer {tokens["accessToken"]}'
     headers['contest_ids']['authorization'] = f'Bearer {tokens["accessToken"]}'
 
 
@@ -59,9 +60,9 @@ def _parse_contest_id(resp: dict) -> str | None:
 
 async def _request_betting_lines(contest_id: str) -> dict | None:
     try:
-        url = PAYLOAD['urls']['prop_lines'].format(contest_id)
-        headers = PAYLOAD['headers'].get('prop_lines')
-        params = PAYLOAD['params'].get('prop_lines')
+        url = PAYLOAD['urls']['betting_lines'].format(contest_id)
+        headers = PAYLOAD['headers'].get('betting_lines')
+        params = PAYLOAD['params'].get('betting_lines')
         if resp_json := await utils.requester.fetch(url, headers=headers, params=params):
             return resp_json
 
@@ -181,8 +182,8 @@ def _parse_betting_lines(resp: dict, collected_betting_lines: list[dict]) -> Non
                                                 'line': line,
                                                 'odds': odds,
                                             }
-                                            betting_line_doc_key = utils.get_betting_line_key(betting_line_doc)
-                                            betting_line_unique_id = utils.generate_unique_id(betting_line_doc_key)
+                                            betting_line_doc_key = get_betting_line_key(betting_line_doc)
+                                            betting_line_unique_id = generate_unique_id(betting_line_doc_key)
                                             betting_line_doc['_id'] = betting_line_unique_id
                                             collected_betting_lines.append(betting_line_doc)
                                             num_betting_lines_collected += 1

@@ -1,4 +1,4 @@
-from app.services.betting_lines.data_collection.utils.standardization import maps
+from app.services.utils.standardization import maps
 
 
 class Standardization:

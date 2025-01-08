@@ -1,5 +1,3 @@
-import asyncio
-
 from pymongo import InsertOne, UpdateOne
 from motor.motor_asyncio import AsyncIOMotorClient
 
