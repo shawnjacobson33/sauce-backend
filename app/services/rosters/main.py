@@ -2,20 +2,17 @@ import asyncio
 import time
 
 from app.db import db
-from app.services.betting_lines.data_collection import run_collectors
-from app.services.betting_lines.data_processing import run_processors
+from app.services.rosters.data_collection import run_collectors
 
 
 async def run_pipeline():
-    # while True:
+    teams = await db.teams.get_teams()
+    while True:
         start_time = time.time()
-        print('Running betting lines pipeline...')
-        print('Starting data collectors...')
-        collected_betting_lines = await run_collectors()
+        print('[Teams]: Running teams pipeline...')
+        print('[Teams]: Starting data collectors...')
+        rosters = await run_collectors(teams)
         print('Finished data collection...')
-        print('Starting data processors...')
-        betting_lines_pr = run_processors(collected_betting_lines) # Todo: should be multi-processed
-        print('Finished data processing...')
         print('Storing processed betting lines...')
         await db.betting_lines.store_betting_lines(betting_lines_pr)
         print(f'Stored {len(betting_lines_pr)} processed betting lines...')
