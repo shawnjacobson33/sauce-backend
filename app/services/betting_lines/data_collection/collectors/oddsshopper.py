@@ -113,7 +113,7 @@ def _parse_betting_lines(league: str, resp: dict, collected_betting_lines: list[
                             if bookmaker_name := _extract_bookmaker(outcome):
                                 if odds := _extract_odds(outcome):
                                     betting_line_doc = {
-                                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                                        'timestamp': datetime.now(),
                                         'bookmaker': bookmaker_name,
                                         'league': league,
                                         'market': market,

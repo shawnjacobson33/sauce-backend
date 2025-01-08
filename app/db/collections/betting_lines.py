@@ -1,18 +1,20 @@
+import asyncio
+
 from pymongo import InsertOne, UpdateOne
 from motor.motor_asyncio import AsyncIOMotorClient
 
 
 class BettingLines:
-    def __init__(self, client: AsyncIOMotorClient):
+    def __init__(self, client: AsyncIOMotorClient, db: str = 'dev'):
         self.client = client
-        self.db = client['sauce-dev']
+        self.db = client[f'sauce-{db}']
         self.collection = self.db['betting_lines']
 
     async def get_betting_line(self, query: dict) -> dict:
-        return await self.collection.find_one(query, { '_id': 0 })
+        return await self.collection.find_one(query)
 
     async def get_betting_lines(self, query: dict) -> list[dict]:
-        return await self.collection.find(query, { '_id': 0 }).to_list()
+        return await self.collection.find(query).to_list()
 
     @staticmethod
     def _create_doc(line: dict):
@@ -27,13 +29,15 @@ class BettingLines:
             'line': line['line'],
             'odds': line['odds'],
             'impl_prb': 1 / line['odds'],
+            'tw_prb': line.get('tw_prb'),
+            'ev': line.get('ev'),
             'timestamp': [line['timestamp']]
         }
 
     async def store_betting_lines(self, betting_lines: list[dict]) -> None:
         requests = []
         for betting_line_dict in betting_lines:
-            if not (betting_line_doc_match := await self.get_betting_line(betting_line_dict['_id'])):
+            if betting_line_doc_match := await self.get_betting_line(betting_line_dict['_id']):
                 records = betting_line_doc_match['records']
                 most_recent_record = records[-1]
                 if (not (betting_line_dict['line'] == most_recent_record['line']) or
