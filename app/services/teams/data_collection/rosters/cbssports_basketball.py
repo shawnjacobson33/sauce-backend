@@ -16,6 +16,9 @@ async def _request_rosters(league: str, team: dict) -> dict | None:
         return resp_json
 
 
+async def run_cbssports_basketball_rosters_collector():
+    pass
+
 
 
 

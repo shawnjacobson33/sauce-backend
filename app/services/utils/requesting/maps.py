@@ -122,12 +122,38 @@ PAYLOAD_MAP = {
             }
         }
     },
-    'rosters': {
-        'CBSSportsBasketball': {
+    'teams': {
+        'CBSSports': {
             'urls': {
-                'NBA': 'https://www.cbssports.com/nba/teams/{}/{}/roster/',  # BOS, boston-celtics
-                'WNBA': 'https://www.cbssports.com/wnba/teams/{}/{}/roster/',
-                'NCAAM': 'https://www.cbssports.com/college-basketball/teams/{}/{}/roster/'
+                'NBA': {
+                    'teams': 'https://www.cbssports.com/nba/teams/',
+                    'rosters': 'https://www.cbssports.com/nba/teams/{}/{}/roster/',  # BOS, boston-celtics
+                },
+                'WNBA': {
+                    'teams': 'https://www.cbssports.com/wnba/teams/',
+                    'rosters': 'https://www.cbssports.com/wnba/teams/{}/{}/roster/',
+                },
+                'NCAA': {
+                    'teams': 'https://www.cbssports.com/college-basketball/teams/',  # NOT A TYPO
+                },
+                'NCAAM': {
+                    'rosters': 'https://www.cbssports.com/college-basketball/teams/{}/{}/roster/',
+                },
+                'NCAAF': {
+                    'rosters': 'https://www.cbssports.com/college-football/teams/{}/{}/roster/',
+                },
+                'NFL': {
+                    'teams': 'https://www.cbssports.com/nfl/teams/',
+                    'rosters': 'https://www.cbssports.com/nfl/teams/{}/{}/roster/',
+                },
+                'MLB': {
+                    'teams': 'https://www.cbssports.com/mlb/teams/',
+                    'rosters': 'https://www.cbssports.com/mlb/teams/{}/{}/roster/',
+                },
+                'NHL': {
+                    'teams': 'https://www.cbssports.com/nhl/teams/',
+                    'rosters': 'https://www.cbssports.com/nhl/teams/{}/{}/roster/',
+                }
             },
             'headers': {
                 'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -204,6 +230,5 @@ PAYLOAD_MAP = {
                 'OptanonConsent': 'isGpcEnabled=0&datestamp=Wed+Jan+08+2025+12%3A29%3A53+GMT-0600+(Central+Standard+Time)&version=202409.1.0&browserGpcFlag=0&isIABGlobal=false&identifierType=Cookie+Unique+Id&hosts=&consentId=12893d13-3879-4bef-bce5-dff048d07c27&interactionCount=1&isAnonUser=1&landingPath=https%3A%2F%2Fwww.cbssports.com%2Fnba%2Fteams%2FBOS%2Fboston-celtics%2Froster%2F&GPPCookiesCount=1&groups=1%3A1%2CBG1259%3A1%2C5%3A1%2C4%3A1%2C2%3A1%2C3%3A1',
             }
         }
-    }
-
+    },
 }

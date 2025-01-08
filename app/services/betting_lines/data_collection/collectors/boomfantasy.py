@@ -7,7 +7,7 @@ from app.services.betting_lines.data_collection.configs import CONFIGS
 from app.services.betting_lines.data_collection.helpers import generate_unique_id, get_betting_line_key
 
 
-PAYLOAD = utils.requester.get_payload('BoomFantasy')
+PAYLOAD = utils.requester.get_payload('betting_lines', 'BoomFantasy')
 
 num_betting_lines_collected = 0
 

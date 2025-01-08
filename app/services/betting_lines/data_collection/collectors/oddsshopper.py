@@ -8,7 +8,7 @@ from app.services.betting_lines.data_collection.configs import CONFIGS
 from app.services.betting_lines.data_collection.helpers import generate_unique_id, get_betting_line_key
 
 
-PAYLOAD = utils.requester.get_payload('OddsShopper')
+PAYLOAD = utils.requester.get_payload('betting_lines', 'OddsShopper')
 
 num_betting_lines_collected = 0
 
