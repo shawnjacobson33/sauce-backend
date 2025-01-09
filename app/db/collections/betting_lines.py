@@ -5,6 +5,7 @@ from app.db.base import BaseCollection
 
 
 class BettingLines(BaseCollection):
+
     def __init__(self, db: AsyncIOMotorDatabase):
         super().__init__(db)
         self.collection = self.db['betting_lines']

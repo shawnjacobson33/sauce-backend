@@ -43,12 +43,12 @@ def _get_true_prb(df: pd.DataFrame) -> pd.DataFrame:
         return weighted_market_avg_betting_line_df
 
     devigged_betting_lines = sharp_betting_lines.apply(devig, axis=1).dropna()
-    print('Devigged sharp betting lines...')
+    print('[BettingLines]: Devigged sharp betting lines...')
     weighted_market_avg_betting_lines = (
               devigged_betting_lines.groupby(['line', 'league', 'subject', 'market', 'label'])
                                     .apply(weighted_market_avg)
     )
-    print('Calculated weighted market average...')
+    print('[BettingLines]: Calculated weighted market average...')
 
     return weighted_market_avg_betting_lines
 
@@ -69,8 +69,8 @@ def _calculate_ev(betting_lines: pd.DataFrame, sharp_betting_lines: pd.DataFrame
         if len(matching_sharp_prop_line) == 1:
             prb_of_winning = matching_sharp_prop_line.iloc[0]['tw_prb']
             potential_winnings = row['odds'] - 1
-            row['true_prb'] = prb_of_winning
-            row['ev'] = round((prb_of_winning * potential_winnings) - (1 - prb_of_winning), 4)
+            row['tw_prb'] = prb_of_winning
+            row['ev'] = (prb_of_winning * potential_winnings) - (1 - prb_of_winning)
 
         return row
 
@@ -79,12 +79,13 @@ def _calculate_ev(betting_lines: pd.DataFrame, sharp_betting_lines: pd.DataFrame
                                .dropna()
                                .sort_values(by='ev', ascending=False)
     )
-    print('Calculated expected values...')
+    print('[BettingLines]: Calculated expected values...')
     return betting_lines_with_ev
 
 
 def run_processors(betting_lines: list[dict]):
     betting_lines_df = pd.DataFrame(betting_lines)
+    betting_lines_df['impl_prb'] = 1 / betting_lines_df['odds']
     sharp_betting_lines_df = _get_true_prb(betting_lines_df)
     evaluated_betting_lines_df = _calculate_ev(betting_lines_df, sharp_betting_lines_df)
     return evaluated_betting_lines_df.to_dict(orient='records')

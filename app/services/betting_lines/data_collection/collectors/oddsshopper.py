@@ -8,6 +8,7 @@ from app.services.utils import utilities as utils, Standardizer
 
 
 class OddsShopperCollector:
+
     def __init__(self, collected_betting_lines: list[dict], standardizer: Standardizer):
         self.collected_betting_lines = collected_betting_lines
         self.standardizer = standardizer
@@ -118,7 +119,7 @@ class OddsShopperCollector:
                             for outcome in side.get('outcomes', []):
                                 if bookmaker_name := self._extract_bookmaker(outcome):
                                     if odds := self._extract_odds(outcome):
-                                        self.collected_betting_lines.append({
+                                        betting_line_dict = {
                                             'timestamp': datetime.now().isoformat(),
                                             'bookmaker': bookmaker_name,
                                             'league': league,
@@ -127,7 +128,10 @@ class OddsShopperCollector:
                                             'label': label,
                                             'line': float(outcome.get('line', 0.5)),
                                             'odds': odds,
-                                        })
+                                        }
+                                        betting_line_key = utils.storer.get_betting_line_key(betting_line_dict)
+                                        betting_line_dict['_id'] = betting_line_key
+                                        self.collected_betting_lines.append(betting_line_dict)
                                         self.num_betting_lines_collected += 1
 
 
