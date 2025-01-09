@@ -3,8 +3,8 @@ from typing import Optional, Iterable, Union
 import time
 
 from app.services.configs import load_configs
-from app.services.utils import utilities as utils
-from app.services.betting_lines.data_collection.helpers import generate_unique_id, get_betting_line_key
+from app.services.utils import Standardizer, utilities as utils
+from app.services.utils.hashing import generate_unique_id, get_betting_line_key
 
 
 CONFIGS = load_configs('general')
@@ -190,7 +190,7 @@ def _parse_betting_lines(resp: dict, collected_betting_lines: list[dict]) -> Non
                                             num_betting_lines_collected += 1
 
 
-async def run_boomfantasy_collector(collected_betting_lines: list) -> None:
+async def run_boomfantasy_collector(collected_betting_lines: list, standardizer: Standardizer) -> None:
     # Todo: don't get new tokens every time...randomize every three requests
     global num_betting_lines_collected
     try:

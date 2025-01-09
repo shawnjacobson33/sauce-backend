@@ -1,1 +1,1 @@
-from .standardization import Standardization
+from .standardization import Standardizer

@@ -1,13 +1,13 @@
 import asyncio
 
+from app.services.utils import Standardizer
 from app.services.betting_lines.data_collection import collectors
 
 
-async def run_collectors():
+async def run_collectors(standardizer: Standardizer):
     collected_betting_lines = []
     coros = [
-        collectors.run_boomfantasy_collector(collected_betting_lines),
-        collectors.run_oddsshopper_collector(collected_betting_lines)
+        collectors.OddsShopperCollector(collected_betting_lines, standardizer).run_collector()
     ]
     await asyncio.gather(*coros)
     return collected_betting_lines

@@ -1,7 +1,28 @@
+
+from app.services.utils.hashing import Hashing
 from app.services.utils.standardization import maps
 
 
-class Standardization:
+def load_subject_name_strd_map(rosters: list[dict]):
+    subject_name_strd_map = {}
+
+    for roster in rosters:
+        for player in roster['players']:
+            for attribute_field in ['team', 'position']:
+                subject_key = Hashing.get_subject_key(player, attribute_field)
+                subject_hash = Hashing.generate_hash(subject_key)
+                subject_name_strd_map[subject_hash] = player['name']
+                # Todo: think about adding more data for each subject instead of only 'name'?
+
+    return subject_name_strd_map
+
+
+class Standardizer:
+
+    def __init__(self, rosters: list[dict] = None):
+        self.rosters = rosters
+
+        self.subject_name_strd_map = load_subject_name_strd_map(rosters) if rosters else {}
 
     @staticmethod
     def get_sport(league: str) -> str:
@@ -37,4 +58,10 @@ class Standardization:
 
         raise ValueError(f"Sport '{sport}' not found in market map")
 
-    # todo: add standardize subject name method
+    @staticmethod
+    def standardize_subject_name(subject_name: str, subject_attribute_field: str) -> str:
+
+        if strd_subject_name := maps.SUBJECT_NAME_STRD_MAP.get(subject_name):
+            return strd_subject_name
+
+        raise ValueError(f"Subject '{subject_name}' not found in subject map")

@@ -7,12 +7,11 @@ from app.services.rosters.data_collection import run_collectors
 
 # Todo: if you are sleeping for an entire day make sure to release resources
 async def run_pipeline():
-    teams = await db.teams.get_teams()
     while True:
         start_time = time.time()
         print('[Rosters]: Running teams pipeline...')
         print('[Rosters]: Starting data collectors...')
-        collected_rosters = await run_collectors(teams)
+        collected_rosters = await run_collectors()
         print('[Rosters]: Finished data collection...')
         print('[Rosters]: Storing collected rosters...')
         await db.rosters.store_rosters(collected_rosters)

@@ -1,7 +1,7 @@
 # Description: Configurations for the data collection service.
 _CONFIGS = {
     'general': {
-        'leagues_to_collect_from': { 'NBA', 'NFL', 'NHL', 'NCAAM'}
+        'leagues_to_collect_from': { 'NBA', 'NCAAM' }
     },
     'rosters': {
         'ncaa_conferences_to_collect_from': {

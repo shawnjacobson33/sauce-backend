@@ -1,6 +1,7 @@
 from app.services.utils.requesting import Requesting
-from app.services.utils.standardization import Standardization
+from app.services.utils.hashing import Hashing
 
 
 requester = Requesting()
-standardizer = Standardization()
+
+hasher = Hashing()

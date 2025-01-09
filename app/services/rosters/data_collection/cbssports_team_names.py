@@ -2,10 +2,11 @@ import asyncio
 
 from bs4 import BeautifulSoup
 
+from app.services.configs import load_configs
 from app.services.utils import utilities as utils
-from app.services.rosters.configs import CONFIGS
 
 
+CONFIGS = load_configs('general')
 PAYLOAD = utils.requester.get_payload('teams', 'CBSSports')
 
 

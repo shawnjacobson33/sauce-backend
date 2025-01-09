@@ -30,7 +30,6 @@ async def _request_rosters(collected_rosters: list, league: str, team: dict) -> 
         _parse_rosters(collected_rosters, league, team, resp_html)
 
 
-# Todo: store all subjects for a particular team in one document
 def _parse_rosters(collected_rosters: list, league: str, team: dict, html: str) -> None:
     roster = { 'league': league, 'team': team, 'players': [] }
     soup = BeautifulSoup(html, 'html.parser')
@@ -42,7 +41,7 @@ def _parse_rosters(collected_rosters: list, league: str, team: dict, html: str) 
                         if a_elem := span_elem.find('a'):
                             roster['players'].append({
                                 'position': cells[2].text.strip(),
-                                'subject': a_elem.text.strip(),
+                                'name': a_elem.text.strip(),
                                 'jersey_number': cells[0].text.strip(),
                             })
 
@@ -53,12 +52,11 @@ async def run_cbssports_basketball_rosters_collector(collected_rosters: list):
     tasks = []
     for league in CONFIGS['leagues_to_collect_from']:
         if utils.standardizer.get_sport(league) == 'Basketball':
-            teams = await db.teams.get_teams({ 'league': league if 'NCAA' not in league else 'NCAA' })
+            teams = await db.teams.get_teams({ 'league': league if 'NCAA' not in league else 'NCAA' })  # Todo: fine for now...optimize in the future
             for team in teams:
                 tasks.append(_request_rosters(collected_rosters, league, team))
 
     await asyncio.gather(*tasks)
-    print(collected_rosters)
 
 
 if __name__ == '__main__':
