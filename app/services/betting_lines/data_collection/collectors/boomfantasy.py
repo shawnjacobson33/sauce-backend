@@ -4,7 +4,7 @@ import time
 
 from app.services.configs import load_configs
 from app.services.utils import Standardizer, utilities as utils
-from app.services.utils.hashing import generate_unique_id, get_betting_line_key
+from app.services.utils.storing import generate_unique_id, get_betting_line_key
 
 
 CONFIGS = load_configs('general')
@@ -184,8 +184,7 @@ def _parse_betting_lines(resp: dict, collected_betting_lines: list[dict]) -> Non
                                                 'odds': odds,
                                             }
                                             betting_line_doc_key = get_betting_line_key(betting_line_doc)
-                                            betting_line_unique_id = generate_unique_id(betting_line_doc_key)
-                                            betting_line_doc['_id'] = betting_line_unique_id
+                                            betting_line_doc['_id'] = betting_line_doc_key
                                             collected_betting_lines.append(betting_line_doc)
                                             num_betting_lines_collected += 1
 

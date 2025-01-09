@@ -66,7 +66,7 @@ class OddsShopperCollector:
     def _extract_market(self, event: dict, league: str) -> str | None:
         try:
             if raw_market_name := event.get('offerName'):
-                sport = self.standardizer.get_sport(league)
+                sport = utils.get_sport(league)
                 std_market_name = self.standardizer.standardize_market_name(raw_market_name, sport)
                 return std_market_name
 
@@ -74,11 +74,14 @@ class OddsShopperCollector:
             print('[OddsShopper]: !! ERROR -', e, '!!')
 
 
-    def _extract_subject(self, event: dict) -> Optional[dict]:
+    def _extract_subject(self, event: dict, league: str) -> str | None:
         try:
             if (participants := event.get('participants')) and (first_participants := participants[0]):
                 if raw_subject_name := first_participants.get('name'):
-                    return raw_subject_name
+                    cleaned_subject_name = utils.cleaner.clean_subject_name(raw_subject_name)
+                    subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
+                    std_subject_name = self.standardizer.standardize_subject_name(subject_key)
+                    return std_subject_name
 
                 raise ValueError(f"No subject name found in event participants: '{event}'")
 
@@ -109,13 +112,13 @@ class OddsShopperCollector:
     def _parse_betting_lines(self, league: str, resp: dict) -> None:
         for event in resp:
             if market := self._extract_market(event, league):
-                if subject := self._extract_subject(event):
+                if subject := self._extract_subject(event, league):
                     for side in event.get('sides', []):
                         if label := side.get('label'):
                             for outcome in side.get('outcomes', []):
                                 if bookmaker_name := self._extract_bookmaker(outcome):
                                     if odds := self._extract_odds(outcome):
-                                        betting_line_doc = {
+                                        self.collected_betting_lines.append({
                                             'timestamp': datetime.now().isoformat(),
                                             'bookmaker': bookmaker_name,
                                             'league': league,
@@ -124,11 +127,7 @@ class OddsShopperCollector:
                                             'label': label,
                                             'line': float(outcome.get('line', 0.5)),
                                             'odds': odds,
-                                        }
-                                        betting_line_doc_key = utils.hasher.get_betting_line_key(betting_line_doc)
-                                        betting_line_unique_id = utils.hasher.generate_hash(betting_line_doc_key)
-                                        betting_line_doc['_id'] = betting_line_unique_id
-                                        self.collected_betting_lines.append(betting_line_doc)
+                                        })
                                         self.num_betting_lines_collected += 1
 
 

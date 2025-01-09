@@ -1,13 +1,5 @@
-SPORT_MAP = {
-    'NFL': 'Football',
-    'NCAAF': 'Football',
-    'NBA': 'Basketball',
-    'NCAAB': 'Basketball',
-    'NCAAM': 'Basketball',
-    'WNBA': 'Basketball',
-    'MLB': 'Baseball',
-    'NHL': 'Ice Hockey',
-}
+from app.services.utils.storing import Storing
+from app.services.utils.cleaning import Cleaning
 
 # STANDARDIZATION MAPS
 LEAGUE_NAME_STRD_MAP = {
@@ -564,7 +556,37 @@ PERIOD_NAME_STRD_MAP = {
 SUBJECT_NAME_STRD_MAP = {}
 
 
+def load_in_subject_strd_identity_map(rosters: list[dict]):
+    global SUBJECT_NAME_STRD_MAP
+    subject_name_strd_identity_map = {}
 
+    for roster in rosters:
+        for subject in roster['players']:
+            stored_subject_name = subject['name']
+            cleaned_subject_name = Cleaning.clean_subject_name(stored_subject_name)
+            # One for just the league and subject name
+            try:
+                subject_key = Storing.get_subject_key(roster['league'], cleaned_subject_name)
+                if subject_key in subject_name_strd_identity_map:
+                    raise ValueError(f"Duplicate subject key found: '{subject_key}'")
 
+                subject_name_strd_identity_map[subject_key] = stored_subject_name
 
-# Todo: load and add subject standardization map at run time
+            except Exception as e:
+                print('[Standardizer]: !! ERROR -', e, '!!')
+
+            # Two for the league, subject name, and each subject attribute
+            for subject_attribute_field in ['team', 'position']:
+                try:
+                    subject_attribute_field = roster['team']['abbr_name'] if subject_attribute_field == 'team' else subject['position']
+                    subject_key = Storing.get_subject_key(roster['league'], cleaned_subject_name, subject_attribute_field)
+                    if subject_key in subject_name_strd_identity_map:
+                        raise ValueError(f"Duplicate subject key found: '{subject_key}'")
+
+                    subject_name_strd_identity_map[subject_key] = stored_subject_name
+                    # Todo: think about adding more data for each subject instead of only 'name'?
+
+                except Exception as e:
+                    print('[Standardizer]: !! ERROR -', e, '!!')
+
+    SUBJECT_NAME_STRD_MAP.update(subject_name_strd_identity_map)
