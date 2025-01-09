@@ -5,20 +5,21 @@ from app.db import db
 from app.services.rosters.data_collection import run_collectors
 
 
+# Todo: if you are sleeping for an entire day make sure to release resources
 async def run_pipeline():
     teams = await db.teams.get_teams()
     while True:
         start_time = time.time()
-        print('[Teams]: Running teams pipeline...')
-        print('[Teams]: Starting data collectors...')
-        rosters = await run_collectors(teams)
-        print('Finished data collection...')
-        print('Storing processed betting lines...')
-        await db.betting_lines.store_betting_lines(betting_lines_pr)
-        print(f'Stored {len(betting_lines_pr)} processed betting lines...')
+        print('[Rosters]: Running teams pipeline...')
+        print('[Rosters]: Starting data collectors...')
+        collected_rosters = await run_collectors(teams)
+        print('[Rosters]: Finished data collection...')
+        print('[Rosters]: Storing collected rosters...')
+        await db.rosters.store_rosters(collected_rosters)
+        print(f'[Rosters]: Stored {len(collected_rosters)} collected rosters...')
         end_time = time.time()
-        print(f'Pipeline completed in {round(end_time - start_time, 2)} seconds. Sleeping for 60 seconds...')
-        await asyncio.sleep(60)
+        print(f'[Rosters]: Pipeline completed in {round(end_time - start_time, 2)} seconds. See you tomorrow...')
+        await asyncio.sleep(60 * 60 * 24)
 
 
 if __name__ == '__main__':

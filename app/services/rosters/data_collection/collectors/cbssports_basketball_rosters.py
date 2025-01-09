@@ -3,9 +3,11 @@ import asyncio
 from bs4 import BeautifulSoup
 
 from app.db import db
+from app.services.configs import load_configs
 from app.services.utils import utilities as utils
 
 
+CONFIGS = load_configs('general')
 PAYLOAD = utils.requester.get_payload('teams', 'CBSSports')
 
 
@@ -13,12 +15,24 @@ async def _request_rosters(collected_rosters: list, league: str, team: dict) -> 
     base_url = PAYLOAD['urls'][league]['rosters']
     headers = PAYLOAD['headers']
     cookies = PAYLOAD['cookies']
-    url = base_url.format(team['abbr_name'], team['full_name'])
+    abbr_team_name = team['abbr_name']
+    full_team_name = ('-'.join(team['full_name'].lower().split())
+                      .replace('.', '')
+                      .replace('(', '')
+                      .replace(')', '')
+                      .replace("'", ''))
+    if 'NCAA' in league:
+        abbr_team_name = PAYLOAD['ncaa_team_name_url_map'][league]['abbr_name'].get(abbr_team_name, abbr_team_name)
+        full_team_name = PAYLOAD['ncaa_team_name_url_map'][league]['full_name'].get(full_team_name, full_team_name)
+
+    url = base_url.format(abbr_team_name, full_team_name)
     if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
         _parse_rosters(collected_rosters, league, team, resp_html)
 
 
+# Todo: store all subjects for a particular team in one document
 def _parse_rosters(collected_rosters: list, league: str, team: dict, html: str) -> None:
+    roster = { 'league': league, 'team': team, 'players': [] }
     soup = BeautifulSoup(html, 'html.parser')
     if table := soup.find('table'):
         if (rows := table.find_all('tr')) and (len(rows) > 1):
@@ -26,23 +40,22 @@ def _parse_rosters(collected_rosters: list, league: str, team: dict, html: str) 
                 if (cells := row.find_all('td')) and (len(cells) > 2):
                     if span_elem := cells[1].find('span', {'class': 'CellPlayerName--long'}):
                         if a_elem := span_elem.find('a'):
-                            collected_rosters.append({
-                                'league': league,
-                                'team': team,
+                            roster['players'].append({
                                 'position': cells[2].text.strip(),
                                 'subject': a_elem.text.strip(),
                                 'jersey_number': cells[0].text.strip(),
                             })
 
+            collected_rosters.append(roster)
 
-async def run_cbssports_basketball_rosters_collector(collected_rosters: list, teams: dict = None):
+
+async def run_cbssports_basketball_rosters_collector(collected_rosters: list):
     tasks = []
-    for league in PAYLOAD['leagues_to_collect_from']:
-        if not teams:
-            teams = await db.teams.get_teams({'league': league})
-
-        for team in teams:
-            tasks.append(_request_rosters(collected_rosters, league, team))
+    for league in CONFIGS['leagues_to_collect_from']:
+        if utils.standardizer.get_sport(league) == 'Basketball':
+            teams = await db.teams.get_teams({ 'league': league if 'NCAA' not in league else 'NCAA' })
+            for team in teams:
+                tasks.append(_request_rosters(collected_rosters, league, team))
 
     await asyncio.gather(*tasks)
     print(collected_rosters)

@@ -1,9 +1,13 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from app.db.collections import BettingLines, Teams
+from app.db import collections
 
 client = AsyncIOMotorClient('mongodb://localhost:27017')
 
-betting_lines = BettingLines(client, 'dev')
+database = client[f'sauce-dev']
 
-teams = Teams(client, 'dev')
+betting_lines = collections.BettingLines(database)
+
+teams = collections.Teams(database)
+
+rosters = collections.Rosters(database)

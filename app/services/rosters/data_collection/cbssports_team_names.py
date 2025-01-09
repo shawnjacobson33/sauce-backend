@@ -18,7 +18,6 @@ async def _request_teams(collected_teams: list, league: str) -> dict | None:
 
 
 def _parse_teams(collected_teams: list, league: str, html: str) -> None:
-    sport = utils.standardizer.get_sport(league)
     soup = BeautifulSoup(html, 'html.parser')
     if tables := soup.find_all('table'):
         if conference_names := soup.find_all('span', {'class': 'TeamLogoNameLockup-name'}):
@@ -33,15 +32,11 @@ def _parse_teams(collected_teams: list, league: str, html: str) -> None:
                                             href_comps = href.split("/")
                                             if len(href_comps) > 3:
                                                 abbr_name, full_name = href_comps[3], a_elem.text
-                                                team = {
+                                                collected_teams.append({
                                                     'league': league,
                                                     'abbr_name': abbr_name,
                                                     'full_name': full_name,
-                                                }
-                                                if sport:
-                                                    team['sport'] = sport
-
-                                                collected_teams.append(team)
+                                                })
 
 async def run_cbssports_team_names_collector() -> None:
     from app.db import db

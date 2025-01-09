@@ -133,10 +133,8 @@ PAYLOAD_MAP = {
                     'teams': 'https://www.cbssports.com/wnba/teams/',
                     'rosters': 'https://www.cbssports.com/wnba/teams/{}/{}/roster/',
                 },
-                'NCAA': {
-                    'teams': 'https://www.cbssports.com/college-basketball/teams/',  # NOT A TYPO
-                },
                 'NCAAM': {
+                    'teams': 'https://www.cbssports.com/college-basketball/teams/',  # NOT A TYPO
                     'rosters': 'https://www.cbssports.com/college-basketball/teams/{}/{}/roster/',
                 },
                 'NCAAF': {
@@ -153,6 +151,41 @@ PAYLOAD_MAP = {
                 'NHL': {
                     'teams': 'https://www.cbssports.com/nhl/teams/',
                     'rosters': 'https://www.cbssports.com/nhl/teams/{}/{}/roster/',
+                }
+            },
+            'ncaa_team_name_url_map': {
+                'NCAAM': {
+                    'abbr_name': {
+                        'APLST': 'APPST',
+                        'SAMST': 'SAMHOU',
+                        'TXAM': 'TEXAM',
+                        'GAS': 'GASOU',
+                        'SALA': 'SALAB',
+                        'TXSTSM': 'TEXST'
+                    },
+                    'full_name': {
+                        'utsa-roadrunners': 'texassan-antonio-roadrunners',
+                        'byu-cougars': 'brigham-young-cougars',
+                        'miami-fl-hurricanes': 'miami-fla-hurricanes',
+                        'michigan-state-spartans': 'michigan-st-spartans',
+                        'fiu-panthers': 'florida-international-panthers',
+                        'new-mexico-state-aggies': 'new-mexico-st-aggies',
+                        'hawaii-rainbow-warriors': 'hawaii-warriors',
+                        'utep-miners': 'texasel-paso-miners',
+                        'miami-oh-redhawks': 'miami-ohio-redhawks',
+                        'appalachian-state-mountaineers': 'app-state-mountaineers',
+                        'texas-state-bobcats': 'texas-statesan-marcos-bobcats',
+                        'texas-a&m-aggies': 'texas-am-aggies',
+                        "louisiana-ragin'-cajuns": 'louisiana-ragin-cajuns',
+                        'louisiana-monroe-warhawks': 'louisianamonroe-warhawks'
+                    }
+                },
+                'NCAAF': {
+                    'full_name': {
+                        'texas-a&m-aggies': 'texas-am-aggies',
+                        "louisiana-ragin'-cajuns": 'louisiana-ragin-cajuns',
+                        'louisiana-monroe-warhawks': 'louisianamonroe-warhawks'
+                    }
                 }
             },
             'headers': {

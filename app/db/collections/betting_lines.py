@@ -1,11 +1,12 @@
 from pymongo import InsertOne, UpdateOne
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
+from app.db.base import BaseCollection
 
 
-class BettingLines:
-    def __init__(self, client: AsyncIOMotorClient, db: str = 'dev'):
-        self.client = client
-        self.db = client[f'sauce-{db}']
+class BettingLines(BaseCollection):
+    def __init__(self, db: AsyncIOMotorDatabase):
+        super().__init__(db)
         self.collection = self.db['betting_lines']
 
     async def get_betting_line(self, query: dict) -> dict:

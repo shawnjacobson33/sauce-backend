@@ -4,6 +4,7 @@ SPORT_MAP = {
     'NBA': 'Basketball',
     'NCAAB': 'Basketball',
     'NCAAM': 'Basketball',
+    'WNBA': 'Basketball',
     'MLB': 'Baseball',
     'NHL': 'Ice Hockey',
 }
@@ -560,3 +561,6 @@ PERIOD_NAME_STRD_MAP = {
     'firstQuarter': '1Q',
     'firstHalf': '1H'
 }
+
+
+# Todo: load and add subject standardization map at run time
