@@ -553,7 +553,11 @@ PERIOD_NAME_STRD_MAP = {
     'firstQuarter': '1Q',
     'firstHalf': '1H'
 }
-SUBJECT_NAME_STRD_MAP = {}
+SUBJECT_NAME_STRD_MAP = {
+    'NBA:alexandre sarr': 'Alex Sarr',
+    'NBA:alexandre sarr:WAS': 'Alex Sarr',
+    'NBA:alexandre sarr:C': 'Alex Sarr',
+}
 
 
 def load_in_subject_strd_identity_map(rosters: list[dict]):

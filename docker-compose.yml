@@ -1,7 +1,7 @@
 services:
   db:
     image: mongo
-    container_name: mongo-instance
+    container_name: mongo-test-instance
 
   app:
     build:
