@@ -54,9 +54,9 @@ def _get_true_prb(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _calculate_ev(betting_lines: pd.DataFrame, sharp_betting_lines: pd.DataFrame):
-    non_sharp_betting_lines = (
-        betting_lines[~betting_lines['bookmaker'].isin(SHARP_PROP_BOOKMAKERS_WEIGHTS.keys())]
-    )
+    # non_sharp_betting_lines = (
+    #     betting_lines[~betting_lines['bookmaker'].isin(SHARP_PROP_BOOKMAKERS_WEIGHTS.keys())]
+    # )
 
     def expected_value(row):
         matching_sharp_prop_line = sharp_betting_lines[
@@ -75,7 +75,7 @@ def _calculate_ev(betting_lines: pd.DataFrame, sharp_betting_lines: pd.DataFrame
         return row
 
     betting_lines_with_ev = (
-        non_sharp_betting_lines.apply(expected_value, axis=1)
+        betting_lines.apply(expected_value, axis=1)
                                .dropna()
                                .sort_values(by='ev', ascending=False)
     )
