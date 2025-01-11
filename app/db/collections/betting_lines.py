@@ -41,7 +41,7 @@ class BettingLines(BaseCollection):
     @staticmethod
     def _create_doc(line: dict):
         return {
-            **{k: line[k] for k in ['_id', 'bookmaker', 'league', 'subject', 'market', 'label']},
+            **{k: line[k] for k in ['_id', 'date', 'bookmaker', 'league', 'subject', 'market', 'label']},
             'stream': [ BettingLines._create_record(line) ]
         }
 
@@ -66,7 +66,7 @@ class BettingLines(BaseCollection):
                 most_recent_record = stream[-1]
                 if (not (betting_line_dict['line'] == most_recent_record['line']) or
                     not (betting_line_dict['odds'] == most_recent_record['odds']) or
-                    not (betting_line_dict['ev'] == most_recent_record['ev'])):
+                    not (betting_line_dict.get('ev') == most_recent_record.get('ev'))):
 
                     new_record = self._create_record(betting_line_dict)
                     stream.append(new_record)

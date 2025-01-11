@@ -4,3 +4,4 @@
 .DS_Store
 old-functionality/.env
 redis.conf
+__pycache__/

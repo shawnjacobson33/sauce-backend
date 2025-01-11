@@ -24,7 +24,7 @@ def _to_dict(**kwargs):
 async def betting_lines(bookmaker: str | None = None, league: str | None = None, subject: str | None = None):
     query = _to_dict(bookmaker=bookmaker, league=league, subject=subject)
     if most_recent_betting_lines := await db.betting_lines.get_betting_lines(query, most_recent=True):
-        most_recent_betting_lines.sort(key=lambda x: x['ev'], reverse=True)  # Todo: set up an index in mongodb for this
+        most_recent_betting_lines.sort(key=lambda x: x.get('ev'), reverse=True)  # Todo: set up an index in mongodb for this
         most_recent_betting_lines_df = pd.DataFrame(most_recent_betting_lines)
         most_recent_betting_lines_df['batch_timestamp'] = most_recent_betting_lines_df['batch_timestamp'].astype(str)
         most_recent_betting_lines_df['collection_timestamp'] = most_recent_betting_lines_df['collection_timestamp'].astype(str)

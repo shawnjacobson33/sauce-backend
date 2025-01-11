@@ -121,10 +121,12 @@ class OddsShopperCollector:
                             for outcome in side.get('outcomes', []):
                                 if bookmaker_name := self._extract_bookmaker(outcome):
                                     if odds := self._extract_odds(outcome):
+                                        curr_datetime = datetime.now()
                                         betting_line_dict = {
                                             'batch_num': self.batch_num,
                                             'batch_timestamp': self.batch_timestamp,
-                                            'collection_timestamp': datetime.now(),  # Todo: are you sure this is the format to use?
+                                            'collection_timestamp': curr_datetime,  # Todo: are you sure this is the format to use?
+                                            'date': datetime.strptime(curr_datetime.strftime('%Y-%m-%d'), '%Y-%m-%d'),
                                             'bookmaker': bookmaker_name,
                                             'league': league,
                                             'market': market,

@@ -2,15 +2,8 @@ import asyncio
 import pandas as pd
 
 
-SHARP_PROP_BOOKMAKERS_WEIGHTS = {
-    'BetOnline': 0.6,
-    'FanDuel': 0.3,
-    'Caesars': 0.1
-}
-
-
-def _get_true_prb(df: pd.DataFrame) -> pd.DataFrame:
-    sharp_betting_lines = df[df['bookmaker'].isin(SHARP_PROP_BOOKMAKERS_WEIGHTS.keys())]
+def _get_true_prb(df: pd.DataFrame, ev_formula: dict[str, float]) -> pd.DataFrame:
+    sharp_betting_lines = df[df['bookmaker'].isin(ev_formula.keys())]
 
     def devig(row):
         matching_prop_lines = sharp_betting_lines[
@@ -34,7 +27,7 @@ def _get_true_prb(df: pd.DataFrame) -> pd.DataFrame:
             weights_sum = 0
             weighted_market_total = 0
             for _, row in grouped_df.iterrows():
-                weights = SHARP_PROP_BOOKMAKERS_WEIGHTS[row['bookmaker']]
+                weights = ev_formula[row['bookmaker']]
                 weights_sum += weights
                 weighted_market_total += weights * row['tw_prb']
 
@@ -53,7 +46,7 @@ def _get_true_prb(df: pd.DataFrame) -> pd.DataFrame:
     return weighted_market_avg_betting_lines
 
 
-def _calculate_ev(betting_lines: pd.DataFrame, sharp_betting_lines: pd.DataFrame):
+def _calculate_ev(betting_lines: pd.DataFrame, sharp_betting_lines: pd.DataFrame, ev_formula_name: str):
 
     def expected_value(row):
         matching_sharp_prop_line = sharp_betting_lines[
@@ -68,23 +61,23 @@ def _calculate_ev(betting_lines: pd.DataFrame, sharp_betting_lines: pd.DataFrame
             potential_winnings = row['odds'] - 1
             row['tw_prb'] = prb_of_winning
             row['ev'] = (prb_of_winning * potential_winnings) - (1 - prb_of_winning)
+            row['ev_formula'] = ev_formula_name
 
         return row
 
     betting_lines_with_ev = (
         betting_lines.apply(expected_value, axis=1)
-                               .dropna()
-                               .sort_values(by='ev', ascending=False)
+                     .sort_values(by='ev', ascending=False)
     )
     print('[BettingLines]: Calculated expected values...')
     return betting_lines_with_ev
 
 
-def run_processors(betting_lines: list[dict]):
+def run_processors(betting_lines: list[dict], ev_formula: dict[str, float], ev_formula_name: str) -> list[dict]:
     betting_lines_df = pd.DataFrame(betting_lines)
     betting_lines_df['impl_prb'] = 1 / betting_lines_df['odds']
-    sharp_betting_lines_df = _get_true_prb(betting_lines_df)
-    evaluated_betting_lines_df = _calculate_ev(betting_lines_df, sharp_betting_lines_df)
+    sharp_betting_lines_df = _get_true_prb(betting_lines_df, ev_formula)
+    evaluated_betting_lines_df = _calculate_ev(betting_lines_df, sharp_betting_lines_df, ev_formula_name)
     return evaluated_betting_lines_df.to_dict(orient='records')
 
 
