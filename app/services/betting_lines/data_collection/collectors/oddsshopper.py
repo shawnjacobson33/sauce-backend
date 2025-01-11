@@ -3,30 +3,39 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional, Iterable
 
-from app.services.betting_lines.data_collection.base import BaseCollector
-from app.services.configs import load_configs
-from app.services.betting_lines import logging
+from urllib3.exceptions import ResponseError
+
 from app.services.utils import utilities as utils, Standardizer
+from app.services.betting_lines.data_collection import logging
+from app.services.betting_lines.data_collection.base import BaseBettingLinesCollector
 
 
-class OddsShopperCollector(BaseCollector):
+class OddsShopperCollector(BaseBettingLinesCollector):
 
-    def __init__(self, batch_num: int, batch_timestamp: datetime, collected_betting_lines: list[dict], standardizer: Standardizer):
-        self.batch_num = batch_num
-        self.batch_timestamp = batch_timestamp
-        self.collected_betting_lines = collected_betting_lines
-        self.standardizer = standardizer
+    def __init__(self,
+                 batch_num: int,
+                 batch_timestamp: datetime,
+                 collected_betting_lines: list[dict],
+                 standardizer: Standardizer):
 
-        self.configs = load_configs('general')
-        self.payload = utils.requester.get_payload(domain='betting_lines', source_name='OddsShopper')
-        self.num_betting_lines_collected = 0
+        super().__init__('OddsShopper', batch_num, batch_timestamp, collected_betting_lines, standardizer)
 
-    async def _request_matchups(self) -> dict | None:
-        url = self.payload['urls']['matchups']
-        headers = self.payload['headers']
-        cookies = self.payload['cookies']
-        if resp_json := await utils.requester.fetch(url, headers=headers, cookies=cookies):
-            return resp_json
+
+    async def _request_matchups(self) -> list[tuple[str, str]] | None:
+        try:
+            url = self.payload['urls']['matchups']
+            headers = self.payload['headers']
+            cookies = self.payload['cookies']
+            if resp := await utils.requester.fetch(url, headers=headers, cookies=cookies):
+                self.successful_requests += 1
+                return resp
+
+        except ResponseError as e:
+            print('[OddsShopper]: !! ERROR -', e, '!!')
+            self.failed_requests += 1
+
+        except Exception as e:
+            print('[OddsShopper]: !! ERROR -', e, '!!')
 
     @staticmethod
     def _get_offers(resp: dict) -> Iterable:
@@ -60,14 +69,21 @@ class OddsShopperCollector(BaseCollector):
         return {**params, 'startDate': start_date, 'endDate': end_date}
 
 
-    @logging.data_collection_component_logger('OddsShopper', 'Betting Lines')
     async def _request_betting_lines(self, league: str, offer_id: str) -> None:
-        url = self.payload['urls']['betting_lines'].format(offer_id)
-        headers = self.payload['headers']
-        params = self._get_params()
-        if resp_json := await utils.requester.fetch(url, headers=headers, params=params):
-            self._parse_betting_lines(league, resp_json)
+        try:
+            url = self.payload['urls']['betting_lines'].format(offer_id)
+            headers = self.payload['headers']
+            params = self._get_params()
+            if resp_json := await utils.requester.fetch(url, headers=headers, params=params):
+                self.successful_requests += 1
+                self._parse_betting_lines(league, resp_json)
 
+        except ResponseError as e:
+            print('[OddsShopper]: !! ERROR -', e, '!!')
+            self.failed_requests += 1
+
+        except Exception as e:
+            print('[OddsShopper]: !! ERROR -', e, '!!')
 
     def _extract_market(self, event: dict, league: str) -> str | None:
         try:
@@ -125,7 +141,7 @@ class OddsShopperCollector(BaseCollector):
                                 if bookmaker_name := self._extract_bookmaker(outcome):
                                     if odds := self._extract_odds(outcome):
                                         curr_datetime = datetime.now()
-                                        betting_line_dict = {
+                                        betting_line_dict = {  # Todo: better way to gradually build this dict?
                                             'batch_num': self.batch_num,
                                             'batch_timestamp': self.batch_timestamp,
                                             'collection_timestamp': curr_datetime,  # Todo: are you sure this is the format to use?
@@ -141,32 +157,35 @@ class OddsShopperCollector(BaseCollector):
                                         betting_line_key = utils.storer.get_betting_line_key(betting_line_dict)
                                         betting_line_dict['_id'] = betting_line_key
                                         self.collected_betting_lines.append(betting_line_dict)
-                                        self.num_betting_lines_collected += 1
+                                        self.betting_lines_collected += 1
+
+
+    @logging.collector_logger('OddsShopper', 'Gathering Betting Lines Requests')
+    async def _gather_betting_lines_requests(self, matchups: list[tuple[str, str]]) -> dict:
+        betting_lines_tasks = []
+        for league, offer_id in matchups:
+            betting_lines_tasks.append(self._request_betting_lines(league, offer_id))
+
+        await asyncio.gather(*betting_lines_tasks)
+
+        return {
+            'successful_requests': self.successful_requests,
+            'failed_requests': self.failed_requests,
+            'betting_lines_collected': self.betting_lines_collected
+        }
 
 
     async def run_collector(self) -> None:
-        try:
-            start_time = time.time()
-            print('[Oddsshopper]: Running collector...')
-            print('[Oddsshopper]: Requesting matchups...')
-            if matchups_resp := await self._request_matchups():
-                print('[OddsShopper]: Matchups received...')
-                betting_lines_tasks = []
-                for event_data in self._parse_matchups(matchups_resp):
-                    if event_data:
-                        league, offer_id = event_data
-                        betting_lines_tasks.append(self._request_betting_lines(league, offer_id))
-
-                print('[Oddsshopper]: Requesting betting lines...')
-                await asyncio.gather(*betting_lines_tasks)
-                print('[Oddsshopper]: Betting lines received...')
-                print(f'[Oddsshopper]: Collected {self.num_betting_lines_collected} betting lines...')
-                self.num_betting_lines_collected = 0
-                end_time = time.time()
-                print(f'[Oddsshopper]: Time taken: {round(end_time - start_time, 2)} seconds')
-
-        except Exception as e:
-            print(e)
+        start_time = time.time()
+        print('[Oddsshopper]: Running collector...')
+        print('[Oddsshopper]: Requesting matchups...')
+        if matchups_resp := await self._request_matchups():
+            await self._gather_betting_lines_requests(matchups_resp)
+            print('[Oddsshopper]: Betting lines received...')
+            print(f'[Oddsshopper]: Collected {self.betting_lines_collected} betting lines...')
+            self.betting_lines_collected = 0
+            end_time = time.time()
+            print(f'[Oddsshopper]: Time taken: {round(end_time - start_time, 2)} seconds')
 
 
 if __name__ == '__main__':

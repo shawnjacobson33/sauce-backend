@@ -4,19 +4,19 @@ import functools
 from app.db import db
 
 
-def data_collection_component_logger(collector: str, message: str):
+def collector_logger(self, message: str):
 
     def decorator(collection_func):
 
         @functools.wraps(collection_func)  # Preserves original function metadata
         async def wrapper(*args, **kwargs):
-            print(f'[BettingLines] [Collection] [{collector}]: {message}...')
+            print(f'[BettingLines] [Collection] [{self.name}]: {message}...')
             start_time = time.time()
-            result = await collection_func(*args, **kwargs)
+            await collection_func(*args, **kwargs)
             end_time = time.time()
-            print(f'[BettingLines] [Collection] [{collector}]: Finished {message}...', round(end_time - start_time, 2))
+            print(f'[BettingLines] [Collection] [{self.name}]: Finished {message}...', round(end_time - start_time, 2))
 
-            return result
+            await db.betting_lines_pipeline_stats.add_batch_stat('data_collection')
 
         return wrapper
 
@@ -41,27 +41,5 @@ def data_collection_main_logger(message: str):
             return collected_betting_lines
 
         return wrapper
-
-    return decorator
-
-
-def data_processing_logger(message: str):
-
-    def decorator(processing_func):
-
-        @functools.wraps(processing_func)
-        async def wrapped(*args, **kwargs):
-            print(f'[BettingLines] [Processing]: {message}...')
-            start_time = time.time()
-            result = processing_func(*args, **kwargs)
-            end_time = time.time()
-            print(f'[BettingLines] [Processing]: Finished {message}...')
-
-            await db.betting_lines_pipeline_stats.add_batch_stat('data_processing_start_time', start_time)
-            await db.betting_lines_pipeline_stats.add_batch_stat('data_processing_end_time', end_time)
-
-            return result
-
-        return wrapped
 
     return decorator

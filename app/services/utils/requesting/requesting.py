@@ -1,6 +1,7 @@
 from typing import Optional
 
 import aiohttp
+from urllib3.exceptions import ResponseError
 
 from app.services.utils.requesting.maps import PAYLOAD_MAP
 
@@ -14,6 +15,7 @@ class Requesting:
                 return payload
 
             raise ValueError(f"Payload for {source_name} not found")
+
         raise ValueError(f"Payload domain {domain} not found")
 
     @staticmethod
@@ -23,7 +25,7 @@ class Requesting:
                 if resp.status == 200:
                     return await resp.json() if not to_html else await resp.text()
 
-                raise Exception(f"Failed to post to {url} with status code {resp.status}")
+                raise ResponseError(f"Failed to post to {url} with status code {resp.status}")
 
     @staticmethod
     async def fetch(url: str, to_html: bool = False, **kwargs) -> Optional[dict]:
@@ -32,4 +34,4 @@ class Requesting:
                 if resp.status == 200:
                     return await resp.json() if not to_html else await resp.text()
 
-                raise Exception(f"Failed to fetch from {url} with status code {resp.status}")
+                raise ResponseError(f"Failed to fetch from {url} with status code {resp.status}") # Todo: how to handle gracefully and track success and failures?
