@@ -56,13 +56,17 @@ def _calculate_ev(betting_lines: pd.DataFrame, sharp_betting_lines: pd.DataFrame
             (sharp_betting_lines['market'] == row['market']) &
             (sharp_betting_lines['label'] == row['label'])
         ]
+        stats = dict()
         if len(matching_sharp_prop_line) == 1:
             prb_of_winning = matching_sharp_prop_line.iloc[0]['tw_prb']
             potential_winnings = row['odds'] - 1
-            row['tw_prb'] = prb_of_winning
-            row['ev'] = (prb_of_winning * potential_winnings) - (1 - prb_of_winning)
-            row['ev_formula'] = ev_formula_name
+            stats['tw_prb'] = prb_of_winning
+            stats['ev'] = (prb_of_winning * potential_winnings) - (1 - prb_of_winning)
+            stats['ev_formula'] = ev_formula_name
 
+        row['tw_prb'] = stats.get('tw_prb', pd.NA)
+        row['ev'] = stats.get('ev', pd.NA)
+        row['ev_formula'] = stats.get('ev_formula', pd.NA)
         return row
 
     betting_lines_with_ev = (
@@ -83,4 +87,10 @@ def run_processors(betting_lines: list[dict], ev_formula: dict[str, float], ev_f
 
 if __name__ == '__main__':
     betting_lines_data = pd.read_csv('data-samples/oddsshopper-betting-lines-sample.csv').to_dict(orient='records')
-    asyncio.run(run_processors(betting_lines_data))
+    betting_lines_pr = run_processors(
+        betting_lines_data,
+        {'FanDuel': 0.65, 'BetOnline': 0.25, 'DraftKings': 0.1},
+        'sully'
+    )
+
+    asd = 123

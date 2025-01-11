@@ -41,22 +41,27 @@ class BettingLines(BaseCollection):
     @staticmethod
     def _create_doc(line: dict):
         return {
-            **{k: line[k] for k in ['_id', 'date', 'bookmaker', 'league', 'subject', 'market', 'label']},
+            **{k: line[k] for k in ['_id', 'ev_formula', 'date', 'bookmaker', 'league', 'subject', 'market', 'label']},
             'stream': [ BettingLines._create_record(line) ]
         }
 
     @staticmethod
     def _create_record(line: dict) -> dict:
-        return {
+        record = {
             'batch_num': [line['batch_num']],
             'line': line['line'],
             'odds': line['odds'],
             'impl_prb': line['impl_prb'],
-            'tw_prb': line.get('tw_prb'),
-            'ev': line.get('ev'),
             'batch_timestamp': [line['batch_timestamp']],
             'collection_timestamp': [line['collection_timestamp']]
         }
+        if tw_prb := line.get('tw_prb'):
+            record['tw_prb'] = tw_prb
+        if ev := line.get('ev'):
+            record['ev'] = ev
+
+        return record
+
 
     async def store_betting_lines(self, betting_lines: list[dict]) -> None:
         requests = []
