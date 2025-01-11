@@ -10,4 +10,11 @@ class Metadata(BaseCollection):
         self.collection = self.db['metadata']
 
     async def get_ev_formula(self, market_domain: str, ev_formula_name: str) -> str | None:
-        return await self.collection.find_one({'_id': 'metadata'}, {f'ev_algos.{market_domain}.{ev_formula_name}': 1})
+        metadata = await self.collection.find_one({'_id': 'metadata'})
+        if market_domain_dict := metadata['ev_algo'].get(market_domain):
+            if ev_formula := market_domain_dict.get(ev_formula_name):
+                return ev_formula
+
+            raise ValueError(f"EV formula '{ev_formula_name}' not found in '{market_domain}' market domain")
+
+        raise ValueError(f"Market domain '{market_domain}' not found in metadata")

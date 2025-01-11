@@ -44,20 +44,17 @@ async def run_pipeline():
         while True:
             start_time = time.time()
             print('[BettingLines]: Running betting lines pipeline...')
-            print('[BettingLines]: Starting data collectors...')
             collected_betting_lines = await run_collectors(batch_num, batch_timestamp, standardizer)  # Todo: need to collect game markets also
-            print('[BettingLines]: Finished data collection...')
-            print('[BettingLines]: Starting data processors...')
             betting_lines_pr = run_processors(
                 collected_betting_lines, secondary_markets_ev_formula, SECONDARY_MARKETS_EV_FORMULA_NAME) # Todo: should be multi-processed
-            print('[BettingLines]: Finished data processing...')
             print('[BettingLines]: Storing processed betting lines...')
             await db.betting_lines.store_betting_lines(betting_lines_pr)
             print(f'[BettingLines]: Stored {len(betting_lines_pr)} processed betting lines...')
             end_time = time.time()
-            print(f'[BettingLines]: Pipeline completed in {round(end_time - start_time, 2)} seconds. Sleeping for 60 seconds...')
+            sleep_time = random.randint(85, 95)
+            print(f'[BettingLines]: Pipeline completed in {round(end_time - start_time, 2)} seconds. Sleeping for {sleep_time} seconds...')
             batch_num, batch_timestamp = _update_batch_details(batch_num, batch_timestamp)
-            await asyncio.sleep(random.randint(85, 95))
+            await asyncio.sleep(sleep_time)
 
     finally:
         await db.database['betting_lines_pipeline_status'].update_one(

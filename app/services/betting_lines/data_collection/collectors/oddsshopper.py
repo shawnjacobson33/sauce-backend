@@ -3,11 +3,13 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional, Iterable
 
+from app.services.betting_lines.data_collection.base import BaseCollector
 from app.services.configs import load_configs
+from app.services.betting_lines import logging
 from app.services.utils import utilities as utils, Standardizer
 
 
-class OddsShopperCollector:
+class OddsShopperCollector(BaseCollector):
 
     def __init__(self, batch_num: int, batch_timestamp: datetime, collected_betting_lines: list[dict], standardizer: Standardizer):
         self.batch_num = batch_num
@@ -58,6 +60,7 @@ class OddsShopperCollector:
         return {**params, 'startDate': start_date, 'endDate': end_date}
 
 
+    @logging.data_collection_component_logger('OddsShopper', 'Betting Lines')
     async def _request_betting_lines(self, league: str, offer_id: str) -> None:
         url = self.payload['urls']['betting_lines'].format(offer_id)
         headers = self.payload['headers']

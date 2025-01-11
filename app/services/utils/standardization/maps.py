@@ -193,10 +193,10 @@ MARKET_NAME_STRD_MAP = {
       # 4Q Fantasy Points
         '4Q Fantasy Score': '4Q Fantasy Points',  # PrizePicks
       # Top Point Scorer
-        'Top Point Scorer': 'Top Point Scorer',  # OddsShopper
+      #   'Top Point Scorer': 'Top Point Scorer',  # OddsShopper
       # First Basket
-        'First Basket': 'First Basket',  # OddsShopper
-        'First Point Scorer (incl. Overtime)': 'First Basket',  # Rebet
+      #   'First Basket': 'First Basket',  # OddsShopper
+        # 'First Point Scorer (incl. Overtime)': 'First Basket',  # Rebet
 
     },
     'Football': {

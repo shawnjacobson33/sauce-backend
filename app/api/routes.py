@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime
 
 import pandas as pd
 from fastapi import APIRouter
