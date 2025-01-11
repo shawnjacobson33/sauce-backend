@@ -14,11 +14,14 @@ def collector_logger(message: str):
             start_time = time.time()
             await collection_func(self, *args, **kwargs)
             end_time = time.time()
-            print(f'[BettingLines] [Collection] [{self.name}]: Finished {message}...', round(end_time - start_time, 2))
+            print(f'[BettingLines] [Collection] [{self.name}]: Finished {message}...'
+                  f'⏳ {round(end_time - start_time, 2)} seconds ⏳')
             print(f'[BettingLines] [Collection] [{self.name}]: Collected {self.betting_lines_collected} betting lines...')
 
             stats = self.get_stats()
-            await db.pipeline_stats.add_collector_stats(self.name, stats)
+            db.pipeline_stats.add_collector_stats(self.name, stats)
+
+            self.betting_lines_collected = 0
 
         return wrapper
 

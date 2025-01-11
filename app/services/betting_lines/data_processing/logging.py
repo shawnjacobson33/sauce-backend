@@ -4,7 +4,7 @@ import time
 from app.db import db
 
 
-def data_processing_logger(message: str):
+def processor_logger(name: str, message: str):
 
     def decorator(processing_func):
 
@@ -16,8 +16,8 @@ def data_processing_logger(message: str):
             end_time = time.time()
             print(f'[BettingLines] [Processing]: Finished {message}...')
 
-            await db.betting_lines_pipeline_stats.add_batch_stat('data_processing_start_time', start_time)
-            await db.betting_lines_pipeline_stats.add_batch_stat('data_processing_end_time', end_time)
+
+            db.pipeline_stats.add_processor_stats(name, start_time)
 
             return result
 

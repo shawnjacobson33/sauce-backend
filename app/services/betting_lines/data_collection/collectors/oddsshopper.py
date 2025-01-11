@@ -6,7 +6,7 @@ from typing import Optional, Iterable
 from urllib3.exceptions import ResponseError
 
 from app.services.utils import utilities as utils, Standardizer
-from app.services.betting_lines.data_collection import logging
+from app.services.betting_lines.data_collection.logging import collector_logger
 from app.services.betting_lines.data_collection.base import BaseBettingLinesCollector
 
 
@@ -21,7 +21,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         super().__init__('OddsShopper', batch_num, batch_timestamp, collected_betting_lines, standardizer)
 
 
-    async def _request_matchups(self) -> list[tuple[str, str]] | None:
+    async def _request_matchups(self) -> dict | None:
         try:
             url = self.payload['urls']['matchups']
             headers = self.payload['headers']
@@ -31,11 +31,11 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 return resp
 
         except ResponseError as e:
-            print(f'[{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
             self.failed_requests += 1
 
         except Exception as e:
-            print(f'[{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
 
     @staticmethod
     def _get_offers(resp: dict) -> Iterable:
@@ -79,11 +79,11 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 self._parse_betting_lines(league, resp_json)
 
         except ResponseError as e:
-            print(f'[{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
             self.failed_requests += 1
 
         except Exception as e:
-            print(f'[{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
 
     def _extract_market(self, event: dict, league: str) -> str | None:
         try:
@@ -93,11 +93,11 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 return std_market_name
         
         except ValueError as e:  # Todo: implement custom error
-            print(f'[{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
             self.failed_market_standardization += 1
             
         except Exception as e:
-            print(f'[{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
 
 
     def _extract_subject(self, event: dict, league: str) -> str | None:
@@ -110,11 +110,11 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                     return std_subject_name
         
         except ValueError as e:  # Todo: implement custom error
-            print(f'[{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
             self.failed_subject_standardization += 1
 
         except Exception as e:
-            print(f'[{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
             
 
     @staticmethod
@@ -167,22 +167,19 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                         self.betting_lines_collected += 1
 
 
-    @logging.collector_logger(message='Gathering Betting Lines Requests')
-    async def _gather_betting_lines_requests(self, matchups: list[tuple[str, str]]):
+    async def _gather_betting_lines_requests(self, matchups_resp: dict):
         betting_lines_tasks = []
-        for league, offer_id in matchups:
-            betting_lines_tasks.append(self._request_betting_lines(league, offer_id))
+        for event_data in self._parse_matchups(matchups_resp):
+            if event_data:
+                league, offer_id = event_data
+                betting_lines_tasks.append(self._request_betting_lines(league, offer_id))
 
         await asyncio.gather(*betting_lines_tasks)
 
-
+    @collector_logger(message='Collecting betting lines')
     async def run_collector(self) -> None:
-        start_time = time.time()
         if matchups_resp := await self._request_matchups():
             await self._gather_betting_lines_requests(matchups_resp)
-            self.betting_lines_collected = 0
-            end_time = time.time()
-            print(f'[{self.name}]: Time taken: {round(end_time - start_time, 2)} seconds')
 
 
 if __name__ == '__main__':

@@ -19,6 +19,10 @@ class PipelineStats(BaseCollection):
         data_collectors_dict = data_collection_dict.setdefault('collectors', {})
         data_collectors_dict[collector_name] = stats
 
+    def add_processor_stats(self, processor_name: str, stats: dict):
+        data_processing_dict = self._betting_lines_batch_stats.setdefault('data_processing', {})
+        data_processing_dict[processor_name] = stats
+
     # def update_daily_stats(self):
     #     self._daily_pipeline_stats.append(self._batch_stats)
     #     self._batch_stats = {}

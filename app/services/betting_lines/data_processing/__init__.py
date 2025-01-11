@@ -1,3 +1,3 @@
 from .processors import *
 
-__all__ = ['run_processors']
+__all__ = ['BettingLinesProcessor']
