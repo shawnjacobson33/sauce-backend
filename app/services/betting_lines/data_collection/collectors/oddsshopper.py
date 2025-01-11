@@ -31,11 +31,11 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 return resp
 
         except ResponseError as e:
-            print('[OddsShopper]: !! ERROR -', e, '!!')
+            print(f'[{self.name}]: !! ERROR -', e, '!!')
             self.failed_requests += 1
 
         except Exception as e:
-            print('[OddsShopper]: !! ERROR -', e, '!!')
+            print(f'[{self.name}]: !! ERROR -', e, '!!')
 
     @staticmethod
     def _get_offers(resp: dict) -> Iterable:
@@ -79,11 +79,11 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 self._parse_betting_lines(league, resp_json)
 
         except ResponseError as e:
-            print('[OddsShopper]: !! ERROR -', e, '!!')
+            print(f'[{self.name}]: !! ERROR -', e, '!!')
             self.failed_requests += 1
 
         except Exception as e:
-            print('[OddsShopper]: !! ERROR -', e, '!!')
+            print(f'[{self.name}]: !! ERROR -', e, '!!')
 
     def _extract_market(self, event: dict, league: str) -> str | None:
         try:
@@ -91,9 +91,13 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 sport = utils.get_sport(league)
                 std_market_name = self.standardizer.standardize_market_name(raw_market_name, sport)
                 return std_market_name
-
+        
+        except ValueError as e:  # Todo: implement custom error
+            print(f'[{self.name}]: !! ERROR -', e, '!!')
+            self.failed_market_standardization += 1
+            
         except Exception as e:
-            print('[OddsShopper]: !! ERROR -', e, '!!')
+            print(f'[{self.name}]: !! ERROR -', e, '!!')
 
 
     def _extract_subject(self, event: dict, league: str) -> str | None:
@@ -104,11 +108,14 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                     subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
                     std_subject_name = self.standardizer.standardize_subject_name(subject_key)
                     return std_subject_name
-
-                raise ValueError(f"No subject name found in event participants: '{event}'")
+        
+        except ValueError as e:  # Todo: implement custom error
+            print(f'[{self.name}]: !! ERROR -', e, '!!')
+            self.failed_subject_standardization += 1
 
         except Exception as e:
-            print('[OddsShopper]: !! ERROR -', e, '!!')
+            print(f'[{self.name}]: !! ERROR -', e, '!!')
+            
 
     @staticmethod
     def _extract_bookmaker(outcome: dict) -> str | None:
@@ -160,32 +167,22 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                         self.betting_lines_collected += 1
 
 
-    @logging.collector_logger('OddsShopper', 'Gathering Betting Lines Requests')
-    async def _gather_betting_lines_requests(self, matchups: list[tuple[str, str]]) -> dict:
+    @logging.collector_logger(message='Gathering Betting Lines Requests')
+    async def _gather_betting_lines_requests(self, matchups: list[tuple[str, str]]):
         betting_lines_tasks = []
         for league, offer_id in matchups:
             betting_lines_tasks.append(self._request_betting_lines(league, offer_id))
 
         await asyncio.gather(*betting_lines_tasks)
 
-        return {
-            'successful_requests': self.successful_requests,
-            'failed_requests': self.failed_requests,
-            'betting_lines_collected': self.betting_lines_collected
-        }
-
 
     async def run_collector(self) -> None:
         start_time = time.time()
-        print('[Oddsshopper]: Running collector...')
-        print('[Oddsshopper]: Requesting matchups...')
         if matchups_resp := await self._request_matchups():
             await self._gather_betting_lines_requests(matchups_resp)
-            print('[Oddsshopper]: Betting lines received...')
-            print(f'[Oddsshopper]: Collected {self.betting_lines_collected} betting lines...')
             self.betting_lines_collected = 0
             end_time = time.time()
-            print(f'[Oddsshopper]: Time taken: {round(end_time - start_time, 2)} seconds')
+            print(f'[{self.name}]: Time taken: {round(end_time - start_time, 2)} seconds')
 
 
 if __name__ == '__main__':

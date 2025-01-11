@@ -8,7 +8,7 @@ database = client[f'sauce-dev']
 
 metadata = collections.Metadata(database)
 
-betting_lines_pipeline_stats = collections.BettingLinesPipelineStats(database)
+pipeline_stats = collections.PipelineStats(database)
 
 betting_lines = collections.BettingLines(database)
 

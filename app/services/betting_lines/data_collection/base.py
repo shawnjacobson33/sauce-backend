@@ -23,8 +23,21 @@ class BaseBettingLinesCollector:
 
         self.successful_requests = 0
         self.failed_requests = 0
+
+        self.failed_subject_standardization = 0
+        self.failed_market_standardization = 0
+
         self.betting_lines_collected = 0
 
+
+    def get_stats(self) -> dict:
+        return {
+            'batch_num': self.batch_num,
+            'batch_timestamp': self.batch_timestamp,
+            'successful_requests': self.successful_requests,
+            'failed_requests': self.failed_requests,
+            'betting_lines_collected': self.betting_lines_collected
+        }
 
     def run_collector(self):
         raise NotImplementedError

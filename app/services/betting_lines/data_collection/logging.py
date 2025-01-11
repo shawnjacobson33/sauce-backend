@@ -4,19 +4,21 @@ import functools
 from app.db import db
 
 
-def collector_logger(self, message: str):
+def collector_logger(message: str):
 
     def decorator(collection_func):
 
         @functools.wraps(collection_func)  # Preserves original function metadata
-        async def wrapper(*args, **kwargs):
+        async def wrapper(self, *args, **kwargs):
             print(f'[BettingLines] [Collection] [{self.name}]: {message}...')
             start_time = time.time()
-            await collection_func(*args, **kwargs)
+            await collection_func(self, *args, **kwargs)
             end_time = time.time()
             print(f'[BettingLines] [Collection] [{self.name}]: Finished {message}...', round(end_time - start_time, 2))
+            print(f'[BettingLines] [Collection] [{self.name}]: Collected {self.betting_lines_collected} betting lines...')
 
-            await db.betting_lines_pipeline_stats.add_batch_stat('data_collection')
+            stats = self.get_stats()
+            await db.pipeline_stats.add_collector_stats(self.name, stats)
 
         return wrapper
 
