@@ -13,6 +13,7 @@ class Metadata(BaseCollection):
         metadata = await self.collection.find_one({'_id': 'metadata'})
         if market_domain_dict := metadata['ev_algo'].get(market_domain):
             if ev_formula := market_domain_dict.get(ev_formula_name):
+                ev_formula['name'] = ev_formula_name
                 return ev_formula
 
             raise ValueError(f"EV formula '{ev_formula_name}' not found in '{market_domain}' market domain")

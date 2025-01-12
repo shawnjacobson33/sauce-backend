@@ -31,9 +31,7 @@ class BaseBettingLinesCollector:
 
 
     def get_stats(self) -> dict:
-        return {
-            'batch_num': self.batch_num,
-            'batch_timestamp': self.batch_timestamp,
+        return {  # Todo: log sizes of data in mem?
             'successful_requests': self.successful_requests,
             'failed_requests': self.failed_requests,
             'betting_lines_collected': self.betting_lines_collected

@@ -45,7 +45,7 @@ class BettingLines(BaseCollection):
         non_record_fields = ['_id', 'date', 'bookmaker', 'league', 'subject', 'market', 'label']
         record = BettingLines._create_record(line)
         if 'ev' in record:
-            non_record_fields.insert(1, 'ev_formula')
+            non_record_fields.insert(2, 'ev_formula')
 
         return {
             **{k: line[k] for k in non_record_fields},

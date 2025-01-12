@@ -14,14 +14,22 @@ _CONFIGS = load_configs('betting_lines')
 SECONDARY_MARKETS_EV_FORMULA_NAME = _CONFIGS['ev_formulas']['secondary_markets']
 
 
-async def _get_last_batch_details() -> tuple[int, datetime]:
-    if last_batch_details := await db.database['betting_lines_pipeline_status'].find_one(
-        {'_id': 'betting_lines_pipeline_status'}):
-        prev_batch_num, prev_batch_timestamp = last_batch_details['batch_num'], last_batch_details['batch_timestamp']
-        if datetime.now().day > prev_batch_timestamp.day:
-            prev_batch_num = 0
+async def _get_last_batch_details(reset: bool = False) -> tuple[int, datetime]:
+    if reset:
+        await db.database['betting_lines_pipeline_status'].update_one(
+            {'_id': 'betting_lines_pipeline_status'},
+            {'$set': {'batch_num': 0, 'batch_timestamp': datetime.now()}},
+            upsert=True
+        )
 
-        return prev_batch_num, prev_batch_timestamp
+    else:
+        if last_batch_details := await db.database['betting_lines_pipeline_status'].find_one(
+            {'_id': 'betting_lines_pipeline_status'}):
+            prev_batch_num, prev_batch_timestamp = last_batch_details['batch_num'], last_batch_details['batch_timestamp']
+            if datetime.now().day > prev_batch_timestamp.day:
+                prev_batch_num = 0
+
+            return prev_batch_num, prev_batch_timestamp
 
     return 0, datetime.now()
 
@@ -34,16 +42,22 @@ def _update_batch_details(batch_num: int, prev_batch_timestamp: datetime) -> tup
     return new_batch_num, datetime.now()
 
 
+async def _reset_betting_lines_and_pipeline_stats_collections():
+    await db.database['betting_lines'].deleteMany({})
+    await db.database['pipeline_stats'].deleteMany({})
+
+
 async def run_pipeline():
+    # await _reset_betting_lines_and_pipeline_stats_collections()
     secondary_markets_ev_formula = await db.metadata.get_ev_formula('secondary_markets',
                                                                     SECONDARY_MARKETS_EV_FORMULA_NAME)
-    batch_num, batch_timestamp = await _get_last_batch_details()
+    batch_num, batch_timestamp = await _get_last_batch_details(reset=True)
     try:
         rosters = await db.rosters.get_rosters({})
         standardizer = Standardizer(rosters)
         while True:
             start_time = time.time()
-            print('[BettingLines]: Running betting lines pipeline...')
+            db.pipeline_stats.update_batch_details(batch_num, batch_timestamp)
 
             collected_betting_lines = await run_collectors(batch_num, batch_timestamp, standardizer)  # Todo: need to collect game markets also
 
@@ -53,9 +67,11 @@ async def run_pipeline():
             print('[BettingLines]: Storing processed betting lines...')
             await db.betting_lines.store_betting_lines(betting_lines_pr)
             print(f'[BettingLines]: Stored {len(betting_lines_pr)} processed betting lines...')
+
             end_time = time.time()
-            sleep_time = random.randint(85, 95)
+            sleep_time = random.choice([60, 90, 120])
             print(f'[BettingLines]: Pipeline completed in {round(end_time - start_time, 2)} seconds. Sleeping for {sleep_time} seconds...')
+            await db.pipeline_stats.update_daily_stats(datetime.today())
             batch_num, batch_timestamp = _update_batch_details(batch_num, batch_timestamp)
             await asyncio.sleep(sleep_time)
 

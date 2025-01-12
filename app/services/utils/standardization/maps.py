@@ -577,7 +577,7 @@ def load_in_subject_strd_identity_map(rosters: list[dict]):
                 subject_name_strd_identity_map[subject_key] = stored_subject_name
 
             except Exception as e:
-                print('[Standardizer]: !! ERROR -', e, '!!')
+                print('[Standardizer]: ⚠️', e, '!!')
 
             # Two for the league, subject name, and each subject attribute
             for subject_attribute_field in ['team', 'position']:
@@ -591,6 +591,6 @@ def load_in_subject_strd_identity_map(rosters: list[dict]):
                     # Todo: think about adding more data for each subject instead of only 'name'?
 
                 except Exception as e:
-                    print('[Standardizer]: !! ERROR -', e, '!!')
+                    print('[Standardizer]: ⚠️', e, '!!')
 
     SUBJECT_NAME_STRD_MAP.update(subject_name_strd_identity_map)

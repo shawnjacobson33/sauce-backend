@@ -1,3 +1,4 @@
+import time
 import pandas as pd  # Todo: consider switch to dask for parallel processing
 
 from app.services.betting_lines.data_processing.logging import processor_logger
@@ -7,17 +8,15 @@ class BettingLinesProcessor:
 
     def __init__(self, betting_lines_df: list[dict], ev_formula: dict[str, float]):
         self.betting_lines_df = pd.DataFrame(betting_lines_df)
-        self.betting_lines_df['impl_prb'] = 1 / self.betting_lines_df['odds']
+        self.betting_lines_df['impl_prb'] = (1 / self.betting_lines_df['odds']).round(3)
 
         self.sharp_betting_lines_df = self.betting_lines_df[self.betting_lines_df['bookmaker'].isin(ev_formula.keys())]
-        self.sharp_betting_lines_df['impl_prb'] = 1 / self.sharp_betting_lines_df['odds']
+        self.sharp_betting_lines_df['impl_prb'] = (1 / self.sharp_betting_lines_df['odds']).round(3)
 
         self.ev_formula = ev_formula
 
-        self.num_sharp_betting_lines = self.sharp_betting_lines_df.shape[0]
+        self.times = dict()
 
-
-    @processor_logger(name='devig', message='Devigging sharp betting lines...')
     def _get_devigged_lines(self) -> pd.DataFrame:
 
         def devig(row):
@@ -40,7 +39,6 @@ class BettingLinesProcessor:
         return df
 
 
-    @processor_logger(name='weighted_market_sharp_avgs', message='Calculating Weighted Market Sharp Avgs...')
     def _get_weighted_market_sharp_avgs(self, devigged_betting_lines_df: pd.DataFrame) -> pd.DataFrame:
 
         def weighted_market_avg(devigged_betting_lines_df_grpd):
@@ -63,13 +61,6 @@ class BettingLinesProcessor:
         return df
 
 
-    def _process_sharp_betting_lines(self) -> pd.DataFrame:
-        devigged_betting_lines_df = self._get_devigged_lines()
-        weighted_market_sharp_avg_betting_lines_df = self._get_weighted_market_sharp_avgs(devigged_betting_lines_df)
-        return weighted_market_sharp_avg_betting_lines_df
-
-
-    @processor_logger(name='ev', message='Calculating Expected Values...')
     def _get_expected_values(self):
 
         def ev(row):
@@ -88,7 +79,12 @@ class BettingLinesProcessor:
                 stats['ev'] = (prb_of_winning * potential_winnings) - (1 - prb_of_winning)
                 stats['ev_formula'] = self.ev_formula['name']
 
-            row['tw_prb'] = stats.get('tw_prb', pd.NA)
+            if tw_prb := stats.get('tw_prb', pd.NA):
+                row['tw_prb'] = round(tw_prb, 3)
+
+            if expected_value := stats.get('ev', pd.NA):
+                row['ev'] = round(expected_value, 3)
+
             row['ev'] = stats.get('ev', pd.NA)
             row['ev_formula'] = stats.get('ev_formula', pd.NA)
             return row
@@ -100,9 +96,24 @@ class BettingLinesProcessor:
         return df
 
 
+    @processor_logger(message='Processing betting lines')
     def run_processor(self) -> list[dict]:
-        self._process_sharp_betting_lines()
+        start_time = time.time()
+        devigged_betting_lines_df = self._get_devigged_lines()
+        end_time = time.time()
+        self.times['devig_time'] = round(end_time - start_time, 4)
+
+        start_time = time.time()
+        self.sharp_betting_lines_df = self._get_weighted_market_sharp_avgs(devigged_betting_lines_df)
+        end_time = time.time()
+        self.times['weighted_market_sharp_avgs_time'] = round(end_time - start_time, 4)
+
+
+        start_time = time.time()
         betting_lines_df_pr = self._get_expected_values()
+        end_time = time.time()
+        self.times['ev_time'] = round(end_time - start_time, 4)
+
         betting_lines_df_pr.to_csv('data_processing/data-samples/oddsshopper-betting-lines-sample.csv', index=False)
         return betting_lines_df_pr.to_dict(orient='records')
 

@@ -36,7 +36,7 @@ async def _request_new_tokens() -> bool:
             return True
     
     except Exception as e:
-        print('[BoomFantasy]: !! ERROR -', e, '!!')
+        print('[BoomFantasy]: ⚠️', e, '!!')
         return False
 
 
@@ -49,7 +49,7 @@ async def _request_contest_id() -> str | None:
             return _parse_contest_id(resp_json)
     
     except Exception as e:
-        print('[BoomFantasy]: !! ERROR -', e, '!!')
+        print('[BoomFantasy]: ⚠️', e, '!!')
         
 
 def _parse_contest_id(resp: dict) -> str | None:
@@ -68,7 +68,7 @@ async def _request_betting_lines(contest_id: str) -> dict | None:
             return resp_json
 
     except Exception as e:
-        print('[BoomFantasy]: !! ERROR -', e, '!!')
+        print('[BoomFantasy]: ⚠️', e, '!!')
 
 
 def _get_sections(resp: dict) -> Iterable:
@@ -111,7 +111,7 @@ def _extract_subject(qg: dict) -> str | None:
                     return raw_full_subj_name
 
     except Exception as e:
-        print('[BoomFantasy]: !! ERROR -', e, '!!')
+        print('[BoomFantasy]: ⚠️', e, '!!')
 
 
 def _extract_period(qg: dict) -> str | None:
@@ -135,7 +135,7 @@ def _extract_market(qg: dict, q: dict, league: str) -> str | None:
             return std_market_name
 
     except Exception as e:
-        print('[BoomFantasy]: !! ERROR -', e, '!!')
+        print('[BoomFantasy]: ⚠️', e, '!!')
 
 
 def _get_c_data(qg: dict, q: dict, league: str) -> Iterable:

@@ -1,5 +1,4 @@
 import asyncio
-import time
 from datetime import datetime, timedelta
 from typing import Optional, Iterable
 
@@ -31,11 +30,11 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 return resp
 
         except ResponseError as e:
-            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
             self.failed_requests += 1
 
         except Exception as e:
-            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
 
     @staticmethod
     def _get_offers(resp: dict) -> Iterable:
@@ -79,11 +78,11 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 self._parse_betting_lines(league, resp_json)
 
         except ResponseError as e:
-            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
             self.failed_requests += 1
 
         except Exception as e:
-            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
 
     def _extract_market(self, event: dict, league: str) -> str | None:
         try:
@@ -93,11 +92,11 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 return std_market_name
         
         except ValueError as e:  # Todo: implement custom error
-            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
             self.failed_market_standardization += 1
             
         except Exception as e:
-            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
 
 
     def _extract_subject(self, event: dict, league: str) -> str | None:
@@ -110,11 +109,11 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                     return std_subject_name
         
         except ValueError as e:  # Todo: implement custom error
-            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
             self.failed_subject_standardization += 1
 
         except Exception as e:
-            print(f'[BettingLines] [Collection] [{self.name}]: !! ERROR -', e, '!!')
+            print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
             
 
     @staticmethod
