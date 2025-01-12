@@ -105,7 +105,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 if raw_subject_name := first_participants.get('name'):
                     cleaned_subject_name = utils.cleaner.clean_subject_name(raw_subject_name)
                     subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
-                    std_subject_name = self.standardizer.standardize_subject_name(subject_key)
+                    std_subject_name = self.standardizer.standardize_player_name(subject_key)
                     return {
                         'id': subject_key,
                         'name': std_subject_name,

@@ -53,8 +53,8 @@ async def run_pipeline():
                                                                     SECONDARY_MARKETS_EV_FORMULA_NAME)
     batch_num, batch_timestamp = await _get_last_batch_details(reset=True)  # Todo: store pipeline status in the betting lines collection not its own collection
     try:
-        rosters = await db.rosters.get_rosters({})
-        standardizer = Standardizer(rosters)
+        players = await db.players.get_players({})
+        standardizer = Standardizer(players)
         while True:
             start_time = time.time()
             db.pipeline_stats.update_batch_details(batch_num, batch_timestamp)

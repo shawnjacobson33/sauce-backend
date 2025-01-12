@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pymongo import UpdateOne, InsertOne
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -10,8 +12,12 @@ class Games(BaseCollection):
         super().__init__(db)
         self.collection = self.db['games']
 
-    async def get_games(self, query: dict) -> list[dict]:
-        return await self.collection.find(query, { '_id': 0 }).to_list()
+    async def get_games(self, query: dict, live: bool = False) -> list[dict]:
+        if live:
+            live_query = { **query, 'game_time': { '$lte' : datetime.now() }}
+            return await self.collection.find(live_query).to_list()
+
+        return await self.collection.find(query).to_list()
 
     async def get_game(self, query: dict) -> dict:
         return await self.collection.find_one(query)

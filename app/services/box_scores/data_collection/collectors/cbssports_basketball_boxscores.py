@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime, timedelta
 from typing import Iterable
 
 from bs4 import BeautifulSoup
@@ -112,9 +111,9 @@ class CBSSportsBasketballBoxscoresCollector:
         for team_name_div, box_score_div in self._get_divs(soup):
             if cells := self._get_cells(box_score_div):
                 if subject := self._extract_subject(cells[0], league):
-                    # TODO: need to think a bit more about subject name standardization
                     if box_score := self._extract_basketball_stats(cells[1:], league):
                         collected_boxscores.append({
+                            '_id': f'{game['id']}:{subject['id']}',
                             'game': game,
                             'league': league,
                             'subject': subject,
