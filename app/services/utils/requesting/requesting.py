@@ -9,14 +9,17 @@ from app.services.utils.requesting.maps import PAYLOAD_MAP
 class Requesting:
 
     @staticmethod
-    def get_payload(domain: str, source_name: str):
-        if payload_domain := PAYLOAD_MAP.get(domain):
-            if payload := payload_domain.get(source_name):
-                return payload
+    def get_payload(source_name: str, domain: str = None) -> dict | None:
+        if payload := PAYLOAD_MAP.get(source_name):
+            if domain:
+                if payload_domain_specific := payload.get(domain):
+                    return payload_domain_specific
 
-            raise ValueError(f"Payload for {source_name} not found")
+                raise ValueError(f"Payload for {source_name} and domain {domain} not found")
 
-        raise ValueError(f"Payload domain {domain} not found")
+            return payload
+
+        raise ValueError(f"Payload for {source_name} not found")
 
     @staticmethod
     async def post(url: str, to_html: bool = False, **kwargs) -> dict:

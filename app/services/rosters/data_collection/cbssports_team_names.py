@@ -7,12 +7,13 @@ from app.services.utils import utilities as utils
 
 
 CONFIGS = load_configs('general')
-PAYLOAD = utils.requester.get_payload('teams', 'CBSSports')
+PAYLOAD = utils.requester.get_payload('CBSSports', domain='teams')
 
 
 async def _request_teams(collected_teams: list, league: str) -> dict | None:
     url = PAYLOAD['urls'][league]['teams']
     headers = PAYLOAD['headers']
+    headers['referer'] = headers['referer'].format(league, 'teams')
     cookies = PAYLOAD['cookies']
     if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
         return _parse_teams(collected_teams, league, resp_html)

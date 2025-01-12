@@ -6,14 +6,14 @@ from app.db import db
 from app.services.configs import load_configs
 from app.services.utils import utilities as utils
 
-
 CONFIGS = load_configs('general')
-PAYLOAD = utils.requester.get_payload('teams', 'CBSSports')
+PAYLOAD = utils.requester.get_payload('CBSSports', domain='teams')
 
 
 async def _request_rosters(collected_rosters: list, league: str, team: dict) -> None:
     base_url = PAYLOAD['urls'][league]['rosters']
     headers = PAYLOAD['headers']
+    headers['referer'] = headers['referer'].format(league, 'teams')
     cookies = PAYLOAD['cookies']
     abbr_team_name = team['abbr_name']
     full_team_name = ('-'.join(team['full_name'].lower().split())
@@ -48,10 +48,10 @@ def _parse_rosters(collected_rosters: list, league: str, team: dict, html: str) 
             collected_rosters.append(roster)
 
 
-async def run_cbssports_basketball_rosters_collector(collected_rosters: list):
+async def run_collector(collected_rosters: list):
     tasks = []
     for league in CONFIGS['leagues_to_collect_from']:
-        if utils.standardizer.get_sport(league) == 'Basketball':
+        if utils.get_sport(league) == 'Basketball':
             teams = await db.teams.get_teams({ 'league': league if 'NCAA' not in league else 'NCAA' })  # Todo: fine for now...optimize in the future
             for team in teams:
                 tasks.append(_request_rosters(collected_rosters, league, team))
@@ -60,4 +60,4 @@ async def run_cbssports_basketball_rosters_collector(collected_rosters: list):
 
 
 if __name__ == '__main__':
-    asyncio.run(run_cbssports_basketball_rosters_collector([]))
+    asyncio.run(run_collector([]))

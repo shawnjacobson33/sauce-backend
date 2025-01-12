@@ -99,14 +99,17 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
 
 
-    def _extract_subject(self, event: dict, league: str) -> str | None:
+    def _extract_subject(self, event: dict, league: str) -> dict | None:
         try:
             if (participants := event.get('participants')) and (first_participants := participants[0]):
                 if raw_subject_name := first_participants.get('name'):
                     cleaned_subject_name = utils.cleaner.clean_subject_name(raw_subject_name)
                     subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
                     std_subject_name = self.standardizer.standardize_subject_name(subject_key)
-                    return std_subject_name
+                    return {
+                        'id': subject_key,
+                        'name': std_subject_name,
+                    }
         
         except ValueError as e:  # Todo: implement custom error
             print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')

@@ -51,7 +51,7 @@ async def run_pipeline():
     # await _reset_betting_lines_and_pipeline_stats_collections()
     secondary_markets_ev_formula = await db.metadata.get_ev_formula('secondary_markets',
                                                                     SECONDARY_MARKETS_EV_FORMULA_NAME)
-    batch_num, batch_timestamp = await _get_last_batch_details(reset=True)
+    batch_num, batch_timestamp = await _get_last_batch_details(reset=True)  # Todo: store pipeline status in the betting lines collection not its own collection
     try:
         rosters = await db.rosters.get_rosters({})
         standardizer = Standardizer(rosters)

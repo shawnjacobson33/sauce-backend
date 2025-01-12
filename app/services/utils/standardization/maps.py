@@ -560,37 +560,36 @@ SUBJECT_NAME_STRD_MAP = {
 }
 
 
-def load_in_subject_strd_identity_map(rosters: list[dict]):
+def load_in_subject_strd_identity_map(players: list[dict]):
     global SUBJECT_NAME_STRD_MAP
     subject_name_strd_identity_map = {}
 
-    for roster in rosters:
-        for subject in roster['players']:
-            stored_subject_name = subject['name']
-            cleaned_subject_name = Cleaning.clean_subject_name(stored_subject_name)
-            # One for just the league and subject name
+    for player in players:
+        stored_subject_name = player['name']
+        cleaned_subject_name = Cleaning.clean_subject_name(stored_subject_name)
+        # One for just the league and subject name
+        try:
+            subject_key = Storing.get_subject_key(player['league'], cleaned_subject_name)
+            if subject_key in subject_name_strd_identity_map:
+                raise ValueError(f"Duplicate subject key found: '{subject_key}'")
+
+            subject_name_strd_identity_map[subject_key] = stored_subject_name
+
+        except Exception as e:
+            print('[Standardizer]: ⚠️', e, '⚠️')
+
+        # Two for the league, subject name, and each subject attribute
+        for subject_attribute_field in ['team', 'position']:
             try:
-                subject_key = Storing.get_subject_key(roster['league'], cleaned_subject_name)
+                subject_attribute_field = player['team']['abbr_name'] if subject_attribute_field == 'team' else player['position']
+                subject_key = Storing.get_subject_key(player['league'], cleaned_subject_name, subject_attribute_field)
                 if subject_key in subject_name_strd_identity_map:
                     raise ValueError(f"Duplicate subject key found: '{subject_key}'")
 
                 subject_name_strd_identity_map[subject_key] = stored_subject_name
+                # Todo: think about adding more data for each subject instead of only 'name'?
 
             except Exception as e:
-                print('[Standardizer]: ⚠️', e, '!!')
-
-            # Two for the league, subject name, and each subject attribute
-            for subject_attribute_field in ['team', 'position']:
-                try:
-                    subject_attribute_field = roster['team']['abbr_name'] if subject_attribute_field == 'team' else subject['position']
-                    subject_key = Storing.get_subject_key(roster['league'], cleaned_subject_name, subject_attribute_field)
-                    if subject_key in subject_name_strd_identity_map:
-                        raise ValueError(f"Duplicate subject key found: '{subject_key}'")
-
-                    subject_name_strd_identity_map[subject_key] = stored_subject_name
-                    # Todo: think about adding more data for each subject instead of only 'name'?
-
-                except Exception as e:
-                    print('[Standardizer]: ⚠️', e, '!!')
+                print('[Standardizer]: ⚠️', e, '⚠️')
 
     SUBJECT_NAME_STRD_MAP.update(subject_name_strd_identity_map)

@@ -4,11 +4,11 @@ from app.services.utils.standardization import maps
 
 class Standardizer:
 
-    def __init__(self, rosters: list[dict] = None):
-        self.rosters = rosters
+    def __init__(self, players: list[dict] = None):
+        self.players = players
 
-        if rosters:
-            maps.load_in_subject_strd_identity_map(rosters)
+        if players:
+            maps.load_in_subject_strd_identity_map(players)
             self.subject_name_strd_map = maps.SUBJECT_NAME_STRD_MAP
 
     @staticmethod
