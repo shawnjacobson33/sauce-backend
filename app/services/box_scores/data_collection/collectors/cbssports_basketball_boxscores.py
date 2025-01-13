@@ -112,16 +112,15 @@ class CBSSportsBasketballBoxscoresCollector:
                 if cells := self._get_cells(row):
                     if subject := self._extract_subject(cells[0], league):
                         if box_score := self._extract_basketball_stats(cells[1:], league):
-                            box_score_dict = BoxScoreDict({
+                            collected_boxscores.append({
                                 '_id': f'{game['_id']}:{subject['id']}',
                                 'game': game,
                                 'league': league,
                                 'subject': subject,
-                                'box_score': box_score
+                                'box_score': BoxScoreDict(box_score)
                             })
-                            collected_boxscores.append(box_score_dict)
 
-    async def run_collector(self, collected_boxscores: list, games: list[dict]):
+    async def run_collector(self, collected_boxscores: list[dict], games: list[dict]):
         tasks = []
         for league in CONFIGS['leagues_to_collect_from']:
             if utils.get_sport(league) == 'Basketball':

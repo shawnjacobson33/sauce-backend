@@ -14,7 +14,7 @@ betting_lines = collections.BettingLines(database)
 
 teams = collections.Teams(database)
 
-players = collections.Players(database)
+subjects = collections.Subjects(database)
 
 games = collections.Games(database)
 

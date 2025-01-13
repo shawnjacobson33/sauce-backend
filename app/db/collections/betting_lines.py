@@ -42,7 +42,7 @@ class BettingLines(BaseCollection):
 
     @staticmethod
     def _create_doc(line: dict) -> dict:
-        non_record_fields = ['_id', 'date', 'bookmaker', 'league', 'subject', 'market', 'label']
+        non_record_fields = ['_id', 'date', 'bookmaker', 'league', 'game', 'subject', 'market', 'label']
         record = BettingLines._create_record(line)
         if line.get('ev'):
             non_record_fields.insert(2, 'ev_formula')
@@ -89,18 +89,18 @@ class BettingLines(BaseCollection):
 
             betting_line_seen_tracker[betting_line_dict_id] += 1
 
-        disappeared_betting_lines = await self.get_betting_lines({'_id': {'$nin': betting_line_seen_tracker.keys()}})
+        disappeared_betting_lines = await self.get_betting_lines({'_id': {'$nin': list(betting_line_seen_tracker.keys())}})
         for disappeared_betting_line in disappeared_betting_lines:
             stream = disappeared_betting_line['stream']
-            stream.append({
-                'batch_timestamp': disappeared_betting_line['batch_timestamp'],
-            })
-            update_op = self.update_betting_line(disappeared_betting_line['_id'], return_op=True, strema=stream)
-            requests.append(update_op)
+            most_recent_record = stream[-1]
+            if len(most_recent_record) != 1: # Don't need to add an empty record consecutive times
+                stream.append({
+                    'batch_timestamp': betting_lines[0]['batch_timestamp'],
+                })
+                update_op = await self.update_betting_line(disappeared_betting_line['_id'], return_op=True, strema=stream)
+                requests.append(update_op)
 
         await self.collection.bulk_write(requests)
-
-
 
     async def update_betting_line(self, unique_id: str, return_op: bool = False, **kwargs):
         if return_op:

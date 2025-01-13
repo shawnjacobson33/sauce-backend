@@ -19,7 +19,7 @@ class BaseBettingLinesCollector:
         self.standardizer = standardizer
 
         self.configs = load_configs('general')
-        self.payload = utils.requester.get_payload(domain='betting_lines', source_name=self.name)
+        self.payload = utils.requester.get_payload(source_name=self.name)
 
         self.successful_requests = 0
         self.failed_requests = 0

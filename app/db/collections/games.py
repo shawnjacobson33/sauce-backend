@@ -7,7 +7,7 @@ from app.db.base import BaseCollection
 
 
 class Games(BaseCollection):
-
+    # Todo: games should be sorted by game_time ascending
     def __init__(self, db: AsyncIOMotorDatabase):
         super().__init__(db)
         self.collection = self.db['games']
@@ -45,5 +45,6 @@ class Games(BaseCollection):
 
         await self.collection.update_one(query, {'$set': kwargs})
 
-    async def delete_games(self, query: dict) -> None:
-        await self.collection.delete_many(query)
+    async def delete_games(self, games: list[dict]) -> None:
+        game_ids = [game['_id'] for game in games]
+        await self.collection.delete_many({ '_id': { '$in': game_ids } })

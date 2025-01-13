@@ -4,6 +4,7 @@ from typing import Optional, Iterable
 
 from urllib3.exceptions import ResponseError
 
+from app.db.db import subjects, games
 from app.services.utils import utilities as utils, Standardizer
 from app.services.betting_lines.data_collection.logging import collector_logger
 from app.services.betting_lines.data_collection.base import BaseBettingLinesCollector
@@ -75,7 +76,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             params = self._get_params()
             if resp_json := await utils.requester.fetch(url, headers=headers, params=params):
                 self.successful_requests += 1
-                self._parse_betting_lines(league, resp_json)
+                await self._parse_betting_lines(league, resp_json)
 
         except ResponseError as e:
             print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
@@ -99,17 +100,14 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
 
 
-    def _extract_subject(self, event: dict, league: str) -> dict | None:
+    def _extract_subject(self, event: dict, league: str) -> str | None:
         try:
             if (participants := event.get('participants')) and (first_participants := participants[0]):
                 if raw_subject_name := first_participants.get('name'):
                     cleaned_subject_name = utils.cleaner.clean_subject_name(raw_subject_name)
                     subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
-                    std_subject_name = self.standardizer.standardize_player_name(subject_key)
-                    return {
-                        'id': subject_key,
-                        'name': std_subject_name,
-                    }
+                    std_subject_name = self.standardizer.standardize_subject_name(subject_key)
+                    return std_subject_name
         
         except ValueError as e:  # Todo: implement custom error
             print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
@@ -117,7 +115,17 @@ class OddsShopperCollector(BaseBettingLinesCollector):
 
         except Exception as e:
             print(f'[BettingLines] [Collection] [{self.name}]: ⚠️', e, '⚠️')
-            
+
+    @staticmethod
+    async def _get_game(league: str, subject_name: str) -> dict | None:
+        subject = await subjects.get_subject({ 'league': league, 'name': subject_name }, proj={ 'team': 1 })
+        game = await games.get_game({
+            '$or': [
+                { 'home_team': subject['team']['abbr_name'] },
+                { 'away_team': subject['team']['abbr_name'] }
+            ]
+        })
+        return game
 
     @staticmethod
     def _extract_bookmaker(outcome: dict) -> str | None:
@@ -139,34 +147,35 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         if ev := data.get('ev'):
             return ev
 
-
-    def _parse_betting_lines(self, league: str, resp: dict) -> None:
+    async def _parse_betting_lines(self, league: str, resp: dict) -> None:
         for event in resp:
             if market := self._extract_market(event, league):
                 if subject := self._extract_subject(event, league):
-                    for side in event.get('sides', []):
-                        if label := side.get('label'):
-                            for outcome in side.get('outcomes', []):
-                                if bookmaker_name := self._extract_bookmaker(outcome):
-                                    if odds := self._extract_odds(outcome):
-                                        curr_datetime = datetime.now()
-                                        betting_line_dict = {  # Todo: better way to gradually build this dict?
-                                            'batch_num': self.batch_num,
-                                            'batch_timestamp': self.batch_timestamp,
-                                            'collection_timestamp': curr_datetime,  # Todo: are you sure this is the format to use?
-                                            'date': datetime.strptime(curr_datetime.strftime('%Y-%m-%d'), '%Y-%m-%d'),
-                                            'bookmaker': bookmaker_name,
-                                            'league': league,
-                                            'market': market,
-                                            'subject': subject,
-                                            'label': label,
-                                            'line': float(outcome.get('line', 0.5)),
-                                            'odds': odds,
-                                        }
-                                        betting_line_key = utils.storer.get_betting_line_key(betting_line_dict)
-                                        betting_line_dict['_id'] = betting_line_key
-                                        self.collected_betting_lines.append(betting_line_dict)
-                                        self.betting_lines_collected += 1
+                    if game := await self._get_game(league, subject):
+                        for side in event.get('sides', []):
+                            if label := side.get('label'):
+                                for outcome in side.get('outcomes', []):
+                                    if bookmaker_name := self._extract_bookmaker(outcome):
+                                        if odds := self._extract_odds(outcome):
+                                            curr_datetime = datetime.now()
+                                            betting_line_dict = {  # Todo: better way to gradually build this dict?
+                                                'batch_num': self.batch_num,
+                                                'batch_timestamp': self.batch_timestamp,
+                                                'collection_timestamp': curr_datetime,  # Todo: are you sure this is the format to use?
+                                                'date': datetime.strptime(curr_datetime.strftime('%Y-%m-%d'), '%Y-%m-%d'),
+                                                'bookmaker': bookmaker_name,
+                                                'league': league,
+                                                'game': game,
+                                                'market': market,
+                                                'subject': subject,
+                                                'label': label,
+                                                'line': float(outcome.get('line', 0.5)),
+                                                'odds': odds,
+                                            }
+                                            betting_line_key = utils.storer.get_betting_line_key(betting_line_dict)
+                                            betting_line_dict['_id'] = betting_line_key
+                                            self.collected_betting_lines.append(betting_line_dict)
+                                            self.betting_lines_collected += 1
 
 
     async def _gather_betting_lines_requests(self, matchups_resp: dict):

@@ -79,10 +79,12 @@ class BettingLinesProcessor:
                 stats['ev'] = (prb_of_winning * potential_winnings) - (1 - prb_of_winning)
                 stats['ev_formula'] = self.ev_formula['name']
 
-            if tw_prb := stats.get('tw_prb', pd.NA):
+            tw_prb = stats.get('tw_prb', pd.NA)
+            if not pd.isna(tw_prb):
                 row['tw_prb'] = round(tw_prb, 3)
 
-            if expected_value := stats.get('ev', pd.NA):
+            expected_value = stats.get('ev', pd.NA)
+            if not pd.isna(expected_value):
                 row['ev'] = round(expected_value, 3)
 
             row['ev'] = stats.get('ev', pd.NA)

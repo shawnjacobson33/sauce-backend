@@ -1,8 +1,6 @@
 import asyncio
 from datetime import datetime
-import time
 
-from app.db import db
 from app.services.utils import Standardizer
 from app.services.betting_lines.data_collection import collectors
 

@@ -39,7 +39,7 @@ class Standardizer:
         raise ValueError(f"Sport '{sport}' not found in market map")
 
     def standardize_subject_name(self, subject_key: str) -> str:
-        if strd_subject_name := self.subject_name_strd_map.get(subject_key):
+        if strd_subject_name := self.subject_name_strd_map.get(subject_key):  # Todo: Store more info about each subject?
             return strd_subject_name
 
         raise ValueError(f"Subject '{subject_key}' not found in subject strd map")
