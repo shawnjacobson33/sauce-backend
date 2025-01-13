@@ -2,7 +2,7 @@ import asyncio
 import re
 import time
 from copy import deepcopy
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 import aiohttp
 from cloudscraper import Cloudflare
@@ -30,6 +30,7 @@ class AsyncCloudFlare(Cloudflare):
             pass
 
         return False
+
 
     async def challenge_response(self, resp: aiohttp.ClientResponse, **kwargs):
         resp_text = await resp.text()

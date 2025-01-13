@@ -1,9 +1,9 @@
-import logging
+import asyncio
 
 import aiohttp
-import requests
-from aiohttp import ClientResponse
-from cloudscraper import CloudScraper, Cloudflare, CloudflareLoopProtection
+from cloudscraper import CloudScraper, CloudflareLoopProtection
+
+from in_dev.async_cloudscraper.async_cloudflare import AsyncCloudFlare
 
 
 REDIRECT_CODES = (
@@ -19,7 +19,7 @@ class AsyncCloudScraper(CloudScraper):
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
 
-    def perform_request(self, method, url, *args, **kwargs) -> aiohttp.ClientResponse:
+    async def perform_request(self, method, url, *args, **kwargs) -> aiohttp.ClientResponse:
         async with aiohttp.ClientSession() as session:
             async with session.request(method, url, *args, **kwargs) as resp:
                 return resp
@@ -64,15 +64,15 @@ class AsyncCloudScraper(CloudScraper):
         # ------------------------------------------------------------------------------- #
 
         if self.requestPostHook:
-            if response := self.requestPostHook(self, response):  # Give me walrus in 3.7!!!
+            if response := self.requestPostHook(self, response):
                 if self.debug:
                     print('==== requestPostHook Debug ====')
                     self.debugRequest(response)
 
         # ------------------------------------------------------------------------------- #
-
+        resp_text = await response.text()
         if not self.disableCloudflareV1:
-            cloudflare_v1 = Cloudflare(self)
+            cloudflare_v1 = AsyncCloudFlare(self)
 
             # ------------------------------------------------------------------------------- #
             # Check if Cloudflare v1 anti-bot is on
@@ -92,17 +92,25 @@ class AsyncCloudScraper(CloudScraper):
 
                 self._solveDepthCnt += 1
 
-
-                response_text = cloudflare_v1.Challenge_Response(response, **kwargs)
+                resp_text = await cloudflare_v1.challenge_response(response, **kwargs)
             else:
                 # CHANGED
                 if not self._is_redirect(response) and response.status not in [429, 503]:
                     self._solveDepthCnt = 0
 
-        return
+        return resp_text
 
     async def get(self, url: str, *args, **kwargs):
         return await self.request('GET', url, *args, **kwargs)
 
     async def post(self, url: str, *args, **kwargs):
         return await self.request('POST', url, *args, **kwargs)
+
+
+async def main():
+    scraper = AsyncCloudScraper()
+    response_text = await scraper.get('https://scrapfly.io/blog/web-scraping-speed/')
+    asd = 213
+
+if __name__ == '__main__':
+    asyncio.run(main())

@@ -38,3 +38,4 @@ class Requesting:
                     return await resp.json() if not to_html else await resp.text()
 
                 raise ResponseError(f"Failed to fetch from {url} with status code {resp.status}") # Todo: how to handle gracefully and track success and failures?
+

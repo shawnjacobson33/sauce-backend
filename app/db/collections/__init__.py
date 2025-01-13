@@ -4,3 +4,4 @@ from .players import Players
 from .metadata import Metadata
 from .pipeline_stats import PipelineStats
 from .games import Games
+from .boxscores import Boxscores

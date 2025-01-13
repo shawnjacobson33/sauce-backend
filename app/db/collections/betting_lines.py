@@ -34,38 +34,33 @@ class BettingLines(BaseCollection):
 
         return most_recent_betting_lines
 
-    async def get_betting_lines(self, query: dict, most_recent: bool = True) -> list[dict]:
+    async def get_betting_lines(self, query: dict, most_recent: bool = False) -> list[dict]:
         if most_recent:
             return await self._get_most_recent_betting_lines(query)
 
         return await self.collection.find(query).to_list()
 
     @staticmethod
-    def _create_doc(line: dict):
+    def _create_doc(line: dict) -> dict:
         non_record_fields = ['_id', 'date', 'bookmaker', 'league', 'subject', 'market', 'label']
         record = BettingLines._create_record(line)
-        if 'ev' in record:
+        if line.get('ev'):
             non_record_fields.insert(2, 'ev_formula')
+            non_record_fields.append('ev')
 
         return {
             **{k: line[k] for k in non_record_fields},
-            'stream': [ record ]
+            'stream': [ record ],
         }
 
     @staticmethod
     def _create_record(line: dict) -> dict:
         record = {
-            'batch_num': [line['batch_num']],
             'batch_timestamp': [line['batch_timestamp']],
             'collection_timestamp': [line['collection_timestamp']],
             'line': line['line'],
             'odds': line['odds'],
-            'impl_prb': line['impl_prb'],
         }
-        if tw_prb := line.get('tw_prb'):
-            record['tw_prb'] = tw_prb
-        if ev := line.get('ev'):
-            record['ev'] = ev
 
         return record
 
@@ -79,20 +74,13 @@ class BettingLines(BaseCollection):
                 stream = betting_line_doc_match['stream']
                 most_recent_record = stream[-1]
                 if (not (betting_line_dict['line'] == most_recent_record['line']) or
-                    not (betting_line_dict['odds'] == most_recent_record['odds']) or
-                    not (betting_line_dict.get('ev') == most_recent_record.get('ev'))):
+                    not (betting_line_dict['odds'] == most_recent_record['odds'])):
 
                     new_record = self._create_record(betting_line_dict)
                     stream.append(new_record)
-
-                else:
-                    most_recent_record['batch_num'].append(betting_line_dict['batch_num'])
-                    most_recent_record['batch_timestamp'].append(betting_line_dict['batch_timestamp'])
-                    most_recent_record['collection_timestamp'].append(betting_line_dict['collection_timestamp'])
-
-                update_op = await self.update_betting_line(betting_line_dict_id, return_op=True,
-                                                           stream=stream)  # Todo: do you need to replace the entire records field?
-                requests.append(update_op)
+                    update_op = await self.update_betting_line(betting_line_dict_id, return_op=True,
+                                                               stream=stream)  # Todo: do you need to replace the entire records field?
+                    requests.append(update_op)
 
             elif betting_line_seen_tracker[betting_line_dict_id] == 0:  # For first iteration of batches
                 new_betting_line_doc = self._create_doc(betting_line_dict)
@@ -108,6 +96,38 @@ class BettingLines(BaseCollection):
             return UpdateOne({ '_id': unique_id }, { '$set': kwargs })
 
         await self.collection.update_one({ '_id': unique_id }, { '$set': kwargs })
+
+    async def update_live_stats(self, boxscores: list[dict]) -> None:
+        requests = []
+        for boxscore in boxscores:
+            subject_filtered_betting_lines = await self.get_betting_lines({ 'subject': boxscore['subject'] })
+            for betting_line in subject_filtered_betting_lines:
+                market = betting_line['market']
+                if stat := boxscore['boxscore'].get(market):
+                    update_op = self.update_betting_line(betting_line['_id'], return_op=True, live_stat=stat)
+                    requests.append(update_op)
+
+        await self.collection.bulk_write(requests)
+
+    @staticmethod
+    def _get_betting_line_result(betting_line: dict) -> bool:
+        if betting_line['label'] == 'Over':
+            return betting_line['live_stat'] > betting_line['line']
+
+        return betting_line['live_stat'] < betting_line['line']
+
+    async def update_betting_line_results(self, game_id: str) -> None:
+        # Todo: update with other stats?
+        requests = []
+        betting_lines_filtered_by_game = await self.get_betting_lines({ 'game.id': game_id })
+        for betting_line in betting_lines_filtered_by_game:
+            if 'live_stat' in betting_line:
+                result = self._get_betting_line_result(betting_line)
+                update_op = self.update_betting_line(betting_line['_id'], return_op=True, result=result)
+                requests.append(update_op)
+
+        await self.collection.bulk_write(requests)
+
 
     async def delete_betting_lines(self):
         await self.collection.delete_many({})
