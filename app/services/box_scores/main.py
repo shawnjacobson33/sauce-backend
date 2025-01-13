@@ -6,8 +6,20 @@ from app.services.box_scores.data_collection import run_collectors
 from app.services.utils import Standardizer
 
 
-def _get_finished_games(games: list[dict]) -> list:
+def _get_finished_games(games: list[dict]) -> list[dict]:
     return [game for game in games if db.games.is_game_finished(game)]
+
+
+async def _cleanup_finished_games(games: list[dict]) -> None:
+    game_ids = [game['_id'] for game in games]
+    await db.betting_lines.update_betting_line_results(game_ids)
+    await db.games.delete_games(game_ids)
+    await db.box_scores.delete_box_scores(game_ids)
+
+
+async def _check_for_finished_games(games: list[dict]) -> None:
+    if finished_games := _get_finished_games(games):
+        await _cleanup_finished_games(finished_games)
 
 # Todo: if you are sleeping for an entire day make sure to release resources
 async def run_pipeline():
@@ -24,13 +36,7 @@ async def run_pipeline():
             await db.box_scores.store_box_scores(collected_boxscores)
             print(f'[BoxScores]: Stored {len(collected_boxscores)} collected boxscores...')
             await db.betting_lines.update_live_stats(collected_boxscores)
-            if finished_games := _get_finished_games(live_games):
-                for finished_game in finished_games:
-                    await db.betting_lines.update_betting_line_results(finished_game['_id'])
-
-                await db.games.delete_games(finished_games)
-                await db.box_scores.delete_box_scores( { 'game._id': { '$in': [game['_id'] for game in finished_games] } } )
-
+            await _check_for_finished_games(live_games)
             end_time = time.time()
             print(f'[BoxScores]: Pipeline completed in {round(end_time - start_time, 2)} seconds. See you tomorrow...')
             await asyncio.sleep(30)

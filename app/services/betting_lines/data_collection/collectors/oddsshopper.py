@@ -13,12 +13,11 @@ from app.services.betting_lines.data_collection.base import BaseBettingLinesColl
 class OddsShopperCollector(BaseBettingLinesCollector):
 
     def __init__(self,
-                 batch_num: int,
                  batch_timestamp: datetime,
                  collected_betting_lines: list[dict],
                  standardizer: Standardizer):
 
-        super().__init__('OddsShopper', batch_num, batch_timestamp, collected_betting_lines, standardizer)
+        super().__init__('OddsShopper', batch_timestamp, collected_betting_lines, standardizer)
 
 
     async def _request_matchups(self) -> dict | None:
@@ -159,7 +158,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                         if odds := self._extract_odds(outcome):
                                             curr_datetime = datetime.now()
                                             betting_line_dict = {  # Todo: better way to gradually build this dict?
-                                                'batch_num': self.batch_num,
                                                 'batch_timestamp': self.batch_timestamp,
                                                 'collection_timestamp': curr_datetime,  # Todo: are you sure this is the format to use?
                                                 'date': datetime.strptime(curr_datetime.strftime('%Y-%m-%d'), '%Y-%m-%d'),

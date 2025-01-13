@@ -7,13 +7,11 @@ from app.services.utils import utilities as utils, Standardizer
 class BaseBettingLinesCollector:
     def __init__(self,
                  name: str,
-                 batch_num: int,
                  batch_timestamp: datetime,
                  collected_betting_lines: list[dict],
                  standardizer: Standardizer):
 
         self.name = name
-        self.batch_num = batch_num
         self.batch_timestamp = batch_timestamp
         self.collected_betting_lines = collected_betting_lines
         self.standardizer = standardizer

@@ -5,10 +5,10 @@ from app.services.utils import Standardizer
 from app.services.betting_lines.data_collection import collectors
 
 
-async def run_collectors(batch_num: int, batch_timestamp: datetime, standardizer: Standardizer):
+async def run_collectors(batch_timestamp: datetime, standardizer: Standardizer):
     collected_betting_lines = []
     coros = [
-        collectors.OddsShopperCollector(batch_num, batch_timestamp, collected_betting_lines, standardizer).run_collector()
+        collectors.OddsShopperCollector(batch_timestamp, collected_betting_lines, standardizer).run_collector()
     ]
     await asyncio.gather(*coros)
     return collected_betting_lines

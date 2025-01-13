@@ -45,6 +45,5 @@ class Games(BaseCollection):
 
         await self.collection.update_one(query, {'$set': kwargs})
 
-    async def delete_games(self, games: list[dict]) -> None:
-        game_ids = [game['_id'] for game in games]
+    async def delete_games(self, game_ids: list[str]) -> None:
         await self.collection.delete_many({ '_id': { '$in': game_ids } })

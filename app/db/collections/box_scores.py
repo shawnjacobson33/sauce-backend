@@ -35,6 +35,5 @@ class BoxScores(BaseCollection):
 
         await self.collection.update_one(query, {'$set': kwargs})
 
-    async def delete_box_scores(self, query: dict) -> None:
-        await self.collection.delete_many(query)
-
+    async def delete_box_scores(self, game_ids: list[str]) -> None:
+        await self.collection.delete_many({'game._id': {'$in': game_ids}})

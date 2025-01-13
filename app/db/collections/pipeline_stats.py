@@ -14,9 +14,8 @@ class PipelineStats(BaseCollection):
         self._daily_pipeline_stats = []
         self._betting_lines_batch_stats = {}
 
-    def update_batch_details(self, batch_num: int, prev_batch_timestamp: date) -> None:
-        self._betting_lines_batch_stats['batch_num'] = batch_num
-        self._betting_lines_batch_stats['batch_timestamp'] = prev_batch_timestamp
+    def update_batch_details(self, batch_timestamp: date) -> None:
+        self._betting_lines_batch_stats['batch_timestamp'] = batch_timestamp
 
     def add_collector_stats(self, collector_name: str, stats: dict) -> None:
         data_collection_dict = self._betting_lines_batch_stats.setdefault('data_collection', {})
@@ -25,6 +24,9 @@ class PipelineStats(BaseCollection):
 
     def add_processor_stats(self, stats: dict):
         self._betting_lines_batch_stats['data_processing'] = stats
+
+    def add_pipeline_stats(self, stats: dict):
+        self._betting_lines_batch_stats['pipeline'] = stats
 
     async def update_daily_stats(self, curr_date: date):
         await self.collection.update_one(

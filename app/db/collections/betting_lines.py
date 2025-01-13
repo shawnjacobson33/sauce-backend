@@ -65,6 +65,30 @@ class BettingLines(BaseCollection):
         return record
 
 
+    async def _update_disappeared_betting_lines(self, seen_betting_lines: list[str], requests: list, batch_timestamp: str):
+        disappeared_betting_lines = await self.get_betting_lines(
+            {'_id': {'$nin': seen_betting_lines}})
+        for disappeared_betting_line in disappeared_betting_lines:
+            stream = disappeared_betting_line['stream']
+            most_recent_record = stream[-1]
+            if len(most_recent_record) != 1:  # Don't need to add an empty record consecutive times
+                stream.append({
+                    'batch_timestamp': batch_timestamp,
+                })
+                update_op = await self.update_betting_line(disappeared_betting_line['_id'], return_op=True,
+                                                           strema=stream)
+                requests.append(update_op)
+
+    async def _update_stream(self, stream: list[dict], new_betting_line: dict, requests: list):
+        most_recent_record = stream[-1]
+        if (not (new_betting_line['line'] == most_recent_record['line']) or
+                not (new_betting_line['odds'] == most_recent_record['odds'])):
+            new_record = self._create_record(new_betting_line)
+            stream.append(new_record)
+            update_op = await self.update_betting_line(new_betting_line['_id'], return_op=True,
+                                                       stream=stream)  # Todo: do you need to replace the entire records field?
+            requests.append(update_op)
+
     async def store_betting_lines(self, betting_lines: list[dict]) -> None:
         requests = []
         betting_line_seen_tracker = defaultdict(int)
@@ -72,15 +96,7 @@ class BettingLines(BaseCollection):
             betting_line_dict_id = betting_line_dict['_id']
             if betting_line_doc_match := await self.get_betting_line(betting_line_dict_id):
                 stream = betting_line_doc_match['stream']
-                most_recent_record = stream[-1]
-                if (not (betting_line_dict['line'] == most_recent_record['line']) or
-                    not (betting_line_dict['odds'] == most_recent_record['odds'])):
-
-                    new_record = self._create_record(betting_line_dict)
-                    stream.append(new_record)
-                    update_op = await self.update_betting_line(betting_line_dict_id, return_op=True,
-                                                               stream=stream)  # Todo: do you need to replace the entire records field?
-                    requests.append(update_op)
+                await self._update_stream(stream, betting_line_dict, requests)
 
             elif betting_line_seen_tracker[betting_line_dict_id] == 0:  # For first iteration of batches
                 new_betting_line_doc = self._create_doc(betting_line_dict)
@@ -89,16 +105,9 @@ class BettingLines(BaseCollection):
 
             betting_line_seen_tracker[betting_line_dict_id] += 1
 
-        disappeared_betting_lines = await self.get_betting_lines({'_id': {'$nin': list(betting_line_seen_tracker.keys())}})
-        for disappeared_betting_line in disappeared_betting_lines:
-            stream = disappeared_betting_line['stream']
-            most_recent_record = stream[-1]
-            if len(most_recent_record) != 1: # Don't need to add an empty record consecutive times
-                stream.append({
-                    'batch_timestamp': betting_lines[0]['batch_timestamp'],
-                })
-                update_op = await self.update_betting_line(disappeared_betting_line['_id'], return_op=True, strema=stream)
-                requests.append(update_op)
+        seen_betting_lines = list(betting_line_seen_tracker.keys())
+        batch_timestamp = betting_lines[0]['batch_timestamp']
+        await self._update_disappeared_betting_lines(seen_betting_lines, requests, batch_timestamp)
 
         await self.collection.bulk_write(requests)
 
@@ -127,10 +136,10 @@ class BettingLines(BaseCollection):
 
         return betting_line['live_stat'] < betting_line['line']
 
-    async def update_betting_line_results(self, game_id: str) -> None:
+    async def update_betting_line_results(self, game_ids: list[dict]) -> None:
         # Todo: update with other stats?
         requests = []
-        betting_lines_filtered_by_game = await self.get_betting_lines({ 'game.id': game_id })
+        betting_lines_filtered_by_game = await self.get_betting_lines({ 'game._id': { '$in': game_ids } })
         for betting_line in betting_lines_filtered_by_game:
             if 'live_stat' in betting_line:
                 result = self._get_betting_line_result(betting_line)
