@@ -5,6 +5,8 @@ from bs4 import BeautifulSoup
 
 from app.services.configs import load_configs
 from app.services.utils import utilities as utils, Standardizer
+from app.services.box_scores.base import BoxScoreDict
+
 
 CONFIGS = load_configs('general')
 PAYLOAD = utils.requester.get_payload('CBSSports', domain='boxscores')
@@ -16,12 +18,12 @@ class CBSSportsBasketballBoxscoresCollector:
         self.standardizer = standardizer
 
     async def _request_boxscores(self, collected_boxscores: list, league: str, game: dict):
-        game_id = game['id']
-        base_url = PAYLOAD['url'].format(league, game_id)
-        headers = PAYLOAD['headers']
-        # Todo: need to update referer
+        game_id = game['_id']
+        mapped_league = PAYLOAD['league_map'].get(league)
+        url = PAYLOAD['url'].format(mapped_league, game_id)
+        headers = PAYLOAD['headers'][0]
+        headers['referer'] = url
         cookies = PAYLOAD['cookies']
-        url = base_url.format(game_id)
         if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
             self._parse_boxscores(collected_boxscores, resp_html, league, game)
 
@@ -82,9 +84,8 @@ class CBSSportsBasketballBoxscoresCollector:
 
     @staticmethod
     def _get_divs(soup: BeautifulSoup) -> Iterable:
-        for team_name_div in soup.find_all('div', {'class': 'team-name'}):
-            for box_score_div in soup.find_all('div', class_=['starters-stats', 'bench-stats']):
-                yield team_name_div, box_score_div
+        for box_score_div in soup.find_all('div', class_=['starters-stats', 'bench-stats']):
+            yield box_score_div
 
     @staticmethod
     def _get_table(box_score_div):
@@ -98,33 +99,34 @@ class CBSSportsBasketballBoxscoresCollector:
                 for row in [row for row in rows if row.get('class')[0] not in {'header-row', 'total-row'}]:
                     yield row
 
-
-    def _get_cells(self, box_score_div):
-        for row in self._get_rows(box_score_div):
-            if cells := row.find_all('td'):
-                cells = [cell for cell in cells if 'for-mobile' not in cell.get('class')]
-                return cells
-
+    @staticmethod
+    def _get_cells(row):
+        if cells := row.find_all('td'):
+            cells = [cell for cell in cells if 'for-mobile' not in cell.get('class')]
+            return cells
 
     def _parse_boxscores(self, collected_boxscores: list, html: str, league: str, game: dict) -> None:
         soup = BeautifulSoup(html, 'html.parser')
-        for team_name_div, box_score_div in self._get_divs(soup):
-            if cells := self._get_cells(box_score_div):
-                if subject := self._extract_subject(cells[0], league):
-                    if box_score := self._extract_basketball_stats(cells[1:], league):
-                        collected_boxscores.append({
-                            '_id': f'{game['id']}:{subject['id']}',
-                            'game': game,
-                            'league': league,
-                            'subject': subject,
-                            'box_score': box_score
-                        })
+        for box_score_div in self._get_divs(soup):
+            for row in self._get_rows(box_score_div):
+                if cells := self._get_cells(row):
+                    if subject := self._extract_subject(cells[0], league):
+                        if box_score := self._extract_basketball_stats(cells[1:], league):
+                            box_score_dict = BoxScoreDict({
+                                '_id': f'{game['_id']}:{subject['id']}',
+                                'game': game,
+                                'league': league,
+                                'subject': subject,
+                                'box_score': box_score
+                            })
+                            collected_boxscores.append(box_score_dict)
 
     async def run_collector(self, collected_boxscores: list, games: list[dict]):
         tasks = []
         for league in CONFIGS['leagues_to_collect_from']:
             if utils.get_sport(league) == 'Basketball':
-                for game in games[league]:
-                    tasks.append(self._request_boxscores(collected_boxscores, league, game))
+                for game in games:
+                    if game['league'] == league:
+                        tasks.append(self._request_boxscores(collected_boxscores, league, game))
 
         await asyncio.gather(*tasks)

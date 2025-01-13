@@ -18,7 +18,7 @@ players = collections.Players(database)
 
 games = collections.Games(database)
 
-boxscores = collections.Boxscores(database)
+box_scores = collections.BoxScores(database)
 
 
 

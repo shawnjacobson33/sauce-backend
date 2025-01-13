@@ -278,7 +278,7 @@ PAYLOAD_MAP = {
                 },
                 'NFL': {
                     'schedule': 'https://www.cbssports.com/nfl/schedule/'
-                },''
+                },
                 'NHL': {
                     'schedule': 'https://www.cbssports.com/nhl/schedule/{}/'
                 }
@@ -290,8 +290,18 @@ PAYLOAD_MAP = {
                 'NCAAM': 2,
             }  # Todo: should this be in configs?
         },
-        'box_scores': {
+        'boxscores': {
             'url': 'https://www.cbssports.com/{}/gametracker/boxscore/{}/',  # NBA_20241113_BOS@BKN'
+            'headers': CBSSPORTS_HEADERS,
+            'cookies': CBSSPORTS_COOKIES,
+            'league_map': {
+                'NBA': 'nba',
+                'NCAAM': 'college-basketball',
+                'NCAAF': 'college-football',
+                'NFL': 'nfl',
+                'MLB': 'mlb',
+                'NHL': 'nhl'
+            }
         }
     },
 

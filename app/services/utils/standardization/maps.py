@@ -573,7 +573,7 @@ def load_in_subject_strd_identity_map(subjects: list[dict]):
             if subject_key in subject_name_strd_identity_map:
                 raise ValueError(f"Duplicate subject key found: '{subject_key}'")
 
-            subject_name_strd_identity_map[subject_key] = stored_subject_name
+            SUBJECT_NAME_STRD_MAP[subject_key] = stored_subject_name
 
         except Exception as e:
             print('[Standardizer]: ⚠️', e, '⚠️')
@@ -586,10 +586,9 @@ def load_in_subject_strd_identity_map(subjects: list[dict]):
                 if subject_key in subject_name_strd_identity_map:
                     raise ValueError(f"Duplicate subject key found: '{subject_key}'")
 
-                subject_name_strd_identity_map[subject_key] = stored_subject_name
+                SUBJECT_NAME_STRD_MAP[subject_key] = stored_subject_name
                 # Todo: think about adding more data for each subject instead of only 'name'?
 
             except Exception as e:
                 print('[Standardizer]: ⚠️', e, '⚠️')
 
-    SUBJECT_NAME_STRD_MAP.update(subject_name_strd_identity_map)

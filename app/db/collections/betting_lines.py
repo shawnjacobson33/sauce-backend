@@ -56,8 +56,8 @@ class BettingLines(BaseCollection):
     @staticmethod
     def _create_record(line: dict) -> dict:
         record = {
-            'batch_timestamp': [line['batch_timestamp']],
-            'collection_timestamp': [line['collection_timestamp']],
+            'batch_timestamp': line['batch_timestamp'],
+            'collection_timestamp': line['collection_timestamp'],
             'line': line['line'],
             'odds': line['odds'],
         }
@@ -68,7 +68,7 @@ class BettingLines(BaseCollection):
     async def store_betting_lines(self, betting_lines: list[dict]) -> None:
         requests = []
         betting_line_seen_tracker = defaultdict(int)
-        for betting_line_dict in betting_lines:
+        for betting_line_dict in betting_lines:  # Todo: change so it loops through every betting line currently stored and then check if a betting line disappeared for this batch.
             betting_line_dict_id = betting_line_dict['_id']
             if betting_line_doc_match := await self.get_betting_line(betting_line_dict_id):
                 stream = betting_line_doc_match['stream']
@@ -89,7 +89,18 @@ class BettingLines(BaseCollection):
 
             betting_line_seen_tracker[betting_line_dict_id] += 1
 
+        disappeared_betting_lines = await self.get_betting_lines({'_id': {'$nin': betting_line_seen_tracker.keys()}})
+        for disappeared_betting_line in disappeared_betting_lines:
+            stream = disappeared_betting_line['stream']
+            stream.append({
+                'batch_timestamp': disappeared_betting_line['batch_timestamp'],
+            })
+            update_op = self.update_betting_line(disappeared_betting_line['_id'], return_op=True, strema=stream)
+            requests.append(update_op)
+
         await self.collection.bulk_write(requests)
+
+
 
     async def update_betting_line(self, unique_id: str, return_op: bool = False, **kwargs):
         if return_op:
@@ -97,14 +108,14 @@ class BettingLines(BaseCollection):
 
         await self.collection.update_one({ '_id': unique_id }, { '$set': kwargs })
 
-    async def update_live_stats(self, boxscores: list[dict]) -> None:
+    async def update_live_stats(self, box_scores: list[dict]) -> None:
         requests = []
-        for boxscore in boxscores:
-            subject_filtered_betting_lines = await self.get_betting_lines({ 'subject': boxscore['subject'] })
+        for box_score in box_scores:
+            subject_filtered_betting_lines = await self.get_betting_lines({ 'subject': box_score['subject']['name'] })
             for betting_line in subject_filtered_betting_lines:
                 market = betting_line['market']
-                if stat := boxscore['boxscore'].get(market):
-                    update_op = self.update_betting_line(betting_line['_id'], return_op=True, live_stat=stat)
+                if stat := box_score['box_score'].get(market):
+                    update_op = await self.update_betting_line(betting_line['_id'], return_op=True, live_stat=stat)
                     requests.append(update_op)
 
         await self.collection.bulk_write(requests)

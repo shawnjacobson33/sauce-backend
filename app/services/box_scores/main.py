@@ -17,16 +17,16 @@ async def run_pipeline():
     standardizer = Standardizer(players)
     while True:
         if live_games := await db.games.get_games({}, live=True):  # Poll for live games...TODO: more efficient ways to get live games?
-            await _check_for_finished_games(live_games)
             start_time = time.time()
             print('[BoxScores]: Running boxscores pipeline...')
             print('[BoxScores]: Starting data collectors...')
             collected_boxscores = await run_collectors(live_games, standardizer)
             print('[BoxScores]: Finished data collection...')
             print('[BoxScores]: Storing collected boxscores...')
-            await db.boxscores.store_boxscores(collected_boxscores)
+            await db.box_scores.store_box_scores(collected_boxscores)
             print(f'[BoxScores]: Stored {len(collected_boxscores)} collected boxscores...')
             await db.betting_lines.update_live_stats(collected_boxscores)
+            await _check_for_finished_games(live_games)
             end_time = time.time()
             print(f'[BoxScores]: Pipeline completed in {round(end_time - start_time, 2)} seconds. See you tomorrow...')
             await asyncio.sleep(30)
