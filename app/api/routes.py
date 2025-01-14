@@ -4,14 +4,14 @@ import pandas as pd
 from fastapi import APIRouter
 
 from app.db import db
-from app.services import run_pipeline
+from app.services import run_services
 
 router = APIRouter()
 
 
-@router.get('/start_pipeline')
-async def start_betting_lines_pipeline():
-    asyncio.create_task(run_pipeline())
+@router.get('/start_services')
+async def start_services():
+    asyncio.create_task(run_services())
     return {'message': 'Betting lines pipeline started.'}
 
 

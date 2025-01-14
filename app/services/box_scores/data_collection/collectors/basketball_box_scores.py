@@ -12,20 +12,31 @@ CONFIGS = load_configs('general')
 PAYLOAD = utils.requester.get_payload('CBSSports', domain='boxscores')
 
 
-class BasketballBoxScores:
+class BasketballBoxScoresCollector:
 
     def __init__(self, standardizer: Standardizer):
         self.standardizer = standardizer
 
+        self.name = "BasketballBoxScores"
+        self.num_items_collected = 0
+        self.successful_requests = 0
+        self.failed_requests = 0
+
     async def _request_boxscores(self, collected_boxscores: list, league: str, game: dict):
-        game_id = game['_id']
-        mapped_league = PAYLOAD['league_map'].get(league)
-        url = PAYLOAD['url'].format(mapped_league, game_id)
-        headers = PAYLOAD['headers'][0]
-        headers['referer'] = url
-        cookies = PAYLOAD['cookies']
-        if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
-            self._parse_boxscores(collected_boxscores, resp_html, league, game)
+        try:
+            game_id = game['_id']
+            mapped_league = PAYLOAD['league_map'].get(league)
+            url = PAYLOAD['url'].format(mapped_league, game_id)
+            headers = PAYLOAD['headers'][0]
+            headers['referer'] = url
+            cookies = PAYLOAD['cookies']
+            if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
+                self.successful_requests += 1
+                self._parse_boxscores(collected_boxscores, resp_html, league, game)
+
+        except Exception as e:
+            self.failed_requests += 1
+            print(f'[BoxScores] [Collection] [{self.name}]: ⚠️ {e} ⚠️')
 
     @staticmethod
     def _extract_team(div) -> dict[str, str] | None:
@@ -119,6 +130,7 @@ class BasketballBoxScores:
                                 'subject': subject,
                                 'box_score': BoxScoreDict(box_score)
                             })
+                            self.num_items_collected += 1
 
     @utils.logger.collector_logger('BoxScores', message='Running Collector')
     async def run_collector(self, collected_boxscores: list[dict], games: list[dict]):
@@ -130,3 +142,10 @@ class BasketballBoxScores:
                         tasks.append(self._request_boxscores(collected_boxscores, league, game))
 
         await asyncio.gather(*tasks)
+
+    def get_stats(self) -> dict:
+        return {
+            'successful_requests': self.successful_requests,
+            'failed_requests': self.failed_requests,
+            'box_scores_collected': self.num_items_collected
+        }

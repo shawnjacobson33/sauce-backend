@@ -10,14 +10,14 @@ CONFIGS = load_configs('general')
 PAYLOAD = utils.requester.get_payload('CBSSports', domain='games')
 
 
-class CBSSportsBasketballGamesCollector:
+class BasketballGamesCollector:
 
     def __init__(self):
         pass
 
     async def _request_games(self, collected_games: list, league: str):
         base_url = PAYLOAD['urls'][league]['schedule']
-        headers = PAYLOAD['headers']
+        headers = PAYLOAD['headers'][0]
         headers['referer'] = headers['referer'].format(league, 'schedule')
         cookies = PAYLOAD['cookies']
         today = datetime.strptime(datetime.now().strftime('%Y%m%d'), '%Y%m%d')

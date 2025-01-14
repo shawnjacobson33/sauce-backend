@@ -21,8 +21,9 @@ class BoxScoreDict(dict):
             compound_stat = 0
             markets = key.split(' + ')
             for market in markets:
-                compound_stat += self.get(market)
+                if stat := self.get(market):
+                    compound_stat += stat
 
             return compound_stat
 
-        return super().get(key, {})
+        return super().get(key)

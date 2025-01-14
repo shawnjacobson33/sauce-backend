@@ -1,7 +1,10 @@
+import json
 from collections import defaultdict
+from datetime import datetime
 
-from pymongo import InsertOne, UpdateOne
+import pymongo
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from google.cloud import storage
 
 from app.db.base import BaseCollection
 
@@ -64,7 +67,6 @@ class BettingLines(BaseCollection):
 
         return record
 
-
     async def _update_disappeared_betting_lines(self, seen_betting_lines: list[str], requests: list, batch_timestamp: str):
         disappeared_betting_lines = await self.get_betting_lines(
             {'_id': {'$nin': seen_betting_lines}})
@@ -76,7 +78,7 @@ class BettingLines(BaseCollection):
                     'batch_timestamp': batch_timestamp,
                 })
                 update_op = await self.update_betting_line(disappeared_betting_line['_id'], return_op=True,
-                                                           strema=stream)
+                                                           stream=stream)
                 requests.append(update_op)
 
     async def _update_stream(self, stream: list[dict], new_betting_line: dict, requests: list):
@@ -100,7 +102,7 @@ class BettingLines(BaseCollection):
 
             elif betting_line_seen_tracker[betting_line_dict_id] == 0:  # For first iteration of batches
                 new_betting_line_doc = self._create_doc(betting_line_dict)
-                insert_op = InsertOne(new_betting_line_doc)
+                insert_op = pymongo.InsertOne(new_betting_line_doc)
                 requests.append(insert_op)
 
             betting_line_seen_tracker[betting_line_dict_id] += 1
@@ -113,14 +115,16 @@ class BettingLines(BaseCollection):
 
     async def update_betting_line(self, unique_id: str, return_op: bool = False, **kwargs):
         if return_op:
-            return UpdateOne({ '_id': unique_id }, { '$set': kwargs })
+            return pymongo.UpdateOne({ '_id': unique_id }, { '$set': kwargs })
 
         await self.collection.update_one({ '_id': unique_id }, { '$set': kwargs })
 
     async def update_live_stats(self, box_scores: list[dict]) -> None:
         requests = []
         for box_score in box_scores:
-            subject_filtered_betting_lines = await self.get_betting_lines({ 'subject': box_score['subject']['name'] })
+            subject_filtered_betting_lines = await self.get_betting_lines({
+                'subject': box_score['subject']['name'] , 'game.id': box_score['game']['_id']
+            })
             for betting_line in subject_filtered_betting_lines:
                 market = betting_line['market']
                 if stat := box_score['box_score'].get(market):
@@ -130,24 +134,25 @@ class BettingLines(BaseCollection):
         await self.collection.bulk_write(requests)
 
     @staticmethod
-    def _get_betting_line_result(betting_line: dict) -> bool:
-        if betting_line['label'] == 'Over':
-            return betting_line['live_stat'] > betting_line['line']
+    def _refactor_live_to_final_stat(betting_lines: list[dict]):
+        for betting_line in betting_lines:
+            final_stat = betting_line.pop('live_stat', None)
+            betting_line['final_stat'] = final_stat
 
-        return betting_line['live_stat'] < betting_line['line']
+    @staticmethod
+    def _upload_to_gcs(betting_lines: list[dict]) -> None:
+        betting_lines_json = json.dumps(betting_lines)
+
+        storage_client = storage.Client()
+        bucket = storage_client.bucket("betting-lines")  # Todo: set to env variable
+        blob = bucket.blob(f"{datetime.now().strftime('%Y-%m-%d')}.json")
+        blob.upload_from_string(betting_lines_json)
 
     async def update_betting_line_results(self, game_ids: list[dict]) -> None:
-        # Todo: update with other stats?
-        requests = []
+        # Todo: ANY FINAL STATS TO ADD?
         betting_lines_filtered_by_game = await self.get_betting_lines({ 'game._id': { '$in': game_ids } })
-        for betting_line in betting_lines_filtered_by_game:
-            if 'live_stat' in betting_line:
-                result = self._get_betting_line_result(betting_line)
-                update_op = self.update_betting_line(betting_line['_id'], return_op=True, result=result)
-                requests.append(update_op)
-
-        await self.collection.bulk_write(requests)
-
+        self._refactor_live_to_final_stat(betting_lines_filtered_by_game)
+        self._upload_to_gcs(betting_lines_filtered_by_game)
 
     async def delete_betting_lines(self):
         await self.collection.delete_many({})

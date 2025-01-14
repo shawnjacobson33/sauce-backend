@@ -1,1 +1,1 @@
-from .basketball_box_scores import BasketballBoxScores
+from .basketball_box_scores import BasketballBoxScoresCollector

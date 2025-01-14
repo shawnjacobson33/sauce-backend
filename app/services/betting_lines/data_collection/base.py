@@ -26,7 +26,7 @@ class BaseBettingLinesCollector:
         self.failed_subject_standardization = 0
         self.failed_market_standardization = 0
 
-        self.num_betting_lines_collected = 0
+        self.num_collected = 0
 
     async def _get_game(self, league: str, subject_name: str) -> dict | None:
         try:
@@ -46,7 +46,7 @@ class BaseBettingLinesCollector:
         return {  # Todo: log sizes of data in mem?
             'successful_requests': self.successful_requests,
             'failed_requests': self.failed_requests,
-            'betting_lines_collected': self.num_betting_lines_collected
+            'betting_lines_collected': self.num_collected
         }
 
     def run_collector(self):

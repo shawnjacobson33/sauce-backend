@@ -190,7 +190,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                                                 betting_line_doc_key = utils.storer.get_betting_line_key(betting_line_doc)
                                                 betting_line_doc['_id'] = betting_line_doc_key
                                                 self.collected_betting_lines.append(betting_line_doc)
-                                                self.num_betting_lines_collected += 1
+                                                self.num_collected += 1
     
 
     @utils.logger.collector_logger('BettingLines', message='Running Collector')

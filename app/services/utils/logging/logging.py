@@ -18,12 +18,12 @@ class Logger:
                 print(f'[{pipeline}] [Collection] [{self.name}]: Finished {message}...'
                       f'⏳ {round(end_time - start_time, 2)} seconds ⏳')
                 print(
-                    f'[{pipeline}] [Collection] [{self.name}]: Collected {self.num_betting_lines_collected} betting lines...')
+                    f'[{pipeline}] [Collection] [{self.name}]: Collected {self.num_items_collected}...')
 
                 stats = self.get_stats()
                 db.pipeline_stats.add_collector_stats(self.name, stats)
 
-                self.betting_lines_collected = 0
+                self.num_items_collected = 0
 
             return wrapper
 

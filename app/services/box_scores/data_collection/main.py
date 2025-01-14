@@ -7,7 +7,7 @@ from app.services.box_scores.data_collection import collectors
 async def run_collectors(games: list[dict], standardizer: Standardizer):
     collected_boxscores = []
     coros = [
-        collectors.BasketballBoxScores(standardizer).run_collector(collected_boxscores, games),
+        collectors.BasketballBoxScoresCollector(standardizer).run_collector(collected_boxscores, games),
     ]
     await asyncio.gather(*coros)
     return collected_boxscores

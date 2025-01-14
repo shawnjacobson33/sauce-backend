@@ -159,7 +159,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                             betting_line_key = utils.storer.get_betting_line_key(betting_line_dict)
                                             betting_line_dict['_id'] = betting_line_key
                                             self.collected_betting_lines.append(betting_line_dict)
-                                            self.num_betting_lines_collected += 1
+                                            self.num_collected += 1
 
 
     async def _gather_betting_lines_requests(self, matchups_resp: dict):

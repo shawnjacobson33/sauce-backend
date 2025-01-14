@@ -5,3 +5,5 @@
 old-functionality/.env
 redis.conf
 __pycache__/
+*.pyc
+

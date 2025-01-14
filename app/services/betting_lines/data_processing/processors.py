@@ -113,7 +113,6 @@ class BettingLinesProcessor:
         end_time = time.time()
         self.times['ev_time'] = round(end_time - start_time, 4)
 
-        betting_lines_df_pr.to_csv('data_processing/data-samples/oddsshopper-betting-lines-sample.csv', index=False)
         return betting_lines_df_pr.to_dict(orient='records')
 
 
