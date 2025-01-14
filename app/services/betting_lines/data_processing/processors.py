@@ -1,7 +1,7 @@
 import time
 import pandas as pd  # Todo: consider switch to dask for parallel processing
 
-from app.services.betting_lines.data_processing.logging import processor_logger
+from app.services.utils import utilities as utils
 
 
 class BettingLinesProcessor:
@@ -38,7 +38,6 @@ class BettingLinesProcessor:
         df = self.sharp_betting_lines_df.apply(devig, axis=1).dropna()
         return df
 
-
     def _get_weighted_market_sharp_avgs(self, devigged_betting_lines_df: pd.DataFrame) -> pd.DataFrame:
 
         def weighted_market_avg(devigged_betting_lines_df_grpd):
@@ -59,7 +58,6 @@ class BettingLinesProcessor:
         df = (devigged_betting_lines_df.groupby(['line', 'league', 'subject', 'market', 'label'])
                                          .apply(weighted_market_avg))
         return df
-
 
     def _get_expected_values(self):
 
@@ -97,8 +95,7 @@ class BettingLinesProcessor:
         )
         return df
 
-
-    @processor_logger(message='Processing betting lines')
+    @utils.logger.processor_logger('BettingLines', message='Processing betting lines')
     def run_processor(self) -> list[dict]:
         start_time = time.time()
         devigged_betting_lines_df = self._get_devigged_lines()
@@ -122,7 +119,8 @@ class BettingLinesProcessor:
 
 if __name__ == '__main__':
     betting_lines_data = pd.read_csv('data-samples/oddsshopper-betting-lines-sample.csv').to_dict(orient='records')
-    betting_lines_pr = run_processor(
+    processor = BettingLinesProcessor(betting_lines_data, {'FanDuel': 0.65, 'BetOnline': 0.25, 'DraftKings': 0.1, 'name': 'sully'})
+    betting_lines_pr = processor.run_processor(
         betting_lines_data,
         {'FanDuel': 0.65, 'BetOnline': 0.25, 'DraftKings': 0.1, 'name': 'sully'},
     )

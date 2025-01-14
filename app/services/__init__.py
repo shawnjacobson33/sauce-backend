@@ -1,1 +1,1 @@
-from .betting_lines import run_pipeline
+from .betting_lines import BettingLinesPipeline

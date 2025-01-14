@@ -1,7 +1,9 @@
 from app.services.utils.requesting import Requesting
 from app.services.utils.storing import Storing
 from app.services.utils.cleaning import Cleaning
+from app.services.utils.logging import Logger
 
+logger = Logger()
 
 requester = Requesting()
 

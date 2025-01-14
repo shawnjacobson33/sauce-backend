@@ -12,7 +12,7 @@ CONFIGS = load_configs('general')
 PAYLOAD = utils.requester.get_payload('CBSSports', domain='boxscores')
 
 
-class CBSSportsBasketballBoxscoresCollector:
+class BasketballBoxScores:
 
     def __init__(self, standardizer: Standardizer):
         self.standardizer = standardizer
@@ -120,6 +120,7 @@ class CBSSportsBasketballBoxscoresCollector:
                                 'box_score': BoxScoreDict(box_score)
                             })
 
+    @utils.logger.collector_logger('BoxScores', message='Running Collector')
     async def run_collector(self, collected_boxscores: list[dict], games: list[dict]):
         tasks = []
         for league in CONFIGS['leagues_to_collect_from']:

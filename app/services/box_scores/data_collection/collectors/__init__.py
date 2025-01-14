@@ -1,1 +1,1 @@
-from .cbssports_basketball_boxscores import CBSSportsBasketballBoxscoresCollector
+from .basketball_box_scores import BasketballBoxScores
