@@ -1,2 +1,2 @@
-from .oddsshopper import OddsShopperCollector
-from .boomfantasy import BoomFantasyCollector
+from .oddsshopper_collector import OddsShopperCollector
+from .boomfantasy_collector import BoomFantasyCollector

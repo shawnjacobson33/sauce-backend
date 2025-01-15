@@ -12,9 +12,9 @@ async def run_services():
     subjects = await db.subjects.get_subjects({})
     standardizer = Standardizer(subjects)
     pipelines = [
-        # RostersPipeline().run_pipeline(),
-        GamesPipeline().run_pipeline(),
-        # BoxScoresPipeline(standardizer, reset=True).run_pipeline(),
+        # RostersPipeline(reset=True).run_pipeline(),
+        # GamesPipeline(reset=True).run_pipeline(),
+        BoxScoresPipeline(standardizer, reset=True).run_pipeline(),
         # BettingLinesPipeline(standardizer, reset=True).run_pipeline(),
     ]
 

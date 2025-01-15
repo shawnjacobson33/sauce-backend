@@ -1,1 +1,1 @@
-from .main import BoxScoresPipeline
+from .box_scores_pipeline import BoxScoresPipeline

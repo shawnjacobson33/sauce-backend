@@ -1,16 +1,13 @@
 import asyncio
+from datetime import datetime
 
 from app.services.rosters.data_collection import collectors
 
 
-async def run_collectors():
-    collected_rosters = []
+async def run_collectors(batch_timestamp: datetime):
+    rosters_container = []
     coros = [
-        collectors.run_cbssports_basketball_rosters_collector(collected_rosters),
+        collectors.BasketballRostersCollector(batch_timestamp, rosters_container).run_collector(),
     ]
     await asyncio.gather(*coros)
-    return collected_rosters
-
-
-if __name__ == '__main__':
-    asyncio.run(run_collectors())
+    return rosters_container

@@ -14,7 +14,7 @@ from app.services.betting_lines.data_processing import BettingLinesProcessor
 class BettingLinesPipeline(BasePipeline):
 
     def __init__(self, standardizer: Standardizer, reset: bool = False):
-        super().__init__(reset)
+        super().__init__('BettingLines', reset)
         self.standardizer = standardizer
         # Todo: send the configs down the pipeline
         self.configs = load_configs('betting_lines')
@@ -30,7 +30,7 @@ class BettingLinesPipeline(BasePipeline):
         print(f'[BettingLinesPipeline]: Stored {len(betting_lines)} processed betting lines...')
         self.times['storage_time'] = round(end_time - start_time, 2)
 
-    @utils.logger.pipeline_logger('BettingLines', message='Running Pipeline')
+    @utils.logger.pipeline_logger(message='Running Pipeline')
     async def run_pipeline(self):
         if self.reset:
             await db.database['betting_lines'].delete_many({})

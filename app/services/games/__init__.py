@@ -1,1 +1,1 @@
-from .main import GamesPipeline
+from .games_pipeline import GamesPipeline

@@ -18,7 +18,7 @@ class Games(BaseCollection):
 
     async def get_games(self, query: dict, live: bool = False) -> list[dict]:
         if live:
-            live_query = { **query, 'game_time': { '$lte' : datetime.now() }}
+            live_query = { **query, 'game_time': 'live' }
             return await self.collection.find(live_query).to_list()
 
         return await self.collection.find(query).to_list()
@@ -45,5 +45,8 @@ class Games(BaseCollection):
 
         await self.collection.update_one(query, {'$set': kwargs})
 
-    async def delete_games(self, game_ids: list[str]) -> None:
-        await self.collection.delete_many({ '_id': { '$in': game_ids } })
+    async def delete_games(self, game_ids: list[str] = None) -> None:
+        if game_ids:
+            return await self.collection.delete_many({'_id': {'$in': game_ids}})
+
+        await self.collection.delete_many({})

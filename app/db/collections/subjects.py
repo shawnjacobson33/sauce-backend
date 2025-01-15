@@ -12,16 +12,13 @@ class Subjects(BaseCollection):
     async def get_subjects(self, query: dict) -> list[dict]:
         return await self.collection.find(query).to_list()
 
-    async def get_subject(self, query: dict, proj: dict = None) -> dict:
-        if proj is None:
-            proj = {}
-
-        return await self.collection.find_one(query, proj)
+    async def get_subject(self, query: dict) -> dict:
+        return await self.collection.find_one(query)
 
     async def store_subjects(self, subjects: list[dict]) -> None:
         requests = []
         for subject in subjects:
-            query = { 'team.full_name': subject['team']['full_name'] }
+            query = { 'name': subject['name'], 'jersey_number': subject['jersey_number'] }
             if await self.get_subject(query):
                 update_op = await self.update_subject(query, return_op=True, **subject)
                 requests.append(update_op)

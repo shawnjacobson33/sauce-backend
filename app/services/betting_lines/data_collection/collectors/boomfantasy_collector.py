@@ -81,8 +81,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
             if contest := data.get('multiLineContest'):
                 for section in contest.get('sections', []):
                     yield section
-    
-    
+
     def _extract_league(self, section: dict) -> str | None:
         if raw_league_name := section.get('league'):
             cleaned_league_name = raw_league_name.strip().upper()
@@ -113,7 +112,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                         raw_full_subj_name = ' '.join([raw_first_name, raw_last_name])
                         return raw_full_subj_name
     
-        except ResponseError as e:
+        except Exception as e:
             self.log_error(e)
             self.failed_subject_standardization += 1
 
@@ -189,11 +188,11 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                                                 }
                                                 betting_line_doc_key = utils.storer.get_betting_line_key(betting_line_doc)
                                                 betting_line_doc['_id'] = betting_line_doc_key
-                                                self.collected_betting_lines.append(betting_line_doc)
+                                                self.items_container.append(betting_line_doc)
                                                 self.num_collected += 1
     
 
-    @utils.logger.collector_logger('BettingLines', message='Running Collector')
+    @utils.logger.collector_logger(message='Running Collector')
     async def run_collector(self) -> None:
         if await self._request_new_tokens():
             if contest_id := await self._request_contest_id():

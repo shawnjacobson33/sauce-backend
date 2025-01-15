@@ -1,1 +1,1 @@
-from .main import BettingLinesPipeline
+from .betting_lines_pipeline import BettingLinesPipeline

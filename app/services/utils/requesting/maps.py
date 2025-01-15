@@ -201,29 +201,47 @@ PAYLOAD_MAP = {
             'urls': {
                 'NBA': {
                     'teams': 'https://www.cbssports.com/nba/teams/',
-                    'rosters': 'https://www.cbssports.com/nba/teams/{}/{}/roster/',  # BOS, boston-celtics
                 },
                 'WNBA': {
                     'teams': 'https://www.cbssports.com/wnba/teams/',
-                    'rosters': 'https://www.cbssports.com/wnba/teams/{}/{}/roster/',
                 },
                 'NCAAM': {
                     'teams': 'https://www.cbssports.com/college-basketball/teams/',  # NOT A TYPO
+                },
+                'NFL': {
+                    'teams': 'https://www.cbssports.com/nfl/teams/',
+                },
+                'MLB': {
+                    'teams': 'https://www.cbssports.com/mlb/teams/',
+                },
+                'NHL': {
+                    'teams': 'https://www.cbssports.com/nhl/teams/',
+                }
+            },
+            'headers': CBSSPORTS_HEADERS,
+            'cookies': CBSSPORTS_COOKIES,
+        },
+        'rosters': {
+            'urls': {
+                'NBA': {
+                    'rosters': 'https://www.cbssports.com/nba/teams/{}/{}/roster/',  # BOS, boston-celtics
+                },
+                'WNBA': {
+                    'rosters': 'https://www.cbssports.com/wnba/teams/{}/{}/roster/',
+                },
+                'NCAAM': {
                     'rosters': 'https://www.cbssports.com/college-basketball/teams/{}/{}/roster/',
                 },
                 'NCAAF': {
                     'rosters': 'https://www.cbssports.com/college-football/teams/{}/{}/roster/',
                 },
                 'NFL': {
-                    'teams': 'https://www.cbssports.com/nfl/teams/',
                     'rosters': 'https://www.cbssports.com/nfl/teams/{}/{}/roster/',
                 },
                 'MLB': {
-                    'teams': 'https://www.cbssports.com/mlb/teams/',
                     'rosters': 'https://www.cbssports.com/mlb/teams/{}/{}/roster/',
                 },
                 'NHL': {
-                    'teams': 'https://www.cbssports.com/nhl/teams/',
                     'rosters': 'https://www.cbssports.com/nhl/teams/{}/{}/roster/',
                 }
             },

@@ -12,10 +12,10 @@ class OddsShopperCollector(BaseBettingLinesCollector):
 
     def __init__(self,
                  batch_timestamp: datetime,
-                 collected_betting_lines: list[dict],
+                 betting_lines_container: list[dict],
                  standardizer: Standardizer):
 
-        super().__init__('OddsShopper', batch_timestamp, collected_betting_lines, standardizer)
+        super().__init__('OddsShopper', batch_timestamp, betting_lines_container, standardizer)
 
     async def _request_matchups(self) -> dict | None:
         try:
@@ -30,9 +30,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             self.log_error(e)
             self.failed_requests += 1
 
-        except Exception as e:
-            self.log_error(e)
-
     @staticmethod
     def _get_offers(resp: dict) -> Iterable:
         for offer_category in resp.get('offerCategories', []):
@@ -46,7 +43,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             if cleaned_league_name in self.configs['leagues_to_collect_from']:
                 return cleaned_league_name
 
-
     def _parse_matchups(self, resp: dict) -> tuple[str, str] | None:
         for offer in self._get_offers(resp):
             if (league := self._extract_league(offer)) and (offer_id := offer.get('id')):
@@ -58,12 +54,10 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         return (datetime.now().strftime(date_format)[:-3] + 'Z',
                 (datetime.now() + timedelta(days=8)).strftime(date_format)[:-3] + 'Z')
 
-
     def _get_params(self):
         params = self.payload['params']['betting_lines']
         start_date, end_date = self._get_dates()
         return {**params, 'startDate': start_date, 'endDate': end_date}
-
 
     async def _request_betting_lines(self, league: str, offer_id: str) -> None:
         try:
@@ -78,9 +72,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             self.log_error(e)
             self.failed_requests += 1
 
-        except Exception as e:
-            self.log_error(e)
-
     def _extract_market(self, event: dict, league: str) -> str | None:
         try:
             if raw_market_name := event.get('offerName'):
@@ -91,10 +82,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         except ValueError as e:  # Todo: implement custom error
             self.log_error(e)
             self.failed_market_standardization += 1
-            
-        except Exception as e:
-            self.log_error(e)
-
 
     def _extract_subject(self, event: dict, league: str) -> str | None:
         try:
@@ -108,9 +95,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         except ValueError as e:  # Todo: implement custom error
             self.log_error(e)
             self.failed_subject_standardization += 1
-
-        except Exception as e:
-            self.log_error(e)
 
     @staticmethod
     def _extract_bookmaker(outcome: dict) -> str | None:
@@ -158,7 +142,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                             }
                                             betting_line_key = utils.storer.get_betting_line_key(betting_line_dict)
                                             betting_line_dict['_id'] = betting_line_key
-                                            self.collected_betting_lines.append(betting_line_dict)
+                                            self.items_container.append(betting_line_dict)
                                             self.num_collected += 1
 
 
@@ -171,12 +155,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
 
         await asyncio.gather(*betting_lines_tasks)
 
-    @utils.logger.collector_logger('BettingLines', message='Running Collector')
+    @utils.logger.collector_logger(message='Running Collector')
     async def run_collector(self) -> None:
         if matchups_resp := await self._request_matchups():
             await self._gather_betting_lines_requests(matchups_resp)
-
-
-if __name__ == '__main__':
-    collector = OddsShopperCollector(datetime.now().isoformat(), [], Standardizer())  # Todo: how to get rosters dependency?
-    asyncio.run(collector.run_collector())

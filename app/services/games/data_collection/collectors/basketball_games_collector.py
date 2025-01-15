@@ -2,33 +2,37 @@ import asyncio
 from datetime import datetime, timedelta
 
 from bs4 import BeautifulSoup
+from urllib3.exceptions import ResponseError
 
-from app.services.configs import load_configs
+from app.services.base import BaseCollector
 from app.services.utils import utilities as utils
 
-CONFIGS = load_configs('general')
-PAYLOAD = utils.requester.get_payload('CBSSports', domain='games')
 
+class BasketballGamesCollector(BaseCollector):
 
-class BasketballGamesCollector:
+    def __init__(self, batch_timestamp: datetime, games_container: list):
+        super().__init__('CBSSports', 'Games', batch_timestamp, games_container)
 
-    def __init__(self):
-        pass
+    async def _request_games(self, league: str):
+        try:
+            base_url = self.payload['urls'][league]['schedule']
+            headers = self.payload['headers'][0]
+            headers['referer'] = headers['referer'].format(league, 'schedule')
+            cookies = self.payload['cookies']
+            today = datetime.strptime(datetime.now().strftime('%Y%m%d'), '%Y%m%d')
+            for i in range(self.payload['num_days_to_collect_from_league_map'][league]):
+                date = today + timedelta(days=i)
+                url = base_url.format(date.strftime('%Y%m%d'))
+                if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
+                    self.successful_requests += 1
+                    self._parse_games(resp_html, league, date)
 
-    async def _request_games(self, collected_games: list, league: str):
-        base_url = PAYLOAD['urls'][league]['schedule']
-        headers = PAYLOAD['headers'][0]
-        headers['referer'] = headers['referer'].format(league, 'schedule')
-        cookies = PAYLOAD['cookies']
-        today = datetime.strptime(datetime.now().strftime('%Y%m%d'), '%Y%m%d')
-        for i in range(PAYLOAD['num_days_to_collect_from_league_map'][league]):
-            date = today + timedelta(days=i)
-            url = base_url.format(date.strftime('%Y%m%d'))
-            if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
-                self._parse_games(collected_games, resp_html, league, date)
+        except ResponseError as e:
+            self.failed_requests += 1
+            self.log_error(e)
 
     @staticmethod
-    def _get_complete_date_time(date: datetime, time_str: str) -> datetime | None:
+    def _get_complete_date_time(date: datetime, time_str: str) -> datetime | str:
         if time_str[-1].lower() in ['a', 'p']:
             time_str = time_str.strip() + "m"  # Add 'm' to make it "am" or "pm"
 
@@ -38,7 +42,7 @@ class BasketballGamesCollector:
             return datetime.strptime(formatted_date_str, "%Y-%m-%dT%H:%M:%SZ")
 
         except ValueError:
-            return None
+            return 'live'
 
     @staticmethod
     def _extract_team(span_elem) -> dict[str, str] | None:
@@ -57,7 +61,7 @@ class BasketballGamesCollector:
                    return box_score_url, game_time
 
     # Todo: Implement team name standardization check to make sure we are using uniform team names
-    def _parse_games(self, collected_games: list, html: str, league: str, requested_date: datetime):
+    def _parse_games(self, html: str, league: str, requested_date: datetime):
         soup = BeautifulSoup(html, 'html.parser')
         if divs := soup.find_all('div', {'class': 'TableBaseWrapper'}):
             if table := divs[-1].find('table', {'class': 'TableBase-table'}):
@@ -69,7 +73,7 @@ class BasketballGamesCollector:
                                 if len(span_elems) > 1:
                                     if away_team := self._extract_team(span_elems[0]):
                                         if home_team := self._extract_team(span_elems[1]):
-                                            collected_games.append({
+                                            self.items_container.append({
                                                 '_id': box_score_url,
                                                 'game_time': game_time,
                                                 'league': league,
@@ -77,11 +81,12 @@ class BasketballGamesCollector:
                                                 'home_team': home_team,
                                             })
 
-    # Todo: implement statistics for logging?
-    async def run_collector(self, collected_games: list):
+
+    @utils.logger.collector_logger(message='Running Collector')
+    async def run_collector(self):
         tasks = []
-        for league in CONFIGS['leagues_to_collect_from']:
+        for league in self.configs['leagues_to_collect_from']:
             if utils.get_sport(league) == 'Basketball':
-                tasks.append(self._request_games(collected_games, league))
+                tasks.append(self._request_games(league))
 
         await asyncio.gather(*tasks)

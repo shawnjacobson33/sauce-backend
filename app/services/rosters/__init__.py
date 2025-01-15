@@ -1,1 +1,1 @@
-from .main import RostersPipeline
+from .rosters_pipeline import RostersPipeline

@@ -9,7 +9,7 @@ from app.services.utils import utilities as utils, Standardizer
 class BoxScoresPipeline(BasePipeline):
 
     def __init__(self, standardizer: Standardizer, reset: bool = False):
-        super().__init__(reset)
+        super().__init__('Boxscores', reset)
         self.standardizer = standardizer
 
     @staticmethod
@@ -33,7 +33,7 @@ class BoxScoresPipeline(BasePipeline):
         await db.box_scores.store_box_scores(collected_boxscores)
         print(f'[BoxScores]: Stored {len(collected_boxscores)} collected boxscores...')
 
-    @utils.logger.pipeline_logger('BoxScores', message='Running Pipeline')
+    @utils.logger.pipeline_logger(message='Running Pipeline')
     async def run_pipeline(self):
         if self.reset:
             await db.box_scores.delete_box_scores({})
