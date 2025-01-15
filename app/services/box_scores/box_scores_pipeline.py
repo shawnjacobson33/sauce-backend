@@ -50,6 +50,6 @@ class BoxScoresPipeline(BasePipeline):
                 await db.betting_lines.update_live_stats(collected_boxscores)
                 # await self._check_for_finished_games(live_games)
 
-                sleep_time = 30
-                print(f'[BoxScoresPipeline]: Iteration complete! Sleeping for {sleep_time} seconds...')
+                sleep_time = self.configs['throttle']
+                print(f'[BoxScoresPipeline]: Iteration complete! Throttling for {sleep_time} seconds...')
                 await asyncio.sleep(sleep_time)

@@ -31,8 +31,10 @@ class RostersPipeline(BasePipeline):
             print(f'[Rosters]: Stored {len(collected_rosters)} collected rosters...')
             
             end_time = time.time()
-            print(f'[Rosters]: Pipeline completed in {round(end_time - start_time, 2)} seconds. See you tomorrow...')
-            await asyncio.sleep(60 * 60 * 24)
+
+            sleep_time = self.configs['throttle']
+            print(f'[Rosters]: Pipeline completed in {round(end_time - start_time, 2)} seconds. Sleeping for {sleep_time} seconds...')
+            await asyncio.sleep(sleep_time)
 
 
 if __name__ == '__main__':

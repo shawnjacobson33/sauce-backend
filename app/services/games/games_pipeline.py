@@ -30,5 +30,7 @@ class GamesPipeline(BasePipeline):
             print(f'[Games]: Stored {len(collected_games)} collected games...')
 
             end_time = time.time()
-            print(f'[Games]: Pipeline completed in {round(end_time - start_time, 2)} seconds. See you tomorrow...')
+
+            sleep_time = self.configs['throttle']
+            print(f'[Games]: Pipeline completed in {round(end_time - start_time, 2)} seconds. Sleeping for {sleep_time} seconds...')
             await asyncio.sleep(120)

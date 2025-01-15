@@ -45,6 +45,6 @@ class BettingLinesPipeline(BasePipeline):
             await self._store_betting_lines(betting_lines_container)
             await db.pipeline_stats.update_daily_stats(datetime.today())
 
-            sleep_time = 120
-            print(f'[BettingLinesPipeline]: Iteration complete! Sleeping for {sleep_time} seconds...')
+            sleep_time = self.configs['throttle']
+            print(f'[BettingLinesPipeline]: Iteration complete! Throttling for {sleep_time} seconds...')
             await asyncio.sleep(sleep_time)

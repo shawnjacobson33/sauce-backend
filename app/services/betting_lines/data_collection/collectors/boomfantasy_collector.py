@@ -4,7 +4,7 @@ from typing import Optional, Iterable
 from urllib3.exceptions import ResponseError
 
 from app.services.utils import utilities as utils, Standardizer
-from app.services.betting_lines.data_collection.base import BaseBettingLinesCollector
+from app.services.betting_lines.data_collection.betting_lines_collector_base import BaseBettingLinesCollector
 
 
 class BoomFantasyCollector(BaseBettingLinesCollector):
