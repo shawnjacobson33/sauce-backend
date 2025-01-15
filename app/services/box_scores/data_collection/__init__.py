@@ -1,1 +1,1 @@
-from .main import run_collectors
+from .box_scores_dc_manager import BoxScoresDataCollectionManager

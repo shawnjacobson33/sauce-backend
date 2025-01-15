@@ -11,8 +11,8 @@ from app.services.utils import utilities as utils
 
 class BasketballRostersCollector(BaseCollector):
     
-    def __init__(self, batch_timestamp: datetime, rosters_container: list):
-        super().__init__('CBSSports', 'Rosters', batch_timestamp, rosters_container)
+    def __init__(self, batch_timestamp: datetime, rosters_container: list, configs: dict):
+        super().__init__('CBSSports', 'rosters', batch_timestamp, rosters_container, configs)
         
     async def _request_rosters(self, league: str, team: dict) -> None:
         try:
@@ -58,7 +58,7 @@ class BasketballRostersCollector(BaseCollector):
     @utils.logger.collector_logger(message='Running Collector')
     async def run_collector(self):
         tasks = []
-        for league in self.configs['leagues_to_collect_from']:
+        for league in self.configs['valid_leagues']:
             if utils.get_sport(league) == 'Basketball':
                 teams = await db.teams.get_teams({ 'league': league if 'NCAA' not in league else 'NCAA' })  # Todo: fine for now...optimize in the future
                 for team in teams:

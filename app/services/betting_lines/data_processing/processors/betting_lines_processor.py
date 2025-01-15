@@ -6,16 +6,17 @@ from app.services.utils import utilities as utils
 
 class BettingLinesProcessor:
 
-    def __init__(self, betting_lines_df: list[dict], ev_formula: dict[str, float]):
-        self.betting_lines_df = pd.DataFrame(betting_lines_df)
+    def __init__(self, betting_lines_container: list[dict], configs: dict):
+        self.configs = configs
+
+        self.times = {}
+        self.ev_formula = self.configs['ev_formula']
+
+        self.betting_lines_df = pd.DataFrame(betting_lines_container)
         self.betting_lines_df['impl_prb'] = (1 / self.betting_lines_df['odds']).round(3)
 
-        self.sharp_betting_lines_df = self.betting_lines_df[self.betting_lines_df['bookmaker'].isin(ev_formula.keys())]
+        self.sharp_betting_lines_df = self.betting_lines_df[self.betting_lines_df['bookmaker'].isin(self.ev_formula.keys())]
         self.sharp_betting_lines_df['impl_prb'] = (1 / self.sharp_betting_lines_df['odds']).round(3)
-
-        self.ev_formula = ev_formula
-
-        self.times = dict()
 
     def _get_devigged_lines(self) -> pd.DataFrame:
 
@@ -117,7 +118,7 @@ class BettingLinesProcessor:
 
 
 if __name__ == '__main__':
-    betting_lines_data = pd.read_csv('data-samples/oddsshopper-betting-lines-sample.csv').to_dict(orient='records')
+    betting_lines_data = pd.read_csv('../data-samples/oddsshopper-betting-lines-sample.csv').to_dict(orient='records')
     processor = BettingLinesProcessor(betting_lines_data, {'FanDuel': 0.65, 'BetOnline': 0.25, 'DraftKings': 0.1, 'name': 'sully'})
     betting_lines_pr = processor.run_processor(
         betting_lines_data,

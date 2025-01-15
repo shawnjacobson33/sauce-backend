@@ -1,24 +1,20 @@
 import asyncio
 import time
 from datetime import datetime
-import random
 
 from app.db import db
 from app.services.base import BasePipeline
-from app.services.configs import load_configs
 from app.services.utils import utilities as utils, Standardizer
-from app.services.betting_lines.data_collection import run_collectors
-from app.services.betting_lines.data_processing import BettingLinesProcessor
+from app.services.betting_lines.data_collection import BettingLinesDataCollectionManager
+from app.services.betting_lines.data_processing import BettingLinesDataProcessingManager
 
 
 class BettingLinesPipeline(BasePipeline):
 
-    def __init__(self, standardizer: Standardizer, reset: bool = False):
-        super().__init__('BettingLines', reset)
+    def __init__(self, configs: dict, standardizer: Standardizer):
+        super().__init__('BettingLines', configs)
+        self.configs = configs
         self.standardizer = standardizer
-        # Todo: send the configs down the pipeline
-        self.configs = load_configs('betting_lines')
-        self.secondary_markets_ev_formula = self.configs['ev_formulas']['secondary_markets']
 
         self.times = {}
 
@@ -32,29 +28,24 @@ class BettingLinesPipeline(BasePipeline):
 
     @utils.logger.pipeline_logger(message='Running Pipeline')
     async def run_pipeline(self):
-        if self.reset:
+        if self.configs['reset']:
             await db.database['betting_lines'].delete_many({})
             await db.database['pipeline_stats'].delete_many({})
 
-        secondary_markets_ev_formula = await db.metadata.get_ev_formula(
-            'secondary_markets', self.secondary_markets_ev_formula
-        )
+
         while True:
             batch_timestamp = datetime.now()
             db.pipeline_stats.update_batch_details(batch_timestamp)
-            collected_betting_lines = await run_collectors(batch_timestamp, self.standardizer)  # Todo: need to collect game markets also
 
-            betting_lines_processor = BettingLinesProcessor(collected_betting_lines, secondary_markets_ev_formula)
-            betting_lines_pr = betting_lines_processor.run_processor() # Todo: should be multi-processed
+            betting_lines_dc_manager = BettingLinesDataCollectionManager(self.configs['data_collection'], self.standardizer)
+            betting_lines_container = await betting_lines_dc_manager.run_collectors(batch_timestamp)  # Todo: need to collect game markets also
 
-            await self._store_betting_lines(betting_lines_pr)
+            betting_lines_prc_manager = BettingLinesDataProcessingManager(self.configs['data_processing'], betting_lines_container)
+            betting_lines_container = await betting_lines_prc_manager.run_processors()
+
+            await self._store_betting_lines(betting_lines_container)
             await db.pipeline_stats.update_daily_stats(datetime.today())
 
-            sleep_time = random.choice([60, 90, 120])
+            sleep_time = 120
             print(f'[BettingLinesPipeline]: Iteration complete! Sleeping for {sleep_time} seconds...')
             await asyncio.sleep(sleep_time)
-
-
-if __name__ == '__main__':
-    pipeline = BettingLinesPipeline(reset=True)
-    asyncio.run(pipeline.run_pipeline())

@@ -44,7 +44,7 @@ async def run_cbssports_team_names_collector() -> None:
     from app.db import db
     collected_teams = []
     tasks = []
-    for league in CONFIGS['leagues_to_collect_from']:
+    for league in CONFIGS['valid_leagues']:
         tasks.append(_request_teams(collected_teams, league))
 
     await asyncio.gather(*tasks)

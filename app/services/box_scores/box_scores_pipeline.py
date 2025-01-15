@@ -1,15 +1,16 @@
 import asyncio
+from datetime import datetime
 
 from app.db import db
 from app.services.base import BasePipeline
-from app.services.box_scores.data_collection import run_collectors
+from app.services.box_scores.data_collection import BoxScoresDataCollectionManager
 from app.services.utils import utilities as utils, Standardizer
 
 
 class BoxScoresPipeline(BasePipeline):
 
-    def __init__(self, standardizer: Standardizer, reset: bool = False):
-        super().__init__('Boxscores', reset)
+    def __init__(self, configs: dict, standardizer: Standardizer):
+        super().__init__('Boxscores', configs)
         self.standardizer = standardizer
 
     @staticmethod
@@ -35,16 +36,19 @@ class BoxScoresPipeline(BasePipeline):
 
     @utils.logger.pipeline_logger(message='Running Pipeline')
     async def run_pipeline(self):
-        if self.reset:
+        if self.configs['reset']:
             await db.box_scores.delete_box_scores({})
 
         while True:
             if live_games := await db.games.get_games({}, live=True):  # Poll for live games...TODO: more efficient ways to get live games?
-                collected_boxscores = await run_collectors(live_games, self.standardizer)
+                batch_timestamp = datetime.now()
+
+                box_scores_dc_manager = BoxScoresDataCollectionManager(self.configs['data_collection'], self.standardizer)
+                collected_boxscores = await box_scores_dc_manager.run_collectors(batch_timestamp, live_games)
 
                 await self._store_box_scores(collected_boxscores)
                 await db.betting_lines.update_live_stats(collected_boxscores)
-                await self._check_for_finished_games(live_games)
+                # await self._check_for_finished_games(live_games)
 
                 sleep_time = 30
                 print(f'[BoxScoresPipeline]: Iteration complete! Sleeping for {sleep_time} seconds...')

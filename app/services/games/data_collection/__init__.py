@@ -1,1 +1,1 @@
-from .main import run_collectors
+from .games_dc_manager import GamesDataCollectionManager

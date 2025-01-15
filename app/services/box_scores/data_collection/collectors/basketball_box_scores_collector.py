@@ -12,9 +12,16 @@ from app.services.box_scores.base import BoxScoreDict
 
 class BasketballBoxScoresCollector(BaseCollector):
 
-    def __init__(self, standardizer: Standardizer, batch_timestamp: datetime, boxscores_container: list):
-        super().__init__("CBSSports", 'Boxscores', batch_timestamp, boxscores_container)
+    def __init__(self,
+                 batch_timestamp: datetime,
+                 standardizer: Standardizer,
+                 boxscores_container: list,
+                 games: list[dict],
+                 configs: dict):
+
+        super().__init__("CBSSports", 'box_scores', batch_timestamp, boxscores_container, configs)
         self.standardizer = standardizer
+        self.games = games
 
     async def _request_boxscores(self, league: str, game: dict):
         try:
@@ -127,11 +134,11 @@ class BasketballBoxScoresCollector(BaseCollector):
                             self.num_collected += 1
 
     @utils.logger.collector_logger(message='Running Collector')
-    async def run_collector(self, games: list[dict]):
+    async def run_collector(self):
         tasks = []
-        for league in self.configs['leagues_to_collect_from']:
+        for league in self.configs['valid_leagues']:
             if utils.get_sport(league) == 'Basketball':
-                for game in games:
+                for game in self.games:
                     if game['league'] == league:
                         tasks.append(self._request_boxscores(league, game))
 

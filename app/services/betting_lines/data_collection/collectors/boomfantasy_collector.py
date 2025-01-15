@@ -11,10 +11,11 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
     
     def __init__(self,
                  batch_timestamp: datetime,
-                 collected_betting_lines: list[dict],
-                 standardizer: Standardizer):
+                 betting_lines_container: list[dict],
+                 standardizer: Standardizer,
+                 configs: dict):
 
-        super().__init__('BoomFantasy', batch_timestamp, collected_betting_lines, standardizer)
+        super().__init__('BoomFantasy', batch_timestamp, betting_lines_container, standardizer, configs)
     
     def _get_tokens(self, token_type: str = None) -> str | dict | None:
         credentials = self.payload['json_data']['tokens']['authentication']['credentials']
@@ -85,7 +86,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
     def _extract_league(self, section: dict) -> str | None:
         if raw_league_name := section.get('league'):
             cleaned_league_name = raw_league_name.strip().upper()
-            if cleaned_league_name in self.configs['leagues_to_collect_from']:
+            if cleaned_league_name in self.configs['valid_leagues']:
                 return cleaned_league_name
     
     @staticmethod
@@ -103,14 +104,21 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         if player_image := qg.get('playerImage'):
             if team_name := player_image.get('abbreviation'):
                 return team_name
-    
-    def _extract_subject(self, qg: dict) -> str | None:
+
+    @staticmethod
+    def _get_raw_subject_name(qg: dict):
+        if title := qg.get('title'):
+            if options := title.get('o'):
+                if (raw_first_name := options.get('firstName')) and (raw_last_name := options.get('lastName')):
+                    return ' '.join([raw_first_name, raw_last_name])
+
+    def _extract_subject(self, qg: dict, league: str) -> str | None:
         try:
-            if title := qg.get('title'):
-                if options := title.get('o'):
-                    if (raw_first_name := options.get('firstName')) and (raw_last_name := options.get('lastName')):
-                        raw_full_subj_name = ' '.join([raw_first_name, raw_last_name])
-                        return raw_full_subj_name
+            if raw_subject_name := self._get_raw_subject_name(qg):
+                cleaned_subject_name = utils.cleaner.clean_subject_name(raw_subject_name)
+                subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
+                std_subject_name = self.standardizer.standardize_subject_name(subject_key)
+                return std_subject_name
     
         except Exception as e:
             self.log_error(e)
@@ -121,8 +129,8 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
             std_period_name = self.standardizer.standardize_period_name(period)
             return std_period_name
 
-    def _get_q_data(self, qg: dict) -> Iterable:
-        yield self._extract_subject(qg)
+    def _get_q_data(self, qg: dict, league: str) -> Iterable:
+        yield self._extract_subject(qg, league)
         for q in qg.get('q', []):
             yield q
 
@@ -160,7 +168,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         for section in self._get_sections(resp):
             if league := self._extract_league(section):
                 for qg in self._get_qg_data(section):
-                   q_data_iter = iter(self._get_q_data(qg))
+                   q_data_iter = iter(self._get_q_data(qg, league))
                    if subject := next(q_data_iter):
                        if game := await self._get_game(league, subject):
                            for q in q_data_iter:

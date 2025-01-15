@@ -2,7 +2,6 @@ from datetime import datetime
 
 from app.db import db
 from app.services.base import BaseCollector
-from app.services.configs import load_configs
 from app.services.utils import Standardizer
 
 
@@ -12,9 +11,10 @@ class BaseBettingLinesCollector(BaseCollector):
                  name: str,
                  batch_timestamp: datetime,
                  betting_lines_container: list[dict],
-                 standardizer: Standardizer):
+                 standardizer: Standardizer,
+                 configs: dict):
 
-        super().__init__(name, 'BettingLines', batch_timestamp, betting_lines_container)
+        super().__init__(name, 'betting_lines', batch_timestamp, betting_lines_container, configs)
         self.standardizer = standardizer
 
         self.failed_subject_standardization = 0
@@ -22,7 +22,7 @@ class BaseBettingLinesCollector(BaseCollector):
 
     async def _get_game(self, league: str, subject_name: str) -> dict | None:
         try:
-            if subject := await db.subjects.get_subject({'league': league, 'name': subject_name}, proj={'team': 1}):
+            if subject := await db.subjects.get_subject({'league': league, 'name': subject_name}):
                 game = await db.games.get_game({
                     '$or': [
                         {'home_team': subject['team']['abbr_name']},

@@ -10,8 +10,8 @@ from app.services.utils import utilities as utils
 
 class BasketballGamesCollector(BaseCollector):
 
-    def __init__(self, batch_timestamp: datetime, games_container: list):
-        super().__init__('CBSSports', 'Games', batch_timestamp, games_container)
+    def __init__(self, batch_timestamp: datetime, games_container: list, configs: dict):
+        super().__init__('CBSSports', 'games', batch_timestamp, games_container, configs)
 
     async def _request_games(self, league: str):
         try:
@@ -85,7 +85,7 @@ class BasketballGamesCollector(BaseCollector):
     @utils.logger.collector_logger(message='Running Collector')
     async def run_collector(self):
         tasks = []
-        for league in self.configs['leagues_to_collect_from']:
+        for league in self.configs['valid_leagues']:
             if utils.get_sport(league) == 'Basketball':
                 tasks.append(self._request_games(league))
 

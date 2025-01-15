@@ -7,6 +7,7 @@ class Standardizer:
     def __init__(self, subjects: list[dict] = None):
         self.subjects = subjects
 
+        self.subject_name_strd_map = {}
         if subjects:
             maps.load_in_subject_strd_identity_map(subjects)
             self.subject_name_strd_map = maps.SUBJECT_NAME_STRD_MAP

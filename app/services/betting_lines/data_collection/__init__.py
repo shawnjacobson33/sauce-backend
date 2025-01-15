@@ -1,1 +1,1 @@
-from .main import run_collectors
+from .betting_lines_dc_manager import BettingLinesDataCollectionManager

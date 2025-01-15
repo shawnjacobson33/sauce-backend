@@ -13,9 +13,10 @@ class OddsShopperCollector(BaseBettingLinesCollector):
     def __init__(self,
                  batch_timestamp: datetime,
                  betting_lines_container: list[dict],
-                 standardizer: Standardizer):
+                 standardizer: Standardizer,
+                 configs: dict):
 
-        super().__init__('OddsShopper', batch_timestamp, betting_lines_container, standardizer)
+        super().__init__('OddsShopper', batch_timestamp, betting_lines_container, standardizer, configs)
 
     async def _request_matchups(self) -> dict | None:
         try:
@@ -40,7 +41,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
     def _extract_league(self, offer: dict) -> str | None:
         if raw_league_name := offer.get('leagueCode'):
             cleaned_league_name = raw_league_name.strip().upper()
-            if cleaned_league_name in self.configs['leagues_to_collect_from']:
+            if cleaned_league_name in self.configs['valid_leagues']:
                 return cleaned_league_name
 
     def _parse_matchups(self, resp: dict) -> tuple[str, str] | None:

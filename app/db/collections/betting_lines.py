@@ -123,7 +123,7 @@ class BettingLines(BaseCollection):
         requests = []
         for box_score in box_scores:
             subject_filtered_betting_lines = await self.get_betting_lines({
-                'subject': box_score['subject']['name'] , 'game.id': box_score['game']['_id']
+                'subject': box_score['subject']['name'] , 'game._id': box_score['game']['_id']
             })
             for betting_line in subject_filtered_betting_lines:
                 market = betting_line['market']
