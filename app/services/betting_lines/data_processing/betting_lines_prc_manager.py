@@ -11,8 +11,9 @@ class BettingLinesDataProcessingManager:
         self.betting_lines_container = betting_lines_container
 
     async def _get_ev_formula(self):
-        self.configs['ev_formulas']['secondary_markets']['formula'] = await db.metadata.get_ev_formula(
-            'secondary_markets', self.configs['ev_formula']['secondary_markets']['name']
+        ev_formulas_secondary_markets = self.configs['ev_formulas']['secondary_markets']
+        ev_formulas_secondary_markets['formula'] = await db.metadata.get_ev_formula(
+            'secondary_markets', ev_formulas_secondary_markets['name']
         )
 
     async def run_processors(self):  # Todo: Needs to be multi-processsed

@@ -142,7 +142,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 std_market_name = self.standardizer.standardize_market_name(raw_market_name, sport, period=period)
                 return std_market_name
     
-        except Exception as e:
+        except ValueError as e:
             self.log_error(e)
             self.failed_market_standardization += 1
 

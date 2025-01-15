@@ -9,19 +9,19 @@ from app.services.betting_lines import BettingLinesPipeline
 from app.services.utils import Standardizer
 
 
-def _get_standardizer():
-    subjects = db.subjects.get_subjects({})
-    return Standardizer(subjects)
+async def _get_standardizer(configs: dict) -> Standardizer:
+    subjects = await db.subjects.get_subjects({})
+    return Standardizer(configs, subjects)
 
 
 async def run_services():
     configs = load_configs()
-    standardizer = _get_standardizer()
+    standardizer = await _get_standardizer(configs['standardization'])
 
     pipelines = [
-        RostersPipeline(configs['rosters']).run_pipeline(),
-        GamesPipeline(configs['games']).run_pipeline(),
-        BoxScoresPipeline(configs['box_scores'], standardizer).run_pipeline(),
+        # RostersPipeline(configs['rosters']).run_pipeline(),
+        # GamesPipeline(configs['games']).run_pipeline(),
+        # BoxScoresPipeline(configs['box_scores'], standardizer).run_pipeline(),
         BettingLinesPipeline(configs['betting_lines'], standardizer).run_pipeline(),
     ]
 

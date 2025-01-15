@@ -4,7 +4,8 @@ from app.services.utils.standardization import maps
 
 class Standardizer:
 
-    def __init__(self, subjects: list[dict] = None):
+    def __init__(self, configs: dict, subjects: list[dict] = None):
+        self.configs = configs
         self.subjects = subjects
 
         self.subject_name_strd_map = {}
@@ -26,18 +27,19 @@ class Standardizer:
 
         raise ValueError(f"Period '{period}' not found in period map")
 
-    @staticmethod
-    def standardize_market_name(market_name: str, sport: str, period: str = None) -> str:
+    def standardize_market_name(self, market_name: str, sport: str, period: str = None) -> str:
         if period:
             market_name = f'{period} {market_name}'
 
         if market_map_sport_filtered := maps.MARKET_NAME_STRD_MAP.get(sport):
-            if strd_market_name := market_map_sport_filtered.get(market_name):
-                return strd_market_name
+            strd_market_name = market_map_sport_filtered.get(market_name)
+            if strd_market_name not in self.configs['invalid_markets']:
+                if strd_market_name:
+                    return strd_market_name
 
-            raise ValueError(f"Market '{market_name}' not found in '{sport}' market map")
-
-        raise ValueError(f"Sport '{sport}' not found in market map")
+                raise ValueError(f"Market '{market_name}' not found in '{sport}' market map")
+        else:
+            raise ValueError(f"Sport '{sport}' not found in market map")
 
     def standardize_subject_name(self, subject_key: str) -> str:
         if strd_subject_name := self.subject_name_strd_map.get(subject_key):  # Todo: Store more info about each subject?

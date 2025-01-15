@@ -12,7 +12,7 @@ router = APIRouter()
 @router.get('/start_services')
 async def start_services():
     asyncio.create_task(run_services())
-    return {'message': 'Betting lines pipeline started.'}
+    return {'message': 'Pipelines have started.'}
 
 
 def _to_dict(**kwargs):

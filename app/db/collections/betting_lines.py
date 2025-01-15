@@ -83,8 +83,9 @@ class BettingLines(BaseCollection):
 
     async def _update_stream(self, stream: list[dict], new_betting_line: dict, requests: list):
         most_recent_record = stream[-1]
-        if (not (new_betting_line['line'] == most_recent_record['line']) or
-                not (new_betting_line['odds'] == most_recent_record['odds'])):
+        if (not (new_betting_line['line'] == most_recent_record.get('line')) or
+                not (new_betting_line['odds'] == most_recent_record.get('odds'))):
+
             new_record = self._create_record(new_betting_line)
             stream.append(new_record)
             update_op = await self.update_betting_line(new_betting_line['_id'], return_op=True,

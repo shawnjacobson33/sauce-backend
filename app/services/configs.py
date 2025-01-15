@@ -1,10 +1,12 @@
 # Description: Configurations for the data collection service.
 _CONFIGS = {
+    'standardization': {
+        'invalid_markets': {'First Basket', 'Top Point Scorer'}
+    },
     'betting_lines': {
         'reset': False,
         'data_collection': {
             'valid_leagues': {'NBA', 'NCAAM'},
-            'invalid_markets': {'First Basket', 'Top Point Scorer'}
         },
         'data_processing': {
             'ev_formulas': {

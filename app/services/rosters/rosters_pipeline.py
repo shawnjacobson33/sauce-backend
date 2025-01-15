@@ -10,8 +10,9 @@ from app.services.utils import utilities as utils
 
 class RostersPipeline(BasePipeline):
 
-    def __init__(self, configs: dict, reset: bool = False):
-        super().__init__('Rosters', configs, reset)
+    def __init__(self, configs: dict):
+        super().__init__('Rosters', configs)
+
         self.times = {}
 
     @utils.logger.pipeline_logger(message='Running Pipeline')

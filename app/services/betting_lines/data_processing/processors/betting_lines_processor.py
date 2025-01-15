@@ -10,7 +10,7 @@ class BettingLinesProcessor:
         self.configs = configs
 
         self.times = {}
-        self.ev_formula = self.configs['ev_formula']
+        self.ev_formula = self.configs['ev_formulas']['secondary_markets']['formula']
 
         self.betting_lines_df = pd.DataFrame(betting_lines_container)
         self.betting_lines_df['impl_prb'] = (1 / self.betting_lines_df['odds']).round(3)

@@ -25,8 +25,8 @@ class BaseBettingLinesCollector(BaseCollector):
             if subject := await db.subjects.get_subject({'league': league, 'name': subject_name}):
                 game = await db.games.get_game({
                     '$or': [
-                        {'home_team': subject['team']['abbr_name']},
-                        {'away_team': subject['team']['abbr_name']}
+                        {'league': subject['league'], 'home_team': subject['team']['abbr_name']},
+                        {'league': subject['league'], 'away_team': subject['team']['abbr_name']}
                     ]
                 })
                 return game

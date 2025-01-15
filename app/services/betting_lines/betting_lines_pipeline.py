@@ -32,7 +32,6 @@ class BettingLinesPipeline(BasePipeline):
             await db.database['betting_lines'].delete_many({})
             await db.database['pipeline_stats'].delete_many({})
 
-
         while True:
             batch_timestamp = datetime.now()
             db.pipeline_stats.update_batch_details(batch_timestamp)
