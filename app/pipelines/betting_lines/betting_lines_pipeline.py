@@ -28,7 +28,7 @@ class BettingLinesPipeline(BasePipeline):
 
     @utils.logger.pipeline_logger(message='Running Pipeline')
     async def run_pipeline(self):
-        await asyncio.sleep(20)  # For first iteration where RostersPipeline and GamesPipeline need to run first
+        # await asyncio.sleep(20)  # For first iteration where RostersPipeline and GamesPipeline need to run first
         if self.configs['reset']:
             await db.database['betting_lines'].delete_many({})
             await db.database['pipeline_stats'].delete_many({})

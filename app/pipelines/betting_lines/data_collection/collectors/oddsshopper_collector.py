@@ -31,10 +31,10 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             self.log_error(e)
             self.failed_requests += 1
 
-    @staticmethod
-    def _get_offers(resp: dict) -> Iterable:
-        for offer_category in resp.get('offerCategories', []):
-            if offer_category.get('name') == 'PlayerProps':
+    def _get_offers(self, resp: dict) -> Iterable:
+        offer_categories = resp.get('offerCategories', [])
+        for offer_category in offer_categories:
+            if offer_category.get('name') in self.configs['valid_market_domains']:
                 for offer in offer_category.get('offers', []):
                     yield offer
 
@@ -76,6 +76,8 @@ class OddsShopperCollector(BaseBettingLinesCollector):
     def _extract_market(self, event: dict, league: str) -> str | None:
         try:
             if raw_market_name := event.get('offerName'):
+                if raw_market_name == 'Moneyline':
+                    asd = 123
                 sport = utils.get_sport(league)
                 std_market_name = self.standardizer.standardize_market_name(raw_market_name, sport)
                 return std_market_name
@@ -129,9 +131,9 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                         if odds := self._extract_odds(outcome):
                                             curr_datetime = datetime.now()
                                             betting_line_dict = {  # Todo: better way to gradually build this dict?
-                                                'batch_timestamp': self.batch_timestamp,
-                                                'collection_timestamp': curr_datetime,  # Todo: are you sure this is the format to use?
-                                                'date': datetime.strptime(curr_datetime.strftime('%Y-%m-%d'), '%Y-%m-%d'),
+                                                'batch_timestamp': self.batch_timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                                                'collection_timestamp': curr_datetime.strftime('%Y-%m-%d %H:%M:%S'),  # Todo: are you sure this is the format to use?
+                                                'date': curr_datetime.strftime('%Y-%m-%d'),
                                                 'bookmaker': bookmaker_name,
                                                 'league': league,
                                                 'game': game,

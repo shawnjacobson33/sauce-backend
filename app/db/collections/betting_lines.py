@@ -143,9 +143,13 @@ class BettingLines(BaseCollection):
             betting_line['final_stat'] = final_stat
 
     @staticmethod
-    def _upload_to_gcs(betting_lines: list[dict]) -> None:
+    def _prepare_betting_lines_for_upload(betting_lines: list[dict]) -> str:
+        BettingLines._refactor_live_to_final_stat(betting_lines)
         betting_lines_json = json.dumps(betting_lines)
+        return betting_lines_json
 
+    @staticmethod
+    def _upload_to_gcs(betting_lines_json: str) -> None:
         storage_client = storage.Client()
         bucket = storage_client.bucket("betting-lines")  # Todo: set to env variable
         blob = bucket.blob(f"{datetime.now().strftime('%Y-%m-%d')}.json")
@@ -154,8 +158,8 @@ class BettingLines(BaseCollection):
     async def update_betting_line_results(self, game_ids: list[dict]) -> None:
         # Todo: ANY FINAL STATS TO ADD?
         betting_lines_filtered_by_game = await self.get_betting_lines({ 'game._id': { '$in': game_ids } })
-        self._refactor_live_to_final_stat(betting_lines_filtered_by_game)
-        self._upload_to_gcs(betting_lines_filtered_by_game)
+        betting_lines_json = self._prepare_betting_lines_for_upload(betting_lines_filtered_by_game)
+        self._upload_to_gcs(betting_lines_json)
 
     async def delete_betting_lines(self):
         await self.collection.delete_many({})

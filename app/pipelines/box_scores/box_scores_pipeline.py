@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.db import db
 from app.pipelines.base import BasePipeline
@@ -36,7 +36,7 @@ class BoxScoresPipeline(BasePipeline):
 
     @utils.logger.pipeline_logger(message='Running Pipeline')
     async def run_pipeline(self):
-        await asyncio.sleep(20)  # For first iteration where RostersPipeline and GamesPipeline need to run first
+        # await asyncio.sleep(20)  # For first iteration where RostersPipeline and GamesPipeline need to run first
         if self.configs['reset']:
             await db.box_scores.delete_box_scores({})
 
@@ -49,7 +49,7 @@ class BoxScoresPipeline(BasePipeline):
 
                 await self._store_box_scores(collected_boxscores)
                 await db.betting_lines.update_live_stats(collected_boxscores)
-                # await self._check_for_finished_games(live_games)
+                await self._check_for_finished_games(live_games)
 
                 sleep_time = self.configs['throttle']
                 print(f'[BoxScoresPipeline]: Iteration complete! Throttling for {sleep_time} seconds...')

@@ -182,9 +182,9 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                                             if label and odds:
                                                 curr_datetime = datetime.now()
                                                 betting_line_doc = {
-                                                    'batch_timestamp': self.batch_timestamp,
-                                                    'collection_timestamp': curr_datetime,
-                                                    'date': datetime.strptime(curr_datetime.strftime('%Y-%m-%d'), '%Y-%m-%d'),
+                                                    'batch_timestamp': self.batch_timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                                                    'collection_timestamp': curr_datetime.strftime('%Y-%m-%d %H:%M:%S'),  # Todo: are you sure this is the format to use?
+                                                    'date': curr_datetime.strftime('%Y-%m-%d'),
                                                     'bookmaker': self.name,
                                                     'league': league,
                                                     'game': game,

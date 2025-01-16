@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pymongo import UpdateOne, InsertOne
+from pymongo import UpdateOne, InsertOne, UpdateMany
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.db.base import BaseCollection
@@ -14,7 +14,8 @@ class Games(BaseCollection):
 
     @staticmethod
     def is_game_finished(game: dict) -> bool:
-        return game['game_time'].hour - datetime.now().hour >= 4
+        if start_time := game['start_time']: # Todo: TEMPORARY FIX
+            return datetime.now().hour - start_time.hour >= 4
 
     async def get_games(self, query: dict, live: bool = False) -> list[dict]:
         if live:

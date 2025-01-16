@@ -29,6 +29,7 @@ class BaseBettingLinesCollector(BaseCollector):
                         {'league': subject['league'], 'away_team': subject['team']['abbr_name']}
                     ]
                 })
+                game['game_time'] = game['game_time'].strftime('"%Y-%m-%dT%H:%M:%SZ"')
                 return game
 
         except Exception as e:

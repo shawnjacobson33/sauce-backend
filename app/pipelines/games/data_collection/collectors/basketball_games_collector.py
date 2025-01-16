@@ -73,13 +73,19 @@ class BasketballGamesCollector(BaseCollector):
                                 if len(span_elems) > 1:
                                     if away_team := self._extract_team(span_elems[0]):
                                         if home_team := self._extract_team(span_elems[1]):
-                                            self.items_container.append({
+                                            game_dict = {
                                                 '_id': box_score_url,
-                                                'game_time': game_time,
                                                 'league': league,
                                                 'away_team': away_team,
                                                 'home_team': home_team,
-                                            })
+                                            }
+                                            if game_time == 'live': # Todo: Only a problem if you collect a game for the first time when its live
+                                                game_dict['status'] = 'live'
+
+                                            else:
+                                                game_dict['game_time'] = game_time
+
+                                            self.items_container.append(game_dict)
 
 
     @utils.logger.collector_logger(message='Running Collector')
