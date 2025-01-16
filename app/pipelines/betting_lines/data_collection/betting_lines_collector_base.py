@@ -20,16 +20,27 @@ class BaseBettingLinesCollector(BaseCollector):
         self.failed_subject_standardization = 0
         self.failed_market_standardization = 0
 
-    async def _get_game(self, league: str, subject_name: str) -> dict | None:
+    @staticmethod
+    async def _get_subject(market_domain: str, league: str, subject_name: str) -> dict | None:
+        if market_domain == 'PlayerProps':
+            return await db.subjects.get_subject({'league': league, 'name': subject_name})
+        elif market_domain == 'Gamelines':
+            return await db.teams.get_team({'league': league, 'full_name': subject_name})
+
+    @staticmethod
+    def _get_team_name(market_domain: str, subject: dict) -> str:
+        return subject['team']['abbr_name'] if market_domain == 'PlayerProps' else subject['abbr_name']
+
+    async def _get_game(self, market_domain: str, league: str, subject_name: str) -> dict | None:
         try:
-            if subject := await db.subjects.get_subject({'league': league, 'name': subject_name}):
+            if subject := await self._get_subject(market_domain, league, subject_name):
+                team_name = self._get_team_name(market_domain, subject)
                 game = await db.games.get_game({
                     '$or': [
-                        {'league': subject['league'], 'home_team': subject['team']['abbr_name']},
-                        {'league': subject['league'], 'away_team': subject['team']['abbr_name']}
+                        {'league': subject['league'], 'home_team': team_name},
+                        {'league': subject['league'], 'away_team': team_name}
                     ]
                 })
-                game['game_time'] = game['game_time'].strftime('"%Y-%m-%dT%H:%M:%SZ"')
                 return game
 
         except Exception as e:

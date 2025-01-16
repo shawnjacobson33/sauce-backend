@@ -1,16 +1,15 @@
 
-from app.pipelines.utils.standardization import maps
+from app.pipelines.utils.standardization import standardization_maps as maps
 
 
 class Standardizer:
 
-    def __init__(self, configs: dict, subjects: list[dict] = None):
+    def __init__(self, configs: dict, teams: list[dict] = None, subjects: list[dict] = None):
         self.configs = configs
-        self.subjects = subjects
 
         self.subject_name_strd_map = {}
         if subjects:
-            maps.load_in_subject_strd_identity_map(subjects)
+            maps.load_in_subject_strd_identity_map(teams, subjects)
             self.subject_name_strd_map = maps.SUBJECT_NAME_STRD_MAP
 
     @staticmethod
@@ -27,19 +26,20 @@ class Standardizer:
 
         raise ValueError(f"Period '{period}' not found in period map")
 
-    def standardize_market_name(self, market_name: str, sport: str, period: str = None) -> str:
+    def standardize_market_name(self, market_name: str, market_domain: str, sport: str, period: str = None) -> str:
         if period:
             market_name = f'{period} {market_name}'
 
-        if market_map_sport_filtered := maps.MARKET_NAME_STRD_MAP.get(sport):
-            strd_market_name = market_map_sport_filtered.get(market_name)
-            if strd_market_name not in self.configs['invalid_markets']:
-                if strd_market_name:
-                    return strd_market_name
+        market_map_filtered = maps.MARKET_NAME_STRD_MAP[market_domain]
+        if market_domain == 'PlayerProps':
+            market_map_filtered = market_map_filtered[sport]
 
-                raise ValueError(f"Market '{market_name}' not found in '{sport}' market map")
-        else:
-            raise ValueError(f"Sport '{sport}' not found in market map")
+        strd_market_name = market_map_filtered.get(market_name)
+        if strd_market_name not in self.configs['invalid_markets']:
+            if strd_market_name:
+                return strd_market_name
+
+            raise ValueError(f"Market '{market_name}' not found in '{sport}' market map")
 
     def standardize_subject_name(self, subject_key: str) -> str:
         if strd_subject_name := self.subject_name_strd_map.get(subject_key):  # Todo: Store more info about each subject?

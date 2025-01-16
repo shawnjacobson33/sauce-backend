@@ -45,14 +45,13 @@ class BettingLines(BaseCollection):
 
     @staticmethod
     def _create_doc(line: dict) -> dict:
-        non_record_fields = ['_id', 'date', 'bookmaker', 'league', 'game', 'subject', 'market', 'label']
+        record_fields = {'batch_timestamp', 'collection_timestamp', 'line', 'odds'}
         record = BettingLines._create_record(line)
-        if line.get('ev'):
-            non_record_fields.insert(2, 'ev_formula')
-            non_record_fields.append('ev')
+        if not line['metrics'].get('ev'):
+            record_fields.add('ev_formula')
 
         return {
-            **{k: line[k] for k in non_record_fields},
+            **{k: line[k] for k in line if k not in record_fields},
             'stream': [ record ],
         }
 

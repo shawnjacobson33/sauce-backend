@@ -34,8 +34,9 @@ class OddsShopperCollector(BaseBettingLinesCollector):
     def _get_offers(self, resp: dict) -> Iterable:
         offer_categories = resp.get('offerCategories', [])
         for offer_category in offer_categories:
-            if offer_category.get('name') in self.configs['valid_market_domains']:
+            if (category_name := offer_category['name']) in self.configs['valid_market_domains']:
                 for offer in offer_category.get('offers', []):
+                    offer['domain'] = category_name
                     yield offer
 
     def _extract_league(self, offer: dict) -> str | None:
@@ -44,10 +45,10 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             if cleaned_league_name in self.configs['valid_leagues']:
                 return cleaned_league_name
 
-    def _parse_matchups(self, resp: dict) -> tuple[str, str] | None:
+    def _parse_matchups(self, resp: dict) -> tuple[str, dict] | None:
         for offer in self._get_offers(resp):
-            if (league := self._extract_league(offer)) and (offer_id := offer.get('id')):
-                yield league, offer_id
+            if league := self._extract_league(offer):
+                yield league, offer
 
     @staticmethod
     def _get_dates() -> tuple[str, str]:
@@ -60,44 +61,58 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         start_date, end_date = self._get_dates()
         return {**params, 'startDate': start_date, 'endDate': end_date}
 
-    async def _request_betting_lines(self, league: str, offer_id: str) -> None:
+    async def _request_betting_lines(self, league: str, offer: dict) -> None:
         try:
-            url = self.payload['urls']['betting_lines'].format(offer_id)
+            url = self.payload['urls']['betting_lines'].format(offer['id'])
             headers = self.payload['headers']
             params = self._get_params()
             if resp_json := await utils.requester.fetch(url, headers=headers, params=params):
                 self.successful_requests += 1
-                await self._parse_betting_lines(league, resp_json)
+                await self._parse_betting_lines(resp_json, league, offer['domain'])
 
         except ResponseError as e:
             self.log_error(e)
             self.failed_requests += 1
 
-    def _extract_market(self, event: dict, league: str) -> str | None:
+        except AttributeError as e:
+            self.log_error(e)
+
+    def _extract_market(self, event: dict, league: str, market_domain: str) -> str | None:
         try:
-            if raw_market_name := event.get('offerName'):
-                if raw_market_name == 'Moneyline':
-                    asd = 123
-                sport = utils.get_sport(league)
-                std_market_name = self.standardizer.standardize_market_name(raw_market_name, sport)
-                return std_market_name
+            raw_market_name = event['offerName']
+            sport = utils.get_sport(league) if market_domain == 'PlayerProps' else None
+            std_market_name = self.standardizer.standardize_market_name(raw_market_name, market_domain, sport)
+            return std_market_name
         
         except ValueError as e:  # Todo: implement custom error
             self.log_error(e)
             self.failed_market_standardization += 1
 
-    def _extract_subject(self, event: dict, league: str) -> str | None:
+        except AttributeError as e:
+            self.log_error(e)
+
+    @staticmethod
+    def _extract_raw_subject_names(participants: list[dict], market_domain: str) -> Iterable:
+        for i, participant in enumerate(participants):
+            if i != 1:
+                if ((market_domain == 'PlayerProps') and (i == 0)) or (market_domain == 'Gamelines'):
+                    yield participant['name']
+
+    def _extract_subjects(self, event: dict, league: str, market_domain: str) -> Iterable:
         try:
-            if (participants := event.get('participants')) and (first_participants := participants[0]):
-                if raw_subject_name := first_participants.get('name'):
-                    cleaned_subject_name = utils.cleaner.clean_subject_name(raw_subject_name)
-                    subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
-                    std_subject_name = self.standardizer.standardize_subject_name(subject_key)
-                    return std_subject_name
+            participants = event['participants']
+            for raw_subject_name in self._extract_raw_subject_names(participants, market_domain):
+                cleaned_subject_name = utils.cleaner.clean_subject_name(raw_subject_name)
+                subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
+                std_subject_name = self.standardizer.standardize_subject_name(subject_key)
+                yield std_subject_name
         
         except ValueError as e:  # Todo: implement custom error
             self.log_error(e)
             self.failed_subject_standardization += 1
+
+        except AttributeError as e:
+            self.log_error(e)
 
     @staticmethod
     def _extract_bookmaker(outcome: dict) -> str | None:
@@ -119,11 +134,14 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         if ev := data.get('ev'):
             return ev
 
-    async def _parse_betting_lines(self, league: str, resp: dict) -> None:
+    async def _parse_betting_lines(self, resp: dict, league: str, market_domain: str) -> None:
         for event in resp:
-            if market := self._extract_market(event, league):
-                if subject := self._extract_subject(event, league):
-                    if game := await self._get_game(league, subject):
+            hold = event.get('hold')
+            if market := self._extract_market(event, league, market_domain):
+                for subject in self._extract_subjects(event, league, market_domain):
+                    if game := await self._get_game(market_domain, league, subject):
+                        if market_domain == 'Gamelines':
+                            asd = 123
                         for side in event.get('sides', []):
                             if label := side.get('label'):
                                 for outcome in side.get('outcomes', []):
@@ -142,12 +160,17 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                                 'label': label,
                                                 'line': float(outcome.get('line', 0.5)),
                                                 'odds': odds,
+                                                'one_click_url': outcome.get('deepLinkUrl'),
+                                                'extra_source_stats': {
+                                                    'hold': hold,
+                                                    'tw_prb': self._extract_tw_prb(outcome),
+                                                    'ev': self.extract_ev(outcome)
+                                                }
                                             }
                                             betting_line_key = utils.storer.get_betting_line_key(betting_line_dict)
                                             betting_line_dict['_id'] = betting_line_key
                                             self.items_container.append(betting_line_dict)
                                             self.num_collected += 1
-
 
     async def _gather_betting_lines_requests(self, matchups_resp: dict):
         betting_lines_tasks = []

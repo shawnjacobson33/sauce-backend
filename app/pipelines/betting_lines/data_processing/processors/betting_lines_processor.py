@@ -100,6 +100,19 @@ class BettingLinesProcessor:
         )
         return df
 
+    @staticmethod
+    def _add_metrics(betting_lines_pr_list: list[dict]) -> None:
+        for betting_line in betting_lines_pr_list:
+            metrics_dict = {
+                'impl_prb': betting_line.pop('impl_prb'),
+                'tw_prb': betting_line.pop('tw_prb'),
+            }
+            if 'ev' in betting_line:
+                metrics_dict['ev'] = betting_line.pop('ev')
+                metrics_dict['ev_formula'] = betting_line.pop('ev_formula')
+
+            betting_line['metrics'] = metrics_dict
+
     @utils.logger.processor_logger('BettingLines', message='Processing betting lines')
     def run_processor(self) -> list[dict]:
         start_time = time.time()
@@ -118,7 +131,9 @@ class BettingLinesProcessor:
         end_time = time.time()
         self.times['ev_time'] = round(end_time - start_time, 4)
 
-        return betting_lines_df_pr.to_dict(orient='records')
+        betting_lines_pr_list = betting_lines_df_pr.to_dict(orient='records')
+        self._add_metrics(betting_lines_pr_list)
+        return betting_lines_pr_list
 
 
 if __name__ == '__main__':

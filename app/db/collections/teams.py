@@ -37,3 +37,4 @@ class Teams(BaseCollection):
 
     async def delete_teams(self, query: dict) -> None:
         await self.collection.delete_many(query)
+

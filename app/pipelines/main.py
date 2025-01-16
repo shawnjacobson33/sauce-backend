@@ -10,8 +10,9 @@ from app.pipelines.utils import Standardizer
 
 
 async def _get_standardizer(configs: dict) -> Standardizer:
+    teams = await db.teams.get_teams({})
     subjects = await db.subjects.get_subjects({})
-    return Standardizer(configs, subjects)
+    return Standardizer(configs, teams, subjects)
 
 
 async def run_pipelines():
