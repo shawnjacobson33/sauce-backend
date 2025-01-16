@@ -37,7 +37,8 @@ class Games(BaseCollection):
                 insert_op = InsertOne(game)
                 requests.append(insert_op)
 
-        await self.collection.bulk_write(requests)
+        if requests:
+            await self.collection.bulk_write(requests)
 
     async def update_game(self, query: dict, return_op: bool = False, **kwargs):
         if return_op:

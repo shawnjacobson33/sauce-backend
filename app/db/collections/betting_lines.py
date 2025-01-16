@@ -112,7 +112,8 @@ class BettingLines(BaseCollection):
         batch_timestamp = betting_lines[0]['batch_timestamp']
         await self._update_disappeared_betting_lines(seen_betting_lines, requests, batch_timestamp)
 
-        await self.collection.bulk_write(requests)
+        if requests:
+            await self.collection.bulk_write(requests)
 
     async def update_betting_line(self, unique_id: str, return_op: bool = False, **kwargs):
         if return_op:
@@ -132,7 +133,8 @@ class BettingLines(BaseCollection):
                     update_op = await self.update_betting_line(betting_line['_id'], return_op=True, live_stat=stat)
                     requests.append(update_op)
 
-        await self.collection.bulk_write(requests)
+        if requests:
+            await self.collection.bulk_write(requests)
 
     @staticmethod
     def _refactor_live_to_final_stat(betting_lines: list[dict]):

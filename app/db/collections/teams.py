@@ -26,7 +26,8 @@ class Teams(BaseCollection):
                 insert_op = InsertOne(team)
                 requests.append(insert_op)
 
-        await self.collection.bulk_write(requests)
+        if requests:
+            await self.collection.bulk_write(requests)
 
     async def update_team(self, query: dict, return_op: bool = False, **kwargs):
         if return_op:

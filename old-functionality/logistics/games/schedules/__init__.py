@@ -1,4 +1,4 @@
-from app.services.game_schedules.cbssports_basketball_games import *
+from app.pipelines.game_schedules.cbssports_basketball_games import *
 from .cbssports_football import *
 from .cbssports_ice_hockey import *
 

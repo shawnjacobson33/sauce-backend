@@ -27,7 +27,8 @@ class BoxScores(BaseCollection):
                 insert_op = InsertOne(box_score)
                 requests.append(insert_op)
 
-        await self.collection.bulk_write(requests)
+        if requests:
+            await self.collection.bulk_write(requests)
 
     async def update_box_score(self, query: dict, return_op: bool = False, **kwargs):
         if return_op:

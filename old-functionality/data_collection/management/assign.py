@@ -1,7 +1,7 @@
 import asyncio
 
 from app import MongoDB
-import app.services.betting_lines_service.data_collection.management.execute as exc
+import app.pipelines.betting_lines_service.data_collection.management.execute as exc
 from app import ActiveGames
 from app import reporting as rp
 

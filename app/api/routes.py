@@ -4,7 +4,7 @@ import pandas as pd
 from fastapi import APIRouter
 
 from app.db import db
-from app.services import run_services
+from app.pipelines import run_services
 
 router = APIRouter()
 
