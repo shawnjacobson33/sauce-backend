@@ -139,7 +139,8 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
             period = self._extract_period(qg)
             if raw_market_name := q.get("statistic"):
                 sport = utils.get_sport(league)
-                std_market_name = self.standardizer.standardize_market_name(raw_market_name, sport, period=period)
+                std_market_name = self.standardizer.standardize_market_name(
+                    raw_market_name, 'PlayerProps', sport, period=period)
                 return std_market_name
     
         except ValueError as e:
@@ -170,7 +171,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 for qg in self._get_qg_data(section):
                    q_data_iter = iter(self._get_q_data(qg, league))
                    if subject := next(q_data_iter):
-                       if game := await self._get_game(league, subject):
+                       if game := await self._get_game('PlayerProps', league, subject):  # Todo: The market domains for each bookmaker shoul dbe stored in db or something
                            for q in q_data_iter:
                             c_data_iter = iter(self._get_c_data(qg, q, league))
                             if market := next(c_data_iter):

@@ -1,15 +1,16 @@
 services:
   db:
     image: mongo
-    container_name: mongo-test-instance
+    container_name: mongo-instance
+
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: app-instance
+    container_name: sauce-pipeline-app-instance
     ports:
-        - "8000:8000"
+        - "8501:8501"
     depends_on:
         - db
     volumes:

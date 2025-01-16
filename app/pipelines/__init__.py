@@ -1,1 +1,1 @@
-from .main import run_pipelines
+from .pipeline_manager import PipelineManager

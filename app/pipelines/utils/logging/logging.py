@@ -11,14 +11,14 @@ class Logger:
         def decorator(collection_func):
             @functools.wraps(collection_func)  # Preserves original function metadata
             async def wrapper(self, *args, **kwargs):
-                print(f'[{self.domain}] [Collection] [{self.name}]: {message}...')
+                print(f'[{self.domain}] [Collection] [{self.name}]: {message}')
                 start_time = time.time()
                 await collection_func(self, *args, **kwargs)
                 end_time = time.time()
-                print(f'[{self.domain}] [Collection] [{self.name}]: Finished {message}...'
-                      f'⏳ {round(end_time - start_time, 2)} seconds ⏳')
-                print(
-                    f'[{self.domain}] [Collection] [{self.name}]: Collected {len(self.items_container)} {self.domain}...')
+                print((f'[{self.domain}] [Collection] [{self.name}]: Finished {message}...'
+                      f'⏳ {round(end_time - start_time, 2)} seconds ⏳'
+                      f'📦 {len(self.items_container)} {self.domain} 📦')
+                )
 
                 stats = self.get_stats()
                 db.pipeline_stats.add_collector_stats(self.name, stats)

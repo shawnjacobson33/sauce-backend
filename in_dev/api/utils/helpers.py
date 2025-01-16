@@ -15,7 +15,7 @@ def get_query(league: str | None, bookmaker: str | None) -> dict:
 
 
 def get_sample_betting_lines(file_name: str) -> pd.DataFrame:
-    for root, dirs, files in os.walk('.'):
+    for root, dirs, files in os.walk(''):
         if file_name in files:
             absolute_path = os.path.abspath(os.path.join(root, file_name))
             break

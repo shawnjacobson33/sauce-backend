@@ -140,8 +140,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             if market := self._extract_market(event, league, market_domain):
                 for subject in self._extract_subjects(event, league, market_domain):
                     if game := await self._get_game(market_domain, league, subject):
-                        if market_domain == 'Gamelines':
-                            asd = 123
                         for side in event.get('sides', []):
                             if label := side.get('label'):
                                 for outcome in side.get('outcomes', []):

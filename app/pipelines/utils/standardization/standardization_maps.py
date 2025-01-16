@@ -577,6 +577,12 @@ SUBJECT_NAME_STRD_MAP = {
     'NBA:alexandre sarr': 'Alex Sarr',
     'NBA:alexandre sarr:WAS': 'Alex Sarr',
     'NBA:alexandre sarr:C': 'Alex Sarr',
+    'NBA:bub carrington': 'Carlton Carrington',
+    'NBA:bub carrington:WAS': 'Carlton Carrington',
+    'NBA:bub carrington:PG': 'Carlton Carrington',  # Todo: do you need to map
+    'NBA:lu dort': 'Luguentz Dort',
+    'NBA:lu dort:OKC': 'Luguentz Dort',
+    'NBA:lu dort:SF': 'Luguentz Dort',
 }
 
 

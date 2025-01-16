@@ -1,18 +1,11 @@
-import asyncio
 
 import pandas as pd
 from fastapi import APIRouter
 
 from app.db import db
-from app.pipelines import run_services
+
 
 router = APIRouter()
-
-
-@router.get('/start_services')
-async def start_services():
-    asyncio.create_task(run_services())
-    return {'message': 'Pipelines have started.'}
 
 
 def _to_dict(**kwargs):
