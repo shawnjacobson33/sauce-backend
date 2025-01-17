@@ -26,7 +26,7 @@ class PipelineManager:
         pipelines = [  # Todo: make sure RostersPipline runs first before BettingLinesPipeline just for first iteration?
             # RostersPipeline(self.configs['rosters']).run_pipeline(),
             # GamesPipeline(self.configs['games']).run_pipeline(),
-            BoxScoresPipeline(self.configs['box_scores'], standardizer).run_pipeline(),
+            # BoxScoresPipeline(self.configs['box_scores'], standardizer).run_pipeline(),
             # BettingLinesPipeline(self.configs['betting_lines'], standardizer).run_pipeline(),
         ]
     

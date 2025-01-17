@@ -12,7 +12,7 @@ from pipelines.utils import utilities as utils
 class BasketballRostersCollector(BaseCollector):
     
     def __init__(self, batch_timestamp: datetime, rosters_container: list, configs: dict):
-        super().__init__('CBSSports', 'rosters', batch_timestamp, rosters_container, configs)
+        super().__init__('CBSSports', 'Rosters', batch_timestamp, rosters_container, configs)
         
     async def _request_rosters(self, league: str, team: dict) -> None:
         try:

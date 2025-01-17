@@ -9,8 +9,12 @@ def logger(processing_func):
     @functools.wraps(processing_func)
     def wrapped(self, *args, **kwargs):
         print(f'[{self.domain}Pipeline] [Processing]: 🟢 Started Processing 🟢')
+        start_time = time.time()
         result = processing_func(self, *args, **kwargs)
-        print(f'[{self.domain}Pipeline] [Processing]: 🔴 Finished Processing 🔴')
+        end_time = time.time()
+        self.times['processing_time'] = round(end_time - start_time, 4)
+        print(f'[{self.domain}Pipeline] [Processing]: 🔴 Finished Processing 🔴\n'
+              f'--------> ⏱️ {self.times['processing_time']} seconds ⏱️\n')
 
         db.pipeline_stats.add_processor_stats(self.times)
 

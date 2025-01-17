@@ -1,11 +1,9 @@
-import asyncio
 from datetime import datetime
 
 from db import db
 from pipelines.pipeline_base import BasePipeline, logger
 from pipelines.box_scores.data_collection import BoxScoresDataCollectionManager
 from pipelines.utils import Standardizer
-from pipelines.utils import utilities as utils
 
 
 class BoxScoresPipeline(BasePipeline):
@@ -31,26 +29,20 @@ class BoxScoresPipeline(BasePipeline):
 
     @staticmethod
     async def _store_box_scores(collected_boxscores: list[dict]) -> None:
-        print('[BoxScores]: Storing collected boxscores...')
         await db.box_scores.store_box_scores(collected_boxscores)
-        print(f'[BoxScores]: Stored {len(collected_boxscores)} collected boxscores...')
 
-    @logger
-    async def run_pipeline(self):
+    async def _configure_pipeline(self):
         if self.configs['reset']:
             await db.box_scores.delete_box_scores({})
 
-        while True:
-            if live_games := await db.games.get_games({}, live=True):  # Poll for live games...TODO: more efficient ways to get live games?
-                batch_timestamp = datetime.now()
+    @logger
+    async def run_pipeline(self):
+        if live_games := await db.games.get_games({}, live=True):  # Poll for live games...TODO: more efficient ways to get live games?
+            batch_timestamp = datetime.now()
 
-                box_scores_dc_manager = BoxScoresDataCollectionManager(self.configs['data_collection'], self.standardizer)
-                collected_boxscores = await box_scores_dc_manager.run_collectors(batch_timestamp, live_games)
+            box_scores_dc_manager = BoxScoresDataCollectionManager(self.configs['data_collection'], self.standardizer)
+            collected_boxscores = await box_scores_dc_manager.run_collectors(batch_timestamp, live_games)
 
-                await self._store_box_scores(collected_boxscores)
-                await db.betting_lines.update_live_stats(collected_boxscores)
-                await self._check_for_finished_games(live_games)
-
-                sleep_time = self.configs['throttle']
-                print(f'[BoxScoresPipeline]: Iteration complete! Throttling for {sleep_time} seconds...')
-                await asyncio.sleep(sleep_time)
+            await self._store_box_scores(collected_boxscores)
+            await db.betting_lines.update_live_stats(collected_boxscores)
+            await self._check_for_finished_games(live_games)

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from db import db
-from pipelines.pipeline_base import BaseCollector
+from pipelines.collector_base import BaseCollector
 from pipelines.utils import Standardizer
 
 

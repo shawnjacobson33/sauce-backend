@@ -11,7 +11,7 @@ from pipelines.utils import utilities as utils
 class BasketballGamesCollector(BaseCollector):
 
     def __init__(self, batch_timestamp: datetime, games_container: list, configs: dict):
-        super().__init__('CBSSports', 'games', batch_timestamp, games_container, configs)
+        super().__init__('CBSSports', 'Games', batch_timestamp, games_container, configs)
 
     async def _request_games(self, league: str):
         try:

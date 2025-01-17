@@ -1,9 +1,6 @@
 from pipelines.utils.requesting import Requesting
 from pipelines.utils.storing import Storing
 from pipelines.utils.cleaning import Cleaning
-from pipelines.utils.logging import Logger
-
-logger = Logger()
 
 requester = Requesting()
 

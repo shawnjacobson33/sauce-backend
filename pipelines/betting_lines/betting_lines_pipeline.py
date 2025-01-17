@@ -1,4 +1,3 @@
-import asyncio
 import time
 from datetime import datetime
 
@@ -20,12 +19,10 @@ class BettingLinesPipeline(BasePipeline):
         self.stored_in_gcs = False
 
     async def _store_betting_lines(self, betting_lines: list[dict]):
-        print('[BettingLinesPipeline]: Storing processed betting lines...')
         start_time = time.time()
         await db.betting_lines.store_betting_lines(betting_lines)
         end_time = time.time()
-        print(f'[BettingLinesPipeline]: Stored {len(betting_lines)} processed betting lines...')
-        self.times['storage_time'] = round(end_time - start_time, 2)
+        self.times['collection_store_betting_lines_time'] = round(end_time - start_time, 2)
 
     async def _handle_completed_betting_lines(self, batch_timestamp: datetime) -> None:
         # Todo: Need logging output for this
@@ -33,7 +30,7 @@ class BettingLinesPipeline(BasePipeline):
             await db.betting_lines.store_completed_betting_lines(in_gcs=True)
             self.stored_in_gcs = True
 
-        if batch_timestamp.hour == 1:
+        if batch_timestamp.hour == 1 and self.stored_in_gcs:
             self.stored_in_gcs = False
     
     async def _configure_pipeline(self):
@@ -57,5 +54,3 @@ class BettingLinesPipeline(BasePipeline):
 
         await self._store_betting_lines(betting_lines_container)
         await db.pipeline_stats.update_daily_stats(datetime.today())
-
-        await asyncio.sleep(self.configs['throttle'])

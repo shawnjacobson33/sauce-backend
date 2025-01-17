@@ -20,7 +20,7 @@ class BasketballBoxScoresCollector(BaseCollector):
                  games: list[dict],
                  configs: dict):
 
-        super().__init__("CBSSports", 'box_scores', batch_timestamp, boxscores_container, configs)
+        super().__init__("CBSSports", 'BoxScores', batch_timestamp, boxscores_container, configs)
         self.standardizer = standardizer
         self.games = games
 

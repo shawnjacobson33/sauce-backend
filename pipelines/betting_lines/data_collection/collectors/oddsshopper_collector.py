@@ -120,13 +120,13 @@ class OddsShopperCollector(BaseBettingLinesCollector):
     @staticmethod
     def _add_extra_source_stats(hold: float | None, outcome: dict, betting_line_dict: dict):
         if hold:
-            betting_line_dict['extra_source_stats']['hold'] = round(hold, 3)
+            betting_line_dict.setdefault('extra_source_stats', {})['hold'] = round(hold, 3)
 
         if tw_prb := outcome.get('trueWinProbability'):
-            betting_line_dict['extra_source_stats']['tw_prb'] = round(tw_prb, 3)
+            betting_line_dict.setdefault('extra_source_stats', {})['tw_prb'] = round(tw_prb, 3)
 
         if ev := outcome.get('ev'):
-            betting_line_dict['extra_source_stats']['ev'] = round(ev, 3)
+            betting_line_dict.setdefault('extra_source_stats', {})['ev'] = round(ev, 3)
 
     async def _parse_betting_lines(self, resp: dict, league: str, market_domain: str) -> None:
         for event in resp:
