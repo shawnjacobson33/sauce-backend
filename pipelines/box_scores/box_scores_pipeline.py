@@ -21,7 +21,7 @@ class BoxScoresPipeline(BasePipeline):
     @staticmethod
     async def _cleanup_finished_games(games: list[dict]) -> None:
         game_ids = [game['_id'] for game in games]
-        await db.betting_lines.update_betting_line_results(game_ids)
+        await db.betting_lines.store_completed_betting_lines(game_ids=game_ids)
         await db.games.delete_games(game_ids)
         await db.box_scores.delete_box_scores(game_ids)
 

@@ -36,6 +36,9 @@ class BettingLinesPipeline(BasePipeline):
 
         while True:
             batch_timestamp = datetime.now()
+            if batch_timestamp.hour == 0 and batch_timestamp.minute == 0:
+                await db.betting_lines.store_completed_betting_lines(in_gcs=True)
+
             db.pipeline_stats.update_batch_details(batch_timestamp)
 
             betting_lines_dc_manager = BettingLinesDataCollectionManager(self.configs['data_collection'], self.standardizer)

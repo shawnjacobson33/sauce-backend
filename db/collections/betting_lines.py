@@ -1,7 +1,6 @@
 import json
 from collections import defaultdict
 from datetime import datetime
-import copy
 
 import pymongo
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -16,6 +15,8 @@ class BettingLines(BaseCollection):
         super().__init__(db)
 
         self.collection = self.db['betting_lines']
+        self.completed_betting_lines_collection = self.db['completed_betting_lines']
+
         self.gcs_uploader = GCSUploader(bucket_name='betting-lines')
 
     async def get_betting_line(self, query: dict) -> dict:
@@ -45,6 +46,9 @@ class BettingLines(BaseCollection):
             return await self._get_most_recent_betting_lines(query, proj if proj else {})
 
         return await self.collection.find(query, proj if proj else {}).to_list()
+
+    async def get_completed_betting_lines(self, query: dict, proj: dict = None):
+        return await self.completed_betting_lines_collection.find(query, proj if proj else {}).to_list()
 
     @staticmethod
     def _create_doc(line: dict) -> dict:
@@ -139,23 +143,25 @@ class BettingLines(BaseCollection):
             await self.collection.bulk_write(requests)
 
     @staticmethod
-    def _refactor_live_to_final_stat(betting_lines: list[dict]):
+    def _restructure_betting_lines_data(betting_lines: list[dict]):
         for betting_line in betting_lines:
             final_stat = betting_line.pop('live_stat', None)
             betting_line['final_stat'] = final_stat
 
-    @staticmethod
-    def _optimize_game_data(betting_lines: list[dict]) -> None:
-        for betting_line in betting_lines:
-            betting_line['game_id'] = copy.deepcopy(betting_line['game']['_id'])
-            del betting_line['game']
+            game = betting_line.pop('game')
+            betting_line['game_id'] = game['_id']
 
     @staticmethod
     def _prepare_betting_lines_for_upload(betting_lines: list[dict]) -> str:
-        BettingLines._refactor_live_to_final_stat(betting_lines)
-        BettingLines._optimize_game_data(betting_lines)
+        BettingLines._restructure_betting_lines_data(betting_lines)
         betting_lines_json = json.dumps(betting_lines)
         return betting_lines_json
+
+    async def _store_in_gcs(self):
+        completed_betting_lines = await self.get_completed_betting_lines({})
+        betting_lines_json = self._prepare_betting_lines_for_upload(completed_betting_lines)
+        blob_name = f"{datetime.now().strftime('%Y-%m-%d')}.json"
+        self.gcs_uploader.upload(blob_name, betting_lines_json)
 
     @staticmethod
     def _get_projection_for_gcs() -> dict:
@@ -164,20 +170,22 @@ class BettingLines(BaseCollection):
             'league': 0, 'market': 0
         }
 
-    async def update_betting_line_results(self, game_ids: list[dict]) -> None:
+    async def store_completed_betting_lines(self, game_ids: list[dict] = None, in_gcs: bool = False) -> None:
         # Todo: ANY FINAL STATS TO ADD?, OUTPUT THE SIZE OF THE JSON FILE
-        optimized_projection = self._get_projection_for_gcs()
-        betting_lines_filtered_by_game = await self.get_betting_lines({
-            'game._id': { '$in': game_ids },
-        }, optimized_projection)
-        betting_lines_filtered_for_live_stat = [ # only want to store betting lines that have a final box score stat
-            betting_line for betting_line in betting_lines_filtered_by_game if betting_line.get('live_stat')]
+        if game_ids:
+            optimized_projection = self._get_projection_for_gcs()
+            betting_lines_filtered_by_game = await self.get_betting_lines({
+                'game._id': { '$in': game_ids },
+            }, optimized_projection)
+            betting_lines_filtered_for_live_stat = [ # only want to store betting lines that have a final box score stat
+                betting_line for betting_line in betting_lines_filtered_by_game if betting_line.get('live_stat')
+            ]
+            self.completed_betting_lines_collection.insert_many(betting_lines_filtered_for_live_stat)
+            return await self.delete_betting_lines(betting_lines_filtered_by_game)
 
-        betting_lines_json = self._prepare_betting_lines_for_upload(betting_lines_filtered_for_live_stat)
-        blob_name = f"{datetime.now().strftime('%Y-%m-%d')}.json"
-        self.gcs_uploader.upload(blob_name, betting_lines_json)
-
-        await self.delete_betting_lines(betting_lines_filtered_by_game)
+        if in_gcs:
+            await self._store_in_gcs()
+            return await self.completed_betting_lines_collection.delete_many({})
 
     async def delete_betting_lines(self, betting_lines: list[dict] = None) -> None:
         if betting_lines:
