@@ -2,7 +2,7 @@
 *.json
 *.txt
 .DS_Store
-old-functionality/.env
+extra/old-functionality/.env
 redis.conf
 __pycache__/
 *.pyc

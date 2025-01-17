@@ -1,8 +1,0 @@
-APP_NAME = 'Sauce'
-DATABASE_NAME = 'sauce'
-DATABASE_URL = f'mongodb+srv://username:password@{DATABASE_NAME}.hvhxg.mongodb.net/?retryWrites=true&w=majority&appName={APP_NAME}&ssl=true'
-SOURCES_COLLECTION_NAME = 'sources-v1'
-MARKETS_COLLECTION_NAME = 'markets-v4'
-GAMES_COLLECTION_NAME = 'games-v1'
-TEAMS_COLLECTION_NAME = 'teams-v2'
-SUBJECTS_COLLECTION_NAME = 'subjects-v6'

@@ -15,7 +15,7 @@ BE KNOWN AS A COMPETITIVE PLATFORM.
 - DFS or "social betting" is a rapidly expanding sub-sector of sports betting, that allows people
 aged 18-20 to bet on sports. Traditional sportsbooks are not allowed to do this. I want to capitalize
 on that age range (college students), by capturing value across dfs/social bookmakers that
-other sports betting tools don't focus on, providing my service at an incredibly more affordable
+other sports betting tools don't focus on, providing my app at an incredibly more affordable
 price, relative to the value gained in return, than the market average (impart because my methods
 of data collection will not come from an API).
 

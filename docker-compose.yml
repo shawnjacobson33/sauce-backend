@@ -1,8 +1,10 @@
 services:
+
   db:
     image: mongo
     container_name: mongo-instance
-
+    volumes:
+      - mongo-volume:/data/db
 
   app:
     build:
@@ -14,4 +16,7 @@ services:
     depends_on:
         - db
     volumes:
-        - ./app:/app
+        - .:/app
+
+volumes:
+  mongo-volume:
