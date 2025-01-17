@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 from db import db
-from pipelines.base import BasePipeline
+from pipelines.pipeline_base import BasePipeline, logger
 from pipelines.games.data_collection import GamesDataCollectionManager
 from pipelines.utils import utilities as utils
 
@@ -13,7 +13,7 @@ class GamesPipeline(BasePipeline):
     def __init__(self, configs: dict):
         super().__init__('Games', configs)
 
-    @utils.logger.pipeline_logger(message='Running Pipeline')
+    @logger
     async def run_pipeline(self):
         if self.configs['reset']:
             await db.games.delete_games({})

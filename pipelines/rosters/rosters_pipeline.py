@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 from db import db
-from pipelines.base import BasePipeline
+from pipelines.pipeline_base import BasePipeline, logger
 from pipelines.rosters.data_collection import RostersDataCollectionManager
 from pipelines.utils import utilities as utils
 
@@ -15,7 +15,7 @@ class RostersPipeline(BasePipeline):
 
         self.times = {}
 
-    @utils.logger.pipeline_logger(message='Running Pipeline')
+    @logger
     async def run_pipeline(self):
         if self.configs['reset']:
             await db.subjects.delete_subjects({})

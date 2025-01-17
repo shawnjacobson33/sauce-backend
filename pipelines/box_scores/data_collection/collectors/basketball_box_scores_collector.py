@@ -5,7 +5,7 @@ from typing import Iterable
 from bs4 import BeautifulSoup
 from urllib3.exceptions import ResponseError
 
-from pipelines.base import BaseCollector
+from pipelines.collector_base import BaseCollector, logger
 from pipelines.utils import Standardizer
 from pipelines.utils import utilities as utils
 from pipelines.box_scores.base import BoxScoreDict
@@ -134,7 +134,7 @@ class BasketballBoxScoresCollector(BaseCollector):
                             })
                             self.num_collected += 1
 
-    @utils.logger.collector_logger(message='Running Collector')
+    @logger
     async def run_collector(self):
         tasks = []
         for league in self.configs['valid_leagues']:

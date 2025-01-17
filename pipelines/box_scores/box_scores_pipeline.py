@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime
 
 from db import db
-from pipelines.base import BasePipeline
+from pipelines.pipeline_base import BasePipeline, logger
 from pipelines.box_scores.data_collection import BoxScoresDataCollectionManager
 from pipelines.utils import Standardizer
 from pipelines.utils import utilities as utils
@@ -35,9 +35,8 @@ class BoxScoresPipeline(BasePipeline):
         await db.box_scores.store_box_scores(collected_boxscores)
         print(f'[BoxScores]: Stored {len(collected_boxscores)} collected boxscores...')
 
-    @utils.logger.pipeline_logger(message='Running Pipeline')
+    @logger
     async def run_pipeline(self):
-        # await asyncio.sleep(20)  # For first iteration where RostersPipeline and GamesPipeline need to run first
         if self.configs['reset']:
             await db.box_scores.delete_box_scores({})
 

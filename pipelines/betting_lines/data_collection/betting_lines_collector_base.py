@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from db import db
-from pipelines.base import BaseCollector
+from pipelines.pipeline_base import BaseCollector
 from pipelines.utils import Standardizer
 
 
@@ -14,7 +14,7 @@ class BaseBettingLinesCollector(BaseCollector):
                  standardizer: Standardizer,
                  configs: dict):
 
-        super().__init__(name, 'betting_lines', batch_timestamp, betting_lines_container, configs)
+        super().__init__(name, 'BettingLines', batch_timestamp, betting_lines_container, configs)
         self.standardizer = standardizer
 
         self.failed_subject_standardization = 0

@@ -1,7 +1,22 @@
+import functools
 import time
 import pandas as pd  # Todo: consider switch to dask for parallel processing
 
-from pipelines.utils import utilities as utils
+from db import db
+
+
+def logger(processing_func):
+    @functools.wraps(processing_func)
+    def wrapped(self, *args, **kwargs):
+        print(f'[{self.domain}Pipeline] [Processing]: 🟢 Started Processing 🟢')
+        result = processing_func(self, *args, **kwargs)
+        print(f'[{self.domain}Pipeline] [Processing]: 🔴 Finished Processing 🔴')
+
+        db.pipeline_stats.add_processor_stats(self.times)
+
+        return result
+
+    return wrapped
 
 
 class BettingLinesProcessor:
@@ -9,6 +24,7 @@ class BettingLinesProcessor:
     def __init__(self, betting_lines_container: list, configs: dict):
         self.configs = configs
 
+        self.domain = 'BettingLines'  # for logging
         self.times = {}
         self.ev_formula = self.configs['ev_formulas']['secondary_markets']['formula']
 
@@ -113,7 +129,7 @@ class BettingLinesProcessor:
 
             betting_line['metrics'] = metrics_dict
 
-    @utils.logger.processor_logger('BettingLines', message='Processing betting lines')
+    @logger
     def run_processor(self) -> list[dict]:
         start_time = time.time()
         devigged_betting_lines_df = self._get_devigged_lines()

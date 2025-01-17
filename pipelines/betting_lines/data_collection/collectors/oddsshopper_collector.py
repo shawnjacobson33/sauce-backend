@@ -1,11 +1,13 @@
 import asyncio
 from datetime import datetime, timedelta
-from typing import Optional, Iterable
+from typing import Iterable
 
 from urllib3.exceptions import ResponseError
 
 from pipelines.utils import Standardizer
 from pipelines.utils import utilities as utils
+
+from pipelines.collector_base import logger
 from pipelines.betting_lines.data_collection.betting_lines_collector_base import BaseBettingLinesCollector
 
 
@@ -169,7 +171,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
 
         await asyncio.gather(*betting_lines_tasks)
 
-    @utils.logger.collector_logger(message='Running Collector')
+    @logger
     async def run_collector(self) -> None:
         if matchups_resp := await self._request_matchups():
             await self._gather_betting_lines_requests(matchups_resp)

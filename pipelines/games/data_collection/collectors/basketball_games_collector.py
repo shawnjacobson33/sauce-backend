@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from urllib3.exceptions import ResponseError
 
-from pipelines.base import BaseCollector
+from pipelines.collector_base import BaseCollector, logger
 from pipelines.utils import utilities as utils
 
 
@@ -88,7 +88,7 @@ class BasketballGamesCollector(BaseCollector):
                                             self.items_container.append(game_dict)
 
 
-    @utils.logger.collector_logger(message='Running Collector')
+    @logger
     async def run_collector(self):
         tasks = []
         for league in self.configs['valid_leagues']:

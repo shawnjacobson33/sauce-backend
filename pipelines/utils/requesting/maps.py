@@ -76,7 +76,7 @@ CBSSPORTS_COOKIES = {
 
 PAYLOAD_MAP = {
     'OddsShopper': {
-        'betting_lines': {
+        'BettingLines': {
             'urls': {
                         'processing_info': 'https://www.oddsshopper.com/api/processingInfo/all',
                         'matchups': 'https://www.oddsshopper.com/api/liveOdds/offers?league=all',
@@ -122,7 +122,7 @@ PAYLOAD_MAP = {
         }
     },
     'BoomFantasy': {
-        'betting_lines': {
+        'BettingLines': {
             'urls': {
                         'contest_ids': 'https://production-boom-dfs-backend-api.boomfantasy.com/api/v1/graphql',
                         'tokens': 'https://production-api.boomfantasy.com/api/v1/sessions',
@@ -201,7 +201,7 @@ PAYLOAD_MAP = {
         }
     },
     'CBSSports': {
-        'teams': {
+        'Teams': {
             'urls': {
                 'NBA': {
                     'teams': 'https://www.cbssports.com/nba/teams/',
@@ -225,7 +225,7 @@ PAYLOAD_MAP = {
             'headers': CBSSPORTS_HEADERS,
             'cookies': CBSSPORTS_COOKIES,
         },
-        'rosters': {
+        'Rosters': {
             'urls': {
                 'NBA': {
                     'rosters': 'https://www.cbssports.com/nba/teams/{}/{}/roster/',  # BOS, boston-celtics
@@ -287,7 +287,7 @@ PAYLOAD_MAP = {
                 }
             },
         },
-        'games': {
+        'Games': {
             'urls': {
                 'NBA': {
                     'schedule': 'https://www.cbssports.com/nba/schedule/{}/'
@@ -312,7 +312,7 @@ PAYLOAD_MAP = {
                 'NCAAM': 2,
             }  # Todo: should this be in configs?
         },
-        'box_scores': {
+        'BoxScores': {
             'url': 'https://www.cbssports.com/{}/gametracker/boxscore/{}/',  # NBA_20241113_BOS@BKN'
             'headers': CBSSPORTS_HEADERS,
             'cookies': CBSSPORTS_COOKIES,
