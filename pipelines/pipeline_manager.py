@@ -36,16 +36,24 @@ class PipelineManager:
 
 
 # async def main():
-#     await db.database['games'].insert_one({
-#         '_id': 'NBA_20250118_WAS@GS',
-#         'league': 'NBA',
-#         'away_team': 'WAS',
-#         'home_team': 'GS',
-#         'game_time': '2025-01-18T23:00:00Z',
-#         'status': 'live'
-#     })
-#
-#
+# #     # await db.database['games'].insert_one({
+# #     #     '_id': 'NBA_20250118_WAS@GS',
+# #     #     'league': 'NBA',
+# #     #     'away_team': 'WAS',
+# #     #     'home_team': 'GS',
+# #     #     'game_time': '2025-01-18T23:00:00Z',
+# #     #     'status': 'live'
+# #     # })
+#     doc = await db.database['metadata'].find_one({'_id': 'metadata'})
+#     await db.database['metadata'].update_one(
+#         {'_id': 'metadata'},
+#         {
+#             '$set': {'ev_formulas.main_markets': doc['ev_formulas']['secondary_markets']},
+#             '$unset': {'ev_formulas.secondary_markets': ''}
+#         }
+#     )
+
+
 # if __name__ == '__main__':
 #     import asyncio
 #

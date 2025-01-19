@@ -138,14 +138,18 @@ class BasketballBoxScoresCollector(BaseCollector):
                 if cells := self._get_cells(row):
                     if subject := self._extract_subject(cells[0], league):
                         if box_score := self._extract_basketball_stats(cells[1:], league):
-                            self.items_container.append({
-                                '_id': f'{game['_id']}:{subject['id']}',
-                                'game': game,
-                                'league': league,
-                                'subject': subject,
-                                'box_score': BoxScoreDict(box_score)
-                            })
-                            self.num_collected += 1
+                            try:
+                                self.items_container.append({
+                                    '_id': f'{game['_id']}:{subject['id']}',
+                                    'game': game,
+                                    'league': league,
+                                    'subject': subject,
+                                    game['period']: BoxScoreDict(box_score)  # Todo: this needs to be tested
+                                })
+                                self.num_collected += 1
+
+                            except AttributeError as e:
+                                self.log_error(e)
 
     @logger
     async def run_collector(self):

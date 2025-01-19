@@ -1,6 +1,6 @@
 
 
-def moneyline(data: dict, subject: str) -> int:
+def moneyline(data: dict, subject: str) -> int:  # Todo: need to test these
     if data['home_team'] == subject:
         return 1 if data['home_score'] > data['away_score'] else 0
     else:

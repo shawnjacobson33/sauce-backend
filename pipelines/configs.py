@@ -13,7 +13,7 @@ _CONFIGS = {
         },
         'data_processing': {
             'ev_formulas': {
-                'main_markets': '????',
+                'primary_markets': '????',
                 'secondary_markets': {
                     'name': 'sully'
                 }

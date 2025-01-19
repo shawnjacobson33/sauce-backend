@@ -4,12 +4,38 @@ from db.base import BaseCollection
 
 
 class Metadata(BaseCollection):
+    """
+    A class to manage metadata in the database.
+
+    Attributes:
+        db (AsyncIOMotorDatabase): The database connection.
+        collection (AsyncIOMotorDatabase.collection): The metadata collection.
+    """
 
     def __init__(self, db: AsyncIOMotorDatabase):
+        """
+        Initializes the Metadata class with the given database connection.
+
+        Args:
+            db (AsyncIOMotorDatabase): The database connection.
+        """
         super().__init__(db)
         self.collection = self.db['metadata']
 
     async def get_ev_formula(self, market_domain: str, ev_formula_name: str) -> str | None:
+        """
+        Retrieves the EV formula for the given market domain and formula name.
+
+        Args:
+            market_domain (str): The market domain to search in.
+            ev_formula_name (str): The name of the EV formula to retrieve.
+
+        Returns:
+            str | None: The EV formula if found, otherwise None.
+
+        Raises:
+            ValueError: If the market domain or EV formula is not found.
+        """
         metadata = await self.collection.find_one({'_id': 'metadata'})
         if market_domain_dict := metadata['ev_algo'].get(market_domain):
             if ev_formula := market_domain_dict.get(ev_formula_name):

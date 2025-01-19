@@ -5,17 +5,55 @@ from db.base import BaseCollection
 
 
 class Teams(BaseCollection):
+    """
+    A class to manage teams in the database.
+
+    Attributes:
+        db (AsyncIOMotorDatabase): The database connection.
+        collection (AsyncIOMotorDatabase.collection): The teams collection.
+    """
+
     def __init__(self, db: AsyncIOMotorDatabase):
+        """
+        Initializes the Teams class with the given database connection.
+
+        Args:
+            db (AsyncIOMotorDatabase): The database connection.
+        """
         super().__init__(db)
         self.collection = self.db['teams']
 
     async def get_teams(self, query: dict) -> list[dict]:
+        """
+        Retrieves a list of teams based on the given query.
+
+        Args:
+            query (dict): The query to find the teams.
+
+        Returns:
+            list[dict]: A list of team documents.
+        """
         return await self.collection.find(query, { '_id': 0 }).to_list()
 
     async def get_team(self, query: dict) -> dict:
+        """
+        Retrieves a single team document based on the given query.
+
+        Args:
+            query (dict): The query to find the team.
+
+        Returns:
+            dict: The team document.
+        """
         return await self.collection.find_one(query)
 
     async def store_teams(self, teams: list[dict]) -> None:
+        """
+        Stores a list of teams in the database.
+
+        Args:
+            teams (list[dict]): The list of teams to store.
+        """
         requests = []
         for team in teams:
             query = {'full_name': team['full_name']}
@@ -30,11 +68,27 @@ class Teams(BaseCollection):
             await self.collection.bulk_write(requests)
 
     async def update_team(self, query: dict, return_op: bool = False, **kwargs):
+        """
+        Updates a team in the database.
+
+        Args:
+            query (dict): The query to find the team to update.
+            return_op (bool): Whether to return the update operation.
+            **kwargs: The fields to update.
+
+        Returns:
+            UpdateOne: The update operation if return_op is True.
+        """
         if return_op:
             return UpdateOne(query, {'$set': kwargs})
 
         await self.collection.update_one(query, {'$set': kwargs})
 
     async def delete_teams(self, query: dict) -> None:
-        await self.collection.delete_many(query)
+        """
+        Deletes teams from the database.
 
+        Args:
+            query (dict): The query to filter the teams to delete.
+        """
+        await self.collection.delete_many(query)

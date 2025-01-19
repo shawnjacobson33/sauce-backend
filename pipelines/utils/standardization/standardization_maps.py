@@ -571,7 +571,11 @@ MARKET_NAME_STRD_MAP = {
 }
 PERIOD_NAME_STRD_MAP = {
     'firstQuarter': '1Q',
-    'firstHalf': '1H'
+    'secondQuarter': '2Q',
+    'firstHalf': '1H',
+    'thirdQuarter': '3Q',
+    'secondHalf': '2H',
+    'fourthQuarter': '4Q',
 }
 SUBJECT_NAME_STRD_MAP = {
     'NBA:alexandre sarr': 'Alex Sarr',
