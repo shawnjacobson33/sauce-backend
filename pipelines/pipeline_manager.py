@@ -26,9 +26,9 @@ class PipelineManager:
         pipelines = [  # Todo: make sure RostersPipline runs first before BettingLinesPipeline just for first iteration?
             # RostersPipeline(self.configs['rosters']).run_pipeline(),
             # GamesPipeline(self.configs['games']).run_pipeline(),
-            # BoxScoresPipeline(self.configs['box_scores'], standardizer).run_pipeline(),
+            BoxScoresPipeline(self.configs['box_scores'], standardizer).run_pipeline(),
             # BettingLinesPipeline(self.configs['betting_lines'], standardizer).run_pipeline(),
-            GCSPipeline(self.configs['gcs']).run_pipeline()
+            # GCSPipeline(self.configs['gcs']).run_pipeline()
         ]
     
         await asyncio.gather(*pipelines)
@@ -37,10 +37,10 @@ class PipelineManager:
 
 # async def main():
 #     await db.database['games'].insert_one({
-#         '_id': 'NBA_20250118_CLE@MIN',
+#         '_id': 'NBA_20250118_WAS@GS',
 #         'league': 'NBA',
-#         'away_team': 'CLE',
-#         'home_team': 'MIN',
+#         'away_team': 'WAS',
+#         'home_team': 'GS',
 #         'game_time': '2025-01-18T23:00:00Z',
 #         'status': 'live'
 #     })

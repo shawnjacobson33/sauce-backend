@@ -48,6 +48,10 @@ class BasketballBoxScoresCollector(BaseCollector):
         if period := soup.find('div', {'class': 'quarter'}):
             game['period'] = period.text.strip()
 
+        if (scores := soup.find_all('div', {'class': 'score-text'})) and (len(scores) == 2):
+            game['away_score'] = int(scores[0].text.strip())
+            game['home_score'] = int(scores[1].text.strip())
+
     @staticmethod
     def _extract_team(div) -> dict[str, str] | None:
         if (a_elem := div.find('a')) and (href := a_elem.get('href')):
@@ -62,7 +66,7 @@ class BasketballBoxScoresCollector(BaseCollector):
     def _extract_subject(self, cell, league: str) -> dict[str, str] | None:
         try:
             if (a_elem := cell.find('a')) and (href := a_elem.get('href')):
-                raw_subject_name = ' '.join(href.split('/')[-2].split('-')).title()
+                raw_subject_name = ' '.join(href.split('/')[-2].split('-'))
                 cleaned_subject_name = utils.cleaner.clean_subject_name(raw_subject_name)
                 subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
                 std_subject_name = self.standardizer.standardize_subject_name(subject_key)
