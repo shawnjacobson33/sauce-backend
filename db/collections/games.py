@@ -12,17 +12,12 @@ class Games(BaseCollection):
         super().__init__(db)
         self.collection = self.db['games']
 
-    @staticmethod
-    def is_game_finished(game: dict) -> bool:
-        if start_time := game.get('start_time', game.get('game_time')): # Todo: TEMPORARY FIX
-            return (datetime.now().hour - start_time.hour >= 4) or (datetime.now().day - start_time.day >= 1)
-
     async def get_games(self, query: dict, live: bool = False) -> list[dict]:
         if live:
             live_query = {
                 **query,
                 '$or': [
-                    {'game_time': 'live'},
+                    {'status': 'live'},
                     {'game_time': {'$lte': datetime.now()}}
                 ]
             }

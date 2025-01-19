@@ -123,7 +123,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 std_subject_name = self.standardizer.standardize_subject_name(subject_key)
                 return std_subject_name
     
-        except Exception as e:
+        except ValueError as e:
             self.log_error(e)
             self.failed_subject_standardization += 1
 
@@ -189,9 +189,10 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                                                     'batch_timestamp': self.batch_timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                                                     'collection_timestamp': curr_datetime.strftime('%Y-%m-%d %H:%M:%S'),  # Todo: are you sure this is the format to use?
                                                     'date': curr_datetime.strftime('%Y-%m-%d'),
-                                                    'bookmaker': self.name,
+                                                    'bookmaker': self.name,  # Todo: Maybe include more data about the bookmaker here
                                                     'league': league,
                                                     'game': game,
+                                                    'market_domain': 'PlayerProps',
                                                     'market': market,
                                                     'subject': subject,
                                                     'label': label,
@@ -203,7 +204,6 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                                                 self.items_container.append(betting_line_doc)
                                                 self.num_collected += 1
     
-
     @logger
     async def run_collector(self) -> None:
         if await self._request_new_tokens():

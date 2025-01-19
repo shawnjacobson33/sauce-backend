@@ -14,7 +14,7 @@ class BoxScoresPipeline(BasePipeline):
 
     @staticmethod
     def _get_finished_games(games: list[dict]) -> list[dict]:
-        return [game for game in games if db.games.is_game_finished(game)]
+        return [game for game in games if game.get('period') == 'End']
 
     @staticmethod
     async def _cleanup_finished_games(games: list[dict]) -> None:
@@ -26,10 +26,6 @@ class BoxScoresPipeline(BasePipeline):
     async def _check_for_finished_games(self, games: list[dict]) -> None:
         if finished_games := self._get_finished_games(games):
             await self._cleanup_finished_games(finished_games)
-
-    @staticmethod
-    async def _store_box_scores(collected_boxscores: list[dict]) -> None:
-        await db.box_scores.store_box_scores(collected_boxscores)
 
     async def _configure_pipeline(self):
         if self.configs['reset']:
@@ -43,6 +39,6 @@ class BoxScoresPipeline(BasePipeline):
             box_scores_dc_manager = BoxScoresDataCollectionManager(self.configs['data_collection'], self.standardizer)
             collected_boxscores = await box_scores_dc_manager.run_collectors(batch_timestamp, live_games)
 
-            await self._store_box_scores(collected_boxscores)
+            await db.box_scores.store_box_scores(collected_boxscores)
             await db.betting_lines.update_live_stats(collected_boxscores)
             await self._check_for_finished_games(live_games)

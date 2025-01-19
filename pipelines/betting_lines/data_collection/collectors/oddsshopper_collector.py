@@ -77,8 +77,8 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             self.log_error(e)
             self.failed_requests += 1
 
-        except AttributeError as e:
-            self.log_error(e)
+        # except AttributeError as e:
+        #     self.log_error(e)
 
     def _extract_market(self, event: dict, league: str, market_domain: str) -> str | None:
         try:
@@ -91,8 +91,8 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             self.log_error(e)
             self.failed_market_standardization += 1
 
-        except AttributeError as e:
-            self.log_error(e)
+        # except AttributeError as e:
+        #     self.log_error(e)
 
     @staticmethod
     def _extract_raw_subject_names(participants: list[dict], market_domain: str) -> Iterable:
@@ -114,8 +114,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             self.log_error(e)
             self.failed_subject_standardization += 1
 
-        except AttributeError as e:
-            self.log_error(e)
 
     @staticmethod
     def _add_extra_source_stats(hold: float | None, outcome: dict, betting_line_dict: dict):
@@ -147,14 +145,15 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                                 'bookmaker': bookmaker_name,
                                                 'league': league,
                                                 'game': game,
+                                                'market_domain': market_domain,
                                                 'market': market,
                                                 'subject': subject,
                                                 'label': label,
                                                 'line': float(outcome.get('line', 0.5)),
                                                 'odds': odds,
                                             }
-                                            if one_click_url := outcome.get('deepLinkUrl'):
-                                                betting_line_dict['one_click_url'] = one_click_url
+                                            if url := outcome.get('deepLinkUrl'):
+                                                betting_line_dict['url'] = url
 
                                             self._add_extra_source_stats(hold, outcome, betting_line_dict)
                                             betting_line_key = utils.storer.get_betting_line_key(betting_line_dict)

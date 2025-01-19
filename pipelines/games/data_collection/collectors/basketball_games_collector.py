@@ -20,7 +20,7 @@ class BasketballGamesCollector(BaseCollector):
             headers['referer'] = headers['referer'].format(league, 'schedule')
             cookies = self.payload['cookies']
             today = datetime.strptime(datetime.now().strftime('%Y%m%d'), '%Y%m%d')
-            for i in range(self.payload['num_days_to_collect_from_league_map'][league]):
+            for i in range(self.payload['num_days_to_collect_from_league_map'][league]):  # Todo: this should be configurable
                 date = today + timedelta(days=i)
                 url = base_url.format(date.strftime('%Y%m%d'))
                 if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
@@ -81,7 +81,6 @@ class BasketballGamesCollector(BaseCollector):
                                             }
                                             if game_time == 'live': # Todo: Only a problem if you collect a game for the first time when its live
                                                 game_dict['status'] = 'live'
-
                                             else:
                                                 game_dict['game_time'] = game_time
 

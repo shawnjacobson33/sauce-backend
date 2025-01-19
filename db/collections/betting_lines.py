@@ -31,9 +31,17 @@ class BettingLines(BaseCollection):
 
         return most_recent_stream_record
 
-    async def _get_most_recent_betting_lines(self, query: dict, proj: dict) -> list[dict]:
+    def _get_cursor(self, *args, **kwargs):
+        if kwargs.pop('agg', None):
+            return self.collection.aggregate(*args, **kwargs)
+        elif n := kwargs.pop('n', None):
+            return self.collection.find(*args, **kwargs).limit(n)
+
+        return self.collection.find(*args, **kwargs)
+
+    async def _get_most_recent_betting_lines(self, *args, **kwargs) -> list[dict]:
         most_recent_betting_lines = []
-        async for betting_line in self.collection.find(query, {'stream': { '$slice': -1 }, **proj}):
+        async for betting_line in self._get_cursor(*args, **kwargs):
             most_recent_stream_record = self._get_most_recent_stream_record(betting_line['stream'])
             most_recent_betting_lines.append(
                 { **{k: v for k, v in betting_line.items() if k != 'stream'}, **most_recent_stream_record }
@@ -41,14 +49,14 @@ class BettingLines(BaseCollection):
 
         return most_recent_betting_lines
 
-    async def get_betting_lines(self, query: dict, proj: dict = None, most_recent: bool = False) -> list[dict]:
-        if most_recent:
-            return await self._get_most_recent_betting_lines(query, proj if proj else {})
+    async def get_betting_lines(self, *args, **kwargs) -> list[dict]:
+        if kwargs.pop('most_recent', None):
+            return await self._get_most_recent_betting_lines(*args, **kwargs)
 
-        return await self.collection.find(query, proj if proj else {}).to_list()
+        return await self._get_cursor(*args, **kwargs).to_list()
 
-    async def get_completed_betting_lines(self, query: dict, proj: dict = None):
-        return await self.completed_betting_lines_collection.find(query, proj if proj else {}).to_list()
+    async def get_completed_betting_lines(self, *args, **kwargs) -> list[dict]:
+        return await self.completed_betting_lines_collection.find(*args, **kwargs).to_list()
 
     @staticmethod
     def _create_doc(line: dict) -> dict:
@@ -158,16 +166,19 @@ class BettingLines(BaseCollection):
         return betting_lines_json
 
     async def _store_in_gcs(self):
-        completed_betting_lines = await self.get_completed_betting_lines({})
-        betting_lines_json = self._prepare_betting_lines_for_upload(completed_betting_lines)
-        blob_name = f"{datetime.now().strftime('%Y-%m-%d')}.json"
-        self.gcs_uploader.upload(blob_name, betting_lines_json)
+        if completed_betting_lines := await self.get_completed_betting_lines({}):
+            betting_lines_json = self._prepare_betting_lines_for_upload(completed_betting_lines)
+            blob_name = f"{datetime.now().strftime('%Y-%m-%d')}.json"
+            self.gcs_uploader.upload(blob_name, betting_lines_json)
+
+        else:
+            print('[GCSPipeline]: ⚠️ No completed betting lines to store in GCS. ⚠️')
 
     @staticmethod
     def _get_projection_for_gcs() -> dict:
         return {
-            'one_click_url': 0, 'metrics': 0, 'subject': 0, 'bookmaker': 0, 'date': 0, 'label': 0,
-            'league': 0, 'market': 0
+            'url': 0, 'metrics': 0, 'subject': 0, 'bookmaker': 0, 'date': 0, 'label': 0,
+            'league': 0, 'market': 0, 'market_domain': 0
         }
 
     async def store_completed_betting_lines(self, game_ids: list[dict] = None, in_gcs: bool = False) -> None:
@@ -181,7 +192,7 @@ class BettingLines(BaseCollection):
                 betting_line for betting_line in betting_lines_filtered_by_game if betting_line.get('live_stat')
             ]
             self.completed_betting_lines_collection.insert_many(betting_lines_filtered_for_live_stat)
-            return await self.delete_betting_lines(betting_lines_filtered_by_game)
+            await self.delete_betting_lines(betting_lines_filtered_by_game)
 
         if in_gcs:
             await self._store_in_gcs()

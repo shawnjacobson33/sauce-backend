@@ -19,7 +19,3 @@ subjects = collections.Subjects(database)
 games = collections.Games(database)
 
 box_scores = collections.BoxScores(database)
-
-
-
-

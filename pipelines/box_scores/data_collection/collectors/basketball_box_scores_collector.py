@@ -41,6 +41,14 @@ class BasketballBoxScoresCollector(BaseCollector):
             self.log_error(e)
 
     @staticmethod
+    def _extract_and_add_game_info(soup: BeautifulSoup, game: dict) -> None:
+        if live_time := soup.find('div', {'class': 'time'}):
+            game['live_time'] = live_time.text.strip()
+
+        if period := soup.find('div', {'class': 'quarter'}):
+            game['period'] = period.text.strip()
+
+    @staticmethod
     def _extract_team(div) -> dict[str, str] | None:
         if (a_elem := div.find('a')) and (href := a_elem.get('href')):
             if (len(href) > 3) and (team_name := href.split('/')[3]):
@@ -120,6 +128,7 @@ class BasketballBoxScoresCollector(BaseCollector):
 
     def _parse_boxscores(self, html: str, league: str, game: dict) -> None:
         soup = BeautifulSoup(html, 'html.parser')
+        self._extract_and_add_game_info(soup, game)
         for box_score_div in self._get_divs(soup):
             for row in self._get_rows(box_score_div):
                 if cells := self._get_cells(row):

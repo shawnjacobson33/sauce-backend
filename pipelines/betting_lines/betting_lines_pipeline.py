@@ -23,27 +23,16 @@ class BettingLinesPipeline(BasePipeline):
         await db.betting_lines.store_betting_lines(betting_lines)
         end_time = time.time()
         self.times['collection_store_betting_lines_time'] = round(end_time - start_time, 2)
-
-    async def _handle_completed_betting_lines(self, batch_timestamp: datetime) -> None:
-        # Todo: Need logging output for this
-        if batch_timestamp.hour == 0 and not self.stored_in_gcs:
-            await db.betting_lines.store_completed_betting_lines(in_gcs=True)
-            self.stored_in_gcs = True
-
-        if batch_timestamp.hour == 1 and self.stored_in_gcs:
-            self.stored_in_gcs = False
     
     async def _configure_pipeline(self):
         if self.configs['reset']:
             await db.database['betting_lines'].delete_many({})
+            await db.database['completed_betting_lines'].delete_many({})
             await db.database['pipeline_stats'].delete_many({})
             
     @logger
     async def run_pipeline(self):
         batch_timestamp = datetime.now()
-
-        await self._handle_completed_betting_lines(batch_timestamp)
-
         db.pipeline_stats.update_batch_details(batch_timestamp)
 
         betting_lines_dc_manager = BettingLinesDataCollectionManager(self.configs['data_collection'], self.standardizer)

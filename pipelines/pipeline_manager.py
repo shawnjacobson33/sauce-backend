@@ -6,6 +6,7 @@ from pipelines.games import GamesPipeline
 from pipelines.rosters import RostersPipeline
 from pipelines.box_scores import BoxScoresPipeline
 from pipelines.betting_lines import BettingLinesPipeline
+from pipelines.storage_pipeline import GCSPipeline
 from pipelines.utils import Standardizer
 
 
@@ -19,7 +20,6 @@ class PipelineManager:
         subjects = await db.subjects.get_subjects({})
         return Standardizer(self.configs['standardization'], teams, subjects)
     
-    
     async def run_pipelines(self):
         standardizer = await self._get_standardizer()
 
@@ -28,10 +28,28 @@ class PipelineManager:
             # GamesPipeline(self.configs['games']).run_pipeline(),
             # BoxScoresPipeline(self.configs['box_scores'], standardizer).run_pipeline(),
             # BettingLinesPipeline(self.configs['betting_lines'], standardizer).run_pipeline(),
+            GCSPipeline(self.configs['gcs']).run_pipeline()
         ]
     
         await asyncio.gather(*pipelines)
 
+
+
+# async def main():
+#     await db.database['games'].insert_one({
+#         '_id': 'NBA_20250118_CLE@MIN',
+#         'league': 'NBA',
+#         'away_team': 'CLE',
+#         'home_team': 'MIN',
+#         'game_time': '2025-01-18T23:00:00Z',
+#         'status': 'live'
+#     })
+#
+#
+# if __name__ == '__main__':
+#     import asyncio
+#
+#     asyncio.run(main())
 
 if __name__ == '__main__':
     from pipelines.configs import load_configs
