@@ -5,6 +5,12 @@ import pandas as pd  # Todo: consider switch to dask for parallel processing
 from db import db
 
 
+MARKET_DOMAIN_MAP = {
+    'Gamelines': 'main_markets',
+    'PlayerProps': 'secondary_markets',
+}
+
+
 def logger(processing_func):
     @functools.wraps(processing_func)
     def wrapped(self, *args, **kwargs):
@@ -30,7 +36,6 @@ class BettingLinesProcessor:
 
         self.domain = 'BettingLines'  # for logging
         self.times = {}
-        self.ev_formula = self.configs['ev_formulas']['secondary_markets']['formula']
 
         if betting_lines_container:
             self.betting_lines_df = pd.DataFrame(betting_lines_container)
@@ -72,6 +77,7 @@ class BettingLinesProcessor:
                 weights_sum = 0
                 weighted_market_total = 0
                 for _, row in devigged_betting_lines_df_grpd.iterrows():
+                    ev_formula = self.ev_formula[MARKET_DOMAIN_MAP[row['market_domain']]]
                     weights = self.ev_formula[row['bookmaker']]
                     weights_sum += weights
                     weighted_market_total += weights * row['tw_prb']

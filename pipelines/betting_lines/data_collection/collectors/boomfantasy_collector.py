@@ -137,14 +137,17 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         for q in qg.get('q', []):
             yield q
 
-    def _extract_market(self, qg: dict, q: dict, league: str) -> str | None:
+    def _extract_market(self, qg: dict, q: dict, league: str) -> dict | None:
         try:
             period = self._extract_period(qg)
             if raw_market_name := q.get("statistic"):
                 sport = utils.get_sport(league)
                 std_market_name = self.standardizer.standardize_market_name(
                     raw_market_name, 'PlayerProps', sport, period=period)
-                return std_market_name
+                return {
+                    'domain': 'PlayerProps',
+                    'name': std_market_name,
+                }
     
         except ValueError as e:
             self.log_error(e)
@@ -192,7 +195,6 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                                                     'bookmaker': self.name,  # Todo: Maybe include more data about the bookmaker here
                                                     'league': league,
                                                     'game': game,
-                                                    'market_domain': 'PlayerProps',
                                                     'market': market,
                                                     'subject': subject,
                                                     'label': label,

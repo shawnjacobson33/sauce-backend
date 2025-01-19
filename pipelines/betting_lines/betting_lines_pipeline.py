@@ -16,7 +16,6 @@ class BettingLinesPipeline(BasePipeline):
         self.standardizer = standardizer
 
         self.times = {}
-        self.stored_in_gcs = False
 
     async def _store_betting_lines(self, betting_lines: list[dict]):
         start_time = time.time()

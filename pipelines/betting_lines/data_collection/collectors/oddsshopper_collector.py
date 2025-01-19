@@ -80,12 +80,15 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         # except AttributeError as e:
         #     self.log_error(e)
 
-    def _extract_market(self, event: dict, league: str, market_domain: str) -> str | None:
+    def _extract_market(self, event: dict, league: str, market_domain: str) -> dict | None:
         try:
             raw_market_name = event['offerName']
             sport = utils.get_sport(league) if market_domain == 'PlayerProps' else None
             std_market_name = self.standardizer.standardize_market_name(raw_market_name, market_domain, sport)
-            return std_market_name
+            return {
+                'domain': market_domain,
+                'name': std_market_name
+            }
         
         except ValueError as e:  # Todo: implement custom error
             self.log_error(e)
@@ -145,7 +148,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                                 'bookmaker': bookmaker_name,
                                                 'league': league,
                                                 'game': game,
-                                                'market_domain': market_domain,
                                                 'market': market,
                                                 'subject': subject,
                                                 'label': label,
