@@ -18,6 +18,7 @@ class BettingLinesDataCollectionManager:
             collectors.OddsShopperCollector(batch_timestamp, betting_lines_container, self.standardizer, self.configs).run_collector(),
             collectors.BoomFantasyCollector(batch_timestamp, betting_lines_container, self.standardizer, self.configs).run_collector()
         ]
+
         await asyncio.gather(*coros)
 
         return betting_lines_container

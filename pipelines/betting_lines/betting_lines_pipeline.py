@@ -30,7 +30,7 @@ class BettingLinesPipeline(BasePipeline):
             await db.database['completed_betting_lines'].delete_many({})
             await db.database['pipeline_stats'].delete_many({})
 
-        await asyncio.sleep(25)
+        # await asyncio.sleep(25)
             
     @pipeline_logger
     async def run_pipeline(self):

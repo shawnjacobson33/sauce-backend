@@ -103,16 +103,24 @@ class OddsShopperCollector(BaseBettingLinesCollector):
 
     def _extract_subjects(self, event: dict, league: str, market_domain: str) -> Iterable:
         try:
-            participants = event['participants']
-            for raw_subject_name in self._extract_raw_subject_names(participants, market_domain):
+            last_subject_name = None
+            for raw_subject_name in self._extract_raw_subject_names(event['participants'], market_domain):
                 cleaned_subject_name = utils.cleaner.clean_subject_name(raw_subject_name)
                 subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
                 std_subject_name = self.standardizer.standardize_subject_name(subject_key)
                 yield std_subject_name
+                last_subject_name = std_subject_name
+
+            while True:  # For player props with only one participant
+                yield last_subject_name
         
         except ValueError as e:  # Todo: implement custom error
             self.log_error(e)
             self.failed_subject_standardization += 1
+
+    @staticmethod
+    def _extract_label(side: dict, market: str, market_domain: str) -> str | None:
+        return side.get('label') if not ((market_domain == 'Gamelines') and ('Total' not in market)) else 'Over'
 
     @staticmethod
     def _add_extra_source_stats(hold: float | None, outcome: dict, betting_line_dict: dict):
@@ -129,36 +137,38 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         for event in resp:
             hold = event.get('hold')
             if market := self._extract_market(event, league, market_domain):
-                for subject in self._extract_subjects(event, league, market_domain):  # Todo: bug here...for game line markets
-                    if game := await self._get_game(market_domain, league, subject):
-                        for side in event.get('sides', []):
-                            if label := side.get('label'):
-                                for outcome in side.get('outcomes', []):
-                                    if bookmaker_name := outcome.get('sportsbookCode'):
-                                        if odds := outcome.get('odds'):
-                                            curr_datetime = datetime.now()
-                                            betting_line_dict = {  # Todo: better way to gradually build this dict?
-                                                'batch_timestamp': self.batch_timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-                                                'collection_timestamp': curr_datetime.strftime('%Y-%m-%d %H:%M:%S'),  # Todo: are you sure this is the format to use?
-                                                'date': curr_datetime.strftime('%Y-%m-%d'),
-                                                'bookmaker': bookmaker_name,
-                                                'league': league,
-                                                'game': game,
-                                                'market_domain': market_domain,
-                                                'market': market,
-                                                'subject': subject,
-                                                'label': label,
-                                                'line': float(outcome.get('line', 0.5)),
-                                                'odds': odds,
-                                            }
-                                            if url := outcome.get('deepLinkUrl'):
-                                                betting_line_dict['url'] = url
+                if subjects := self._extract_subjects(event, league, market_domain):
+                    subjects_iter = iter(subjects)
+                    for side in event.get('sides', []):
+                        if subject := next(subjects_iter, None):
+                            if game := await self._get_game(market_domain, league, subject):
+                                if label := self._extract_label(side, market, market_domain):
+                                    for outcome in side.get('outcomes', []):
+                                        if bookmaker_name := outcome.get('sportsbookCode'):
+                                            if odds := outcome.get('odds'):
+                                                curr_datetime = datetime.now()
+                                                betting_line_dict = {  # Todo: better way to gradually build this dict?
+                                                    'batch_timestamp': self.batch_timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                                                    'collection_timestamp': curr_datetime.strftime('%Y-%m-%d %H:%M:%S'),  # Todo: are you sure this is the format to use?
+                                                    'date': curr_datetime.strftime('%Y-%m-%d'),
+                                                    'bookmaker': bookmaker_name,
+                                                    'league': league,
+                                                    'game': game,
+                                                    'market_domain': market_domain,
+                                                    'market': market,
+                                                    'subject': subject,
+                                                    'label': label,
+                                                    'line': float(outcome.get('line', 0.5)),
+                                                    'odds': odds,
+                                                }
+                                                if url := outcome.get('deepLinkUrl'):
+                                                    betting_line_dict['url'] = url
 
-                                            self._add_extra_source_stats(hold, outcome, betting_line_dict)
-                                            betting_line_key = utils.storer.get_betting_line_key(betting_line_dict)
-                                            betting_line_dict['_id'] = betting_line_key
-                                            self.items_container.append(betting_line_dict)
-                                            self.num_collected += 1
+                                                self._add_extra_source_stats(hold, outcome, betting_line_dict)
+                                                betting_line_key = utils.storer.get_betting_line_key(betting_line_dict)
+                                                betting_line_dict['_id'] = betting_line_key
+                                                self.items_container.append(betting_line_dict)
+                                                self.num_collected += 1
 
     async def _gather_betting_lines_requests(self, matchups_resp: dict):
         betting_lines_tasks = []

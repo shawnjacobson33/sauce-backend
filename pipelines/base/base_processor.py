@@ -41,32 +41,29 @@ class BaseProcessor:
         self.betting_lines_df['impl_prb'] = (1 / self.betting_lines_df['odds']).round(3)
 
         self.sharp_betting_lines_df = self.betting_lines_df[
-            (self.betting_lines_df['bookmaker'].isin(self.ev_formula['formula'])) &
-            (self.betting_lines_df['market_domain'] == 'PlayerProps')
-            ]
+            (self.betting_lines_df['bookmaker'].isin(self.ev_formula['formula']))
+        ]
+
+    def _get_matching_betting_lines_mask(self, row):
+        raise NotImplementedError
 
     def _get_devigged_lines(self) -> pd.DataFrame:
 
         def devig(row):
-            matching_player_prop_lines = self.sharp_betting_lines_df[
-                (self.sharp_betting_lines_df['line'] == row['line']) &
-                (self.sharp_betting_lines_df['league'] == row['league']) &
-                (self.sharp_betting_lines_df['subject'] == row['subject']) &
-                (self.sharp_betting_lines_df['market'] == row['market']) &
-                (self.sharp_betting_lines_df['bookmaker'] == row['bookmaker']) &
-                (self.sharp_betting_lines_df['label'] != row['label'])  # Todo: is this the same for games lines also?
-                ]
+            matching_betting_lines = self.sharp_betting_lines_df[
+                self._get_matching_betting_lines_mask(row) # Todo: is this the same for games lines also?
+            ]
 
-            if len(matching_player_prop_lines) == 1:
-                matching_prop_line = matching_player_prop_lines.iloc[0]
-                row['tw_prb'] = row['impl_prb'] / (matching_prop_line['impl_prb'] + row['impl_prb'])
+            if len(matching_betting_lines) == 1:
+                matching_betting_line = matching_betting_lines.iloc[0]
+                row['tw_prb'] = row['impl_prb'] / (matching_betting_line['impl_prb'] + row['impl_prb'])
 
             return row
 
-        df = self.sharp_betting_lines_df.apply(devig, axis=1).dropna()
-        return df
+        devigged_sharp_betting_lines_df = (self.sharp_betting_lines_df.apply(devig, axis=1).dropna(subset=['tw_prb']))
+        return devigged_sharp_betting_lines_df
 
-    def _get_weighted_market_sharp_avgs(self, devigged_game_lines_df: pd.DataFrame) -> pd.DataFrame:
+    def _weight_market_sharp_avgs(self, devigged_game_lines_df: pd.DataFrame) -> None:
 
         def weighted_market_avg(devigged_game_lines_df_grpd):
             weighted_market_avg_betting_line_df = (devigged_game_lines_df_grpd.iloc[[0]]
@@ -87,22 +84,22 @@ class BaseProcessor:
 
             return weighted_market_avg_betting_line_df
 
-        df = (devigged_game_lines_df.groupby(['line', 'league', 'subject', 'market', 'label'])
-                                    .apply(weighted_market_avg))
-        return df
+        self.sharp_betting_lines_df = (devigged_game_lines_df.groupby(['line', 'league', 'subject', 'market', 'label'])
+                                                             .apply(weighted_market_avg))
 
-    def _get_expected_values(self):
+    def _get_expected_values(self) -> pd.DataFrame:
 
         def ev(row):
-            matching_sharp_prop_line = self.sharp_betting_lines_df[
+            matching_sharp_betting_line = self.sharp_betting_lines_df[
                 (self.sharp_betting_lines_df['line'] == row['line']) &
-                (self.sharp_betting_lines_df['league'] == row['league']) &
+                (self.sharp_betting_lines_df['game'] == row['game']) &
                 (self.sharp_betting_lines_df['subject'] == row['subject']) &
                 (self.sharp_betting_lines_df['market'] == row['market']) &
                 (self.sharp_betting_lines_df['label'] == row['label'])
             ]
-            if len(matching_sharp_prop_line) == 1:
-                prb_of_winning = matching_sharp_prop_line.iloc[0]['tw_prb']
+
+            if len(matching_sharp_betting_line) == 1:
+                prb_of_winning = matching_sharp_betting_line.iloc[0]['tw_prb']
                 potential_winnings = row['odds'] - 1
                 expected_value = (prb_of_winning * potential_winnings) - (1 - prb_of_winning)
 
@@ -112,10 +109,8 @@ class BaseProcessor:
 
             return row
 
-        df = (
-            self.sharp_betting_lines_df.apply(ev, axis=1)
-                                 .sort_values(by='ev', ascending=False)
-        )
+        df = (self.betting_lines_df.apply(ev, axis=1)
+                                   .sort_values(by='ev', ascending=False))
         return df
 
     @staticmethod
@@ -145,20 +140,20 @@ class BaseProcessor:
     @processor_logger
     def run_processor(self) -> list[dict]:
         start_time = time.time()
-        devigged_game_lines_df = self._get_devigged_lines()
+        devigged_betting_lines_df = self._get_devigged_lines()
         end_time = time.time()
         self.times['devig_time'] = round(end_time - start_time, 4)
 
         start_time = time.time()
-        self.betting_lines_df = self._get_weighted_market_sharp_avgs(devigged_game_lines_df)
+        self._weight_market_sharp_avgs(devigged_betting_lines_df)
         end_time = time.time()
         self.times['weighted_market_sharp_avgs_time'] = round(end_time - start_time, 4)
 
         start_time = time.time()
-        game_lines_df_pr = self._get_expected_values()
+        betting_lines_df_pr = self._get_expected_values()
         end_time = time.time()
         self.times['ev_time'] = round(end_time - start_time, 4)
 
-        betting_lines_pr_list = game_lines_df_pr.to_dict(orient='records')
+        betting_lines_pr_list = betting_lines_df_pr.to_dict(orient='records')
         self._cleanup_betting_lines(betting_lines_pr_list)
         return betting_lines_pr_list
