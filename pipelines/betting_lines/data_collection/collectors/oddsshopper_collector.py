@@ -7,7 +7,7 @@ from urllib3.exceptions import ResponseError
 from pipelines.utils import Standardizer
 from pipelines.utils import utilities as utils
 
-from pipelines.collector_base import logger
+from pipelines.base.base_collector import collector_logger
 from pipelines.betting_lines.data_collection.betting_lines_collector_base import BaseBettingLinesCollector
 
 
@@ -80,15 +80,12 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         # except AttributeError as e:
         #     self.log_error(e)
 
-    def _extract_market(self, event: dict, league: str, market_domain: str) -> dict | None:
+    def _extract_market(self, event: dict, league: str, market_domain: str) -> str | None:
         try:
             raw_market_name = event['offerName']
             sport = utils.get_sport(league) if market_domain == 'PlayerProps' else None
             std_market_name = self.standardizer.standardize_market_name(raw_market_name, market_domain, sport)
-            return {
-                'domain': market_domain,
-                'name': std_market_name
-            }
+            return std_market_name
         
         except ValueError as e:  # Todo: implement custom error
             self.log_error(e)
@@ -117,7 +114,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             self.log_error(e)
             self.failed_subject_standardization += 1
 
-
     @staticmethod
     def _add_extra_source_stats(hold: float | None, outcome: dict, betting_line_dict: dict):
         if hold:
@@ -133,7 +129,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         for event in resp:
             hold = event.get('hold')
             if market := self._extract_market(event, league, market_domain):
-                for subject in self._extract_subjects(event, league, market_domain):
+                for subject in self._extract_subjects(event, league, market_domain):  # Todo: bug here...for game line markets
                     if game := await self._get_game(market_domain, league, subject):
                         for side in event.get('sides', []):
                             if label := side.get('label'):
@@ -148,6 +144,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                                 'bookmaker': bookmaker_name,
                                                 'league': league,
                                                 'game': game,
+                                                'market_domain': market_domain,
                                                 'market': market,
                                                 'subject': subject,
                                                 'label': label,
@@ -172,7 +169,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
 
         await asyncio.gather(*betting_lines_tasks)
 
-    @logger
+    @collector_logger
     async def run_collector(self) -> None:
         if matchups_resp := await self._request_matchups():
             await self._gather_betting_lines_requests(matchups_resp)

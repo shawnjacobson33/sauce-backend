@@ -6,7 +6,7 @@ from urllib3.exceptions import ResponseError
 from pipelines.utils import Standardizer
 from pipelines.utils import utilities as utils
 
-from pipelines.collector_base import logger
+from pipelines.base.base_collector import collector_logger
 from pipelines.betting_lines.data_collection.betting_lines_collector_base import BaseBettingLinesCollector
 
 
@@ -137,17 +137,14 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         for q in qg.get('q', []):
             yield q
 
-    def _extract_market(self, qg: dict, q: dict, league: str) -> dict | None:
+    def _extract_market(self, qg: dict, q: dict, league: str) -> str | None:
         try:
             period = self._extract_period(qg)
             if raw_market_name := q.get("statistic"):
                 sport = utils.get_sport(league)
                 std_market_name = self.standardizer.standardize_market_name(
                     raw_market_name, 'PlayerProps', sport, period=period)
-                return {
-                    'domain': 'PlayerProps',
-                    'name': std_market_name,
-                }
+                return std_market_name
     
         except ValueError as e:
             self.log_error(e)
@@ -195,6 +192,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                                                     'bookmaker': self.name,  # Todo: Maybe include more data about the bookmaker here
                                                     'league': league,
                                                     'game': game,
+                                                    'market_domain': "PlayerProps",
                                                     'market': market,
                                                     'subject': subject,
                                                     'label': label,
@@ -206,7 +204,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                                                 self.items_container.append(betting_line_doc)
                                                 self.num_collected += 1
     
-    @logger
+    @collector_logger
     async def run_collector(self) -> None:
         if await self._request_new_tokens():
             if contest_id := await self._request_contest_id():

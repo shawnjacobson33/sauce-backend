@@ -1,7 +1,6 @@
 
 from db import db
-from pipelines.pipeline_base import BasePipeline, logger
-
+from pipelines.base.base_pipeline import BasePipeline, pipeline_logger
 
 class GCSPipeline(BasePipeline):
 
@@ -11,6 +10,6 @@ class GCSPipeline(BasePipeline):
     async def _configure_pipeline(self):
         return
 
-    @logger
+    @pipeline_logger
     async def run_pipeline(self):
         await db.betting_lines.store_completed_betting_lines(in_gcs=True)

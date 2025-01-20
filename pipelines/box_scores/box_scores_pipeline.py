@@ -1,9 +1,10 @@
+import asyncio
 from datetime import datetime
 
 from db import db
-from pipelines.pipeline_base import BasePipeline, logger
-from pipelines.box_scores.data_collection import BoxScoresDataCollectionManager
 from pipelines.utils import Standardizer
+from pipelines.base.base_pipeline import BasePipeline, pipeline_logger
+from pipelines.box_scores.data_collection import BoxScoresDataCollectionManager
 
 
 class BoxScoresPipeline(BasePipeline):
@@ -31,7 +32,9 @@ class BoxScoresPipeline(BasePipeline):
         if self.configs['reset']:
             await db.box_scores.delete_box_scores({})
 
-    @logger
+        await asyncio.sleep(25)
+
+    @pipeline_logger
     async def run_pipeline(self):
         if live_games := await db.games.get_games({}, live=True):  # Poll for live games...TODO: more efficient ways to get live games?
             batch_timestamp = datetime.now()

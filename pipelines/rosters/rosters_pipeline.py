@@ -1,11 +1,8 @@
-import asyncio
-import time
 from datetime import datetime
 
 from db import db
-from pipelines.pipeline_base import BasePipeline, logger
+from pipelines.base.base_pipeline import BasePipeline, pipeline_logger
 from pipelines.rosters.data_collection import RostersDataCollectionManager
-from pipelines.utils import utilities as utils
 
 
 class RostersPipeline(BasePipeline):
@@ -19,7 +16,7 @@ class RostersPipeline(BasePipeline):
         if self.configs['reset']:
             await db.subjects.delete_subjects({})
 
-    @logger
+    @pipeline_logger
     async def run_pipeline(self):
         batch_timestamp = datetime.now()
 

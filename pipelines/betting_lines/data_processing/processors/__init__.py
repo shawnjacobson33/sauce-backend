@@ -1,1 +1,2 @@
-from .betting_lines_processor import BettingLinesProcessor
+from .game_lines_processor import GameLinesProcessor
+from .player_prop_lines_processor import PlayerPropsProcessor

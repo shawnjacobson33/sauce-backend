@@ -5,7 +5,7 @@ _CONFIGS = {
         # Todo: need an invalid leagues list and then create a standardize league method
     },
     'betting_lines': {
-        'reset': False,
+        'reset': True,
         'throttle': 600,
         'data_collection': {
             'valid_leagues': {'NBA', 'NCAAM'},
@@ -13,10 +13,10 @@ _CONFIGS = {
         },
         'data_processing': {
             'ev_formulas': {
-                'main_markets': {
+                'Gamelines': {
                     'name': 'sully'
                 },
-                'secondary_markets': {
+                'PlayerProps': {
                     'name': 'sully'
                 }
             }
@@ -33,14 +33,14 @@ _CONFIGS = {
         },
     },
     'games': {
-        'reset': False,
+        'reset': True,
         'throttle': 540,
         'data_collection': {
             'valid_leagues': {'NBA', 'NCAAM'},
         }
     },
     'box_scores': {
-        'reset': False,
+        'reset': True,
         'throttle': 60,
         'data_collection': {
             'valid_leagues': {'NBA', 'NCAAM'},

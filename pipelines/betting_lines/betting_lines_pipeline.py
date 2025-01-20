@@ -1,9 +1,10 @@
+import asyncio
 import time
 from datetime import datetime
 
 from db import db
-from pipelines.pipeline_base import BasePipeline, logger
 from pipelines.utils import Standardizer
+from pipelines.base.base_pipeline import BasePipeline, pipeline_logger
 from pipelines.betting_lines.data_collection import BettingLinesDataCollectionManager
 from pipelines.betting_lines.data_processing import BettingLinesDataProcessingManager
 
@@ -28,8 +29,10 @@ class BettingLinesPipeline(BasePipeline):
             await db.database['betting_lines'].delete_many({})
             await db.database['completed_betting_lines'].delete_many({})
             await db.database['pipeline_stats'].delete_many({})
+
+        await asyncio.sleep(25)
             
-    @logger
+    @pipeline_logger
     async def run_pipeline(self):
         batch_timestamp = datetime.now()
         db.pipeline_stats.update_batch_details(batch_timestamp)

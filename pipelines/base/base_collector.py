@@ -6,7 +6,7 @@ from db import db
 from pipelines.utils import utilities as utils
 
 
-def logger(collection_func):
+def collector_logger(collection_func):
     @functools.wraps(collection_func)  # Preserves original function metadata
     async def wrapper(self, *args, **kwargs):
         print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: 🟢 Started Collecting 🟢')

@@ -5,7 +5,7 @@ import time
 from db import db
 
 
-def logger(pipeline_func):
+def pipeline_logger(pipeline_func):
     @functools.wraps(pipeline_func)
     async def wrapped(self, *args, **kwargs):
         await self._configure_pipeline()

@@ -1,11 +1,8 @@
-import asyncio
-import time
 from datetime import datetime
 
 from db import db
-from pipelines.pipeline_base import BasePipeline, logger
+from pipelines.base.base_pipeline import BasePipeline, pipeline_logger
 from pipelines.games.data_collection import GamesDataCollectionManager
-from pipelines.utils import utilities as utils
 
 
 class GamesPipeline(BasePipeline):
@@ -17,7 +14,7 @@ class GamesPipeline(BasePipeline):
         if self.configs['reset']:
             await db.games.delete_games({})
 
-    @logger
+    @pipeline_logger
     async def run_pipeline(self):
         batch_timestamp = datetime.now()
 

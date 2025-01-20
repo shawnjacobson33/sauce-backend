@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from urllib3.exceptions import ResponseError
 
 from db import db
-from pipelines.collector_base import BaseCollector, logger
+from pipelines.base.base_collector import BaseCollector, collector_logger
 from pipelines.utils import utilities as utils
 
 
@@ -55,7 +55,7 @@ class BasketballRostersCollector(BaseCollector):
                                     'jersey_number': cells[0].text.strip()
                                 })
 
-    @logger
+    @collector_logger
     async def run_collector(self):
         tasks = []
         for league in self.configs['valid_leagues']:
