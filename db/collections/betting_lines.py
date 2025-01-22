@@ -27,9 +27,8 @@ class BettingLines(BaseCollection):
         Args:
             db (AsyncIOMotorDatabase): The database connection.
         """
-        super().__init__(db)
+        super().__init__('betting_lines', db)
 
-        self.collection = self.db['betting_lines']
         self.completed_betting_lines_collection = self.db['completed_betting_lines']
 
         self.gcs_uploader = GCSUploader(bucket_name='betting-lines')

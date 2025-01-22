@@ -20,7 +20,7 @@ class BoxScores(BaseCollection):
         Args:
             db (AsyncIOMotorDatabase): The database connection.
         """
-        super().__init__(db)
+        super().__init__('box_scores', db)
         self.collection = self.db['box_scores']
 
     async def get_box_scores(self, query: dict) -> list[dict]:

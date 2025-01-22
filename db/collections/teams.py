@@ -20,8 +20,7 @@ class Teams(BaseCollection):
         Args:
             db (AsyncIOMotorDatabase): The database connection.
         """
-        super().__init__(db)
-        self.collection = self.db['teams']
+        super().__init__('teams', db)
 
     async def get_teams(self, query: dict) -> list[dict]:
         """
