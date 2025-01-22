@@ -1,3 +1,5 @@
+
+from pipelines.utils.exceptions import StandardizationError
 from pipelines.utils.standardization import standardization_maps as maps
 
 
@@ -16,14 +18,14 @@ class Standardizer:
         if strd_league_name := maps.LEAGUE_NAME_STRD_MAP.get(league_name):
             return strd_league_name
 
-        raise ValueError(f"League name not found in standardization map: '{league_name}'")
+        raise StandardizationError(f"League name not found in standardization map: '{league_name}'")
 
     @staticmethod
     def standardize_period_name(period: str) -> str:
         if strd_period_name := maps.PERIOD_NAME_STRD_MAP.get(period):
             return strd_period_name
 
-        raise ValueError(f"Period '{period}' not found in period map")
+        raise StandardizationError(f"Period '{period}' not found in period map")
 
     def standardize_market_name(self, market_name: str, market_domain: str, sport: str, period: str = None) -> str:
         if period:
@@ -38,10 +40,10 @@ class Standardizer:
             if strd_market_name:
                 return strd_market_name
 
-            raise ValueError(f"Market '{market_name}' not found in '{sport}' market map")
+            raise StandardizationError(f"Market '{market_name}' not found in '{sport}' market map")
 
     def standardize_subject_name(self, subject_key: str) -> str:
         if strd_subject_name := self.subject_name_strd_map.get(subject_key):  # Todo: Store more info about each subject?
             return strd_subject_name
 
-        raise ValueError(f"Subject '{subject_key}' not found in subject strd map")
+        raise StandardizationError(f"Subject '{subject_key}' not found in subject strd map")

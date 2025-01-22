@@ -29,7 +29,7 @@ class BasketballGamesCollector(BaseCollector):
 
         except ResponseError as e:
             self.failed_requests += 1
-            self.log_error(e)
+            self.log_message(e, level='EXCEPTION')
 
     @staticmethod
     def _get_complete_date_time(date: datetime, time_str: str) -> datetime | str:

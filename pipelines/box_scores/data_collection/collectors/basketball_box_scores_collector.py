@@ -2,8 +2,7 @@ import asyncio
 from datetime import datetime
 from typing import Iterable
 
-from bs4 import BeautifulSoup
-from urllib3.exceptions import ResponseError
+from bs4 import BeautifulSoup, PageElement
 
 from pipelines.base.base_collector import BaseCollector, collector_logger
 from pipelines.utils import Standardizer
@@ -12,6 +11,13 @@ from pipelines.box_scores.base import BoxScoreDict
 
 
 class BasketballBoxScoresCollector(BaseCollector):
+    """
+    A class to collect basketball box scores data.
+
+    Attributes:
+        standardizer (Standardizer): The standardizer for data.
+        games (list[dict]): The list of games to collect box scores for.
+    """
 
     def __init__(self,
                  batch_timestamp: datetime,
@@ -19,116 +25,279 @@ class BasketballBoxScoresCollector(BaseCollector):
                  boxscores_container: list,
                  games: list[dict],
                  configs: dict):
+        """
+        Initializes the BasketballBoxScoresCollector with the given parameters.
 
+        Args:
+            batch_timestamp (datetime): The timestamp of the batch.
+            standardizer (Standardizer): The standardizer for data.
+            boxscores_container (list): The container to store box scores.
+            games (list[dict]): The list of games to collect box scores for.
+            configs (dict): The configuration settings.
+        """
         super().__init__("CBSSports", 'BoxScores', batch_timestamp, boxscores_container, configs)
         self.standardizer = standardizer
         self.games = games
 
-    async def _request_boxscores(self, league: str, game: dict):
+    def _get_payload_for_box_scores(self, league: str, game: dict) -> tuple[str, dict, dict]:
+        """
+        Gets the payload for the box scores request.
+
+        Args:
+            league (str): The league name.
+            game (dict): The game data.
+
+        Returns:
+            tuple[str, dict, dict]: The URL, headers, and cookies for the request.
+        """
         try:
             game_id = game['_id']
-            mapped_league = self.payload['league_map'].get(league)
+            mapped_league = self.payload['league_map'][league]
             url = self.payload['url'].format(mapped_league, game_id)
             headers = self.payload['headers'][0]
             headers['referer'] = url
             cookies = self.payload['cookies']
-            if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
-                self.successful_requests += 1
-                self._parse_boxscores(resp_html, league, game)
+            return url, headers, cookies
 
-        except ResponseError as e:
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
+
+    async def _request_boxscores(self, league: str, game: dict):
+        """
+        Requests box scores data from the CBSSports API.
+
+        Args:
+            league (str): The league name.
+            game (dict): The game data.
+        """
+        try:
+            url, headers, cookies = self._get_payload_for_box_scores(league, game)
+            if url and headers and cookies:
+                if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
+                    self.successful_requests += 1
+                    self._parse_boxscores(resp_html, league, game)
+
+        except Exception as e:
             self.failed_requests += 1
-            self.log_error(e)
+            self.log_message(e, level='EXCEPTION')
 
-    @staticmethod
-    def _extract_and_add_game_info(soup: BeautifulSoup, game: dict) -> None:
-        if live_time := soup.find('div', {'class': 'time'}):
-            game['live_time'] = live_time.text.strip()
+    def _extract_and_add_game_info(self, soup: BeautifulSoup, game: dict) -> None:
+        """
+        Extracts and adds game information from the HTML soup.
 
-        if period := soup.find('div', {'class': 'quarter'}):
-            game['period'] = period.text.strip()
+        Args:
+            soup (BeautifulSoup): The HTML soup.
+            game (dict): The game data.
+        """
+        try:
+            if live_time := soup.find('div', {'class': 'time'}):
+                game['live_time'] = live_time.text.strip()
 
-        if (scores := soup.find_all('div', {'class': 'score-text'})) and (len(scores) == 2):
-            game['away_score'] = int(scores[0].text.strip())
-            game['home_score'] = int(scores[1].text.strip())
+            if period := soup.find('div', {'class': 'quarter'}):
+                game['period'] = period.text.strip()
 
-    @staticmethod
-    def _extract_team(div) -> str | None:
-        if (a_elem := div.find('a')) and (href := a_elem.get('href')):
-            if (len(href) > 3) and (team_name := href.split('/')[3]):
-                return team_name
+            if scores := soup.find_all('div', {'class': 'score-text'}):
+                game['away_score'] = int(scores[0].text.strip())
+                game['home_score'] = int(scores[1].text.strip())
+
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
+
+    def _extract_team(self, div) -> str | None:
+        """
+        Extracts the team name from the div element.
+
+        Args:
+            div (PageElement): The div element.
+
+        Returns:
+            str | None: The team name if found, otherwise None.
+        """
+        try:
+            if (a_elem := div.find('a')) and (href := a_elem['href']):
+                if team_name := href.split('/')[3]:
+                    return team_name
+
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
 
     @staticmethod
     def _extract_position(span_elem) -> str:
+        """
+        Extracts the position from the span element.
+
+        Args:
+            span_elem (PageElement): The span element.
+
+        Returns:
+            str: The position.
+        """
         position = span_elem.text.strip()
         return position
 
-    def _extract_subject(self, cell, league: str) -> dict[str, str] | None:
+    def _extract_raw_subject_name(self, cell) -> str | None:
+        """
+        Extracts the raw subject name from the cell element.
+
+        Args:
+            cell (PageElement): The cell element.
+
+        Returns:
+            str | None: The raw subject name if found, otherwise None.
+        """
         try:
-            if (a_elem := cell.find('a')) and (href := a_elem.get('href')):
-                raw_subject_name = ' '.join(href.split('/')[-2].split('-'))
-                cleaned_subject_name = utils.cleaner.clean_subject_name(raw_subject_name)
-                subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
-                std_subject_name = self.standardizer.standardize_subject_name(subject_key)
-                return {
-                    'id': subject_key,
-                    'name': std_subject_name,
-                }
+            a_elem = cell.find('a')
+            href = a_elem['href']
+            raw_subject_name = ' '.join(href.split('/')[-2].split('-'))
+            return raw_subject_name
 
         except Exception as e:
-            self.log_error(e)
+            self.log_message(e, level='EXCEPTION')
 
-    @staticmethod
-    def _extract_basketball_stats(cells, league: str) -> dict | None:
-        data = [cell.text for cell in cells if ('for-mobile' not in cell.get('class')) and ('hide-on-narrow' not in cell.get('class'))]
-        if '-' not in data:
-            box_score = {
-                'Points': int(data[0]),
-                'Rebounds': int(data[1]),
-                'Assists': int(data[2]),
-                'Field Goals Made': int(data[3].split('/')[0]),
-                'Field Goals Attempted': int(data[3].split('/')[1]),
-                '3-Pointers Made': int(data[4].split('/')[0]),
-                '3-Pointers Attempted': int(data[4].split('/')[1]),
-                'Free Throws Made': int(data[5].split('/')[0]),
-                'Free Throws Attempted': int(data[5].split('/')[1]),
-                'Personal Fouls': int(data[6]),
-                'Steals': int(data[7]),
-                'Blocks': int(data[8]),
-                'Turnovers': int(data[9]),
+    def _extract_subject(self, cell, league: str) -> dict[str, str] | None:
+        """
+        Extracts the subject from the cell element.
+
+        Args:
+            cell (PageElement): The cell element.
+            league (str): The league name.
+
+        Returns:
+            dict[str, str] | None: The subject data if found, otherwise None.
+        """
+        try:
+            raw_subject_name = self._extract_raw_subject_name(cell)
+            cleaned_subject_name = utils.cleaner.clean_subject_name(raw_subject_name)
+            subject_key = utils.storer.get_subject_key(league, cleaned_subject_name)
+            std_subject_name = self.standardizer.standardize_subject_name(subject_key)
+            return {
+                'id': subject_key,
+                'name': std_subject_name,
             }
 
-            if league == 'NBA':
-                # college basketball doesn't have these stats on cbssports
-                box_score['Plus Minus'] = int(data[10][1:]) if '+' in data[11] else int(data[10])
-                box_score['Fantasy Points'] = int(data[11])
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
 
-            return box_score
+    def _extract_basketball_stats(self, cells, league: str) -> dict | None:
+        """
+        Extracts basketball stats from the cells.
 
-    @staticmethod
-    def _get_divs(soup: BeautifulSoup) -> Iterable:
-        for box_score_div in soup.find_all('div', class_=['starters-stats', 'bench-stats']):
-            yield box_score_div
+        Args:
+            cells (list[PageElement]): The list of cell elements.
+            league (str): The league name.
+
+        Returns:
+            dict | None: The basketball stats if found, otherwise None.
+        """
+        try:
+            box_score_data = [cell.text for cell in cells
+                              if ('for-mobile' not in cell['class']) and ('hide-on-narrow' not in cell['class'])]
+            if '-' not in box_score_data:
+                box_score = {
+                    'Points': int(box_score_data[0]),
+                    'Rebounds': int(box_score_data[1]),
+                    'Assists': int(box_score_data[2]),
+                    'Field Goals Made': int(box_score_data[3].split('/')[0]),
+                    'Field Goals Attempted': int(box_score_data[3].split('/')[1]),
+                    '3-Pointers Made': int(box_score_data[4].split('/')[0]),
+                    '3-Pointers Attempted': int(box_score_data[4].split('/')[1]),
+                    'Free Throws Made': int(box_score_data[5].split('/')[0]),
+                    'Free Throws Attempted': int(box_score_data[5].split('/')[1]),
+                    'Personal Fouls': int(box_score_data[6]),
+                    'Steals': int(box_score_data[7]),
+                    'Blocks': int(box_score_data[8]),
+                    'Turnovers': int(box_score_data[9]),
+                }
+
+                if league == 'NBA':
+                    # college basketball doesn't have these stats on cbssports
+                    box_score['Plus Minus'] = int(box_score_data[10][1:]) if '+' in box_score_data[10] else int(
+                        box_score_data[10])
+                    box_score['Fantasy Points'] = int(box_score_data[11])
+
+                return box_score
+
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
+
+    def _get_divs(self, soup: BeautifulSoup) -> Iterable:
+        """
+        Gets the div elements containing box scores from the HTML soup.
+
+        Args:
+            soup (BeautifulSoup): The HTML soup.
+
+        Yields:
+            PageElement: The div element containing box scores.
+        """
+        try:
+            for box_score_div in soup.find_all('div', class_=['starters-stats', 'bench-stats']):
+                yield box_score_div
+
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
 
     @staticmethod
     def _get_table(box_score_div):
-        if table_div := box_score_div.find('div', {'class': 'stats-viewable-area'}):
-            if table := table_div.find('table', {'class': 'stats-table'}):
-                return table
+        """
+        Gets the table element from the box score div.
+
+        Args:
+            box_score_div (PageElement): The box score div element.
+
+        Returns:
+            PageElement: The table element.
+        """
+        table_div = box_score_div.find('div', {'class': 'stats-viewable-area'})
+        table = table_div.find('table', {'class': 'stats-table'})
+        return table
 
     def _get_rows(self, box_score_div):
-        if table := self._get_table(box_score_div):
-            if (rows := table.find_all('tr')) and len(rows) > 1:
-                for row in [row for row in rows if row.get('class')[0] not in {'header-row', 'total-row'}]:
-                    yield row
+        """
+        Gets the rows from the box score table.
 
-    @staticmethod
-    def _get_cells(row):
-        if cells := row.find_all('td'):
-            cells = [cell for cell in cells if 'for-mobile' not in cell.get('class')]
+        Args:
+            box_score_div (PageElement): The box score div element.
+
+        Yields:
+            PageElement: The row element.
+        """
+        try:
+            table = self._get_table(box_score_div)
+            rows = table.find_all('tr')
+            for row in [row for row in rows if row['class'][0] not in {'header-row', 'total-row'}]:
+                yield row
+
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
+
+    def _get_cells(self, row):
+        """
+        Gets the cells from the row element.
+
+        Args:
+            row (PageElement): The row element.
+
+        Returns:
+            list[PageElement]: The list of cell elements.
+        """
+        try:
+            cells = row.find_all('td')
+            cells = [cell for cell in cells if 'for-mobile' not in cell['class']]
             return cells
 
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
+
     def _parse_boxscores(self, html: str, league: str, game: dict) -> None:
+        """
+        Parses the box scores from the HTML response.
+
+        Args:
+            html (str): The HTML response.
+            league (str): The league name.
+            game (dict): The game data.
+        """
         soup = BeautifulSoup(html, 'html.parser')
         self._extract_and_add_game_info(soup, game)
         for box_score_div in self._get_divs(soup):
@@ -146,11 +315,14 @@ class BasketballBoxScoresCollector(BaseCollector):
                                 })
                                 self.num_collected += 1
 
-                            except AttributeError as e:
-                                self.log_error(e)
+                            except Exception as e:
+                                self.log_message(e, level='EXCEPTION')
 
     @collector_logger
     async def run_collector(self):
+        """
+        Runs the collector to gather basketball box scores data.
+        """
         tasks = []
         for league in self.configs['valid_leagues']:
             if utils.get_sport(league) == 'Basketball':

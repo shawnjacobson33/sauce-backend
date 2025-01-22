@@ -1,10 +1,17 @@
 import functools
 import time
-from multiprocessing.queues import Queue
 
+from loguru import logger
 import modin.pandas as pd
 
 from db import db
+
+
+logger.add(
+    'logs/betting_lines_processor.log',
+    filter= lambda record: 'BettingLines' and 'Processing' in record['message'],
+    rotation='1 day',
+    level='INFO')
 
 
 def processor_logger(processing_func):
@@ -36,7 +43,8 @@ class BaseProcessor:
         self.ev_formula = self.configs['ev_formulas'][domain]
 
         if betting_lines_df.empty:
-            raise ValueError('No player prop lines to process!')
+            logger.error(f'No {self.domain} to process!')
+            raise
 
         self.betting_lines_df = betting_lines_df[betting_lines_df['market_domain'] == self.domain]
         self.betting_lines_df['impl_prb'] = (1 / self.betting_lines_df['odds']).round(3)
@@ -61,7 +69,11 @@ class BaseProcessor:
 
             return row
 
-        devigged_sharp_betting_lines_df = self.sharp_betting_lines_df.apply(devig, axis=1)
+        try:
+            devigged_sharp_betting_lines_df = self.sharp_betting_lines_df.apply(devig, axis=1)
+
+        except Exception as e:
+
 
         if devigged_sharp_betting_lines_df.empty:
             raise ValueError('No sharp betting lines to devig!')
@@ -166,3 +178,5 @@ class BaseProcessor:
             self._cleanup_betting_line(betting_line)
 
         return betting_lines
+
+    def log_message(self):

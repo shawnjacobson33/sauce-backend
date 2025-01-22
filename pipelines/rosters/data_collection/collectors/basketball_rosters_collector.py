@@ -35,7 +35,7 @@ class BasketballRostersCollector(BaseCollector):
                 self._parse_rosters(league, team, resp_html)
 
         except ResponseError as e:
-            self.log_error(e)
+            self.log_message(e, level='EXCEPTION')
             self.failed_requests += 1
 
 

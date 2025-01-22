@@ -2,9 +2,9 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Iterable
 
-from pipelines.utils import Standardizer
 from pipelines.utils import utilities as utils
-
+from pipelines.utils.standardization import Standardizer
+from pipelines.utils.exceptions import StandardizationError, RequestingError
 from pipelines.base.base_collector import collector_logger
 from pipelines.betting_lines.data_collection.betting_lines_collector_base import BaseBettingLinesCollector
 
@@ -51,9 +51,12 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 self.successful_requests += 1
                 return resp
 
-        except Exception as e:
-            self.log_error(e)
+        except RequestingError as e:
+            self.log_message(e, level='ERROR')
             self.failed_requests += 1
+
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
 
     def _get_offers(self, resp: dict) -> Iterable:
         """
@@ -65,12 +68,16 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         Yields:
             dict: The offer data.
         """
-        offer_categories = resp.get('offerCategories', [])
-        for offer_category in offer_categories:
-            if (category_name := offer_category.get('name')) in self.configs['valid_market_domains']:
-                for offer in offer_category.get('offers', []):
-                    offer['domain'] = category_name
-                    yield offer
+        try:
+            offer_categories = resp['offerCategories']
+            for offer_category in offer_categories:
+                if (category_name := offer_category['name']) in self.configs['valid_market_domains']:
+                    for offer in offer_category['offers']:
+                        offer['domain'] = category_name
+                        yield offer
+
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
 
     def _extract_league(self, offer: dict) -> str | None:
         """
@@ -82,9 +89,9 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         Returns:
             str | None: The cleaned league name if valid, otherwise None.
         """
-        if (raw_league_name := offer.get('leagueCode')) and (isinstance(raw_league_name, str)):
-            cleaned_league_name = raw_league_name.strip().upper()
-            return cleaned_league_name if cleaned_league_name in self.configs['valid_leagues'] else None
+        raw_league_name = offer['leagueCode']
+        cleaned_league_name = raw_league_name.strip().upper()
+        return cleaned_league_name if cleaned_league_name in self.configs['valid_leagues'] else None
 
     def _parse_matchups(self, resp: dict) -> tuple[str, dict] | None:
         """
@@ -96,9 +103,13 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         Yields:
             tuple[str, dict]: The league and offer data.
         """
-        for offer in self._get_offers(resp):
-            if league := self._extract_league(offer):
-                yield league, offer
+        try:
+            for offer in self._get_offers(resp):
+                if league := self._extract_league(offer):
+                    yield league, offer
+
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
 
     @staticmethod
     def _get_dates() -> tuple[str, str]:
@@ -112,16 +123,18 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         return (datetime.now().strftime(date_format)[:-3] + 'Z',
                 (datetime.now() + timedelta(days=8)).strftime(date_format)[:-3] + 'Z')
 
-    def _get_params(self):
+    def _get_payload_for_betting_lines(self, offer: dict) -> tuple[str, dict, dict]:
         """
         Gets the parameters for the betting lines request.
 
         Returns:
             dict: The parameters for the betting lines request.
         """
+        url = self.payload['urls']['betting_lines'].format(offer['id'])
+        headers = self.payload['headers']
         params = self.payload['params']['betting_lines']
         start_date, end_date = self._get_dates()
-        return {**params, 'startDate': start_date, 'endDate': end_date}
+        return url, headers, {**params, 'startDate': start_date, 'endDate': end_date}
 
     async def _request_betting_lines(self, league: str, offer: dict) -> None:
         """
@@ -132,16 +145,18 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             offer (dict): The offer data.
         """
         try:
-            url = self.payload['urls']['betting_lines'].format(offer['id'])
-            headers = self.payload['headers']
-            params = self._get_params()
-            if resp_json := await utils.requester.fetch(url, headers=headers, params=params):
-                self.successful_requests += 1
-                await self._parse_betting_lines(resp_json, league, offer['domain'])
+            url, headers, params = self._get_payload_for_betting_lines(offer)
+            if url and headers and params:
+                if resp_json := await utils.requester.fetch(url, headers=headers, params=params):
+                    self.successful_requests += 1
+                    await self._parse_betting_lines(resp_json, league, offer['domain'])
+
+        except RequestingError as e:
+            self.log_message(e, level='ERROR')
+            self.failed_requests += 1
 
         except Exception as e:
-            self.log_error(e)
-            self.failed_requests += 1
+            self.log_message(e, level='EXCEPTION')
 
     @staticmethod
     def _get_sport(league: str, market_domain: str) -> str | None:
@@ -175,12 +190,12 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             std_market_name = self.standardizer.standardize_market_name(raw_market_name, market_domain, sport)
             return std_market_name
 
-        except ValueError as e:  # Todo: implement custom error
-            self.log_error(e)
+        except StandardizationError as e:
+            self.log_message(e, level='WARNING')
             self.failed_market_standardization += 1
 
         except Exception as e:
-            self.log_error(e)
+            self.log_message(e, level='ERROR')
 
     @staticmethod
     def _extract_raw_subject_names(participants: list[dict], market_domain: str) -> Iterable:
@@ -225,12 +240,12 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             while True:  # For player props with only one participant
                 yield last_subject_name
 
-        except ValueError as e:  # Todo: implement custom error
-            self.log_error(e)
+        except StandardizationError as e:
+            self.log_message(e, level='WARNING')
             self.failed_subject_standardization += 1
 
         except Exception as e:
-            self.log_error(e)
+            self.log_message(e, level='EXCEPTION')
 
     @staticmethod
     def _extract_label(side: dict, market: str, market_domain: str) -> str | None:
@@ -268,7 +283,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             return line
 
         except Exception as e:
-            self.log_error(e)
+            self.log_message(e, level='EXCEPTION')
 
     def _extract_bookmaker(self, outcome: dict) -> str | None:
         """
@@ -286,7 +301,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                 return bookmaker
 
         except Exception as e:
-            self.log_error(e)
+            self.log_message(e, level='EXCEPTION')
 
     def _extract_odds(self, outcome: dict) -> float | None:
         """
@@ -308,7 +323,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                     return float(odds)
 
         except Exception as e:
-            self.log_error(e)
+            self.log_message(e, level='EXCEPTION')
 
     @staticmethod
     def _add_extra_source_stats(hold: float | None, outcome: dict, betting_line_dict: dict) -> None:
@@ -374,12 +389,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                                     }
 
                                                     self._add_extra_source_stats(hold, outcome, betting_line_dict)
-                                                    betting_line_key = utils.storer.get_betting_line_key(
-                                                        betting_line_dict)
-                                                    betting_line_dict['_id'] = betting_line_key
-
-                                                    self.items_container.append(betting_line_dict)
-                                                    self.num_collected += 1
+                                                    self._store_and_report(betting_line_dict)
 
     async def _gather_betting_lines_requests(self, matchups_resp: dict):
         """

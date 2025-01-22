@@ -2,8 +2,28 @@ import functools
 import time
 from datetime import datetime
 
+from loguru import logger
+
 from db import db
 from pipelines.utils import utilities as utils
+
+
+logger.add(
+    'logs/betting_lines_collection.log',
+    filter= lambda record: 'BettingLines' and 'Collection' in record['message'],
+    rotation='1 day',
+    level='INFO',
+    backtrace=True,
+    diagnose=True)
+
+
+logger.add(
+    'logs/box_scores_collection.log',
+    filter= lambda record: 'BoxScores' and 'Collection' in record['message'],
+    rotation='1 day',
+    level='INFO',
+    backtrace=True,
+    diagnose=True)
 
 
 def collector_logger(collection_func):
@@ -52,5 +72,17 @@ class BaseCollector:
             'num_collected': self.num_collected
         }
 
-    def log_error(self, e: Exception):
-        print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ⚠️', e, '⚠️')
+    def log_message(self, e: Exception, level: str = 'EXCEPTION'):
+        level = level.lower()
+
+        if level == 'info':
+            logger.info(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ℹ️', e, 'ℹ️')
+
+        if level == 'warning':
+            logger.warning(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ⚠️', e, '⚠️')
+
+        if level == 'error':
+            logger.error(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ❌', e, '❌')
+
+        if level == 'exception':
+            logger.exception(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ❌', e, '❌')
