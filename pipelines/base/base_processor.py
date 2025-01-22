@@ -1,5 +1,6 @@
 import functools
 import time
+from multiprocessing.queues import Queue
 
 import modin.pandas as pd
 
@@ -26,7 +27,7 @@ def processor_logger(processing_func):
 
 class BaseProcessor:
 
-    def __init__(self, domain: str, configs: dict, betting_lines: pd.DataFrame):
+    def __init__(self, domain: str, betting_lines_df: pd.DataFrame, configs: dict):
         self.domain = domain
         self.configs = configs
 
@@ -34,10 +35,10 @@ class BaseProcessor:
 
         self.ev_formula = self.configs['ev_formulas'][domain]
 
-        if betting_lines.empty:
+        if betting_lines_df.empty:
             raise ValueError('No player prop lines to process!')
 
-        self.betting_lines_df = betting_lines
+        self.betting_lines_df = betting_lines_df[betting_lines_df['market_domain'] == self.domain]
         self.betting_lines_df['impl_prb'] = (1 / self.betting_lines_df['odds']).round(3)
 
         self.sharp_betting_lines_df = self.betting_lines_df[
@@ -60,7 +61,14 @@ class BaseProcessor:
 
             return row
 
-        devigged_sharp_betting_lines_df = (self.sharp_betting_lines_df.apply(devig, axis=1).dropna(subset=['tw_prb']))
+        devigged_sharp_betting_lines_df = self.sharp_betting_lines_df.apply(devig, axis=1)
+
+        if devigged_sharp_betting_lines_df.empty:
+            raise ValueError('No sharp betting lines to devig!')
+
+        if 'tw_prb' not in devigged_sharp_betting_lines_df.columns:
+            raise ValueError('No tw_prb column in devigged_sharp_betting_lines_df!')
+
         return devigged_sharp_betting_lines_df
 
     def _weight_market_sharp_avgs(self, devigged_game_lines_df: pd.DataFrame) -> None:
@@ -114,28 +122,27 @@ class BaseProcessor:
         return df
 
     @staticmethod
-    def _cleanup_betting_lines(betting_lines_pr_list: list[dict]) -> None:
-        for betting_line in betting_lines_pr_list:
-            if isinstance(betting_line['url'], float):
-                del betting_line['url']
+    def _cleanup_betting_line(betting_line: dict) -> None:
+        if isinstance(betting_line['url'], float):
+            del betting_line['url']
 
-            if isinstance(betting_line['extra_source_stats'], float):
-                del betting_line['extra_source_stats']
+        if isinstance(betting_line['extra_source_stats'], float):
+            del betting_line['extra_source_stats']
 
-            metrics_dict = {
-                'impl_prb': betting_line.pop('impl_prb')
-            }
+        metrics_dict = {
+            'impl_prb': betting_line.pop('impl_prb')
+        }
 
-            if (tw_prb := betting_line.pop('tw_prb')) != float('NaN'):
-                metrics_dict['tw_prb'] = tw_prb
+        if (tw_prb := betting_line.pop('tw_prb')) != float('NaN'):
+            metrics_dict['tw_prb'] = tw_prb
 
-            if (ev := betting_line.pop('ev')) != float('NaN'):
-                metrics_dict['ev'] = ev
+        if (ev := betting_line.pop('ev')) != float('NaN'):
+            metrics_dict['ev'] = ev
 
-            if (ev_formula := betting_line.pop('ev_formula')) != float('NaN'):
-                metrics_dict['ev_formula'] = ev_formula
+        if (ev_formula := betting_line.pop('ev_formula')) != float('NaN'):
+            metrics_dict['ev_formula'] = ev_formula
 
-            betting_line['metrics'] = metrics_dict
+        betting_line['metrics'] = metrics_dict
 
     @processor_logger
     def run_processor(self) -> list[dict]:
@@ -154,6 +161,8 @@ class BaseProcessor:
         end_time = time.time()
         self.times['ev_time'] = round(end_time - start_time, 4)
 
-        betting_lines_pr_list = betting_lines_df_pr.to_dict(orient='records')
-        self._cleanup_betting_lines(betting_lines_pr_list)
-        return betting_lines_pr_list
+        betting_lines = betting_lines_df_pr.to_dict(orient='records')
+        for betting_line in betting_lines:
+            self._cleanup_betting_line(betting_line)
+
+        return betting_lines

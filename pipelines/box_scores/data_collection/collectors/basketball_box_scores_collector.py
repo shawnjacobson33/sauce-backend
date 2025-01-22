@@ -53,7 +53,7 @@ class BasketballBoxScoresCollector(BaseCollector):
             game['home_score'] = int(scores[1].text.strip())
 
     @staticmethod
-    def _extract_team(div) -> dict[str, str] | None:
+    def _extract_team(div) -> str | None:
         if (a_elem := div.find('a')) and (href := a_elem.get('href')):
             if (len(href) > 3) and (team_name := href.split('/')[3]):
                 return team_name
@@ -80,9 +80,8 @@ class BasketballBoxScoresCollector(BaseCollector):
 
     @staticmethod
     def _extract_basketball_stats(cells, league: str) -> dict | None:
-        data = [cell.text for cell in cells if 'for-mobile' not in cell.get('class')]
-        minutes_played = data[7]
-        if (minutes_played != '-') and (int(minutes_played) > 1):
+        data = [cell.text for cell in cells if ('for-mobile' not in cell.get('class')) and ('hide-on-narrow' not in cell.get('class'))]
+        if '-' not in data:
             box_score = {
                 'Points': int(data[0]),
                 'Rebounds': int(data[1]),
@@ -94,16 +93,15 @@ class BasketballBoxScoresCollector(BaseCollector):
                 'Free Throws Made': int(data[5].split('/')[0]),
                 'Free Throws Attempted': int(data[5].split('/')[1]),
                 'Personal Fouls': int(data[6]),
-                'Minutes Played': int(minutes_played),
-                'Steals': int(data[8]),
-                'Blocks': int(data[9]),
-                'Turnovers': int(data[10]),
+                'Steals': int(data[7]),
+                'Blocks': int(data[8]),
+                'Turnovers': int(data[9]),
             }
 
             if league == 'NBA':
                 # college basketball doesn't have these stats on cbssports
-                box_score['Plus Minus'] = int(data[11][1:]) if '+' in data[11] else int(data[11])
-                box_score['Fantasy Points'] = int(data[12])
+                box_score['Plus Minus'] = int(data[10][1:]) if '+' in data[11] else int(data[10])
+                box_score['Fantasy Points'] = int(data[11])
 
             return box_score
 

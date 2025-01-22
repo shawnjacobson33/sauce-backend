@@ -164,7 +164,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
     
     @staticmethod
     def _extract_label_and_odds(c_2: list) -> Optional[tuple[str, float]]:
-        if len(c_2) == 3:
+        if len(c_2) > 3:
             if (label := c_2[1]) and (odds := c_2[2]):
                 return label.title(), float(odds)
 

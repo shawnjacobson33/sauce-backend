@@ -15,16 +15,15 @@ class BettingLinesDataProcessingManager:
     async def _get_ev_formulas(self):
         for market_type, ev_formula_info in self.configs['ev_formulas'].items():
             ev_formula_info['formula'] = await db.metadata.get_ev_formula(market_type, ev_formula_info['name'])
-
-    async def run_processors(self):  # Todo: Needs to be multi-processsed
+            
+    async def run_processors(self):
         await self._get_ev_formulas()
 
         betting_lines_df = pd.DataFrame(self.betting_lines_container)
+        if not betting_lines_df.empty:
+            game_lines = processors.GameLinesProcessor(betting_lines_df, self.configs).run_processor()
+            player_prop_lines = processors.PlayerPropsProcessor(betting_lines_df, self.configs).run_processor()
 
-        game_lines_df = betting_lines_df[betting_lines_df['market_domain'] == 'Gamelines']
-        game_lines_container = processors.GameLinesProcessor(game_lines_df, self.configs).run_processor()
+            betting_lines = game_lines + player_prop_lines
 
-        player_prop_lines_df = betting_lines_df[betting_lines_df['market_domain'] == 'PlayerProps']
-        player_prop_lines_container = processors.PlayerPropsProcessor(player_prop_lines_df, self.configs).run_processor()
-
-        return [*game_lines_container, *player_prop_lines_container]
+            return betting_lines

@@ -1,3 +1,5 @@
+from multiprocessing.queues import Queue
+
 import modin.pandas as pd  # Todo: consider switch to dask for parallel processing
 
 from pipelines.base.base_processor import BaseProcessor
@@ -6,7 +8,7 @@ from pipelines.base.base_processor import BaseProcessor
 class PlayerPropsProcessor(BaseProcessor):
 
     def __init__(self, player_prop_lines: pd.DataFrame, configs: dict):
-        super().__init__('PlayerProps', configs, player_prop_lines)
+        super().__init__('PlayerProps', player_prop_lines, configs)
 
     def _get_matching_betting_lines_mask(self, row) -> bool:
         return ((self.sharp_betting_lines_df['line'] == row['line']) &

@@ -33,7 +33,7 @@ _CONFIGS = {
         },
     },
     'games': {
-        'reset': True,
+        'reset': False,
         'throttle': 540,
         'data_collection': {
             'valid_leagues': {'NBA', 'NCAAM'},
@@ -47,7 +47,7 @@ _CONFIGS = {
         }
     },
     'gcs': {
-        'throttle': 60*60*24,
+        'throttle': 120,
     }
 }
 
