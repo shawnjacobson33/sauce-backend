@@ -34,12 +34,8 @@ class Requesting:
     async def fetch(url: str, to_html: bool = False, **kwargs) -> Optional[dict]:
         # Todo: These are temporary solutions while the aio-cloudscraper is being built.
         async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(url, **kwargs) as resp:
-                    if resp.status == 200:
-                        return await resp.json() if not to_html else await resp.text()
+            async with session.get(url, **kwargs) as resp:
+                if resp.status == 200:
+                    return await resp.json() if not to_html else await resp.text()
 
-                    raise ResponseError(f"Failed to fetch from {url} with status code {resp.status}") # Todo: how to handle gracefully and track success and failures?
-
-            except aiohttp.ClientConnectorError as e:
-                raise ResponseError(f"Failed to connect to {url} with error: {e}")
+                raise ResponseError(f"Failed to fetch from {url} with status code {resp.status}") # Todo: how to handle gracefully and track success and failures?

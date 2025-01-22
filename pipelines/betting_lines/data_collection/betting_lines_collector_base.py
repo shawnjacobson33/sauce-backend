@@ -33,8 +33,8 @@ class BaseBettingLinesCollector(BaseCollector):
 
     async def _get_game(self, market_domain: str, league: str, subject_name: str) -> dict | None:
         if subject := await self._get_subject(market_domain, league, subject_name):
-            team_name = self._get_team_name(market_domain, subject)
             try:
+                team_name = self._get_team_name(market_domain, subject)
                 if game := await db.games.get_game({
                     '$or': [
                         {'league': subject['league'], 'home_team': team_name},
@@ -44,8 +44,8 @@ class BaseBettingLinesCollector(BaseCollector):
                     game['game_time'] = game['game_time'].strftime('%Y-%m-%d %H:%M:%S')
                     return game
 
-            except TypeError as e:
-                print(f'Error getting game: {e} team: {team_name}')
+            except Exception as e:
+                self.log_error(e)
 
     def get_stats(self) -> dict:
         return {  # Todo: log sizes of data in mem?
