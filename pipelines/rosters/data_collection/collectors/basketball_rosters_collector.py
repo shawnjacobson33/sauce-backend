@@ -28,6 +28,32 @@ class BasketballRostersCollector(BaseCollector):
         """
         super().__init__('CBSSports', 'Rosters', batch_timestamp, rosters_container, configs)
 
+    def _get_full_team_name(self, team: dict) -> str:
+        """
+        Gets the full team name from the team information.
+
+        Args:
+            team (dict): The team information.
+
+        Returns:
+            str: The full team name.
+        """
+        try:
+            full_team_name = (
+                '-'.join(team['full_name']
+                   .lower()
+                   .replace('&', '-')
+                   .split()
+            ))
+
+            return (full_team_name.replace('.', '')
+                              .replace('(', '')
+                              .replace(')', '')
+                              .replace("'", ''))
+
+        except Exception as e:
+            self.log_message(message=f'Failed to get full team name: {team} {e}', level='EXCEPTION')
+
     def _get_payload_for_rosters(self, league: str, team: dict) -> tuple[str, dict, dict]:
         """
         Constructs the payload for requesting rosters.
@@ -45,11 +71,7 @@ class BasketballRostersCollector(BaseCollector):
             headers['referer'] = headers['referer'].format(league, 'teams')
             cookies = self.payload['cookies']
             abbr_team_name = team['abbr_name']
-            full_team_name = ('-'.join(team['full_name'].lower().split())
-                              .replace('.', '')
-                              .replace('(', '')
-                              .replace(')', '')
-                              .replace("'", ''))
+
             if 'NCAA' in league:
                 abbr_team_name = self.payload['ncaa_team_name_url_map'][league]['abbr_name'].get(abbr_team_name,
                                                                                                  abbr_team_name)
