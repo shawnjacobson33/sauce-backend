@@ -2,10 +2,11 @@ import asyncio
 from datetime import datetime
 
 from pipelines.utils import Standardizer
+from pipelines.base import BaseManager
 from pipelines.betting_lines.data_collection import collectors
 
 
-class BettingLinesDataCollectionManager:
+class BettingLinesDataCollectionManager(BaseManager):
     """
     A class to manage the collection of betting lines data.
 
@@ -22,7 +23,7 @@ class BettingLinesDataCollectionManager:
             configs (dict): The configuration settings.
             standardizer (Standardizer): The standardizer for data.
         """
-        self.configs = configs
+        super().__init__('BettingLines', configs)
         self.standardizer = standardizer
 
     async def run_collectors(self, batch_timestamp: datetime):
@@ -37,11 +38,15 @@ class BettingLinesDataCollectionManager:
         """
         betting_lines_container = []
 
-        coros = [
-            collectors.OddsShopperCollector(batch_timestamp, betting_lines_container, self.standardizer, self.configs).run_collector(),
-            collectors.BoomFantasyCollector(batch_timestamp, betting_lines_container, self.standardizer, self.configs).run_collector()
-        ]
+        try:
+            coros = [
+                collectors.OddsShopperCollector(batch_timestamp, betting_lines_container, self.standardizer, self.configs).run_collector(),
+                collectors.BoomFantasyCollector(batch_timestamp, betting_lines_container, self.standardizer, self.configs).run_collector()
+            ]
 
-        await asyncio.gather(*coros)
+            await asyncio.gather(*coros)
 
-        return betting_lines_container
+            return betting_lines_container
+
+        except Exception as e:
+            self.log_message(message=f'Failed to run collectors: {e}', level='EXCEPTION')

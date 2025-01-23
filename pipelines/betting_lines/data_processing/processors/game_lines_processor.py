@@ -31,7 +31,11 @@ class GameLinesProcessor(BaseProcessor):
         Returns:
             bool: The mask indicating matching betting lines.
         """
-        return ((self.sharp_betting_lines_df['game'] == row['game']) &
-                (self.sharp_betting_lines_df['market'] == row['market']) &
-                (self.sharp_betting_lines_df['bookmaker'] == row['bookmaker']) &
-                (self.sharp_betting_lines_df['subject'] != row['subject']))
+        try:
+            return ((self.sharp_betting_lines_df['game'] == row['game']) &
+                    (self.sharp_betting_lines_df['market'] == row['market']) &
+                    (self.sharp_betting_lines_df['bookmaker'] == row['bookmaker']) &
+                    (self.sharp_betting_lines_df['subject'] != row['subject']))
+
+        except Exception as e:
+            self.log_message(message=f'Failed to get matching betting lines mask for row: {row}', level='EXCEPTION')

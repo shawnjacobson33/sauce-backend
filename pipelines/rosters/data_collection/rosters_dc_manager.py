@@ -1,10 +1,11 @@
 import asyncio
 from datetime import datetime
 
+from pipelines.base import BaseManager
 from pipelines.rosters.data_collection import collectors
 
 
-class RostersDataCollectionManager:
+class RostersDataCollectionManager(BaseManager):
     """
     A manager class for handling the data collection of rosters.
 
@@ -19,7 +20,7 @@ class RostersDataCollectionManager:
         Args:
             configs (dict): The configuration settings.
         """
-        self.configs = configs
+        super().__init__('Rosters', configs)
 
     async def run_collectors(self, batch_timestamp: datetime):
         """
@@ -33,10 +34,14 @@ class RostersDataCollectionManager:
         """
         rosters_container = []
 
-        coros = [
-            collectors.BasketballRostersCollector(
-                batch_timestamp, rosters_container, self.configs).run_collector(),
-        ]
-        await asyncio.gather(*coros)
+        try:
+            coros = [
+                collectors.BasketballRostersCollector(
+                    batch_timestamp, rosters_container, self.configs).run_collector(),
+            ]
+            await asyncio.gather(*coros)
 
-        return rosters_container
+            return rosters_container
+
+        except Exception as e:
+            self.log_message(message=f'Failed to run collectors: {e}', level='EXCEPTION')

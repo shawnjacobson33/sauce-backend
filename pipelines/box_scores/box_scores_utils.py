@@ -1,6 +1,14 @@
+def moneyline(data: dict, subject: str) -> int:
+    """
+    Determines the moneyline result for a given game and subject team.
 
+    Args:
+        data (dict): The game data containing scores and team information.
+        subject (str): The team for which the moneyline is being calculated.
 
-def moneyline(data: dict, subject: str) -> int:  # Todo: need to test these
+    Returns:
+        int: 1 if the subject team wins, 0 otherwise.
+    """
     if data['home_team'] == subject:
         return 1 if data['home_score'] > data['away_score'] else 0
     else:
@@ -8,6 +16,16 @@ def moneyline(data: dict, subject: str) -> int:  # Todo: need to test these
 
 
 def spread(data: dict, subject: str) -> int:
+    """
+    Calculates the spread for a given game and subject team.
+
+    Args:
+        data (dict): The game data containing scores and team information.
+        subject (str): The team for which the spread is being calculated.
+
+    Returns:
+        int: The spread value.
+    """
     if data['home_team'] == subject:
         return data['home_score'] - data['away_score']
     else:
@@ -15,6 +33,7 @@ def spread(data: dict, subject: str) -> int:
 
 
 DOUBLES_STATS = ['points', 'rebounds', 'assists', 'steals', 'blocks']
+
 SPECIAL_MARKET_TO_STAT_MAP = {
     'Moneyline': moneyline,
     'Spread': spread,
@@ -27,10 +46,31 @@ SPECIAL_MARKET_TO_STAT_MAP = {
 
 
 class BoxScoreDict(dict):
+    """
+    A dictionary subclass for handling box score data with special market calculations.
+    """
+
     def __init__(self, iterable=None, **kwargs):
+        """
+        Initializes the BoxScoreDict with the given iterable and keyword arguments.
+
+        Args:
+            iterable (optional): An iterable to initialize the dictionary.
+            **kwargs: Additional keyword arguments.
+        """
         super().__init__(iterable, **kwargs)
 
     def get(self, key: str, subject: str = None) -> dict:
+        """
+        Retrieves the value for a given key, with special handling for market calculations.
+
+        Args:
+            key (str): The key to retrieve the value for.
+            subject (str, optional): The subject team for special market calculations.
+
+        Returns:
+            dict: The value associated with the key, or the result of the special market calculation.
+        """
         if key in SPECIAL_MARKET_TO_STAT_MAP:
             special_market_stat = SPECIAL_MARKET_TO_STAT_MAP[key](self, subject)
             return special_market_stat

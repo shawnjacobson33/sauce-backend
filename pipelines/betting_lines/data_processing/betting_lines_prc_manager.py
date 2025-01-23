@@ -29,8 +29,12 @@ class BettingLinesDataProcessingManager(BaseManager):
         """
         Retrieves the expected value formulas from the database and updates the configuration settings.
         """
-        for market_type, ev_formula_info in self.configs['ev_formulas'].items():
-            ev_formula_info['formula'] = await db.metadata.get_ev_formula(market_type, ev_formula_info['name'])
+        try:
+            for market_type, ev_formula_info in self.configs['ev_formulas'].items():
+                ev_formula_info['formula'] = await db.metadata.get_ev_formula(market_type, ev_formula_info['name'])
+
+        except Exception as e:
+            self.log_message(message=f'Failed to get expected value formulas: {e}', level='EXCEPTION')
 
     async def run_processors(self):
         """
@@ -54,6 +58,6 @@ class BettingLinesDataProcessingManager(BaseManager):
                 return betting_lines
 
         except Exception as e:
-            self.log_message(level='EXCEPTION', message=f'Failed to run processors: {e}')
+            self.log_message(message=f'Failed to run processors: {e}', level='EXCEPTION')
 
 

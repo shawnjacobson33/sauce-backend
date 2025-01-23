@@ -6,6 +6,7 @@ from db import db
 
 
 def pipeline_logger(pipeline_func):
+
     @functools.wraps(pipeline_func)
     async def wrapped(self, *args, **kwargs):
         await self._configure_pipeline()
@@ -41,4 +42,17 @@ class BasePipeline:
     def run_pipeline(self):
         raise NotImplementedError
 
+    def log_message(self, message: str, level: str = 'EXCEPTION'):
+        level = level.lower()
 
+        if level == 'info':
+            print(f'[{self.domain}Pipeline]: ℹ️', message, 'ℹ️')
+
+        if level == 'warning':
+            print(f'[{self.domain}Pipeline]: ⚠️', message, '⚠️')
+
+        if level == 'error':
+            print(f'[{self.domain}Pipeline]: ‼️', message, '‼️')
+
+        if level == 'exception':
+            print(f'[{self.domain}Pipeline]: ❌', message, '❌')

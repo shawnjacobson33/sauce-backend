@@ -4,10 +4,11 @@ from typing import Iterable
 
 from bs4 import BeautifulSoup, PageElement
 
-from pipelines.base.base_collector import BaseCollector, collector_logger
-from pipelines.utils import Standardizer
+from pipelines.base import BaseCollector, collector_logger
 from pipelines.utils import utilities as utils
-from pipelines.box_scores.base import BoxScoreDict
+from pipelines.utils.standardization import Standardizer
+from pipelines.utils.exceptions import RequestingError, StandardizationError
+from pipelines.box_scores.box_scores_utils import BoxScoreDict
 
 
 class BasketballBoxScoresCollector(BaseCollector):
@@ -60,7 +61,7 @@ class BasketballBoxScoresCollector(BaseCollector):
             return url, headers, cookies
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to get payload for box scores: {league} {game} {e}', level='EXCEPTION')
 
     async def _request_boxscores(self, league: str, game: dict):
         """
@@ -72,14 +73,16 @@ class BasketballBoxScoresCollector(BaseCollector):
         """
         try:
             url, headers, cookies = self._get_payload_for_box_scores(league, game)
-            if url and headers and cookies:
-                if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
-                    self.successful_requests += 1
-                    self._parse_boxscores(resp_html, league, game)
+            if resp_html := await utils.requester.fetch(url, to_html=True, headers=headers, cookies=cookies):
+                self.successful_requests += 1
+                self._parse_boxscores(resp_html, league, game)
+
+        except RequestingError as e:
+            self.log_message(message=f'Failed to request box scores: {game} {e}', level='ERROR')
+            self.failed_requests += 1
 
         except Exception as e:
-            self.failed_requests += 1
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to request box scores: {game} {e}', level='EXCEPTION')
 
     def _extract_and_add_game_info(self, soup: BeautifulSoup, game: dict) -> None:
         """
@@ -101,7 +104,7 @@ class BasketballBoxScoresCollector(BaseCollector):
                 game['home_score'] = int(scores[1].text.strip())
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract game info: {game} {e}', level='EXCEPTION')
 
     def _extract_team(self, div) -> str | None:
         """
@@ -119,10 +122,9 @@ class BasketballBoxScoresCollector(BaseCollector):
                     return team_name
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract team: {div} {e}', level='EXCEPTION')
 
-    @staticmethod
-    def _extract_position(span_elem) -> str:
+    def _extract_position(self, span_elem) -> str:
         """
         Extracts the position from the span element.
 
@@ -132,8 +134,12 @@ class BasketballBoxScoresCollector(BaseCollector):
         Returns:
             str: The position.
         """
-        position = span_elem.text.strip()
-        return position
+        try:
+            position = span_elem.text.strip()
+            return position
+
+        except Exception as e:
+            self.log_message(message=f'Failed to extract position: {span_elem} {e}', level='EXCEPTION')
 
     def _extract_raw_subject_name(self, cell) -> str | None:
         """
@@ -152,7 +158,7 @@ class BasketballBoxScoresCollector(BaseCollector):
             return raw_subject_name
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract raw subject name: {cell} {e}', level='EXCEPTION')
 
     def _extract_subject(self, cell, league: str) -> dict[str, str] | None:
         """
@@ -175,8 +181,11 @@ class BasketballBoxScoresCollector(BaseCollector):
                 'name': std_subject_name,
             }
 
+        except StandardizationError as e:
+            self.log_message(message=f'Failed to standardize subject: {league} {cell} {e}', level='WARNING')
+
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract subject: {league} {cell} {e}', level='EXCEPTION')
 
     def _extract_basketball_stats(self, cells, league: str) -> dict | None:
         """
@@ -218,7 +227,7 @@ class BasketballBoxScoresCollector(BaseCollector):
                 return box_score
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract basketball stats: {league} {cells} {e}', level='EXCEPTION')
 
     def _get_divs(self, soup: BeautifulSoup) -> Iterable:
         """
@@ -235,10 +244,9 @@ class BasketballBoxScoresCollector(BaseCollector):
                 yield box_score_div
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to get divs from soup: {e}', level='EXCEPTION')
 
-    @staticmethod
-    def _get_table(box_score_div):
+    def _get_table(self, box_score_div):
         """
         Gets the table element from the box score div.
 
@@ -248,9 +256,11 @@ class BasketballBoxScoresCollector(BaseCollector):
         Returns:
             PageElement: The table element.
         """
-        table_div = box_score_div.find('div', {'class': 'stats-viewable-area'})
-        table = table_div.find('table', {'class': 'stats-table'})
-        return table
+        try:
+            return box_score_div.find('div', {'class': 'stats-viewable-area'}).find('table', {'class': 'stats-table'})
+
+        except Exception as e:
+            self.log_message(message=f'Failed to get table from box score div: {box_score_div} {e}', level='EXCEPTION')
 
     def _get_rows(self, box_score_div):
         """
@@ -264,12 +274,11 @@ class BasketballBoxScoresCollector(BaseCollector):
         """
         try:
             table = self._get_table(box_score_div)
-            rows = table.find_all('tr')
-            for row in [row for row in rows if row['class'][0] not in {'header-row', 'total-row'}]:
+            for row in [row for row in table.find_all('tr') if row['class'][0] not in {'header-row', 'total-row'}]:
                 yield row
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to get rows from box score div: {box_score_div} {e}', level='EXCEPTION')
 
     def _get_cells(self, row):
         """
@@ -282,12 +291,25 @@ class BasketballBoxScoresCollector(BaseCollector):
             list[PageElement]: The list of cell elements.
         """
         try:
-            cells = row.find_all('td')
-            cells = [cell for cell in cells if 'for-mobile' not in cell['class']]
-            return cells
+            return [cell for cell in row.find_all('td') if 'for-mobile' not in cell['class']]
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to get cells from row: {row} {e}', level='EXCEPTION')
+
+    def _store_and_report_box_scores(self, box_score: dict, game: dict, league: str, subject: dict) -> None:
+        try:
+            self.items_container.append({
+                '_id': f'{game['_id']}:{subject['id']}',
+                'game': game,
+                'league': league,
+                'subject': subject,
+                game['period']: BoxScoreDict(box_score)  # Todo: this needs to be tested
+            })
+
+        except Exception as e:
+            self.log_message(
+                message=f'Failed to store and report box scores: {box_score} {game} {league} {subject} {e}',
+                level='EXCEPTION')
 
     def _parse_boxscores(self, html: str, league: str, game: dict) -> None:
         """
@@ -305,18 +327,7 @@ class BasketballBoxScoresCollector(BaseCollector):
                 if cells := self._get_cells(row):
                     if subject := self._extract_subject(cells[0], league):
                         if box_score := self._extract_basketball_stats(cells[1:], league):
-                            try:
-                                self.items_container.append({
-                                    '_id': f'{game['_id']}:{subject['id']}',
-                                    'game': game,
-                                    'league': league,
-                                    'subject': subject,
-                                    game['period']: BoxScoreDict(box_score)  # Todo: this needs to be tested
-                                })
-                                self.num_collected += 1
-
-                            except Exception as e:
-                                self.log_message(e, level='EXCEPTION')
+                            self._store_and_report_box_scores(box_score, game, league, subject)
 
     @collector_logger
     async def run_collector(self):

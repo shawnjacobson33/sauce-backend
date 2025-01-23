@@ -7,13 +7,6 @@ from db import db
 from pipelines.utils.exceptions import ProcessingError
 
 
-# logger.add(
-#     'logs/betting_lines_processor.log',
-#     filter= lambda record: 'BettingLines' and 'Processing' in record['message'],
-#     rotation='1 day',
-#     level='INFO')
-
-
 def processor_logger(processing_func):
     """
     A decorator that logs the start and end of the processing function,
@@ -153,8 +146,8 @@ class BaseProcessor:
 
             return devigged_sharp_betting_lines_df
 
-        except KeyError:
-            raise ProcessingError('No sharp betting lines could be devigged!')
+        except Exception as e:
+            raise ProcessingError(f'Failed to devig sharp betting lines: {e}')
 
     @time_execution
     def _weight_devigged_lines(self, devigged_game_lines_df: pd.DataFrame) -> pd.DataFrame | None:
@@ -185,12 +178,16 @@ class BaseProcessor:
 
             return weighted_sharp_betting_line
 
-        weighted_sharp_betting_lines_df = (
-            devigged_game_lines_df.groupby(['line', 'league', 'subject', 'market', 'label'])
-                                  .apply(weight_devigged_line)
-        )
+        try:
+            weighted_sharp_betting_lines_df = (
+                devigged_game_lines_df.groupby(['line', 'league', 'subject', 'market', 'label'])
+                                      .apply(weight_devigged_line)
+            )
 
-        return weighted_sharp_betting_lines_df
+            return weighted_sharp_betting_lines_df
+
+        except Exception as e:
+            raise ProcessingError(f'Failed to weight devigged lines: {e}')
 
     @time_execution
     def _get_expected_values(self, weighted_devigged_lines_df: pd.DataFrame) -> pd.DataFrame | None:
@@ -234,8 +231,8 @@ class BaseProcessor:
 
             return df
 
-        except KeyError:
-            raise ProcessingError('No expected values could be calculated!')
+        except KeyError as e:
+            raise ProcessingError(f'Failed to calculate expected values: {e}')
 
 
     @staticmethod
@@ -246,26 +243,30 @@ class BaseProcessor:
         Args:
             betting_line (dict): The betting line dictionary.
         """
-        if isinstance(betting_line['url'], float):
-            del betting_line['url']
+        try:
+            if isinstance(betting_line['url'], float):
+                del betting_line['url']
 
-        if isinstance(betting_line['extra_source_stats'], float):
-            del betting_line['extra_source_stats']
+            if isinstance(betting_line['extra_source_stats'], float):
+                del betting_line['extra_source_stats']
 
-        metrics_dict = {
-            'impl_prb': betting_line.pop('impl_prb')
-        }
+            metrics_dict = {
+                'impl_prb': betting_line.pop('impl_prb')
+            }
 
-        if (tw_prb := betting_line.pop('tw_prb')) != float('NaN'):
-            metrics_dict['tw_prb'] = tw_prb
+            if (tw_prb := betting_line.pop('tw_prb')) != float('NaN'):
+                metrics_dict['tw_prb'] = tw_prb
 
-        if (ev := betting_line.pop('ev')) != float('NaN'):
-            metrics_dict['ev'] = ev
+            if (ev := betting_line.pop('ev')) != float('NaN'):
+                metrics_dict['ev'] = ev
 
-        if (ev_formula := betting_line.pop('ev_formula')) != float('NaN'):
-            metrics_dict['ev_formula'] = ev_formula
+            if (ev_formula := betting_line.pop('ev_formula')) != float('NaN'):
+                metrics_dict['ev_formula'] = ev_formula
 
-        betting_line['metrics'] = metrics_dict
+            betting_line['metrics'] = metrics_dict
+
+        except Exception as e:
+            raise ProcessingError(f'Failed to cleanup betting line: {e}')
 
     @processor_logger
     def run_processor(self) -> list[dict]:
@@ -292,22 +293,20 @@ class BaseProcessor:
             return betting_lines
 
         except ProcessingError as e:
-            self.log_message(e, 'ERROR')
+            self.log_message(message=f'Failed to process betting lines: {e}', level='ERROR')
 
         except Exception as e:
-            self.log_message(e, 'EXCEPTION')
+            self.log_message(message=f'Failed to process betting lines: {e}', level='EXCEPTION')
 
-    def log_message(self, e: Exception = None, level: str = 'EXCEPTION', message: str = None):
+    def log_message(self, message: str, level: str = 'EXCEPTION'):
         """
         Logs a message with the specified level.
 
         Args:
-            e (Exception, optional): The exception to log. Defaults to None.
+            message (str): The log message.
             level (str, optional): The log level. Defaults to 'EXCEPTION'.
-            message (str, optional): The log message. Defaults to None.
         """
         level = level.lower()
-        message = message or str(e)
 
         if level == 'info':
             print(f'[BettingLinesPipeline] [Processing] [{self.name}]: ℹ️', message, 'ℹ️')
@@ -316,7 +315,7 @@ class BaseProcessor:
             print(f'[BettingLinesPipeline] [Processing] [{self.name}]: ⚠️', message, '⚠️')
 
         if level == 'error':
-            print(f'[BettingLinesPipeline] [Processing] [{self.name}]: asd', message, 'asd')
+            print(f'[BettingLinesPipeline] [Processing] [{self.name}]: ‼️', message, '‼️')
 
         if level == 'exception':
             print(f'[BettingLinesPipeline] [Processing] [{self.name}]: ❌', message, '❌')

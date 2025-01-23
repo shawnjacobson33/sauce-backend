@@ -39,25 +39,29 @@ class BasketballRostersCollector(BaseCollector):
         Returns:
             tuple[str, dict, dict]: The URL, headers, and cookies for the request.
         """
-        base_url = self.payload['urls'][league]['rosters']
-        headers = self.payload['headers'][0]
-        headers['referer'] = headers['referer'].format(league, 'teams')
-        cookies = self.payload['cookies']
-        abbr_team_name = team['abbr_name']
-        full_team_name = ('-'.join(team['full_name'].lower().split())
-                          .replace('.', '')
-                          .replace('(', '')
-                          .replace(')', '')
-                          .replace("'", ''))
-        if 'NCAA' in league:
-            abbr_team_name = self.payload['ncaa_team_name_url_map'][league]['abbr_name'].get(abbr_team_name,
-                                                                                             abbr_team_name)
-            full_team_name = self.payload['ncaa_team_name_url_map'][league]['full_name'].get(full_team_name,
-                                                                                             full_team_name)
+        try:
+            base_url = self.payload['urls'][league]['rosters']
+            headers = self.payload['headers'][0]
+            headers['referer'] = headers['referer'].format(league, 'teams')
+            cookies = self.payload['cookies']
+            abbr_team_name = team['abbr_name']
+            full_team_name = ('-'.join(team['full_name'].lower().split())
+                              .replace('.', '')
+                              .replace('(', '')
+                              .replace(')', '')
+                              .replace("'", ''))
+            if 'NCAA' in league:
+                abbr_team_name = self.payload['ncaa_team_name_url_map'][league]['abbr_name'].get(abbr_team_name,
+                                                                                                 abbr_team_name)
+                full_team_name = self.payload['ncaa_team_name_url_map'][league]['full_name'].get(full_team_name,
+                                                                                                 full_team_name)
 
-        url = base_url.format(abbr_team_name, full_team_name)
+            url = base_url.format(abbr_team_name, full_team_name)
 
-        return url, headers, cookies
+            return url, headers, cookies
+
+        except Exception as e:
+            self.log_message(message=f'Failed to get payload for rosters: {league} {team} {e}', level='EXCEPTION')
 
     async def _request_rosters(self, league: str, team: dict) -> None:
         """
@@ -76,31 +80,32 @@ class BasketballRostersCollector(BaseCollector):
                 self._parse_rosters(league, team, resp_html)
 
         except RequestingError as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to request rosters: {e}', level='ERROR')
             self.failed_requests += 1
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to request rosters: {e}', level='EXCEPTION')
 
-    def _get_rows(self, soup) -> list | None:
+    def _get_rows(self, html: str) -> list | None:
         """
         Extracts the rows from the HTML soup.
 
         Args:
-            soup (BeautifulSoup): The parsed HTML soup.
+            html (str): The HTML content.
 
         Returns:
             list | None: The list of rows or None if an error occurs.
         """
         try:
+            soup = BeautifulSoup(html, 'html.parser')
             table = soup.find('table')
             rows = table.find_all('tr')
             return rows
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract rows: {e}', level='EXCEPTION')
 
-    def _extract_position(self, cells: list) -> str:
+    def _extract_position(self, cells: list) -> str | None:
         """
         Extracts the position from the table cells.
 
@@ -114,9 +119,9 @@ class BasketballRostersCollector(BaseCollector):
             return cells[2].text.strip()
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract position: {cells} {e}', level='EXCEPTION')
 
-    def _extract_name(self, cells: list) -> str:
+    def _extract_name(self, cells: list) -> str | None:
         """
         Extracts the name from the table cells.
 
@@ -127,12 +132,11 @@ class BasketballRostersCollector(BaseCollector):
             str: The extracted name.
         """
         try:
-            if span_elem := cells[1].find('span', {'class': 'CellPlayerName--long'}):
-                if a_elem := span_elem.find('a'):
-                    return a_elem.text.strip()
+            span_elem = cells[1].find('span', {'class': 'CellPlayerName--long'})
+            return span_elem.find('a').text.strip()
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract name: {cells} {e}', level='EXCEPTION')
 
     def _extract_jersey_number(self, cells: list) -> str:
         """
@@ -159,8 +163,7 @@ class BasketballRostersCollector(BaseCollector):
             team (dict): The team information.
             html (str): The HTML content.
         """
-        soup = BeautifulSoup(html, 'html.parser')
-        if rows := self._get_rows(soup):
+        if rows := self._get_rows(html):
             for row in rows[1:]:
                 if cells := row.find_all('td'):
                     if position := self._extract_position(cells):
@@ -193,4 +196,4 @@ class BasketballRostersCollector(BaseCollector):
             await asyncio.gather(*tasks)
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to run collector: {e}', level='EXCEPTION')
