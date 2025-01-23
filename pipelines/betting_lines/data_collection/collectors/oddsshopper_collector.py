@@ -262,23 +262,21 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         """
         return side.get('label') if not ((market_domain == 'Gamelines') and ('Total' not in market)) else 'Over'
 
-    def _extract_line(self, outcome: dict) -> float | None:
+    def _extract_line(self, outcome: dict, market: str) -> float | None:
         """
         Extracts the line from the outcome data.
 
         Args:
             outcome (dict): The outcome data.
+            market (str): The market name.
 
         Returns:
             float | None: The line if valid, otherwise None.
         """
         try:
-            line = outcome['line']
+            line = outcome['line'] if 'Moneyline' not in market else 0.5
             if isinstance(line, str):
-                if line.isdecimal():
-                    return float(line)
-
-                return
+                return float(line)
 
             return line
 
@@ -315,12 +313,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         """
         try:
             odds = outcome['odds']
-            if isinstance(odds, (int, float)):
-                return odds
-
-            elif isinstance(odds, str):
-                if odds.isdecimal():
-                    return float(odds)
+            return odds if not isinstance(odds, (int, float)) else float(odds)
 
         except Exception as e:
             self.log_message(e, level='EXCEPTION')
@@ -366,7 +359,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                             if game := await self._get_game(market_domain, league, subject):
                                 if label := self._extract_label(side, market, market_domain):
                                     for outcome in side.get('outcomes', []):
-                                        if line := self._extract_line(outcome):
+                                        if line := self._extract_line(outcome, market):
                                             if bookmaker := self._extract_bookmaker(outcome):
                                                 if odds := self._extract_odds(outcome):
                                                     collection_datetime = datetime.now()

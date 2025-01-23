@@ -1,9 +1,6 @@
-from fastapi import FastAPI
+from fastapi_app.main import app
 
 from db import db
-
-
-app = FastAPI()
 
 
 @app.get("/betting_lines")

@@ -5,7 +5,7 @@ from datetime import datetime
 import pymongo
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from db.base import BaseCollection
+from db.base_collection import BaseCollection
 from db.collections.utils import GCSUploader
 
 
@@ -112,10 +112,14 @@ class BettingLines(BaseCollection):
         Returns:
             list[dict]: The betting lines.
         """
-        if kwargs.pop('most_recent', None):
-            return await self._get_most_recent_betting_lines(*args, **kwargs)
+        try:
+            if kwargs.pop('most_recent', None):
+                return await self._get_most_recent_betting_lines(*args, **kwargs)
 
-        return await self._get_cursor(*args, **kwargs).to_list()
+            return await self._get_cursor(*args, **kwargs).to_list()
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to get betting lines: {e}')
 
     async def get_completed_betting_lines(self, *args, **kwargs) -> list[dict]:
         """
@@ -130,8 +134,7 @@ class BettingLines(BaseCollection):
         """
         return await self.completed_betting_lines_collection.find(*args, **kwargs).to_list()
 
-    @staticmethod
-    def _create_doc(line: dict) -> dict:
+    def _create_doc(self, line: dict) -> dict:
         """
         Creates a new betting line document.
 
@@ -141,15 +144,19 @@ class BettingLines(BaseCollection):
         Returns:
             dict: The new betting line document.
         """
-        record_fields = {'batch_timestamp', 'collection_timestamp', 'line', 'odds'}
-        record = BettingLines._create_record(line)
-        if not line['metrics'].get('ev'):
-            record_fields.add('ev_formula')
+        try:
+            record_fields = {'batch_timestamp', 'collection_timestamp', 'line', 'odds'}
+            record = BettingLines._create_record(line)
+            if not line['metrics'].get('ev'):
+                record_fields.add('ev_formula')
 
-        return {
-            **{k: line[k] for k in line if k not in record_fields},
-            'stream': [ record ],
-        }
+            return {
+                **{k: line[k] for k in line if k not in record_fields},
+                'stream': [ record ],
+            }
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to create betting line doc: {e}')
 
     @staticmethod
     def _create_record(line: dict) -> dict:
@@ -219,27 +226,37 @@ class BettingLines(BaseCollection):
         Args:
             betting_lines (list[dict]): The list of betting lines to store.
         """
-        requests = []
-        betting_line_seen_tracker = defaultdict(int)
-        for betting_line_dict in betting_lines:  # Todo: change so it loops through every betting line currently stored and then check if a betting line disappeared for this batch.
-            betting_line_dict_id = betting_line_dict['_id']
-            if betting_line_doc_match := await self.get_betting_line(betting_line_dict_id):
-                stream = betting_line_doc_match['stream']
-                await self._update_stream(stream, betting_line_dict, requests)
+        try:
+            requests = []
+            betting_line_seen_tracker = defaultdict(int)
+            for betting_line_dict in betting_lines:  # Todo: change so it loops through every betting line currently stored and then check if a betting line disappeared for this batch.
+                betting_line_dict_id = betting_line_dict['_id']
+                if betting_line_doc_match := await self.get_betting_line(betting_line_dict_id):
+                    stream = betting_line_doc_match['stream']
+                    await self._update_stream(stream, betting_line_dict, requests)
 
-            elif betting_line_seen_tracker[betting_line_dict_id] == 0:  # For first iteration of batches
-                new_betting_line_doc = self._create_doc(betting_line_dict)
-                insert_op = pymongo.InsertOne(new_betting_line_doc)
-                requests.append(insert_op)
+                    # update metrics if they changed
+                    if betting_line_doc_match['metrics'] != betting_line_dict['metrics']:
+                        update_op = await self.update_betting_line(betting_line_dict_id, return_op=True,
+                                                                   metrics=betting_line_dict['metrics'])
+                        requests.append(update_op)
 
-            betting_line_seen_tracker[betting_line_dict_id] += 1
 
-        seen_betting_lines = list(betting_line_seen_tracker.keys())
-        batch_timestamp = betting_lines[0]['batch_timestamp']
-        await self._update_disappeared_betting_lines(seen_betting_lines, requests, batch_timestamp)
+                elif betting_line_seen_tracker[betting_line_dict_id] == 0:  # For first iteration of batches
+                    new_betting_line_doc = self._create_doc(betting_line_dict)
+                    insert_op = pymongo.InsertOne(new_betting_line_doc)
+                    requests.append(insert_op)
 
-        if requests:
+                betting_line_seen_tracker[betting_line_dict_id] += 1
+
+            seen_betting_lines = list(betting_line_seen_tracker.keys())
+            batch_timestamp = betting_lines[0]['batch_timestamp']
+            await self._update_disappeared_betting_lines(seen_betting_lines, requests, batch_timestamp)
+
             await self.collection.bulk_write(requests)
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to store betting lines: {e}')
 
     async def update_betting_line(self, unique_id: str, return_op: bool = False, **kwargs):
         """
@@ -253,10 +270,14 @@ class BettingLines(BaseCollection):
         Returns:
             pymongo.UpdateOne: The update operation if return_op is True.
         """
-        if return_op:
-            return pymongo.UpdateOne({ '_id': unique_id }, { '$set': kwargs })
+        try:
+            if return_op:
+                return pymongo.UpdateOne({ '_id': unique_id }, { '$set': kwargs })
 
-        await self.collection.update_one({ '_id': unique_id }, { '$set': kwargs })
+            await self.collection.update_one({ '_id': unique_id }, { '$set': kwargs })
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to update betting line: {e}')
 
     @staticmethod
     def _is_market_period_specific(market: str) -> bool:
@@ -282,24 +303,28 @@ class BettingLines(BaseCollection):
         Returns:
             dict: The box score for the betting line.
         """
-        market = betting_line['market']
-        if self._is_market_period_specific(market):
-            return box_score[market[:2]]
+        try:
+            market = betting_line['market']
+            if self._is_market_period_specific(market):
+                return box_score[market[:2]]
 
-        box_score = dict()
-        periods = { '1H': {'1Q', '2Q'}, '2H': {'3Q', '4Q'} } # Todo: use ENUM?
+            box_score = dict()
+            periods = { '1H': {'1Q', '2Q'}, '2H': {'3Q', '4Q'} } # Todo: use ENUM?
 
-        if market in periods:
-            for specific_period in periods[market[:2]]:
-                if period_specific_box_score := box_score.get(specific_period):
-                    box_score.update(period_specific_box_score)
+            if market in periods:
+                for specific_period in periods[market[:2]]:
+                    if period_specific_box_score := box_score.get(specific_period):
+                        box_score.update(period_specific_box_score)
 
-        for period_group in periods.values():
-            for specific_period in period_group:
-                if period_specific_box_score := box_score.get(specific_period):
-                    box_score.update(period_specific_box_score)
+            for period_group in periods.values():
+                for specific_period in period_group:
+                    if period_specific_box_score := box_score.get(specific_period):
+                        box_score.update(period_specific_box_score)
 
-        return box_score
+            return box_score
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to get box score: {e}')
 
     def _get_market(self, betting_line: dict) -> str:
         """
@@ -321,20 +346,23 @@ class BettingLines(BaseCollection):
         Args:
             box_scores (list[dict]): The list of box scores.
         """
-        requests = []
-        for box_score_dict in box_scores:
-            subject_filtered_betting_lines = await self.get_betting_lines({
-                'subject': box_score_dict['subject']['name'] , 'game._id': box_score_dict['game']['_id']
-            })
-            for betting_line in subject_filtered_betting_lines:
-                market = self._get_market(betting_line)
-                box_score = self._get_box_score(betting_line, box_score_dict)   # Todo: needs to be tested
-                if stat := box_score.get(market):
-                    update_op = await self.update_betting_line(betting_line['_id'], return_op=True, live_stat=stat)
-                    requests.append(update_op)
+        try:
+            requests = []
+            for box_score_dict in box_scores:
+                subject_filtered_betting_lines = await self.get_betting_lines({
+                    'subject': box_score_dict['subject']['name'] , 'game._id': box_score_dict['game']['_id']
+                })
+                for betting_line in subject_filtered_betting_lines:
+                    market = self._get_market(betting_line)
+                    box_score = self._get_box_score(betting_line, box_score_dict)   # Todo: needs to be tested
+                    if stat := box_score.get(market):
+                        update_op = await self.update_betting_line(betting_line['_id'], return_op=True, live_stat=stat)
+                        requests.append(update_op)
 
-        if requests:
             await self.collection.bulk_write(requests)
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to update live stats: {e}')
 
     @staticmethod
     def _restructure_betting_lines_data(betting_lines: list[dict]):
@@ -370,13 +398,14 @@ class BettingLines(BaseCollection):
         """
         Stores completed betting lines in Google Cloud Storage.
         """
-        if completed_betting_lines := await self.get_completed_betting_lines({}):
+        try:
+            completed_betting_lines = await self.get_completed_betting_lines({})
             betting_lines_json = self._prepare_betting_lines_for_upload(completed_betting_lines)
             blob_name = f"{datetime.now().strftime('%Y-%m-%d')}.json"
             self.gcs_uploader.upload(blob_name, betting_lines_json)
 
-        else:
-            print('[GCSPipeline]: ⚠️ No completed betting lines to store in GCS. ⚠️')
+        except Exception as e:
+            self.log_message(level='INFO', message=f'Failed to store completed betting lines in GCS: {e}')
 
     @staticmethod
     def _get_projection_for_gcs() -> dict:
@@ -400,20 +429,24 @@ class BettingLines(BaseCollection):
             in_gcs (bool, optional): Whether to store the betting lines in Google Cloud Storage.
         """
         # Todo: ANY FINAL STATS TO ADD?, OUTPUT THE SIZE OF THE JSON FILE
-        if game_ids:
-            optimized_projection = self._get_projection_for_gcs()
-            betting_lines_filtered_by_game = await self.get_betting_lines({
-                'game._id': { '$in': game_ids },
-            }, optimized_projection)
-            betting_lines_filtered_for_live_stat = [ # only want to store betting lines that have a final box score stat
-                betting_line for betting_line in betting_lines_filtered_by_game if betting_line.get('live_stat')
-            ]
-            self.completed_betting_lines_collection.insert_many(betting_lines_filtered_for_live_stat)
-            await self.delete_betting_lines(betting_lines_filtered_by_game)
+        try:
+            if game_ids:
+                optimized_projection = self._get_projection_for_gcs()
+                betting_lines_filtered_by_game = await self.get_betting_lines({
+                    'game._id': { '$in': game_ids },
+                }, optimized_projection)
+                betting_lines_filtered_for_live_stat = [ # only want to store betting lines that have a final box score stat
+                    betting_line for betting_line in betting_lines_filtered_by_game if betting_line.get('live_stat')
+                ]
+                await self.completed_betting_lines_collection.insert_many(betting_lines_filtered_for_live_stat)
+                await self.delete_betting_lines(betting_lines_filtered_by_game)
 
-        if in_gcs:
-            await self._store_in_gcs()
-            return await self.completed_betting_lines_collection.delete_many({})
+            if in_gcs:
+                await self._store_in_gcs()
+                await self.completed_betting_lines_collection.delete_many({})
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to store completed betting lines: {e}')
 
     async def delete_betting_lines(self, betting_lines: list[dict] = None) -> None:
         """
@@ -422,8 +455,12 @@ class BettingLines(BaseCollection):
         Args:
             betting_lines (list[dict], optional): The list of betting lines to delete.
         """
-        if betting_lines:
-            betting_line_ids = [betting_line['_id'] for betting_line in betting_lines]
-            await self.collection.delete_many({ '_id': { '$in': betting_line_ids } })
+        try:
+            if betting_lines:
+                betting_line_ids = [betting_line['_id'] for betting_line in betting_lines]
+                await self.collection.delete_many({ '_id': { '$in': betting_line_ids } })
 
-        await self.collection.delete_many({})
+            await self.collection.delete_many({})
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to delete betting lines: {e}')

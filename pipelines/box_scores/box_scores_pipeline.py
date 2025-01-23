@@ -32,7 +32,7 @@ class BoxScoresPipeline(BasePipeline):
         if self.configs['reset']:
             await db.box_scores.delete_box_scores({})
 
-        await asyncio.sleep(25)
+        # await asyncio.sleep(25)
 
     @pipeline_logger
     async def run_pipeline(self):

@@ -8,22 +8,22 @@ from db import db
 from pipelines.utils import utilities as utils
 
 
-logger.add(
-    'logs/betting_lines_collection.log',
-    filter= lambda record: 'BettingLines' and 'Collection' in record['message'],
-    rotation='1 day',
-    level='INFO',
-    backtrace=True,
-    diagnose=True)
-
-
-logger.add(
-    'logs/box_scores_collection.log',
-    filter= lambda record: 'BoxScores' and 'Collection' in record['message'],
-    rotation='1 day',
-    level='INFO',
-    backtrace=True,
-    diagnose=True)
+# logger.add(
+#     'logs/betting_lines_collection.log',
+#     filter= lambda record: 'BettingLines' and 'Collection' in record['message'],
+#     rotation='1 day',
+#     level='INFO',
+#     backtrace=True,
+#     diagnose=True)
+#
+#
+# logger.add(
+#     'logs/box_scores_collection.log',
+#     filter= lambda record: 'BoxScores' and 'Collection' in record['message'],
+#     rotation='1 day',
+#     level='INFO',
+#     backtrace=True,
+#     diagnose=True)
 
 
 def collector_logger(collection_func):
@@ -33,11 +33,7 @@ def collector_logger(collection_func):
         start_time = time.time()
         await collection_func(self, *args, **kwargs)
         end_time = time.time()
-        print((f'[{self.domain}Pipeline] [Collection] [{self.name}]: 🔴 Finished Collecting 🔴\n'
-               f'--------> ⏱️ {round(end_time - start_time, 2)} seconds ⏱️\n'
-               f'--------> 💰 {len(self.items_container)} {self.domain} 💰')
-        )
-
+        print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: 🔴 Finished Collecting 🔴')
         stats = self.get_stats()  # Todo: Consider switching to a 'self.times' dict for consistency
         db.pipeline_stats.add_collector_stats(self.name, stats)
 
@@ -76,13 +72,13 @@ class BaseCollector:
         level = level.lower()
 
         if level == 'info':
-            logger.info(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ℹ️', e, 'ℹ️')
+            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ℹ️', e, 'ℹ️')
 
         if level == 'warning':
-            logger.warning(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ⚠️', e, '⚠️')
+            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ⚠️', e, '⚠️')
 
         if level == 'error':
-            logger.error(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ❌', e, '❌')
+            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ❌', e, '❌')
 
         if level == 'exception':
-            logger.exception(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ❌', e, '❌')
+            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ❌', e, '❌')

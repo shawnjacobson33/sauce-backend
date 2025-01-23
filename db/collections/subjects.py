@@ -1,7 +1,7 @@
 from pymongo import UpdateOne, InsertOne
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from db.base import BaseCollection
+from db.base_collection import BaseCollection
 
 
 class Subjects(BaseCollection):
@@ -20,8 +20,7 @@ class Subjects(BaseCollection):
         Args:
             db (AsyncIOMotorDatabase): The database connection.
         """
-        super().__init__(db)
-        self.collection = self.db['subjects']
+        super().__init__('subjects', db)
 
     async def get_subjects(self, query: dict) -> list[dict]:
         """

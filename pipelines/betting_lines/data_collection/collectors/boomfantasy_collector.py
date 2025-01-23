@@ -285,9 +285,12 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 std_subject_name = self.standardizer.standardize_subject_name(subject_key)
                 return std_subject_name
 
+        except StandardizationError as e:
+            self.log_message(e, level='WARNING')
+            self.failed_subject_standardization += 1
+
         except Exception as e:
             self.log_message(e, level='EXCEPTION')
-            self.failed_subject_standardization += 1
 
     def _extract_period(self, qg: dict) -> str | None:
         """
@@ -342,9 +345,12 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                     raw_market_name, 'PlayerProps', sport, period=period)
                 return std_market_name
 
-        except ValueError as e:
-            self.log_message(e, level='EXCEPTION')
+        except StandardizationError as e:
+            self.log_message(e, level='WARNING')
             self.failed_market_standardization += 1
+
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
 
     def _get_c_data(self, qg: dict, q: dict, league: str) -> Iterable:
         """

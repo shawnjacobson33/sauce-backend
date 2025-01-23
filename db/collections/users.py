@@ -1,7 +1,7 @@
 from pymongo import UpdateOne, InsertOne
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from db.base import BaseCollection
+from db.base_collection import BaseCollection
 
 
 class Users(BaseCollection):

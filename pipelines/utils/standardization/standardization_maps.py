@@ -45,6 +45,7 @@ MARKET_NAME_STRD_MAP = {
             'first_qtr_points': '1Q Points',  # Sleeper
           # 1H Points
             '1H POINTS': '1H Points',  # BoomFantasy
+            '2H POINTS': '2H Points',  # BoomFantasy
           # Rebounds
             'Rebounds': 'Rebounds',
             'REBOUNDS': 'Rebounds',  # BoomFantasy
@@ -56,6 +57,7 @@ MARKET_NAME_STRD_MAP = {
           # 1Q Rebounds
             '1Q REBOUNDS': '1Q Rebounds',  # BoomFantasy
             'first_qtr_rebounds': '1Q Rebounds',  # Sleeper
+            '2H REBOUNDS': '2H Rebounds',  # BoomFantasy
           # Defensive Rebounds
             'Defensive Rebounds': 'Defensive Rebounds',  # PrizePicks
           # Offensive Rebounds
@@ -71,6 +73,7 @@ MARKET_NAME_STRD_MAP = {
           # 1Q Assists
             '1Q ASSISTS': '1Q Assists',  # BoomFantasy
             'first_qtr_assists': '1Q Assists',  # Sleeper
+            '2H ASSISTS': '2H Assists',  # BoomFantasy
           # Points + Rebounds
             'Points + Rebounds': 'Points + Rebounds',
             'Pts + Reb': 'Points + Rebounds',  # ParlayPlay
@@ -128,6 +131,7 @@ MARKET_NAME_STRD_MAP = {
             '1H Pts + Rebs + Asts': '1H Points + Rebounds + Assists',  # Underdog Fantasy
           # 2H Points + Rebounds + Assists
             '2H Pts+Rebs+Asts': '2H Points + Rebounds + Assists',  # PrizePicks
+            '2H POINTS_REBOUNDS_ASSISTS': '2H Points + Rebounds + Assists',  # BoomFantasy
           # 3-Pointers Made
             'Three Point Field Goals Made': '3-Pointers Made',  # BetOnline
             'MADE_THREE_POINTERS': '3-Pointers Made',  # BoomFantasy
@@ -146,6 +150,7 @@ MARKET_NAME_STRD_MAP = {
             '1Q 3-Pointers Made': '1Q 3-Pointers Made',  # Underdog Fantasy
           # 1H 3-Pointers Made
             '1H 3-Pointers Made': '1H 3-Pointers Made',  # Underdog Fantasy
+            '2H MADE_THREE_POINTERS': '2H 3-Pointers Made',  # BoomFantasy
           # 3-Pointers Attempted
             '3PT Attempted': '3-Pointers Attempted',  # Dabble
             '3-PT Attempted': '3-Pointers Attempted',  # PrizePicks

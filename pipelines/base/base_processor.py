@@ -1,29 +1,37 @@
 import functools
 import time
 
-from loguru import logger
 import modin.pandas as pd
 
 from db import db
+from pipelines.utils.exceptions import ProcessingError
 
 
-logger.add(
-    'logs/betting_lines_processor.log',
-    filter= lambda record: 'BettingLines' and 'Processing' in record['message'],
-    rotation='1 day',
-    level='INFO')
+# logger.add(
+#     'logs/betting_lines_processor.log',
+#     filter= lambda record: 'BettingLines' and 'Processing' in record['message'],
+#     rotation='1 day',
+#     level='INFO')
 
 
 def processor_logger(processing_func):
+    """
+    A decorator that logs the start and end of the processing function,
+    and records the processing time.
+
+    Args:
+        processing_func (function): The processing function to be decorated.
+
+    Returns:
+        function: The wrapped function with logging.
+    """
     @functools.wraps(processing_func)
     def wrapped(self, *args, **kwargs):
-        print(f'[{self.domain}Pipeline] [Processing]: 🟢 Started Processing 🟢')
+        print('[BettingLinesPipeline] [Processing]: 🟢 Started Processing 🟢')
         start_time = time.time()
         result = processing_func(self, *args, **kwargs)
-        end_time = time.time()
-        self.times['processing_time'] = round(end_time - start_time, 4)
-        print(f'[{self.domain}Pipeline] [Processing]: 🔴 Finished Processing 🔴\n'
-              f'--------> ⏱️ {self.times['processing_time']} seconds ⏱️\n')
+        self.times['processing_time'] = round(time.time() - start_time, 4)
+        print('[BettingLinesPipeline] [Processing]: 🔴 Finished Processing 🔴')
 
         db.pipeline_stats.add_processor_stats(self.times)
 
@@ -32,90 +40,179 @@ def processor_logger(processing_func):
     return wrapped
 
 
-class BaseProcessor:
+def time_execution(func):
+    """
+    A decorator that records the execution time of a function.
 
-    def __init__(self, domain: str, betting_lines_df: pd.DataFrame, configs: dict):
-        self.domain = domain
+    Args:
+        func (function): The function to be decorated.
+
+    Returns:
+        function: The wrapped function with execution time recording.
+    """
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs) -> pd.DataFrame | None:
+        start_time = time.time()
+        result = func(self, *args, **kwargs)
+        elapsed_time = round(time.time() - start_time, 4)
+        self.times[f'{func.__name__}_time'] = elapsed_time
+        return result
+
+    return wrapper
+
+
+class BaseProcessor:
+    """
+    A base class for processing betting lines data.
+
+    Attributes:
+        name (str): The name of the processor.
+        configs (dict): The configuration settings.
+        times (dict): The dictionary to store processing times.
+        ev_formula (dict): The expected value formula for the processor.
+        betting_lines_df (pd.DataFrame): The DataFrame containing betting lines data.
+        sharp_betting_lines_df (pd.DataFrame): The DataFrame containing sharp betting lines data.
+    """
+
+    def __init__(self, name: str, betting_lines_df: pd.DataFrame, configs: dict):
+        """
+        Initializes the BaseProcessor with the given parameters.
+
+        Args:
+            name (str): The name of the processor.
+            betting_lines_df (pd.DataFrame): The DataFrame containing betting lines data.
+            configs (dict): The configuration settings.
+
+        Raises:
+            ProcessingError: If there are no betting lines to process or no sharp betting lines to process.
+        """
+        self.name = name
         self.configs = configs
 
         self.times = {}
 
-        self.ev_formula = self.configs['ev_formulas'][domain]
+        self.ev_formula = self.configs['ev_formulas'][name]
 
         if betting_lines_df.empty:
-            logger.error(f'No {self.domain} to process!')
-            raise
+            raise ProcessingError('No betting lines to process!')
 
-        self.betting_lines_df = betting_lines_df[betting_lines_df['market_domain'] == self.domain]
+        self.betting_lines_df = betting_lines_df.copy(deep=True)
+        self.betting_lines_df = self.betting_lines_df[self.betting_lines_df['market_domain'] == self.name]
         self.betting_lines_df['impl_prb'] = (1 / self.betting_lines_df['odds']).round(3)
 
         self.sharp_betting_lines_df = self.betting_lines_df[
             (self.betting_lines_df['bookmaker'].isin(self.ev_formula['formula']))
         ]
 
+        if self.sharp_betting_lines_df.empty:
+            raise ProcessingError('No sharp betting lines to process!')
+
     def _get_matching_betting_lines_mask(self, row):
+        """
+        Gets the mask for matching betting lines.
+
+        Args:
+            row (pd.Series): The row of the DataFrame.
+
+        Raises:
+            NotImplementedError: This method should be implemented by subclasses.
+        """
         raise NotImplementedError
 
+    @time_execution
     def _get_devigged_lines(self) -> pd.DataFrame:
+        """
+        Gets the devigged lines from the sharp betting lines DataFrame.
 
+        Returns:
+            pd.DataFrame: The DataFrame containing devigged sharp betting lines.
+
+        Raises:
+            ProcessingError: If no sharp betting lines could be devigged.
+        """
         def devig(row):
-            matching_betting_lines = self.sharp_betting_lines_df[
-                self._get_matching_betting_lines_mask(row) # Todo: is this the same for games lines also?
+            complementing_betting_line = self.sharp_betting_lines_df[
+                self._get_matching_betting_lines_mask(row)
             ]
 
-            if len(matching_betting_lines) == 1:
-                matching_betting_line = matching_betting_lines.iloc[0]
-                row['tw_prb'] = row['impl_prb'] / (matching_betting_line['impl_prb'] + row['impl_prb'])
+            complementing_betting_line_size = complementing_betting_line.shape[0]
+
+            if complementing_betting_line_size > 1:
+                raise ProcessingError('While devigging more than one complementing betting line was found!')
+
+            if complementing_betting_line_size == 1:
+                row['tw_prb'] = row['impl_prb'] / (complementing_betting_line.iloc[0]['impl_prb'] + row['impl_prb'])
 
             return row
 
         try:
-            devigged_sharp_betting_lines_df = self.sharp_betting_lines_df.apply(devig, axis=1)
+            devigged_sharp_betting_lines_df = (
+                self.sharp_betting_lines_df.apply(devig, axis=1)
+                                           .dropna(subset=['tw_prb'])
+            )
 
-        except Exception as e:
+            return devigged_sharp_betting_lines_df
 
+        except KeyError:
+            raise ProcessingError('No sharp betting lines could be devigged!')
 
-        if devigged_sharp_betting_lines_df.empty:
-            raise ValueError('No sharp betting lines to devig!')
+    @time_execution
+    def _weight_devigged_lines(self, devigged_game_lines_df: pd.DataFrame) -> pd.DataFrame | None:
+        """
+        Weights the devigged lines based on the expected value formula.
 
-        if 'tw_prb' not in devigged_sharp_betting_lines_df.columns:
-            raise ValueError('No tw_prb column in devigged_sharp_betting_lines_df!')
+        Args:
+            devigged_game_lines_df (pd.DataFrame): The DataFrame containing devigged game lines.
 
-        return devigged_sharp_betting_lines_df
+        Returns:
+            pd.DataFrame | None: The DataFrame containing weighted devigged lines.
+        """
+        def weight_devigged_line(devigged_game_lines_df_grpd):
+            weighted_sharp_betting_line = (
+                devigged_game_lines_df_grpd.iloc[[0]]
+                                            .drop(['bookmaker', 'odds', 'impl_prb'], axis=1)
+            )
 
-    def _weight_market_sharp_avgs(self, devigged_game_lines_df: pd.DataFrame) -> None:
-
-        def weighted_market_avg(devigged_game_lines_df_grpd):
-            weighted_market_avg_betting_line_df = (devigged_game_lines_df_grpd.iloc[[0]]
-                                                    .drop(['bookmaker', 'odds', 'impl_prb'], axis=1))
             if len(devigged_game_lines_df_grpd) > 1:
                 weights_sum = 0
                 weighted_market_total = 0
                 for _, row in devigged_game_lines_df_grpd.iterrows():  # Todo: slow
-                    try:
-                        weights = self.ev_formula['formula'][row['bookmaker']]
-                        weights_sum += weights
-                        weighted_market_total += weights * row['tw_prb']
+                    weights = self.ev_formula['formula'][row['bookmaker']]
+                    weights_sum += weights
+                    weighted_market_total += weights * row['tw_prb']
 
-                    except KeyError:
-                        pass
+                weighted_sharp_betting_line['tw_prb'] = weighted_market_total / weights_sum
 
-                weighted_market_avg_betting_line_df['tw_prb'] = weighted_market_total / weights_sum
+            return weighted_sharp_betting_line
 
-            return weighted_market_avg_betting_line_df
+        weighted_sharp_betting_lines_df = (
+            devigged_game_lines_df.groupby(['line', 'league', 'subject', 'market', 'label'])
+                                  .apply(weight_devigged_line)
+        )
 
-        self.sharp_betting_lines_df = (devigged_game_lines_df.groupby(['line', 'league', 'subject', 'market', 'label'])
-                                                             .apply(weighted_market_avg))
+        return weighted_sharp_betting_lines_df
 
-    def _get_expected_values(self) -> pd.DataFrame:
+    @time_execution
+    def _get_expected_values(self, weighted_devigged_lines_df: pd.DataFrame) -> pd.DataFrame | None:
+        """
+        Calculates the expected values for the betting lines.
 
+        Args:
+            weighted_devigged_lines_df (pd.DataFrame): The DataFrame containing weighted devigged lines.
+
+        Returns:
+            pd.DataFrame | None: The DataFrame containing betting lines with expected values.
+
+        Raises:
+            ProcessingError: If no expected values could be calculated.
+        """
         def ev(row):
-            matching_sharp_betting_line = self.sharp_betting_lines_df[
-                (self.sharp_betting_lines_df['line'] == row['line']) &
-                (self.sharp_betting_lines_df['game'] == row['game']) &
-                (self.sharp_betting_lines_df['subject'] == row['subject']) &
-                (self.sharp_betting_lines_df['market'] == row['market']) &
-                (self.sharp_betting_lines_df['label'] == row['label'])
+            matching_sharp_betting_line = weighted_devigged_lines_df[
+                (weighted_devigged_lines_df['line'] == row['line']) &
+                (weighted_devigged_lines_df['league'] == row['league']) &
+                (weighted_devigged_lines_df['subject'] == row['subject']) &
+                (weighted_devigged_lines_df['market'] == row['market']) &
+                (weighted_devigged_lines_df['label'] == row['label'])
             ]
 
             if len(matching_sharp_betting_line) == 1:
@@ -129,12 +226,26 @@ class BaseProcessor:
 
             return row
 
-        df = (self.betting_lines_df.apply(ev, axis=1)
-                                   .sort_values(by='ev', ascending=False))
-        return df
+        try:
+            df = (
+                self.betting_lines_df.apply(ev, axis=1)
+                                     .sort_values(by='ev', ascending=False)
+            )
+
+            return df
+
+        except KeyError:
+            raise ProcessingError('No expected values could be calculated!')
+
 
     @staticmethod
     def _cleanup_betting_line(betting_line: dict) -> None:
+        """
+        Cleans up the betting line dictionary by removing unnecessary fields and organizing metrics.
+
+        Args:
+            betting_line (dict): The betting line dictionary.
+        """
         if isinstance(betting_line['url'], float):
             del betting_line['url']
 
@@ -158,25 +269,54 @@ class BaseProcessor:
 
     @processor_logger
     def run_processor(self) -> list[dict]:
-        start_time = time.time()
-        devigged_betting_lines_df = self._get_devigged_lines()
-        end_time = time.time()
-        self.times['devig_time'] = round(end_time - start_time, 4)
+        """
+        Runs the processor to calculate devigged lines, weighted devigged lines, and expected values.
 
-        start_time = time.time()
-        self._weight_market_sharp_avgs(devigged_betting_lines_df)
-        end_time = time.time()
-        self.times['weighted_market_sharp_avgs_time'] = round(end_time - start_time, 4)
+        Returns:
+            list[dict]: The list of processed betting lines.
 
-        start_time = time.time()
-        betting_lines_df_pr = self._get_expected_values()
-        end_time = time.time()
-        self.times['ev_time'] = round(end_time - start_time, 4)
+        Raises:
+            ProcessingError: If an error occurs during processing.
+        """
+        try:
+            devigged_betting_lines_df = self._get_devigged_lines()
 
-        betting_lines = betting_lines_df_pr.to_dict(orient='records')
-        for betting_line in betting_lines:
-            self._cleanup_betting_line(betting_line)
+            weighted_devigged_lines_df = self._weight_devigged_lines(devigged_betting_lines_df)
 
-        return betting_lines
+            betting_lines_df_pr = self._get_expected_values(weighted_devigged_lines_df)
 
-    def log_message(self):
+            betting_lines = betting_lines_df_pr.to_dict(orient='records')
+            for betting_line in betting_lines:
+                self._cleanup_betting_line(betting_line)
+
+            return betting_lines
+
+        except ProcessingError as e:
+            self.log_message(e, 'ERROR')
+
+        except Exception as e:
+            self.log_message(e, 'EXCEPTION')
+
+    def log_message(self, e: Exception = None, level: str = 'EXCEPTION', message: str = None):
+        """
+        Logs a message with the specified level.
+
+        Args:
+            e (Exception, optional): The exception to log. Defaults to None.
+            level (str, optional): The log level. Defaults to 'EXCEPTION'.
+            message (str, optional): The log message. Defaults to None.
+        """
+        level = level.lower()
+        message = message or str(e)
+
+        if level == 'info':
+            print(f'[BettingLinesPipeline] [Processing] [{self.name}]: ℹ️', message, 'ℹ️')
+
+        if level == 'warning':
+            print(f'[BettingLinesPipeline] [Processing] [{self.name}]: ⚠️', message, '⚠️')
+
+        if level == 'error':
+            print(f'[BettingLinesPipeline] [Processing] [{self.name}]: asd', message, 'asd')
+
+        if level == 'exception':
+            print(f'[BettingLinesPipeline] [Processing] [{self.name}]: ❌', message, '❌')

@@ -1,7 +1,7 @@
 from pymongo import UpdateOne, InsertOne
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from db.base import BaseCollection
+from db.base_collection import BaseCollection
 
 
 class BoxScores(BaseCollection):
@@ -21,7 +21,6 @@ class BoxScores(BaseCollection):
             db (AsyncIOMotorDatabase): The database connection.
         """
         super().__init__('box_scores', db)
-        self.collection = self.db['box_scores']
 
     async def get_box_scores(self, query: dict) -> list[dict]:
         """
@@ -54,18 +53,21 @@ class BoxScores(BaseCollection):
         Args:
             box_scores (list[dict]): The list of box scores to store.
         """
-        requests = []
-        for box_score in box_scores:
-            query = {'_id': box_score['_id']}
-            if await self.get_box_score(query):
-                update_op = await self.update_box_score(query, return_op=True, **box_score)
-                requests.append(update_op)
-            else:
-                insert_op = InsertOne(box_score)
-                requests.append(insert_op)
+        try:
+            requests = []
+            for box_score in box_scores:
+                query = {'_id': box_score['_id']}
+                if await self.get_box_score(query):
+                    update_op = await self.update_box_score(query, return_op=True, **box_score)
+                    requests.append(update_op)
+                else:
+                    insert_op = InsertOne(box_score)
+                    requests.append(insert_op)
 
-        if requests:
             await self.collection.bulk_write(requests)
+
+        except Exception as e:
+            self.log_message(e, level='EXCEPTION')
 
     async def update_box_score(self, query: dict, return_op: bool = False, **kwargs):
         """

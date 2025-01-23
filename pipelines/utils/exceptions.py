@@ -4,3 +4,8 @@ class StandardizationError(Exception):
 
 class RequestingError(Exception):
     pass
+
+
+class ProcessingError(Exception):
+    pass
+

@@ -40,7 +40,7 @@ _CONFIGS = {
         }
     },
     'box_scores': {
-        'reset': False,
+        'reset': True,
         'throttle': 60,
         'data_collection': {
             'valid_leagues': {'NBA', 'NCAAM'},

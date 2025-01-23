@@ -1,6 +1,6 @@
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from db.base import BaseCollection
+from db.base_collection import BaseCollection
 
 
 class Metadata(BaseCollection):
@@ -19,8 +19,7 @@ class Metadata(BaseCollection):
         Args:
             db (AsyncIOMotorDatabase): The database connection.
         """
-        super().__init__(db)
-        self.collection = self.db['metadata']
+        super().__init__('metadata', db)
 
     async def get_ev_formula(self, market_domain: str, ev_formula_name: str) -> str | None:
         """

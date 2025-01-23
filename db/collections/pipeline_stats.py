@@ -2,7 +2,7 @@ from datetime import date
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from db.base import BaseCollection
+from db.base_collection import BaseCollection
 
 
 class PipelineStats(BaseCollection):
@@ -23,8 +23,7 @@ class PipelineStats(BaseCollection):
         Args:
             db (AsyncIOMotorDatabase): The database connection.
         """
-        super().__init__(db)
-        self.collection = self.db['pipeline_stats']
+        super().__init__('pipeline_stats', db)
 
         self._daily_pipeline_stats = []
         self._betting_lines_batch_stats = {}

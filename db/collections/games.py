@@ -3,7 +3,7 @@ from datetime import datetime
 from pymongo import UpdateOne, InsertOne
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from db.base import BaseCollection
+from db.base_collection import BaseCollection
 
 
 class Games(BaseCollection):
@@ -22,8 +22,7 @@ class Games(BaseCollection):
         Args:
             db (AsyncIOMotorDatabase): The database connection.
         """
-        super().__init__(db)
-        self.collection = self.db['games']
+        super().__init__('games', db)
 
     async def get_games(self, query: dict, live: bool = False) -> list[dict]:
         """
