@@ -7,6 +7,8 @@ class BaseCollection:
         self.db = db
         self.collection = self.db[collection_name]
 
+        self.logging_name = collection_name.replace('_', ' ').title().replace(' ', '')
+
     def log_message(self, e: Exception = None, level: str = 'EXCEPTION', message: str = None):
         """
         Logs a message with the specified level.
@@ -20,13 +22,13 @@ class BaseCollection:
         message = message or str(e)
 
         if level == 'info':
-            print(f'[Storage] [{self.collection.name}]: ℹ️', message, 'ℹ️')
+            print(f'[Storage] [{self.logging_name}]: ℹ️', message, 'ℹ️')
 
         if level == 'warning':
-            print(f'[Storage] [{self.collection.name}]: ⚠️', message, '⚠️')
+            print(f'[Storage] [{self.logging_name}]: ⚠️', message, '⚠️')
 
         if level == 'error':
-            print(f'[Storage] [{self.collection.name}]: ❌', message, '❌')
+            print(f'[Storage] [{self.logging_name}]: ❌', message, '❌')
 
         if level == 'exception':
-            print(f'[Storage] [{self.collection.name}]: ❌', message, '❌')
+            print(f'[Storage] [{self.logging_name}]: ❌', message, '❌')

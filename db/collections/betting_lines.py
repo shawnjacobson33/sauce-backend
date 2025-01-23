@@ -43,7 +43,11 @@ class BettingLines(BaseCollection):
         Returns:
             dict: The betting line document.
         """
-        return await self.collection.find_one(query)
+        try:
+            return await self.collection.find_one(query)
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to get betting line: {e}')
 
     @staticmethod
     def _get_most_recent_stream_record(stream: list[dict]):
@@ -132,9 +136,14 @@ class BettingLines(BaseCollection):
         Returns:
             list[dict]: The completed betting lines.
         """
-        return await self.completed_betting_lines_collection.find(*args, **kwargs).to_list()
+        try:
+            return await self.completed_betting_lines_collection.find(*args, **kwargs).to_list()
 
-    def _create_doc(self, line: dict) -> dict:
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to get completed betting lines: {e}')
+
+    @staticmethod
+    def _create_doc(line: dict) -> dict:
         """
         Creates a new betting line document.
 
@@ -144,19 +153,15 @@ class BettingLines(BaseCollection):
         Returns:
             dict: The new betting line document.
         """
-        try:
-            record_fields = {'batch_timestamp', 'collection_timestamp', 'line', 'odds'}
-            record = BettingLines._create_record(line)
-            if not line['metrics'].get('ev'):
-                record_fields.add('ev_formula')
+        record_fields = {'batch_timestamp', 'collection_timestamp', 'line', 'odds'}
+        record = BettingLines._create_record(line)
+        if not line['metrics'].get('ev'):
+            record_fields.add('ev_formula')
 
-            return {
-                **{k: line[k] for k in line if k not in record_fields},
-                'stream': [ record ],
-            }
-
-        except Exception as e:
-            self.log_message(level='EXCEPTION', message=f'Failed to create betting line doc: {e}')
+        return {
+            **{k: line[k] for k in line if k not in record_fields},
+            'stream': [ record ],
+        }
 
     @staticmethod
     def _create_record(line: dict) -> dict:
@@ -232,6 +237,7 @@ class BettingLines(BaseCollection):
             for betting_line_dict in betting_lines:  # Todo: change so it loops through every betting line currently stored and then check if a betting line disappeared for this batch.
                 betting_line_dict_id = betting_line_dict['_id']
                 if betting_line_doc_match := await self.get_betting_line(betting_line_dict_id):
+                    # update stream
                     stream = betting_line_doc_match['stream']
                     await self._update_stream(stream, betting_line_dict, requests)
 
@@ -243,6 +249,7 @@ class BettingLines(BaseCollection):
 
 
                 elif betting_line_seen_tracker[betting_line_dict_id] == 0:  # For first iteration of batches
+                    # insert a new doc
                     new_betting_line_doc = self._create_doc(betting_line_dict)
                     insert_op = pymongo.InsertOne(new_betting_line_doc)
                     requests.append(insert_op)
@@ -251,6 +258,7 @@ class BettingLines(BaseCollection):
 
             seen_betting_lines = list(betting_line_seen_tracker.keys())
             batch_timestamp = betting_lines[0]['batch_timestamp']
+            # if betting lines disappeared, add an empty record to the stream
             await self._update_disappeared_betting_lines(seen_betting_lines, requests, batch_timestamp)
 
             await self.collection.bulk_write(requests)
@@ -303,28 +311,24 @@ class BettingLines(BaseCollection):
         Returns:
             dict: The box score for the betting line.
         """
-        try:
-            market = betting_line['market']
-            if self._is_market_period_specific(market):
-                return box_score[market[:2]]
+        market = betting_line['market']
+        if self._is_market_period_specific(market):
+            return box_score[market[:2]]
 
-            box_score = dict()
-            periods = { '1H': {'1Q', '2Q'}, '2H': {'3Q', '4Q'} } # Todo: use ENUM?
+        box_score = dict()
+        periods = { '1H': {'1Q', '2Q'}, '2H': {'3Q', '4Q'} } # Todo: use ENUM?
 
-            if market in periods:
-                for specific_period in periods[market[:2]]:
-                    if period_specific_box_score := box_score.get(specific_period):
-                        box_score.update(period_specific_box_score)
+        if market in periods:
+            for specific_period in periods[market[:2]]:
+                if period_specific_box_score := box_score.get(specific_period):
+                    box_score.update(period_specific_box_score)
 
-            for period_group in periods.values():
-                for specific_period in period_group:
-                    if period_specific_box_score := box_score.get(specific_period):
-                        box_score.update(period_specific_box_score)
+        for period_group in periods.values():
+            for specific_period in period_group:
+                if period_specific_box_score := box_score.get(specific_period):
+                    box_score.update(period_specific_box_score)
 
-            return box_score
-
-        except Exception as e:
-            self.log_message(level='EXCEPTION', message=f'Failed to get box score: {e}')
+        return box_score
 
     def _get_market(self, betting_line: dict) -> str:
         """

@@ -68,17 +68,17 @@ class BaseCollector:
             'num_collected': self.num_collected
         }
 
-    def log_message(self, e: Exception, level: str = 'EXCEPTION'):
+    def log_message(self, message: str, level: str = 'EXCEPTION'):
         level = level.lower()
 
         if level == 'info':
-            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ℹ️', e, 'ℹ️')
+            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ℹ️', message, 'ℹ️')
 
         if level == 'warning':
-            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ⚠️', e, '⚠️')
+            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ⚠️', message, '⚠️')
 
         if level == 'error':
-            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ❌', e, '❌')
+            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ❌', message, '❌')
 
         if level == 'exception':
-            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ❌', e, '❌')
+            print(f'[{self.domain}Pipeline] [Collection] [{self.name}]: ❌', message, '❌')

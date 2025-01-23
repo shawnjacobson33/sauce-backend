@@ -32,7 +32,11 @@ class BoxScores(BaseCollection):
         Returns:
             list[dict]: A list of box score documents.
         """
-        return await self.collection.find(query).to_list()
+        try:
+            return await self.collection.find(query).to_list()
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f"Failed to get box scores: {e}")
 
     async def get_box_score(self, query: dict) -> dict:
         """
@@ -44,7 +48,11 @@ class BoxScores(BaseCollection):
         Returns:
             dict: The box score document.
         """
-        return await self.collection.find_one(query)
+        try:
+            return await self.collection.find_one(query)
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f"Failed to get box score: {e}")
 
     async def store_box_scores(self, box_scores: list[dict]) -> None:
         """
@@ -67,7 +75,7 @@ class BoxScores(BaseCollection):
             await self.collection.bulk_write(requests)
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(level='EXCEPTION', message=f"Failed to store box scores: {e}")
 
     async def update_box_score(self, query: dict, return_op: bool = False, **kwargs):
         """
@@ -81,10 +89,14 @@ class BoxScores(BaseCollection):
         Returns:
             UpdateOne: The update operation if return_op is True.
         """
-        if return_op:
-            return UpdateOne(query, {'$set': kwargs})
+        try:
+            if return_op:
+                return UpdateOne(query, {'$set': kwargs})
 
-        await self.collection.update_one(query, {'$set': kwargs})
+            await self.collection.update_one(query, {'$set': kwargs})
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f"Failed to update box score: {e}")
 
     async def delete_box_scores(self, game_ids: list[str] = None):
         """
@@ -93,7 +105,11 @@ class BoxScores(BaseCollection):
         Args:
             game_ids (list[str], optional): The list of game IDs to filter by.
         """
-        if game_ids:
-            return await self.collection.delete_many({'game._id': {'$in': game_ids}})
+        try:
+            if game_ids:
+                return await self.collection.delete_many({'game._id': {'$in': game_ids}})
 
-        await self.collection.delete_many({})
+            await self.collection.delete_many({})
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f"Failed to delete box scores: {e}")

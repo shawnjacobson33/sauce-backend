@@ -35,7 +35,11 @@ class PipelineStats(BaseCollection):
         Args:
             batch_timestamp (date): The timestamp of the batch.
         """
-        self._betting_lines_batch_stats['batch_timestamp'] = batch_timestamp
+        try:
+            self._betting_lines_batch_stats['batch_timestamp'] = batch_timestamp
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to update batch details: {e}')
 
     def add_collector_stats(self, collector_name: str, stats: dict) -> None:
         """
@@ -45,9 +49,13 @@ class PipelineStats(BaseCollection):
             collector_name (str): The name of the collector.
             stats (dict): The statistics of the collector.
         """
-        data_collection_dict = self._betting_lines_batch_stats.setdefault('data_collection', {})
-        data_collectors_dict = data_collection_dict.setdefault('collectors', {})
-        data_collectors_dict[collector_name] = stats
+        try:
+            data_collection_dict = self._betting_lines_batch_stats.setdefault('data_collection', {})
+            data_collectors_dict = data_collection_dict.setdefault('collectors', {})
+            data_collectors_dict[collector_name] = stats
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to add collector stats: {e}')
 
     def add_processor_stats(self, stats: dict):
         """
@@ -56,7 +64,11 @@ class PipelineStats(BaseCollection):
         Args:
             stats (dict): The statistics of the processor.
         """
-        self._betting_lines_batch_stats['data_processing'] = stats
+        try:
+            self._betting_lines_batch_stats['data_processing'] = stats
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to add processor stats: {e}')
 
     def add_pipeline_stats(self, stats: dict):
         """
@@ -65,7 +77,11 @@ class PipelineStats(BaseCollection):
         Args:
             stats (dict): The statistics of the pipeline.
         """
-        self._betting_lines_batch_stats['pipeline'] = stats
+        try:
+            self._betting_lines_batch_stats['pipeline'] = stats
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to add pipeline stats: {e}')
 
     async def update_daily_stats(self, curr_date: date):
         """
@@ -74,9 +90,13 @@ class PipelineStats(BaseCollection):
         Args:
             curr_date (date): The current date.
         """
-        await self.collection.update_one(
-            { 'date': curr_date },
-            { '$push': { 'betting_lines': self._betting_lines_batch_stats } },
-            upsert=True
-        )
-        self._betting_lines_batch_stats = {}
+        try:
+            await self.collection.update_one(
+                { 'date': curr_date },
+                { '$push': { 'betting_lines': self._betting_lines_batch_stats } },
+                upsert=True
+            )
+            self._betting_lines_batch_stats = {}
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to update daily stats: {e}')

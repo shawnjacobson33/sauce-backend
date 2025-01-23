@@ -2,9 +2,10 @@ import pandas as pd
 
 from db import db
 from pipelines.betting_lines.data_processing import processors
+from pipelines.base import BaseManager
 
 
-class BettingLinesDataProcessingManager:
+class BettingLinesDataProcessingManager(BaseManager):
     """
     A class to manage the processing of betting lines data.
 
@@ -21,7 +22,7 @@ class BettingLinesDataProcessingManager:
             configs (dict): The configuration settings.
             betting_lines_container (list[dict]): The container for betting lines data.
         """
-        self.configs = configs
+        super().__init__('BettingLines', configs)
         self.betting_lines_container = betting_lines_container
 
     async def _get_ev_formulas(self):
@@ -41,18 +42,18 @@ class BettingLinesDataProcessingManager:
         Logs:
             Warning: If no betting lines are found.
         """
-        await self._get_ev_formulas()
+        try:
+            await self._get_ev_formulas()
 
-        if self.betting_lines_container:
-            betting_lines_df = pd.DataFrame(self.betting_lines_container)
-            game_lines = processors.GameLinesProcessor(betting_lines_df, self.configs).run_processor()
-            player_prop_lines = processors.PlayerPropsProcessor(betting_lines_df, self.configs).run_processor()
+            if self.betting_lines_container:
+                betting_lines_df = pd.DataFrame(self.betting_lines_container)
+                game_lines = processors.GameLinesProcessor(betting_lines_df, self.configs).run_processor()
+                player_prop_lines = processors.PlayerPropsProcessor(betting_lines_df, self.configs).run_processor()
 
-            try:
                 betting_lines = game_lines + player_prop_lines
                 return betting_lines
 
-            except Exception:
-                print(f'[BettingLinesPipeline] [Processing]: ❌', "No betting lines found!", '❌️')
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to run processors: {e}')
 
-        print(f'[BettingLinesPipeline] [Processing]: ❌️', "No betting lines found!", '❌')
+

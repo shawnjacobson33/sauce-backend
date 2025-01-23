@@ -32,7 +32,11 @@ class Subjects(BaseCollection):
         Returns:
             list[dict]: A list of subject documents.
         """
-        return await self.collection.find(query).to_list()
+        try:
+            return await self.collection.find(query).to_list()
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to get subjects: {e}')
 
     async def get_subject(self, query: dict) -> dict:
         """
@@ -44,7 +48,11 @@ class Subjects(BaseCollection):
         Returns:
             dict: The subject document.
         """
-        return await self.collection.find_one(query)
+        try:
+            return await self.collection.find_one(query)
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to get subject: {e}')
 
     async def store_subjects(self, subjects: list[dict]) -> None:
         """
@@ -53,18 +61,21 @@ class Subjects(BaseCollection):
         Args:
             subjects (list[dict]): The list of subjects to store.
         """
-        requests = []
-        for subject in subjects:
-            query = { 'name': subject['name'], 'jersey_number': subject['jersey_number'] }
-            if await self.get_subject(query):
-                update_op = await self.update_subject(query, return_op=True, **subject)
-                requests.append(update_op)
-            else:
-                insert_op = InsertOne(subject)
-                requests.append(insert_op)
+        try:
+            requests = []
+            for subject in subjects:
+                query = { 'name': subject['name'], 'jersey_number': subject['jersey_number'] }
+                if await self.get_subject(query):
+                    update_op = await self.update_subject(query, return_op=True, **subject)
+                    requests.append(update_op)
+                else:
+                    insert_op = InsertOne(subject)
+                    requests.append(insert_op)
 
-        if requests:
             await self.collection.bulk_write(requests)
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to store subjects: {e}')
 
     async def update_subject(self, query: dict, return_op: bool = False, **kwargs):
         """
@@ -78,10 +89,14 @@ class Subjects(BaseCollection):
         Returns:
             UpdateOne: The update operation if return_op is True.
         """
-        if return_op:
-            return UpdateOne(query, {'$set': kwargs})
+        try:
+            if return_op:
+                return UpdateOne(query, {'$set': kwargs})
 
-        await self.collection.update_one(query, {'$set': kwargs})
+            await self.collection.update_one(query, {'$set': kwargs})
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to update subject: {e}')
 
     async def delete_subjects(self, query: dict) -> None:
         """
@@ -90,4 +105,8 @@ class Subjects(BaseCollection):
         Args:
             query (dict): The query to filter the subjects to delete.
         """
-        await self.collection.delete_many(query)
+        try:
+            await self.collection.delete_many(query)
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f'Failed to delete subjects: {e}')

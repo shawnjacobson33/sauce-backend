@@ -35,17 +35,21 @@ class Games(BaseCollection):
         Returns:
             list[dict]: A list of game documents.
         """
-        if live:
-            live_query = {
-                **query,
-                '$or': [
-                    {'status': 'live'},
-                    {'game_time': {'$lte': datetime.now()}}
-                ]
-            }
-            return await self.collection.find(live_query).to_list()
+        try:
+            if live:
+                live_query = {
+                    **query,
+                    '$or': [
+                        {'status': 'live'},
+                        {'game_time': {'$lte': datetime.now()}}
+                    ]
+                }
+                return await self.collection.find(live_query).to_list()
 
-        return await self.collection.find(query).to_list()
+            return await self.collection.find(query).to_list()
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f"Failed to get games: {e}")
 
     async def get_game(self, query: dict, proj: dict = None) -> dict:
         """
@@ -58,7 +62,11 @@ class Games(BaseCollection):
         Returns:
             dict: The game document.
         """
-        return await self.collection.find_one(query, proj if proj else {})
+        try:
+            return await self.collection.find_one(query, proj if proj else {})
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f"Failed to get game: {e}")
 
     async def store_games(self, games: list[dict]) -> None:
         """
@@ -67,18 +75,21 @@ class Games(BaseCollection):
         Args:
             games (list[dict]): The list of games to store.
         """
-        requests = []
-        for game in games:
-            query = { '_id': game['_id'] }
-            if await self.get_game(query):
-                update_op = await self.update_game(query, return_op=True, **game)
-                requests.append(update_op)
-            else:
-                insert_op = InsertOne(game)
-                requests.append(insert_op)
+        try:
+            requests = []
+            for game in games:
+                query = { '_id': game['_id'] }
+                if await self.get_game(query):
+                    update_op = await self.update_game(query, return_op=True, **game)
+                    requests.append(update_op)
+                else:
+                    insert_op = InsertOne(game)
+                    requests.append(insert_op)
 
-        if requests:
             await self.collection.bulk_write(requests)
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f"Failed to store games: {e}")
 
     async def update_game(self, query: dict, return_op: bool = False, **kwargs):
         """
@@ -92,10 +103,14 @@ class Games(BaseCollection):
         Returns:
             UpdateOne: The update operation if return_op is True.
         """
-        if return_op:
-            return UpdateOne(query, {'$set': kwargs})
+        try:
+            if return_op:
+                return UpdateOne(query, {'$set': kwargs})
 
-        await self.collection.update_one(query, {'$set': kwargs})
+            await self.collection.update_one(query, {'$set': kwargs})
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f"Failed to update game: {e}")
 
     async def delete_games(self, game_ids: list[str] = None) -> None:
         """
@@ -104,7 +119,11 @@ class Games(BaseCollection):
         Args:
             game_ids (list[str], optional): The list of game IDs to filter by.
         """
-        if game_ids:
-            return await self.collection.delete_many({'_id': {'$in': game_ids}})
+        try:
+            if game_ids:
+                return await self.collection.delete_many({'_id': {'$in': game_ids}})
 
-        await self.collection.delete_many({})
+            await self.collection.delete_many({})
+
+        except Exception as e:
+            self.log_message(level='EXCEPTION', message=f"Failed to delete games: {e}")

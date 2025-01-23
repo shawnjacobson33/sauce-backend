@@ -35,12 +35,13 @@ class Metadata(BaseCollection):
         Raises:
             ValueError: If the market domain or EV formula is not found.
         """
-        metadata = await self.collection.find_one({'_id': 'metadata'})
-        if market_domain_dict := metadata['ev_formulas'].get(market_domain):
-            if ev_formula := market_domain_dict.get(ev_formula_name):
-                ev_formula['name'] = ev_formula_name
-                return ev_formula
+        try:
+            metadata = await self.collection.find_one({'_id': 'metadata'})
+            market_domain_dict = metadata['ev_formulas'].get(market_domain)
+            ev_formula = market_domain_dict.get(ev_formula_name)
+            ev_formula['name'] = ev_formula_name
+            return ev_formula
 
-            raise ValueError(f"EV formula '{ev_formula_name}' not found in '{market_domain}' market domain")
+        except Exception as e:
+            self.log_message(level='ERROR', message=f'Failed to get EV formula: {e}')
 
-        raise ValueError(f"Market domain '{market_domain}' not found in metadata")

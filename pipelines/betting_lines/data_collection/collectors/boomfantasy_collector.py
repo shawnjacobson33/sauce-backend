@@ -79,12 +79,12 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 return True
 
         except RequestingError as e:
-            self.log_message(e, level='ERROR')
+            self.log_message(message=f'Failed to request new tokens: {e}', level='ERROR')
             self.failed_requests += 1
             return False
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to request new tokens: {e}', level='EXCEPTION')
             return False
 
     async def _request_contest_id(self) -> str | None:
@@ -103,11 +103,11 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 return self._parse_contest_id(resp_json)
 
         except RequestingError as e:
-            self.log_message(e, level='ERROR')
+            self.log_message(message=f'Failed to request contest ID: {e}', level='ERROR')
             self.failed_requests += 1
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to request contest ID: {e}', level='EXCEPTION')
 
     def _parse_contest_id(self, resp: dict) -> str | None:
         """
@@ -120,13 +120,11 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
             str | None: The contest ID if found, otherwise None.
         """
         try:
-            if (data := resp['data']) and (isinstance(data, dict)):
-                for contest in data['contests']:
-                    if contest['title'] == "Pick' Em":
-                        return contest['_id']
+            for contest in resp['data']['contests']:
+                return contest['_id'] if contest['title'] == "Pick' Em" else None
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to parse contest ID: {e}', level='EXCEPTION')
 
     def _get_payload_for_betting_lines(self, contest_id: str) -> tuple[str, dict, dict] | None:
         """
@@ -160,11 +158,11 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 return resp_json
 
         except RequestingError as e:
-            self.log_message(e, level='ERROR')
+            self.log_message(message=f'Failed to request betting lines: {e}', level='ERROR')
             self.failed_requests += 1
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to request betting lines: {e}', level='EXCEPTION')
 
     def _get_sections(self, resp: dict) -> Iterable:
         """
@@ -177,13 +175,11 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
             dict: The section data.
         """
         try:
-            if data := resp['data']:
-                if contest := data['multiLineContest']:
-                    for section in contest['sections']:
-                        yield section
+            for section in resp['data']['multiLineContest']['sections']:
+                yield section
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to get sections: {e}', level='EXCEPTION')
 
     def _extract_league(self, section: dict) -> str | None:
         """
@@ -202,7 +198,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                     return cleaned_league_name
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract league: {e}', level='EXCEPTION')
 
     @staticmethod
     def _get_qgs(section: dict) -> Iterable:
@@ -234,7 +230,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 yield qg
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to get qg_data: {e}', level='EXCEPTION')
 
     @staticmethod
     def _extract_team(qg: dict) -> str | None:
@@ -247,12 +243,10 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         Returns:
             str | None: The team name if found, otherwise None.
         """
-        player_image = qg['playerImage']
-        team_name = player_image['abbreviation']
-        return team_name
+        return qg['playerImage']['abbreviation']
 
     @staticmethod
-    def _get_raw_subject_name(qg: dict):
+    def _get_raw_subject_name(qg: dict) -> str:
         """
         Extracts the raw subject name from the QG data.
 
@@ -262,10 +256,8 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         Returns:
             str: The raw subject name.
         """
-        if title := qg.get('title'):
-            if options := title.get('o'):
-                if (raw_first_name := options.get('firstName')) and (raw_last_name := options.get('lastName')):
-                    return ' '.join([raw_first_name, raw_last_name])
+        options = qg['title']['o']
+        return ' '.join([options['firstName'], options['lastName']])
 
     def _extract_subject(self, qg: dict, league: str) -> str | None:
         """
@@ -286,11 +278,11 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 return std_subject_name
 
         except StandardizationError as e:
-            self.log_message(e, level='WARNING')
+            self.log_message(message=f'Failed to standardize subject: {e}', level='WARNING')
             self.failed_subject_standardization += 1
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract subject: {e}', level='EXCEPTION')
 
     def _extract_period(self, qg: dict) -> str | None:
         """
@@ -302,7 +294,8 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         Returns:
             str | None: The standardized period name if valid, otherwise None.
         """
-        if (period := qg.get('periodClassifier')) and (period != 'fullGame'):
+
+        if (period := qg['periodClassifier']) != 'fullGame':
             std_period_name = self.standardizer.standardize_period_name(period)
             return std_period_name
 
@@ -323,7 +316,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 yield q
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to get q_data: {e}', level='EXCEPTION')
 
     def _extract_market(self, qg: dict, q: dict, league: str) -> str | None:
         """
@@ -339,18 +332,17 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         """
         try:
             period = self._extract_period(qg)
-            if raw_market_name := q.get("statistic"):
-                sport = utils.get_sport(league)
-                std_market_name = self.standardizer.standardize_market_name(
-                    raw_market_name, 'PlayerProps', sport, period=period)
-                return std_market_name
+            sport = utils.get_sport(league)
+            std_market_name = self.standardizer.standardize_market_name(
+                q["statistic"], 'PlayerProps', sport, period=period)
+            return std_market_name
 
         except StandardizationError as e:
-            self.log_message(e, level='WARNING')
+            self.log_message(message=f'Failed to standardize market: {e}', level='WARNING')
             self.failed_market_standardization += 1
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract market: {e}', level='EXCEPTION')
 
     def _get_c_data(self, qg: dict, q: dict, league: str) -> Iterable:
         """
@@ -366,12 +358,11 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         """
         try:
             yield self._extract_market(qg, q, league)
-            if c_data := q['c']:
-                for c in c_data:
-                    yield c
+            for c in q['c']:
+                yield c
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to get c_data: {e}', level='EXCEPTION')
 
     def _get_c_data_2(self, c: dict) -> Iterable:
         """
@@ -389,7 +380,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 yield c_2_data
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to get c_data_2: {e}', level='EXCEPTION')
 
     def _extract_label_and_odds(self, c_2: list) -> Optional[tuple[str, float]]:
         """
@@ -402,12 +393,10 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
             Optional[tuple[str, float]]: The label and odds if valid, otherwise None.
         """
         try:
-            if len(c_2) > 3:
-                if (label := c_2[1]) and (odds := c_2[2]):
-                    return label.title(), float(odds)
+            return c_2[1].title(), float(c_2[2])
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(message=f'Failed to extract label and odds: {e}', level='EXCEPTION')
 
     async def _parse_betting_lines(self, resp: dict) -> None:
         """

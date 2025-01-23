@@ -2,29 +2,24 @@
 
 
 class BaseManager:
-    def __init__(self, configs: dict):
+
+    def __init__(self, domain: str, configs: dict):
+        self.domain = domain
         self.configs = configs
 
     def log_message(self, e: Exception = None, level: str = 'EXCEPTION', message: str = None):
-        """
-        Logs a message with the specified level.
-
-        Args:
-            e (Exception, optional): The exception to log. Defaults to None.
-            level (str, optional): The log level. Defaults to 'EXCEPTION'.
-            message (str, optional): The log message. Defaults to None.
-        """
         level = level.lower()
+
         message = message or str(e)
 
         if level == 'info':
-            print(f'[BettingLinesPipeline] [Processing] [{self.name}]: ℹ️', message, 'ℹ️')
+            print(f'[{self.domain}Pipeline] [{self.domain}Manager]: ℹ️', message, 'ℹ️')
 
         if level == 'warning':
-            print(f'[BettingLinesPipeline] [Processing] [{self.name}]: ⚠️', message, '⚠️')
+            print(f'[{self.domain}Pipeline] [{self.domain}Manager]: ⚠️', message, '⚠️')
 
         if level == 'error':
-            print(f'[BettingLinesPipeline] [Processing] [{self.name}]: ❌', message, '❌')
+            print(f'[{self.domain}Pipeline] [{self.domain}Manager]: ❌', message, '❌')
 
         if level == 'exception':
-            print(f'[BettingLinesPipeline] [Processing] [{self.name}]: ❌', message, '❌')
+            print(f'[{self.domain}Pipeline] [{self.domain}Manager]: ❌', message, '❌')
