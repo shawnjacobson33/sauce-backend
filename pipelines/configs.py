@@ -1,4 +1,5 @@
 # Description: Configurations for the data collection app.
+
 _CONFIGS = {
     'standardization': {
         'invalid_markets': {'First Basket', 'Top Point Scorer'}
@@ -50,6 +51,18 @@ _CONFIGS = {
 
 
 def load_configs(pipeline_sub_process: str = None) -> dict:
+    """
+    Loads the configuration settings for the specified pipeline subprocess.
+
+    Args:
+        pipeline_sub_process (str, optional): The name of the pipeline subprocess. Defaults to None.
+
+    Returns:
+        dict: The configuration settings for the specified pipeline subprocess.
+
+    Raises:
+        ValueError: If the configuration for the specified pipeline subprocess is not found.
+    """
     if not pipeline_sub_process:
         return _CONFIGS
 
