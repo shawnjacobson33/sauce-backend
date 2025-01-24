@@ -42,7 +42,7 @@ class BasketballRostersCollector(BaseCollector):
             full_team_name = (
                 '-'.join(team['full_name']
                    .lower()
-                   .replace('&', '-')
+                   .replace('&', '')
                    .split()
             ))
 
@@ -71,7 +71,7 @@ class BasketballRostersCollector(BaseCollector):
             headers['referer'] = headers['referer'].format(league, 'teams')
             cookies = self.payload['cookies']
             abbr_team_name = team['abbr_name']
-
+            full_team_name = self._get_full_team_name(team)
             if 'NCAA' in league:
                 abbr_team_name = self.payload['ncaa_team_name_url_map'][league]['abbr_name'].get(abbr_team_name,
                                                                                                  abbr_team_name)

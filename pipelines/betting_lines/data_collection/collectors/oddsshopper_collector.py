@@ -274,7 +274,8 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             str | None: The label if valid, otherwise None.
         """
         try:
-            return side['label'] if not ((market_domain == 'Gamelines') and ('Total' not in market)) else 'Over'
+            if side['label'] != 'Draw':  # Todo: eases calculations for now
+                return side['label'] if not ((market_domain == 'Gamelines') and ('Total' not in market)) else 'Over'
 
         except Exception as e:
             self.log_message(message=f'Failed to extract label: {e}', level='EXCEPTION')
@@ -377,6 +378,8 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                         if line := self._extract_line(outcome, market):
                                             if bookmaker := self._extract_bookmaker(outcome):
                                                 if odds := self._extract_odds(outcome):
+                                                    if market == '1st Quarter Moneyline' and subject == 'Oklahoma City Thunder':
+                                                        asd = 123
                                                     collection_datetime = datetime.now()
                                                     betting_line_dict = {
                                                         'batch_timestamp': self.batch_timestamp.strftime(

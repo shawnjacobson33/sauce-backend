@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pymongo
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo.errors import InvalidOperation
 
 from db.base_collection import BaseCollection
 from db.collections.utils import GCSUploader
@@ -365,8 +366,11 @@ class BettingLines(BaseCollection):
 
             await self.collection.bulk_write(requests)
 
+        except InvalidOperation as e:
+            self.log_message(message=f'No live stats to update: {e}', level='INFO')
+
         except Exception as e:
-            self.log_message(level='EXCEPTION', message=f'Failed to update live stats: {e}')
+            self.log_message(message=f'Failed to update live stats: {e}', level='EXCEPTION')
 
     @staticmethod
     def _restructure_betting_lines_data(betting_lines: list[dict]):
