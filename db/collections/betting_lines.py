@@ -8,6 +8,7 @@ from pymongo.errors import InvalidOperation
 
 from db.base_collection import BaseCollection
 from db.collections.utils import GCSUploader
+from db.collections.utils.game_stats_dict import GameStatsDict
 
 
 class BettingLines(BaseCollection):
@@ -124,7 +125,7 @@ class BettingLines(BaseCollection):
             return await self._get_cursor(*args, **kwargs).to_list()
 
         except Exception as e:
-            self.log_message(level='EXCEPTION', message=f'Failed to get betting lines: {e}')
+            raise Exception(f'Failed to get betting lines: {e}')
 
     async def get_completed_betting_lines(self, *args, **kwargs) -> list[dict]:
         """
@@ -289,79 +290,42 @@ class BettingLines(BaseCollection):
             self.log_message(level='EXCEPTION', message=f'Failed to update betting line: {e}')
 
     @staticmethod
-    def _is_market_period_specific(market: str) -> bool:
-        """
-        Checks if the market is period-specific.
+    def _get_query_for_betting_lines_by_subject(box_score_dict: dict) -> dict:
+        try:
+            return {
+                'subject': box_score_dict['subject']['name'],
+                'game._id': box_score_dict['game']['_id']
+            }
 
-        Args:
-            market (str): The market string.
+        except Exception as e:
+            raise Exception(f'Failed to get query for betting lines by subject: {e}')
 
-        Returns:
-            bool: True if the market is period-specific, False otherwise.
-        """
-        return market[:2] in {'1Q', '2Q', '3Q', '4Q'}
-
-    def _get_box_score(self, betting_line: dict, box_score: dict) -> dict:
-        """
-        Retrieves the box score for a betting line.
-
-        Args:
-            betting_line (dict): The betting line data.
-            box_score (dict): The box score data.
-
-        Returns:
-            dict: The box score for the betting line.
-        """
-        market = betting_line['market']
-        if self._is_market_period_specific(market):
-            return box_score[market[:2]]
-
-        box_score = dict()
-        periods = { '1H': {'1Q', '2Q'}, '2H': {'3Q', '4Q'} } # Todo: use ENUM?
-
-        if market in periods:
-            for specific_period in periods[market[:2]]:
-                if period_specific_box_score := box_score.get(specific_period):
-                    box_score.update(period_specific_box_score)
-
-        for period_group in periods.values():
-            for specific_period in period_group:
-                if period_specific_box_score := box_score.get(specific_period):
-                    box_score.update(period_specific_box_score)
-
-        return box_score
-
-    def _get_market(self, betting_line: dict) -> str:
-        """
-        Retrieves the market for a betting line.
-
-        Args:
-            betting_line (dict): The betting line data.
-
-        Returns:
-            str: The market string.
-        """
-        market = betting_line['market']
-        return market[3:] if self._is_market_period_specific(market) else market
-
-    async def update_live_stats(self, box_scores: list[dict]) -> None:
+    async def update_live_performance(self, updated_live_games: dict, stored_box_score_docs: list[dict]) -> None:
         """
         Updates live stats for betting lines based on the given box scores.
 
         Args:
-            box_scores (list[dict]): The list of box scores.
+            updated_live_games (list[dict]): The list of updated live games.
+            stored_box_score_docs (list[dict]): The list of box scores.
         """
         try:
             requests = []
-            for box_score_dict in box_scores:
-                subject_filtered_betting_lines = await self.get_betting_lines({
-                    'subject': box_score_dict['subject']['name'] , 'game._id': box_score_dict['game']['_id']
-                })
+            seen_games = set()
+            for stored_box_score_doc in stored_box_score_docs:
+
+                # update for game lines
+                if stored_box_score_doc['game_id'] not in seen_games:
+                    custom_game_stats_dict = GameStatsDict(updated_live_games[stored_box_score_doc['game_id']])
+
+                # update for player props
+                query = self._get_query_for_betting_lines_by_subject(stored_box_score_doc)
+                subject_filtered_betting_lines = await self.get_betting_lines(query)
                 for betting_line in subject_filtered_betting_lines:
-                    market = self._get_market(betting_line)
-                    box_score = self._get_box_score(betting_line, box_score_dict)   # Todo: needs to be tested
-                    if stat := box_score.get(market):
-                        update_op = await self.update_betting_line(betting_line['_id'], return_op=True, live_stat=stat)
+                    custom_box_score_dict = GameStatsDict(stored_box_score_doc['box_score'])
+
+                    if stat_value := custom_box_score_dict.get(betting_line['market']):
+                        update_op = await self.update_betting_line(
+                            betting_line['_id'], return_op=True, live_stat=stat_value)
                         requests.append(update_op)
 
             await self.collection.bulk_write(requests)

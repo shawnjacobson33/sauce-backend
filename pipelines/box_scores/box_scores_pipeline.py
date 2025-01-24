@@ -118,9 +118,10 @@ class BoxScoresPipeline(BasePipeline):
                                                                        self.standardizer)
                 collected_boxscores = await box_scores_dc_manager.run_collectors(batch_timestamp, live_games)
 
-                await db.box_scores.store_box_scores(
+                updated_live_games = await db.games.update_live_games(collected_boxscores)
+                stored_box_score_docs = await db.box_scores.store_box_scores(
                     collected_boxscores)  # Todo: need to be more efficient with storing game info
-                await db.betting_lines.update_live_stats(collected_boxscores)
+                await db.betting_lines.update_live_performance(updated_live_games, stored_box_score_docs)
                 await self._check_for_finished_games(live_games)
 
         except Exception as e:

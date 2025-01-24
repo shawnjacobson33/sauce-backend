@@ -1,3 +1,6 @@
+from collections import defaultdict
+from typing import Iterable
+
 from pymongo import UpdateOne, InsertOne
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -54,30 +57,81 @@ class BoxScores(BaseCollection):
         except Exception as e:
             self.log_message(level='EXCEPTION', message=f"Failed to get box score: {e}")
 
-    async def store_box_scores(self, box_scores: list[dict]) -> None:
+    async def _update_box_score_doc(self, box_score: dict, matching_box_score_doc: dict):
+        try:
+            curr_period_num = int(box_score['game']['period'][0])
+            matching_box_score = matching_box_score_doc['box_score']
+            for stat_label, stat_value in box_score['box_score'].items():
+                matching_box_score_stat_dict = matching_box_score[stat_label]
+                matching_box_score_stat_records = matching_box_score_stat_dict['records']
+                if len(matching_box_score_stat_records) > 1:
+                    # for 2Q stats and beyond -- calculate period stats
+                    period_stat = stat_value - sum([period_stat for period_stat in matching_box_score_stat_records])
+                    # update the period stat
+                    if curr_period_num > len(matching_box_score_stat_records):
+                        matching_box_score_stat_records.append(period_stat)
+                    else:
+                        matching_box_score_stat_records[curr_period_num-1] = period_stat
+                else:
+                    # for 1Q stats only
+                    matching_box_score_stat_records[0] = stat_value
+
+                # update the total stat
+                matching_box_score_stat_dict['total'] = stat_value
+
+
+            return await self.update_box_score(
+                query={'_id': matching_box_score_doc['_id']},
+                return_op=True,
+                **matching_box_score_doc
+            )
+
+        except Exception as e:
+            raise Exception(f"Failed to update box score doc: {box_score} {e}")
+
+    @staticmethod
+    def _create_box_score_doc(box_score: dict) -> dict:
+        try:
+            box_score['game_id'] = box_score.pop('game')['_id']
+            # stores box score elements in lists for efficient aggregations later on
+            new_box_score_doc = {
+                **{key: value for key, value in box_score.items() if key != 'box_score'},
+                'box_score': {
+                    stat_label: [stat_value] for stat_label, stat_value in box_score['box_score'].items()
+                }
+            }
+
+            return new_box_score_doc
+
+        except Exception as e:
+            raise Exception(f"Failed to create box score doc: {box_score} {e}")
+
+    async def store_box_scores(self, collected_boxscores: list[dict]) -> Iterable:
         """
         Stores a list of box scores in the database.
 
         Args:
-            box_scores (list[dict]): The list of box scores to store.
+            collected_boxscores (list[dict]): The list of box scores to store.
         """
         try:
-            requests = []
-            for box_score in box_scores:
-                query = {'_id': box_score['_id']}
-                if await self.get_box_score(query):
-                    update_op = await self.update_box_score(query, return_op=True, **box_score)
-                    requests.append(update_op)
+            requests = defaultdict(list)
+            for box_score in collected_boxscores:
+                if matching_box_score_doc := await self.get_box_score({'_id': box_score['_id']}):
+                    update_op = await self._update_box_score_doc(box_score, matching_box_score_doc)
+                    requests['ops'].append(update_op)
+                    requests['box_score_docs'].append(matching_box_score_doc)
                 else:
-                    insert_op = InsertOne(box_score)
-                    requests.append(insert_op)
+                    new_box_score_doc = self._create_box_score_doc(box_score)
+                    requests['ops'].append(InsertOne(new_box_score_doc))
+                    requests['box_score_docs'].append(new_box_score_doc)
 
-            await self.collection.bulk_write(requests)
+            await self.collection.bulk_write(requests['ops'])
+            return requests['box_score_docs']
 
         except Exception as e:
-            self.log_message(level='EXCEPTION', message=f"Failed to store box scores: {e}")
+            self.log_message(message=f"Failed to store box scores: {e}", level='EXCEPTION')
 
-    async def update_box_score(self, query: dict, return_op: bool = False, **kwargs):
+    async def update_box_score(self, query: dict, return_op: bool = False, **kwargs) -> UpdateOne | None:
         """
         Updates a box score in the database.
 
@@ -107,7 +161,7 @@ class BoxScores(BaseCollection):
         """
         try:
             if game_ids:
-                return await self.collection.delete_many({'game._id': {'$in': game_ids}})
+                return await self.collection.delete_many({'game_id': {'$in': game_ids}})
 
             await self.collection.delete_many({})
 

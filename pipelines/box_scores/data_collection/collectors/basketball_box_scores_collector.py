@@ -8,7 +8,6 @@ from pipelines.base import BaseCollector, collector_logger
 from pipelines.utils import utilities as utils
 from pipelines.utils.standardization import Standardizer
 from pipelines.utils.exceptions import RequestingError, StandardizationError
-from pipelines.box_scores.box_scores_utils import BoxScoreDict
 
 
 class BasketballBoxScoresCollector(BaseCollector):
@@ -93,8 +92,8 @@ class BasketballBoxScoresCollector(BaseCollector):
             game (dict): The game data.
         """
         try:
-            if live_time := soup.find('div', {'class': 'time'}):
-                game['live_time'] = live_time.text.strip()
+            if period_time := soup.find('div', {'class': 'time'}):
+                game['period_time'] = period_time.text.strip()
 
             if period := soup.find('div', {'class': 'quarter'}):
                 game['period'] = period.text.strip()
@@ -303,7 +302,7 @@ class BasketballBoxScoresCollector(BaseCollector):
                 'game': game,
                 'league': league,
                 'subject': subject,
-                game['period']: BoxScoreDict(box_score)  # Todo: this needs to be tested
+                'box_score': box_score
             })
 
         except Exception as e:

@@ -110,7 +110,45 @@ class Games(BaseCollection):
             await self.collection.update_one(query, {'$set': kwargs})
 
         except Exception as e:
-            self.log_message(level='EXCEPTION', message=f"Failed to update game: {e}")
+            self.log_message(message=f"Failed to update game: {e}", level='EXCEPTION')
+
+    async def update_live_games(self, collected_boxscores: list[dict]) -> dict:
+        try:
+            requests = {}
+            for box_score in collected_boxscores:
+
+                game = box_score['game']
+                game_id = game['_id']
+                updated_games = requests['games']
+                if game_id not in updated_games:
+
+                    curr_period_num = int(game['period'][0])
+                    if stored_game := await self.get_game({ '_id': game_id }):
+                        for team in ['home', 'away']:
+                            new_team_score = box_score[f'{team}_score']
+                            team_score_dict = stored_game[f'{team}_score']
+                            team_score_records = team_score_dict['records']
+
+                            if len(team_score_records) > 1:
+                                period_score = new_team_score - sum([score for score in team_score_records])
+                                if curr_period_num > len(team_score_records):
+                                    team_score_records.append(period_score)
+                                else:
+                                    team_score_records[curr_period_num - 1] = period_score
+                            else:
+                                team_score_records[0] = new_team_score
+
+                            team_score_dict['total'] = new_team_score
+
+                        update_op = await self.update_game({ '_id': game_id }, return_op=True, **stored_game)
+                        requests['ops'].append(update_op)
+                        updated_games[game_id] = stored_game
+
+            await self.collection.bulk_write(requests)
+            return requests['games']
+
+        except Exception as e:
+            self.log_message(message=f"Failed to update live games: {e}", level='EXCEPTION')
 
     async def delete_games(self, game_ids: list[str] = None) -> None:
         """

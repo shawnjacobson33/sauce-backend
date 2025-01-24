@@ -6,7 +6,7 @@ _CONFIGS = {
         # Todo: need an invalid leagues list and then create a standardize league method
     },
     'betting_lines': {
-        'reset': True,
+        'reset': False,
         'throttle': 600,
         'data_collection': {
             'valid_leagues': {'NBA', 'NCAAM'},
