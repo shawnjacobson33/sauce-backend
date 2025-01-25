@@ -1,4 +1,3 @@
-from collections import defaultdict
 from datetime import datetime
 
 from pymongo import UpdateOne, InsertOne
@@ -114,6 +113,18 @@ class Games(BaseCollection):
             self.log_message(message=f"Failed to update game: {e}", level='EXCEPTION')
 
     async def update_live_games(self, collected_boxscores: list[dict]) -> dict:
+        """
+        Updates live games in the database with the collected box scores.
+
+        Args:
+            collected_boxscores (list[dict]): A list of collected box scores.
+
+        Returns:
+            dict: A dictionary of updated games.
+
+        Raises:
+            Exception: If there is an error updating the live games.
+        """
         try:
             requests = {}
             for box_score in collected_boxscores:
@@ -125,14 +136,14 @@ class Games(BaseCollection):
                 if game_id not in updated_games:
 
                     curr_period_num = int(period[0])
-                    if stored_game := await self.get_game({ '_id': game_id }):
+                    if stored_game := await self.get_game({'_id': game_id}):
 
                         for team, score_dict in game['scores'].items():
                             new_team_score = score_dict['total']
                             team_score_dict = stored_game.setdefault('scores', {}).setdefault(team, {})
                             team_score_periods = team_score_dict.setdefault('periods', [])
 
-                            period_score_dict = {'period': curr_period_num, 'score': new_team_score }
+                            period_score_dict = {'period': curr_period_num, 'score': new_team_score}
                             if team_score_periods:
                                 period_score_dict['score'] = new_team_score - sum(
                                     [score_dict['score'] for score_dict in team_score_periods
@@ -148,7 +159,7 @@ class Games(BaseCollection):
 
                             team_score_dict['total'] = new_team_score
 
-                        update_op = await self.update_game({ '_id': game_id }, return_op=True, **stored_game)
+                        update_op = await self.update_game({'_id': game_id}, return_op=True, **stored_game)
                         requests.setdefault('ops', []).append(update_op)
                         updated_games[game_id] = stored_game
 

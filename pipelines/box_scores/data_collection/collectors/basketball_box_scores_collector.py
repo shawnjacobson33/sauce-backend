@@ -95,10 +95,17 @@ class BasketballBoxScoresCollector(BaseCollector):
             raise Exception(f'Failed to extract period time: {e}')
 
     @staticmethod
-    def _extract_period(soup: BeautifulSoup, period_time: str) -> str:
+    def _extract_period(soup: BeautifulSoup, league: str, period_time: str) -> str:
         try:
             period = soup.find('div', {'class': 'quarter'})
             period = period.text.strip()
+
+            if 'OT' in period:
+                overtime_base_period_num = 5 if league == 'NBA' else 3
+
+                period = f'{int(period[0]) + overtime_base_period_num  
+                if period[0] != 'O' else overtime_base_period_num}th'
+
             return period if period != 'End' else period_time.split(',')[1]
 
         except Exception as e:
@@ -128,7 +135,7 @@ class BasketballBoxScoresCollector(BaseCollector):
             if period_time := self._extract_period_time(soup):
                 game['period_time'] = period_time.split(',')[0]
 
-            if period := self._extract_period(soup, period_time):
+            if period := self._extract_period(soup, game['league'], period_time):
                 game['period'] = period
 
             if scores := self._extract_scores(soup):
