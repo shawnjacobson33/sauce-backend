@@ -58,6 +58,19 @@ class BoxScores(BaseCollection):
             self.log_message(level='EXCEPTION', message=f"Failed to get box score: {e}")
 
     async def _update_box_score_doc(self, box_score: dict, matching_box_score_doc: dict):
+        """
+        Updates an existing box score document with new data.
+
+        Args:
+            box_score (dict): The new box score data.
+            matching_box_score_doc (dict): The existing box score document to be updated.
+
+        Returns:
+            UpdateOne: The update operation to be performed on the database.
+
+        Raises:
+            Exception: If there is an error updating the box score document.
+        """
         try:
             curr_period_num = int(box_score['game']['period'][0])
             matching_box_score = matching_box_score_doc['box_score']
@@ -96,6 +109,18 @@ class BoxScores(BaseCollection):
 
     @staticmethod
     def _create_box_score_doc(box_score: dict) -> dict:
+        """
+        Creates a new box score document from the given data.
+
+        Args:
+            box_score (dict): The box score data.
+
+        Returns:
+            dict: The new box score document.
+
+        Raises:
+            Exception: If there is an error creating the box score document.
+        """
         try:
             game = box_score.pop('game')
             box_score['game_id'] = game['_id']
@@ -133,6 +158,7 @@ class BoxScores(BaseCollection):
                     requests['box_score_docs'].append(new_box_score_doc)
 
             await self.collection.bulk_write(requests['ops'])
+            self.log_message(message=f"Successfully stored {len(collected_boxscores)} box scores", level='INFO')
             return requests['box_score_docs']
 
         except Exception as e:
@@ -173,10 +199,11 @@ class BoxScores(BaseCollection):
                 else:
                     raise Exception()
 
-            if await self.collection.delete_many({}):
-                self.log_message(message="Successfully deleted all box scores", level='INFO')
             else:
-                raise Exception()
+                if await self.collection.delete_many({}):
+                    self.log_message(message="Successfully deleted all box scores", level='INFO')
+                else:
+                    raise Exception()
 
         except Exception as e:
             self.log_message(level='EXCEPTION', message=f"Failed to delete box scores: {e}")

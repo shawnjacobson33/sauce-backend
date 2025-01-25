@@ -126,24 +126,25 @@ class Games(BaseCollection):
 
                     curr_period_num = int(period[0])
                     if stored_game := await self.get_game({ '_id': game_id }):
+
                         for team, score_dict in game['scores'].items():
                             new_team_score = score_dict['total']
                             team_score_dict = stored_game.setdefault('scores', {}).setdefault(team, {})
                             team_score_periods = team_score_dict.setdefault('periods', [])
 
                             period_score_dict = {'period': curr_period_num, 'score': new_team_score }
-                            if len(team_score_periods) > 1:
-                                period_score_dict['score'] = new_team_score - sum([score for score in team_score_periods])
-                                if curr_period_num > len(team_score_periods):
+                            if team_score_periods:
+                                period_score_dict['score'] = new_team_score - sum(
+                                    [score_dict['score'] for score_dict in team_score_periods
+                                     if score_dict['period'] < curr_period_num]
+                                )
+
+                                if curr_period_num != team_score_periods[-1]['period']:
                                     team_score_periods.append(period_score_dict)
                                 else:
-                                    team_score_periods[curr_period_num - 1] = period_score_dict
-
-                            elif len(team_score_periods) == 1:
-                                team_score_periods[0] = period_score_dict
-
+                                    team_score_periods[-1] = period_score_dict
                             else:
-                                team_score_periods.append(period_score_dict)
+                                team_score_periods.insert(0, period_score_dict)
 
                             team_score_dict['total'] = new_team_score
 
@@ -152,7 +153,9 @@ class Games(BaseCollection):
                         updated_games[game_id] = stored_game
 
             await self.collection.bulk_write(requests['ops'])
-            return requests['games']
+            games = requests['games']
+            self.log_message(message=f"Successfully updated {len(games)} live games", level='INFO')
+            return games
 
         except Exception as e:
             self.log_message(message=f"Failed to update live games: {e}", level='EXCEPTION')
@@ -171,10 +174,11 @@ class Games(BaseCollection):
                 else:
                     raise Exception()
 
-            if await self.collection.delete_many({}):
-                self.log_message(message='Successfully deleted all games.', level='INFO')
             else:
-                raise Exception()
+                if await self.collection.delete_many({}):
+                    self.log_message(message='Successfully deleted all games.', level='INFO')
+                else:
+                    raise Exception()
 
         except Exception as e:
             self.log_message(level='EXCEPTION', message=f"Failed to delete games: {e}")

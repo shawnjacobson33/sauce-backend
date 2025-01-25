@@ -37,9 +37,10 @@ class BoxScoresPipeline(BasePipeline):
             bool: True if the game is finished, False otherwise.
         """
         try:
-            return (game['period_time'] == '00:00' and
+            return (game['period_time'] == '00:00') and (
                     (game['period'] == '4th' and game['league'] == 'NBA') or
-                    (game['period'] == '2nd' and game['league'] == 'NCAAM'))
+                    (game['period'] == '2nd' and game['league'] == 'NCAAM') or
+                    ('OT' not in game['period'])) and (game['scores']['away'] - game['scores']['home'] != 0)
 
         except Exception as e:
             raise Exception(f"Error in _is_game_finished: {e}")
@@ -61,6 +62,7 @@ class BoxScoresPipeline(BasePipeline):
                     finished_games.append(game)
 
             self.log_message(message=f'Found {len(finished_games)} finished games: {finished_games}', level='INFO')
+
             return finished_games
 
         except Exception as e:
@@ -129,6 +131,7 @@ class BoxScoresPipeline(BasePipeline):
 
                 box_scores_dc_manager = BoxScoresDataCollectionManager(self.configs['data_collection'],
                                                                        self.standardizer)
+
                 collected_boxscores = await box_scores_dc_manager.run_collectors(batch_timestamp, live_games)
 
                 updated_live_games = await db.games.update_live_games(collected_boxscores)

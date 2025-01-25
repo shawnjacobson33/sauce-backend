@@ -88,17 +88,18 @@ class BasketballBoxScoresCollector(BaseCollector):
         try:
             period_time = soup.find('div', {'class': 'time'})
             period_time = period_time.text.strip()
-            return period_time if period_time not in { 'Halftime', 'End', '4th', '2nd' } else '00:00'
+            return period_time if period_time not in { 'Halftime', 'End', '4th', '2nd', '1st', '3rd' }\
+                else f'00:00,{period_time}'
 
         except Exception as e:
             raise Exception(f'Failed to extract period time: {e}')
 
     @staticmethod
-    def _extract_period(soup: BeautifulSoup, league: str) -> str:
+    def _extract_period(soup: BeautifulSoup, period_time: str) -> str:
         try:
             period = soup.find('div', {'class': 'quarter'})
             period = period.text.strip()
-            return period if period != 'End' else ( '4th' if league in { 'NBA' } else '2nd' )
+            return period if period != 'End' else period_time.split(',')[1]
 
         except Exception as e:
             raise Exception(f'Failed to extract period: {e}')
@@ -125,9 +126,9 @@ class BasketballBoxScoresCollector(BaseCollector):
         """
         try:
             if period_time := self._extract_period_time(soup):
-                game['period_time'] = period_time
+                game['period_time'] = period_time.split(',')[0]
 
-            if period := self._extract_period(soup, game['league']):
+            if period := self._extract_period(soup, period_time):
                 game['period'] = period
 
             if scores := self._extract_scores(soup):

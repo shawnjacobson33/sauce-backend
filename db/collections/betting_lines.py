@@ -492,10 +492,11 @@ class BettingLines(BaseCollection):
                 else:
                     raise Exception()
 
-            if await self.collection.delete_many({}):
-                self.log_message(message='Deleted all betting lines', level='INFO')
-            else:
-                raise Exception()
+            elif betting_lines is None:
+                if await self.collection.delete_many({}):
+                    self.log_message(message='Deleted all betting lines', level='INFO')
+                else:
+                    raise Exception()
 
         except Exception as e:
             self.log_message(level='EXCEPTION', message=f'Failed to delete betting lines: {e}')
