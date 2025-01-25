@@ -63,7 +63,7 @@ class BoxScores(BaseCollection):
             matching_box_score = matching_box_score_doc['box_score']
             for stat_label, stat_value in box_score['box_score'].items():
                 matching_box_score_stat_dict = matching_box_score[stat_label]
-                matching_box_score_stat_records = matching_box_score_stat_dict['records']
+                matching_box_score_stat_records = matching_box_score_stat_dict['periods']
                 if len(matching_box_score_stat_records) > 1:
                     # for 2Q stats and beyond -- calculate period stats
                     period_stat = stat_value - sum([period_stat for period_stat in matching_box_score_stat_records])
@@ -92,12 +92,14 @@ class BoxScores(BaseCollection):
     @staticmethod
     def _create_box_score_doc(box_score: dict) -> dict:
         try:
-            box_score['game_id'] = box_score.pop('game')['_id']
+            game = box_score.pop('game')
+            box_score['game_id'] = game['_id']
             # stores box score elements in lists for efficient aggregations later on
             new_box_score_doc = {
                 **{key: value for key, value in box_score.items() if key != 'box_score'},
                 'box_score': {
-                    stat_label: [stat_value] for stat_label, stat_value in box_score['box_score'].items()
+                    stat_label: { 'periods': [ {'period': game['period'][0], 'stat': stat_value } ], 'total': stat_value }
+                    for stat_label, stat_value in box_score['box_score'].items()
                 }
             }
 

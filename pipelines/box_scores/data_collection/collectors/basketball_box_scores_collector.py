@@ -83,6 +83,16 @@ class BasketballBoxScoresCollector(BaseCollector):
         except Exception as e:
             self.log_message(message=f'Failed to request box scores: {game} {e}', level='EXCEPTION')
 
+    @staticmethod
+    def _extract_period_time(soup: BeautifulSoup) -> str:
+        try:
+            period_time = soup.find('div', {'class': 'time'})
+            period_time = period_time if period_time not in { 'Halftime', 'End' } else '00:00'
+            return period_time.text.strip()
+
+        except Exception as e:
+            raise Exception(f'Failed to extract period time: {e}')
+
     def _extract_and_add_game_info(self, soup: BeautifulSoup, game: dict) -> None:
         """
         Extracts and adds game information from the HTML soup.
@@ -92,15 +102,17 @@ class BasketballBoxScoresCollector(BaseCollector):
             game (dict): The game data.
         """
         try:
-            if period_time := soup.find('div', {'class': 'time'}):
-                game['period_time'] = period_time.text.strip()
+            if period_time := self._extract_period_time(soup):
+                game['period_time'] = period_time
 
             if period := soup.find('div', {'class': 'quarter'}):
                 game['period'] = period.text.strip()
 
             if scores := soup.find_all('div', {'class': 'score-text'}):
-                game['away_score'] = int(scores[0].text.strip())
-                game['home_score'] = int(scores[1].text.strip())
+                game['scores'] = {
+                    'away': { 'total': int(scores[0].text.strip()) },
+                    'home': { 'total': int(scores[1].text.strip()) }
+                }
 
         except Exception as e:
             self.log_message(message=f'Failed to extract game info: {game} {e}', level='EXCEPTION')

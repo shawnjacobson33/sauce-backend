@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 
 from pymongo import UpdateOne, InsertOne
@@ -119,32 +120,38 @@ class Games(BaseCollection):
 
                 game = box_score['game']
                 game_id = game['_id']
-                updated_games = requests['games']
+                period = game['period']
+                updated_games = requests.setdefault('games', {})
                 if game_id not in updated_games:
 
-                    curr_period_num = int(game['period'][0])
+                    curr_period_num = int(period[0])
                     if stored_game := await self.get_game({ '_id': game_id }):
-                        for team in ['home', 'away']:
-                            new_team_score = box_score[f'{team}_score']
-                            team_score_dict = stored_game[f'{team}_score']
-                            team_score_records = team_score_dict['records']
+                        for team, score_dict in box_score['scores'].items():
+                            new_team_score = game[f'{team}_score']
+                            team_score_dict = stored_game.setdefault('scores', {}).setdefault(team, {})
+                            team_score_periods = team_score_dict.setdefault('periods', [])
 
-                            if len(team_score_records) > 1:
-                                period_score = new_team_score - sum([score for score in team_score_records])
-                                if curr_period_num > len(team_score_records):
-                                    team_score_records.append(period_score)
+                            period_score_dict = {'period': curr_period_num, 'score': new_team_score['total'] }
+                            if len(team_score_periods) > 1:
+                                period_score_dict['score'] = new_team_score - sum([score for score in team_score_periods])
+                                if curr_period_num > len(team_score_periods):
+                                    team_score_periods.append(period_score_dict)
                                 else:
-                                    team_score_records[curr_period_num - 1] = period_score
-                            else:
-                                team_score_records[0] = new_team_score
+                                    team_score_periods[curr_period_num - 1] = period_score_dict
 
-                            team_score_dict['total'] = new_team_score
+                            elif len(team_score_periods) == 1:
+                                team_score_periods[0] = period_score_dict
+
+                            else:
+                                team_score_periods.append(period_score_dict)
+
+                            team_score_dict['total'] = new_team_score['total']
 
                         update_op = await self.update_game({ '_id': game_id }, return_op=True, **stored_game)
-                        requests['ops'].append(update_op)
+                        requests.setdefault('ops', []).append(update_op)
                         updated_games[game_id] = stored_game
 
-            await self.collection.bulk_write(requests)
+            await self.collection.bulk_write(requests['ops'])
             return requests['games']
 
         except Exception as e:

@@ -36,7 +36,7 @@ class BoxScoresPipeline(BasePipeline):
             bool: True if the game is finished, False otherwise.
         """
         try:
-            return game['period'] == 'End' and game['live_time'] == '4th'
+            return game['period_time'] == '00:00' and game['period'] == '4th'
 
         except Exception as e:
             self.log_message(f"Error in _is_game_finished: {e}", level='EXCEPTION')
@@ -119,9 +119,12 @@ class BoxScoresPipeline(BasePipeline):
                 collected_boxscores = await box_scores_dc_manager.run_collectors(batch_timestamp, live_games)
 
                 updated_live_games = await db.games.update_live_games(collected_boxscores)
+
                 stored_box_score_docs = await db.box_scores.store_box_scores(
                     collected_boxscores)  # Todo: need to be more efficient with storing game info
-                await db.betting_lines.update_live_performance(updated_live_games, stored_box_score_docs)
+
+                await db.betting_lines.update_live_stats(updated_live_games, stored_box_score_docs)
+
                 await self._check_for_finished_games(live_games)
 
         except Exception as e:

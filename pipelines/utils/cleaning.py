@@ -34,5 +34,7 @@ class Cleaning:
         # Strip, convert to lowercase, and remove periods from the subject name
         cleaned_subject_name = (cleaned_subject_name.strip()
                                                     .lower()
-                                                    .replace('.', ''))
+                                                    .replace('.', '')
+                                                    .replace('-', '')
+                                                    .replace("'", ''))
         return cleaned_subject_name
