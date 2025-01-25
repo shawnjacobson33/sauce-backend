@@ -32,4 +32,8 @@ class Storing:
         Returns:
             str: The generated betting line key.
         """
-        return f"{line['bookmaker']}:{line['league']}:{line['market']}:{line['subject']}:{line['label']}"
+        try:
+            return f"{line['bookmaker']}:{line['league']}:{line['market']}:{line['subject']}:{line['label']}"
+
+        except Exception as e:
+            raise ValueError(f"Failed to generate betting line key: {e}")

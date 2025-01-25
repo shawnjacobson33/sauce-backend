@@ -247,6 +247,7 @@ class BasketballGamesCollector(BaseCollector):
                     tasks.append(self._request_games(league))
 
             await asyncio.gather(*tasks)
+            self.log_message(message=f'Collected {len(self.items_container)} basketball games', level='INFO')
 
         except Exception as e:
             self.log_message(message=f'Failed to run collector: {e}', level='EXCEPTION')

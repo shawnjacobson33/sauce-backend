@@ -53,4 +53,4 @@ class RostersPipeline(BasePipeline):
             await db.subjects.store_subjects(collected_rosters)
 
         except Exception as e:
-            self.log_message(f'Failed to run pipeline: {e}', level='EXCEPTION')
+            self.log_message(f'Failed to run rosters pipeline: {e}', level='EXCEPTION')

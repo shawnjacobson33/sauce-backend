@@ -144,6 +144,9 @@ class BaseProcessor:
                                            .dropna(subset=['tw_prb'])
             )
 
+            self.log_message(
+                message=f'Successfully devigged {len(devigged_sharp_betting_lines_df)} sharp betting lines!',
+                level='INFO')
             return devigged_sharp_betting_lines_df
 
         except Exception as e:
@@ -184,6 +187,9 @@ class BaseProcessor:
                                       .apply(weight_devigged_line)
             )
 
+            self.log_message(
+                message=f'Successfully weighted {len(weighted_sharp_betting_lines_df)} devigged lines!',
+                level='INFO')
             return weighted_sharp_betting_lines_df
 
         except Exception as e:
@@ -228,6 +234,10 @@ class BaseProcessor:
                 self.betting_lines_df.apply(ev, axis=1)
                                      .sort_values(by='ev', ascending=False)
             )
+
+            self.log_message(
+                message=f'Successfully calculated expected values for {len(df)} betting lines!',
+                level='INFO')
 
             return df
 

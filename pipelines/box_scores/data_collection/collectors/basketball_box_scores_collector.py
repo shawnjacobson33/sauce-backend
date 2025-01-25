@@ -372,3 +372,4 @@ class BasketballBoxScoresCollector(BaseCollector):
                         tasks.append(self._request_boxscores(league, game))
 
         await asyncio.gather(*tasks)
+        self.log_message(message=f'Collected {len(self.items_container)} basketball box scores', level='INFO')

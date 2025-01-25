@@ -1,9 +1,9 @@
 # IGNORE ALL JSON FILES
 *.json
-*.txt
 .DS_Store
 extra/old-functionality/.env
 redis.conf
 __pycache__/
 *.pyc
+venv
 

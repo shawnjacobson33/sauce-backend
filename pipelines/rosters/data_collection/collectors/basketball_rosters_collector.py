@@ -174,7 +174,7 @@ class BasketballRostersCollector(BaseCollector):
             return cells[0].text.strip()
 
         except Exception as e:
-            self.log_message(e, level='EXCEPTION')
+            self.log_message(level='EXCEPTION', message=f'Failed to extract jersey number: {cells} {e}')
 
     def _parse_rosters(self, league: str, team: dict, html: str) -> None:
         """
@@ -216,6 +216,7 @@ class BasketballRostersCollector(BaseCollector):
                         tasks.append(self._request_rosters(league, team))
 
             await asyncio.gather(*tasks)
+            self.log_message(message=f'Collected {len(self.items_container)} basketball subjects', level='INFO')
 
         except Exception as e:
             self.log_message(message=f'Failed to run collector: {e}', level='EXCEPTION')

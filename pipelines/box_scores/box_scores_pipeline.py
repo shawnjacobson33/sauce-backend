@@ -25,7 +25,8 @@ class BoxScoresPipeline(BasePipeline):
         super().__init__('BoxScores', configs)
         self.standardizer = standardizer
 
-    def _is_game_finished(self, game: dict) -> bool:
+    @staticmethod
+    def _is_game_finished(game: dict) -> bool:
         """
         Checks if a game is finished.
 
@@ -41,7 +42,7 @@ class BoxScoresPipeline(BasePipeline):
                     (game['period'] == '2nd' and game['league'] == 'NCAAM'))
 
         except Exception as e:
-            self.log_message(f"Error in _is_game_finished: {e}", level='EXCEPTION')
+            raise Exception(f"Error in _is_game_finished: {e}")
 
     def _get_finished_games(self, games: list[dict]) -> list[dict]:
         """
@@ -53,14 +54,20 @@ class BoxScoresPipeline(BasePipeline):
         Returns:
             list[dict]: The list of finished games.
         """
-        finished_games = []
-        for game in games:
-            if self._is_game_finished(game):
-                finished_games.append(game)
+        try:
+            finished_games = []
+            for game in games:
+                if self._is_game_finished(game):
+                    finished_games.append(game)
 
-        return finished_games
+            self.log_message(message=f'Found {len(finished_games)} finished games: {finished_games}', level='INFO')
+            return finished_games
 
-    async def _cleanup_finished_games(self, games: list[dict]) -> None:
+        except Exception as e:
+            raise Exception(f"Error in _get_finished_games: {e}")
+
+    @staticmethod
+    async def _cleanup_finished_games(games: list[dict]) -> None:
         """
         Cleans up the finished games from the database.
 
@@ -77,7 +84,7 @@ class BoxScoresPipeline(BasePipeline):
             await db.box_scores.delete_box_scores(game_ids)
 
         except Exception as e:
-            self.log_message(f"Error in _cleanup_finished_games: {e}", level='EXCEPTION')
+            raise Exception(f"Error in _cleanup_finished_games: {e}")
 
     async def _check_for_finished_games(self, games: list[dict]) -> None:
         """
@@ -86,8 +93,12 @@ class BoxScoresPipeline(BasePipeline):
         Args:
             games (list[dict]): The list of games.
         """
-        if finished_games := self._get_finished_games(games):
-            await self._cleanup_finished_games(finished_games)
+        try:
+            if finished_games := self._get_finished_games(games):
+                await self._cleanup_finished_games(finished_games)
+
+        except Exception as e:
+            self.log_message(message=f"Error in _check_for_finished_games: {e}", level='EXCEPTION')
 
     async def _configure_pipeline(self):
         """

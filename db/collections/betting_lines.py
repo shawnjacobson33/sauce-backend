@@ -226,7 +226,7 @@ class BettingLines(BaseCollection):
                                                        stream=stream)  # Todo: do you need to replace the entire records field?
             requests.append(update_op)
 
-    async def store_betting_lines(self, betting_lines: list[dict]) -> None:
+    async def store_betting_lines(self, betting_lines: list[dict]) -> int:
         """
         Stores betting lines in the database.
 
@@ -264,9 +264,13 @@ class BettingLines(BaseCollection):
             await self._update_disappeared_betting_lines(seen_betting_lines, requests, batch_timestamp)
 
             await self.collection.bulk_write(requests)
+            return 1
+
+        except InvalidOperation as e:
+            self.log_message(message=f'No betting lines to store: {e}', level='WARNING')
 
         except Exception as e:
-            self.log_message(level='EXCEPTION', message=f'Failed to store betting lines: {e}')
+            raise Exception(f'Failed to store betting lines: {e}')
 
     async def update_betting_line(self, unique_id: str, return_op: bool = False, **kwargs):
         """

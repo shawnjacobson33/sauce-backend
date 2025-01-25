@@ -1,6 +1,7 @@
 import modin.pandas as pd
 
 from pipelines.base.base_processor import BaseProcessor
+from pipelines.utils import ProcessingError
 
 
 class PlayerPropsProcessor(BaseProcessor):
@@ -32,12 +33,12 @@ class PlayerPropsProcessor(BaseProcessor):
             bool: The mask indicating matching betting lines.
         """
         try:
-            return ((self.betting_lines_df['line'] == row['line']) &
-                    (self.betting_lines_df['game'] == row['game']) &
-                    (self.betting_lines_df['subject'] == row['subject']) &
-                    (self.betting_lines_df['market'] == row['market']) &
-                    (self.betting_lines_df['bookmaker'] == row['bookmaker']) &
-                    (self.betting_lines_df['label'] != row['label']))
+            return ((self.sharp_betting_lines_df['line'] == row['line']) &
+                    (self.sharp_betting_lines_df['game'] == row['game']) &
+                    (self.sharp_betting_lines_df['subject'] == row['subject']) &
+                    (self.sharp_betting_lines_df['market'] == row['market']) &
+                    (self.sharp_betting_lines_df['bookmaker'] == row['bookmaker']) &
+                    (self.sharp_betting_lines_df['label'] != row['label']))
 
         except Exception as e:
-            self.log_message(message=f'Failed to get matching betting lines mask: {e}', level='EXCEPTION')
+            raise ProcessingError(f'Failed to get matching betting lines mask: {e}')

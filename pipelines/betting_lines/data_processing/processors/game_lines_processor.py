@@ -1,6 +1,7 @@
 import modin.pandas as pd
 
 from pipelines.base.base_processor import BaseProcessor
+from pipelines.utils import ProcessingError
 
 
 class GameLinesProcessor(BaseProcessor):
@@ -38,4 +39,4 @@ class GameLinesProcessor(BaseProcessor):
                     (self.sharp_betting_lines_df['subject'] != row['subject']))
 
         except Exception as e:
-            self.log_message(message=f'Failed to get matching betting lines mask for row: {row} {e}', level='EXCEPTION')
+            raise ProcessingError(f'Failed to get matching betting lines mask: {e}')

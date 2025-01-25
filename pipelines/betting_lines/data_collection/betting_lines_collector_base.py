@@ -38,7 +38,8 @@ class BaseBettingLinesCollector(BaseCollector):
         self.failed_subject_standardization = 0
         self.failed_market_standardization = 0
 
-    async def _get_subject(self, market_domain: str, league: str, subject_name: str) -> dict | None:
+    @staticmethod
+    async def _get_subject(market_domain: str, league: str, subject_name: str) -> dict | None:
         """
         Retrieves the subject based on the market domain, league, and subject name.
 
@@ -57,9 +58,10 @@ class BaseBettingLinesCollector(BaseCollector):
                 return await db.teams.get_team({'league': league, 'full_name': subject_name})
 
         except Exception as e:
-            self.log_message(message=f'Failed to get subject: {subject_name} {e}', level='EXCEPTION')
+            raise Exception(f'Failed to get subject: {subject_name} {e}')
 
-    def _get_team_name(self, market_domain: str, subject: dict) -> str:
+    @staticmethod
+    def _get_team_name(market_domain: str, subject: dict) -> str:
         """
         Retrieves the team name based on the market domain and subject data.
 
@@ -74,7 +76,7 @@ class BaseBettingLinesCollector(BaseCollector):
             return subject['team']['abbr_name'] if market_domain == 'PlayerProps' else subject['abbr_name']
 
         except Exception as e:
-            self.log_message(message=f'Failed to get team name for subject: {subject} {e}', level='EXCEPTION')
+            raise Exception(f'Failed to get team name for subject: {subject} {e}')
 
     async def _get_game(self, market_domain: str, league: str, subject_name: str) -> dict | None:
         """

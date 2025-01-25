@@ -50,7 +50,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             return url, headers, cookies
 
         except Exception as e:
-            self.log_message(message=f'Failed to get payload for requesting matchups: {e}', level='EXCEPTION')
+            raise Exception(f'Failed to get payload for matchups: {e}')
 
     async def _request_matchups(self) -> dict | None:
         """
@@ -63,6 +63,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             url, headers, cookies = self._get_payload_for_matchups()
             if resp := await utils.requester.fetch(url, headers=headers, cookies=cookies):
                 self.successful_requests += 1
+                self.log_message(message='Successfully requested matchups', level='INFO')
                 return resp
 
         except RequestingError as e:
@@ -90,7 +91,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                         yield offer
 
         except Exception as e:
-            self.log_message(message=f'Failed to get offers: {e}', level='EXCEPTION')
+            raise Exception(f'Failed to get offers: {e}')
 
     def _extract_league(self, offer: dict) -> str | None:
         """
@@ -107,7 +108,7 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             return cleaned_league_name if cleaned_league_name in self.configs['valid_leagues'] else None
 
         except Exception as e:
-            self.log_message(message=f'Failed to extract league: {e}', level='EXCEPTION')
+            raise Exception(f'Failed to extract league: {e}')
 
     def _parse_matchups(self, resp: dict) -> tuple[str, dict] | None:
         """
@@ -135,9 +136,13 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         Returns:
             tuple[str, str]: The current date and the date 8 days from now.
         """
-        date_format = '%Y-%m-%dT%H:%M:%S.%f'
-        return (datetime.now().strftime(date_format)[:-3] + 'Z',
-                (datetime.now() + timedelta(days=8)).strftime(date_format)[:-3] + 'Z')
+        try:
+            date_format = '%Y-%m-%dT%H:%M:%S.%f'
+            return (datetime.now().strftime(date_format)[:-3] + 'Z',
+                    (datetime.now() + timedelta(days=8)).strftime(date_format)[:-3] + 'Z')
+
+        except Exception as e:
+            raise Exception(f'Failed to get dates: {e}')
 
     def _get_payload_for_betting_lines(self, offer: dict) -> tuple[str, dict, dict]:
         """
@@ -146,11 +151,15 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         Returns:
             dict: The parameters for the betting lines request.
         """
-        url = self.payload['urls']['betting_lines'].format(offer['id'])
-        headers = self.payload['headers']
-        params = self.payload['params']['betting_lines']
-        start_date, end_date = self._get_dates()
-        return url, headers, {**params, 'startDate': start_date, 'endDate': end_date}
+        try:
+            url = self.payload['urls']['betting_lines'].format(offer['id'])
+            headers = self.payload['headers']
+            params = self.payload['params']['betting_lines']
+            start_date, end_date = self._get_dates()
+            return url, headers, {**params, 'startDate': start_date, 'endDate': end_date}
+
+        except Exception as e:
+            raise Exception(f'Failed to get payload for betting lines: {e}')
 
     async def _request_betting_lines(self, league: str, offer: dict) -> None:
         """
@@ -165,6 +174,8 @@ class OddsShopperCollector(BaseBettingLinesCollector):
             if url and headers and params:
                 if resp_json := await utils.requester.fetch(url, headers=headers, params=params):
                     self.successful_requests += 1
+                    self.log_message(
+                        message=f'Successfully requested betting lines: {league} {offer['domain']}', level='INFO')
                     await self._parse_betting_lines(resp_json, league, offer['domain'])
 
         except RequestingError as e:
@@ -186,7 +197,11 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         Returns:
             str | None: The sport name if applicable, otherwise None.
         """
-        return utils.get_sport(league) if market_domain == 'PlayerProps' else None
+        try:
+            return utils.get_sport(league) if market_domain == 'PlayerProps' else None
+
+        except Exception as e:
+            raise Exception(f'Failed to get sport: {market_domain} {e}')
 
     def _extract_market(self, event: dict, league: str, market_domain: str) -> str | None:
         """
@@ -224,10 +239,14 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         Yields:
             str: The raw subject name.
         """
-        for i, participant in enumerate(participants):
-            if i != 1:
-                if ((market_domain == 'PlayerProps') and (i == 0)) or (market_domain == 'Gamelines'):
-                    yield participant['name']
+        try:
+            for i, participant in enumerate(participants):
+                if i != 1:
+                    if ((market_domain == 'PlayerProps') and (i == 0)) or (market_domain == 'Gamelines'):
+                        yield participant['name']
+
+        except Exception as e:
+            raise Exception(f'Failed to extract raw subject names: {e}')
 
     def _extract_subjects(self, event: dict, league: str, market_domain: str) -> Iterable:
         """
@@ -378,8 +397,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                         if line := self._extract_line(outcome, market):
                                             if bookmaker := self._extract_bookmaker(outcome):
                                                 if odds := self._extract_odds(outcome):
-                                                    if market == '1st Quarter Moneyline' and subject == 'Oklahoma City Thunder':
-                                                        asd = 123
                                                     collection_datetime = datetime.now()
                                                     betting_line_dict = {
                                                         'batch_timestamp': self.batch_timestamp.strftime(
@@ -423,3 +440,4 @@ class OddsShopperCollector(BaseBettingLinesCollector):
         """
         if matchups_resp := await self._request_matchups():
             await self._gather_betting_lines_requests(matchups_resp)
+            self.log_message(message=f'Successfully parsed {len(self.items_container)} betting lines', level='INFO')

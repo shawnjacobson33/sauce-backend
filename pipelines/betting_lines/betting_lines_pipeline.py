@@ -39,8 +39,9 @@ class BettingLinesPipeline(BasePipeline):
         """
         try:
             start_time = time.time()
-            await db.betting_lines.store_betting_lines(betting_lines)
-            self.times['store_betting_lines_time'] = round(time.time() - start_time, 2)
+            if await db.betting_lines.store_betting_lines(betting_lines):
+                self.log_message(message=f'Successfully stored {len(betting_lines)} betting lines', level='INFO')
+                self.times['store_betting_lines_time'] = round(time.time() - start_time, 2)
 
         except Exception as e:
             self.log_message(message=f'Error storing betting lines: {e}', level='EXCEPTION')

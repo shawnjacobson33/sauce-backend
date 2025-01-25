@@ -44,4 +44,4 @@ class RostersDataCollectionManager(BaseManager):
             return rosters_container
 
         except Exception as e:
-            self.log_message(message=f'Failed to run collectors: {e}', level='EXCEPTION')
+            self.log_message(message=f'Failed to run rosters collectors: {e}', level='EXCEPTION')

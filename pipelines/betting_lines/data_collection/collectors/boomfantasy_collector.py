@@ -46,8 +46,12 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         Returns:
             str | dict | None: The token(s) if found, otherwise None.
         """
-        credentials = self.payload['json_data']['tokens']['authentication']['credentials']
-        return credentials.get(token_type, credentials)
+        try:
+            credentials = self.payload['json_data']['tokens']['authentication']['credentials']
+            return credentials.get(token_type, credentials)
+
+        except Exception as e:
+            raise Exception(f'Failed to get tokens: {e}')
 
     def _update_tokens(self, tokens: dict) -> None:
         """
@@ -56,10 +60,14 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         Args:
             tokens (dict): The new tokens to update.
         """
-        self.payload['json_data']['tokens']['authentication']['credentials'].update(tokens)
-        headers = self.payload['headers']
-        headers['betting_lines']['authorization'] = f'Bearer {tokens["accessToken"]}'
-        headers['contest_ids']['authorization'] = f'Bearer {tokens["accessToken"]}'
+        try:
+            self.payload['json_data']['tokens']['authentication']['credentials'].update(tokens)
+            headers = self.payload['headers']
+            headers['betting_lines']['authorization'] = f'Bearer {tokens["accessToken"]}'
+            headers['contest_ids']['authorization'] = f'Bearer {tokens["accessToken"]}'
+
+        except Exception as e:
+            raise Exception(f'Failed to update tokens: {e}')
 
     async def _request_new_tokens(self) -> bool:
         """
@@ -76,6 +84,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                 relevant_tokens = {k: v for k, v in resp_json.items() if k in ['accessToken', 'refreshToken']}
                 self._update_tokens(relevant_tokens)
                 self.successful_requests += 1
+                self.log_message(message='Successfully requested new tokens', level='INFO')
                 return True
 
         except RequestingError as e:
@@ -100,6 +109,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
             json_data = self.payload['json_data'].get('contest_ids')
             if resp_json := await utils.requester.post(url, headers=headers, json=json_data):
                 self.successful_requests += 1
+                self.log_message(message='Successfully requested contest ID', level='INFO')
                 return self._parse_contest_id(resp_json)
 
         except RequestingError as e:
@@ -136,10 +146,14 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         Returns:
             tuple[str, dict, dict] | None: The URL, headers, and parameters for the request.
         """
-        url = self.payload['urls']['betting_lines'].format(contest_id)
-        headers = self.payload['headers']['betting_lines']
-        params = self.payload['params']['betting_lines']
-        return url, headers, params
+        try:
+            url = self.payload['urls']['betting_lines'].format(contest_id)
+            headers = self.payload['headers']['betting_lines']
+            params = self.payload['params']['betting_lines']
+            return url, headers, params
+
+        except Exception as e:
+            raise Exception(f'Failed to get payload for betting lines: {e}')
 
     async def _request_betting_lines(self, contest_id: str) -> dict | None:
         """
@@ -155,6 +169,7 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
             url, headers, params = self._get_payload_for_betting_lines(contest_id)
             if resp_json := await utils.requester.fetch(url, headers=headers, params=params):
                 self.successful_requests += 1
+                self.log_message(message='Successfully requested betting lines', level='INFO')
                 return resp_json
 
         except RequestingError as e:
@@ -211,9 +226,13 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         Yields:
             dict: The QG data.
         """
-        if section['status'] == 'active':
-            for qg in section['qG']:
-                yield qg
+        try:
+            if section['status'] == 'active':
+                for qg in section['qG']:
+                    yield qg
+
+        except Exception as e:
+            raise Exception(f'Failed to get qgs: {e}')
 
     def _get_qg_data(self, section: dict) -> Iterable:
         """
@@ -243,7 +262,11 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         Returns:
             str | None: The team name if found, otherwise None.
         """
-        return qg['playerImage']['abbreviation']
+        try:
+            return qg['playerImage']['abbreviation']
+
+        except Exception as e:
+            raise Exception(f'Failed to extract team: {e}')
 
     @staticmethod
     def _get_raw_subject_name(qg: dict) -> str:
@@ -256,8 +279,12 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
         Returns:
             str: The raw subject name.
         """
-        options = qg['title']['o']
-        return ' '.join([options['firstName'], options['lastName']])
+        try:
+            options = qg['title']['o']
+            return ' '.join([options['firstName'], options['lastName']])
+
+        except Exception as e:
+            raise Exception(f'Failed to get raw subject name: {e}')
 
     def _extract_subject(self, qg: dict, league: str) -> str | None:
         """
@@ -437,6 +464,8 @@ class BoomFantasyCollector(BaseBettingLinesCollector):
                                                 }
 
                                                 self._store_and_report(betting_line_dict)
+
+        self.log_message(message=f'Successfully parsed {len(self.items_container)} betting lines', level='INFO')
 
     @collector_logger
     async def run_collector(self) -> None:

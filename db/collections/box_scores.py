@@ -63,22 +63,27 @@ class BoxScores(BaseCollection):
             matching_box_score = matching_box_score_doc['box_score']
             for stat_label, stat_value in box_score['box_score'].items():
                 matching_box_score_stat_dict = matching_box_score[stat_label]
-                matching_box_score_stat_records = matching_box_score_stat_dict['periods']
-                if len(matching_box_score_stat_records) > 1:
+                matching_box_score_stat_periods = matching_box_score_stat_dict['periods']
+                if len(matching_box_score_stat_periods) > 1:
                     # for 2Q stats and beyond -- calculate period stats
-                    period_stat = stat_value - sum([period_stat for period_stat in matching_box_score_stat_records])
+                    period_stat = stat_value - sum(
+                        [period_stat_dict['stat'] for period_stat_dict in matching_box_score_stat_periods]
+                    )
                     # update the period stat
-                    if curr_period_num > len(matching_box_score_stat_records):
-                        matching_box_score_stat_records.append(period_stat)
+                    if curr_period_num > len(matching_box_score_stat_periods):
+                        matching_box_score_stat_periods.append({ 'period': curr_period_num, 'stat': period_stat })
                     else:
-                        matching_box_score_stat_records[curr_period_num-1] = period_stat
+                        matching_box_score_stat_periods[curr_period_num-1] = {
+                            'period': curr_period_num, 'stat': period_stat
+                        }
                 else:
                     # for 1Q stats only
-                    matching_box_score_stat_records[0] = stat_value
+                    matching_box_score_stat_periods[0] = {
+                        'period': curr_period_num, 'stat': stat_value
+                    }
 
                 # update the total stat
                 matching_box_score_stat_dict['total'] = stat_value
-
 
             return await self.update_box_score(
                 query={'_id': matching_box_score_doc['_id']},
