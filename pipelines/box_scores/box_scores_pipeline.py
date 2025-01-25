@@ -36,7 +36,9 @@ class BoxScoresPipeline(BasePipeline):
             bool: True if the game is finished, False otherwise.
         """
         try:
-            return game['period_time'] == '00:00' and game['period'] == '4th'
+            return (game['period_time'] == '00:00' and
+                    (game['period'] == '4th' and game['league'] == 'NBA') or
+                    (game['period'] == '2nd' and game['league'] == 'NCAAM'))
 
         except Exception as e:
             self.log_message(f"Error in _is_game_finished: {e}", level='EXCEPTION')

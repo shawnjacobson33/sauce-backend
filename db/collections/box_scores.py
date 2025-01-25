@@ -163,9 +163,15 @@ class BoxScores(BaseCollection):
         """
         try:
             if game_ids:
-                return await self.collection.delete_many({'game_id': {'$in': game_ids}})
+                if await self.collection.delete_many({'game_id': {'$in': game_ids}}):
+                    self.log_message(message=f"Successfully deleted box scores for games: {game_ids}", level='INFO')
+                else:
+                    raise Exception()
 
-            await self.collection.delete_many({})
+            if await self.collection.delete_many({}):
+                self.log_message(message="Successfully deleted all box scores", level='INFO')
+            else:
+                raise Exception()
 
         except Exception as e:
             self.log_message(level='EXCEPTION', message=f"Failed to delete box scores: {e}")

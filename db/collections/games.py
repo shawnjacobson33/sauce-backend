@@ -126,12 +126,12 @@ class Games(BaseCollection):
 
                     curr_period_num = int(period[0])
                     if stored_game := await self.get_game({ '_id': game_id }):
-                        for team, score_dict in box_score['scores'].items():
-                            new_team_score = game[f'{team}_score']
+                        for team, score_dict in game['scores'].items():
+                            new_team_score = score_dict['total']
                             team_score_dict = stored_game.setdefault('scores', {}).setdefault(team, {})
                             team_score_periods = team_score_dict.setdefault('periods', [])
 
-                            period_score_dict = {'period': curr_period_num, 'score': new_team_score['total'] }
+                            period_score_dict = {'period': curr_period_num, 'score': new_team_score }
                             if len(team_score_periods) > 1:
                                 period_score_dict['score'] = new_team_score - sum([score for score in team_score_periods])
                                 if curr_period_num > len(team_score_periods):
@@ -145,7 +145,7 @@ class Games(BaseCollection):
                             else:
                                 team_score_periods.append(period_score_dict)
 
-                            team_score_dict['total'] = new_team_score['total']
+                            team_score_dict['total'] = new_team_score
 
                         update_op = await self.update_game({ '_id': game_id }, return_op=True, **stored_game)
                         requests.setdefault('ops', []).append(update_op)
@@ -166,9 +166,15 @@ class Games(BaseCollection):
         """
         try:
             if game_ids:
-                return await self.collection.delete_many({'_id': {'$in': game_ids}})
+                if await self.collection.delete_many({'_id': {'$in': game_ids}}):
+                    self.log_message(message=f'Successfully deleted games: {game_ids}', level='INFO')
+                else:
+                    raise Exception()
 
-            await self.collection.delete_many({})
+            if await self.collection.delete_many({}):
+                self.log_message(message='Successfully deleted all games.', level='INFO')
+            else:
+                raise Exception()
 
         except Exception as e:
             self.log_message(level='EXCEPTION', message=f"Failed to delete games: {e}")

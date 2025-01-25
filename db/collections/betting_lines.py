@@ -383,12 +383,16 @@ class BettingLines(BaseCollection):
         Args:
             betting_lines (list[dict]): The list of betting lines.
         """
-        for betting_line in betting_lines:
-            final_stat = betting_line.pop('live_stat', None)
-            betting_line['final_stat'] = final_stat
+        try:
+            for betting_line in betting_lines:
+                final_stat = betting_line.pop('live_stat', None)
+                betting_line['final_stat'] = final_stat
 
-            game = betting_line.pop('game')
-            betting_line['game_id'] = game['_id']
+                game = betting_line.pop('game')
+                betting_line['game_id'] = game['_id']
+
+        except Exception as e:
+            raise Exception(f'Failed to restructure betting lines data: {e}')
 
     @staticmethod
     def _prepare_betting_lines_for_upload(betting_lines: list[dict]) -> str:
@@ -401,9 +405,13 @@ class BettingLines(BaseCollection):
         Returns:
             str: The betting lines data as a JSON string.
         """
-        BettingLines._restructure_betting_lines_data(betting_lines)
-        betting_lines_json = json.dumps(betting_lines)
-        return betting_lines_json
+        try:
+            BettingLines._restructure_betting_lines_data(betting_lines)
+            betting_lines_json = json.dumps(betting_lines)
+            return betting_lines_json
+
+        except Exception as e:
+            raise Exception(f'Failed to prepare betting lines for upload: {e}')
 
     async def _store_in_gcs(self):
         """
@@ -446,10 +454,14 @@ class BettingLines(BaseCollection):
                 betting_lines_filtered_by_game = await self.get_betting_lines({
                     'game._id': { '$in': game_ids },
                 }, optimized_projection)
-                betting_lines_filtered_for_live_stat = [ # only want to store betting lines that have a final box score stat
+                if betting_lines_filtered_for_live_stat := [ # only want to store betting lines that have a final box score stat
                     betting_line for betting_line in betting_lines_filtered_by_game if betting_line.get('live_stat')
-                ]
-                await self.completed_betting_lines_collection.insert_many(betting_lines_filtered_for_live_stat)
+                ]:
+                    await self.completed_betting_lines_collection.insert_many(betting_lines_filtered_for_live_stat)
+
+                else:
+                    self.log_message(message=f'No completed betting lines to store: {game_ids}', level='WARNING')
+
                 await self.delete_betting_lines(betting_lines_filtered_by_game)
 
             if in_gcs:
@@ -457,7 +469,7 @@ class BettingLines(BaseCollection):
                 await self.completed_betting_lines_collection.delete_many({})
 
         except Exception as e:
-            self.log_message(level='EXCEPTION', message=f'Failed to store completed betting lines: {e}')
+            self.log_message(message=f'Failed to store completed betting lines: {e}', level='EXCEPTION')
 
     async def delete_betting_lines(self, betting_lines: list[dict] = None) -> None:
         """
@@ -469,9 +481,17 @@ class BettingLines(BaseCollection):
         try:
             if betting_lines:
                 betting_line_ids = [betting_line['_id'] for betting_line in betting_lines]
-                await self.collection.delete_many({ '_id': { '$in': betting_line_ids } })
+                if await self.collection.delete_many({ '_id': { '$in': betting_line_ids } }):
+                    self.log_message(
+                        message=f'Deleted {len(betting_line_ids)} betting lines: {betting_line_ids}',
+                        level='INFO')
+                else:
+                    raise Exception()
 
-            await self.collection.delete_many({})
+            if await self.collection.delete_many({}):
+                self.log_message(message='Deleted all betting lines', level='INFO')
+            else:
+                raise Exception()
 
         except Exception as e:
             self.log_message(level='EXCEPTION', message=f'Failed to delete betting lines: {e}')

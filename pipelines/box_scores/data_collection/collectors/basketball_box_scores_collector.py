@@ -87,11 +87,33 @@ class BasketballBoxScoresCollector(BaseCollector):
     def _extract_period_time(soup: BeautifulSoup) -> str:
         try:
             period_time = soup.find('div', {'class': 'time'})
-            period_time = period_time if period_time not in { 'Halftime', 'End' } else '00:00'
-            return period_time.text.strip()
+            period_time = period_time.text.strip()
+            return period_time if period_time not in { 'Halftime', 'End', '4th', '2nd' } else '00:00'
 
         except Exception as e:
             raise Exception(f'Failed to extract period time: {e}')
+
+    @staticmethod
+    def _extract_period(soup: BeautifulSoup, league: str) -> str:
+        try:
+            period = soup.find('div', {'class': 'quarter'})
+            period = period.text.strip()
+            return period if period != 'End' else ( '4th' if league in { 'NBA' } else '2nd' )
+
+        except Exception as e:
+            raise Exception(f'Failed to extract period: {e}')
+
+    @staticmethod
+    def _extract_scores(soup: BeautifulSoup) -> dict[str, dict[str, int]]:
+        try:
+            scores = soup.find_all('div', {'class': 'score-text'})
+            return {
+                'away': { 'total': int(scores[0].text.strip()) },
+                'home': { 'total': int(scores[1].text.strip()) }
+            }
+
+        except Exception as e:
+            raise Exception(f'Failed to extract scores: {e}')
 
     def _extract_and_add_game_info(self, soup: BeautifulSoup, game: dict) -> None:
         """
@@ -105,14 +127,11 @@ class BasketballBoxScoresCollector(BaseCollector):
             if period_time := self._extract_period_time(soup):
                 game['period_time'] = period_time
 
-            if period := soup.find('div', {'class': 'quarter'}):
-                game['period'] = period.text.strip()
+            if period := self._extract_period(soup, game['league']):
+                game['period'] = period
 
-            if scores := soup.find_all('div', {'class': 'score-text'}):
-                game['scores'] = {
-                    'away': { 'total': int(scores[0].text.strip()) },
-                    'home': { 'total': int(scores[1].text.strip()) }
-                }
+            if scores := self._extract_scores(soup):
+                game['scores'] = scores
 
         except Exception as e:
             self.log_message(message=f'Failed to extract game info: {game} {e}', level='EXCEPTION')

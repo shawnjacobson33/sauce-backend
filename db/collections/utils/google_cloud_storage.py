@@ -9,8 +9,9 @@ class GCSUploader:
         self.bucket = self.client.get_bucket(bucket_name)
 
     def upload(self, blob_name: str, json_data: str) -> None:
-        blob = self.bucket.blob(blob_name)
-        blob.upload_from_string(json_data)
+        try:
+            blob = self.bucket.blob(blob_name)
+            blob.upload_from_string(json_data)
 
-
-
+        except Exception as e:
+            raise Exception(f'Failed to upload to GCS: {e}')
