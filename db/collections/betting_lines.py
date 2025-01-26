@@ -316,7 +316,6 @@ class BettingLines(BaseCollection):
             requests = []
             seen_games = set()
             irrelevant_games = set()
-            game_filtered_betting_lines = []
 
             for stored_box_score_doc in stored_box_score_docs:
 
@@ -337,9 +336,6 @@ class BettingLines(BaseCollection):
                         if betting_line['market_domain'] == 'Gamelines'
                     ]
 
-                    if not game_lines_market_domain_betting_lines:
-                        raise InvalidOperation('No game lines to update')
-
                     for betting_line in game_lines_market_domain_betting_lines:
                         if stat_value := game_stats_dict.get(betting_line['market'],
                                                              betting_line['subject']):
@@ -349,25 +345,22 @@ class BettingLines(BaseCollection):
                             )
                             requests.append(update_op)
 
-                # update for player props
-                box_score_stats_dict = PlayerStatsDict(stored_box_score_doc['box_score'])
-                player_prop_lines_market_domain_betting_lines = [
-                    betting_line for betting_line in game_filtered_betting_lines
-                    if betting_line['market_domain'] == 'PlayerProps'
-                ]
+                    # update for player props
+                    box_score_stats_dict = PlayerStatsDict(stored_box_score_doc['box_score'])
+                    player_prop_lines_market_domain_betting_lines = [
+                        betting_line for betting_line in game_filtered_betting_lines
+                        if betting_line['market_domain'] == 'PlayerProps'
+                    ]
 
-                if not player_prop_lines_market_domain_betting_lines:
-                    continue
+                    for betting_line in player_prop_lines_market_domain_betting_lines:
+                        if stat_value := box_score_stats_dict.get(betting_line['market']):
 
-                for betting_line in player_prop_lines_market_domain_betting_lines:
-                    if stat_value := box_score_stats_dict.get(betting_line['market']):
+                            update_op = await self.update_betting_line(
+                                betting_line['_id'], return_op=True, live_stat=stat_value
+                            )
+                            requests.append(update_op)
 
-                        update_op = await self.update_betting_line(
-                            betting_line['_id'], return_op=True, live_stat=stat_value
-                        )
-                        requests.append(update_op)
-
-                seen_games.add(game_id)
+                    seen_games.add(game_id)
 
             if irrelevant_games:
                 self.log_message(level='INFO', message=f'No betting lines for: {irrelevant_games}')

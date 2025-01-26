@@ -15,20 +15,23 @@ MARKET_NAME_STRD_MAP = {
     'Gamelines': {
         # Moneyline
           'Moneyline': 'Moneyline',
-          '1st Quarter Moneyline': '1st Quarter Moneyline',
-          '2nd Quarter Moneyline': '2nd Quarter Moneyline',
-          '1st Half Moneyline': '1st Half Moneyline',
+          '1st Quarter Moneyline': '1Q Moneyline',
+          '2nd Quarter Moneyline': '2Q Moneyline',
+          '1st Half Moneyline': '1H Moneyline',
+          '2nd Half Moneyline': '2H Moneyline',
         # Spread
           'Spread': 'Spread',
           'Point Spread': 'Point Spread',
-          '1st Quarter Point Spread': '1st Quarter Point Spread',
-          '2nd Quarter Point Spread': '2nd Quarter Point Spread',
-          '1st Half Point Spread': '1st Half Point Spread',
+          '1st Quarter Point Spread': '1Q Point Spread',
+          '2nd Quarter Point Spread': '2Q Point Spread',
+          '1st Half Point Spread': '1H Point Spread',
+          '2nd Half Point Spread': '2H Point Spread',
         # Total
           'Total': 'Total',
-          '1st Quarter Total': '1st Quarter Total',
-          '2nd Quarter Total': '2nd Quarter Total',
-          '1st Half Total': '1st Half Total',
+          '1st Quarter Total': '1Q Total',
+          '2nd Quarter Total': '2Q Total',
+          '1st Half Total': '1H Total',
+          '2nd Half Total': '2H Total',
     },
     'PlayerProps': {
         'Basketball': {

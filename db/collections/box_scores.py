@@ -84,7 +84,7 @@ class BoxScores(BaseCollection):
                     # for 2Q stats and beyond -- calculate period stats
                     period_score_dict['stat'] = stat_value - sum(
                         [period_stat_dict['stat'] for period_stat_dict in matching_box_score_stat_periods
-                         if period_stat_dict['period'] < curr_period_num]
+                         if int(period_stat_dict['period']) < curr_period_num]
                     )
                     # update the period stat
                     if curr_period_num != matching_box_score_stat_periods[-1]['period']:
