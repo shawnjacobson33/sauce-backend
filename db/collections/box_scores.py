@@ -75,25 +75,26 @@ class BoxScores(BaseCollection):
             curr_period_num = int(box_score['game']['period'][0])
             matching_box_score = matching_box_score_doc['box_score']
             for stat_label, stat_value in box_score['box_score'].items():
+
                 matching_box_score_stat_dict = matching_box_score[stat_label]
                 matching_box_score_stat_periods = matching_box_score_stat_dict['periods']
-                if len(matching_box_score_stat_periods) > 1:
+
+                period_score_dict = { 'period': curr_period_num, 'stat': stat_value }
+                if matching_box_score_stat_periods:
                     # for 2Q stats and beyond -- calculate period stats
-                    period_stat = stat_value - sum(
-                        [period_stat_dict['stat'] for period_stat_dict in matching_box_score_stat_periods]
+                    period_score_dict['stat'] = stat_value - sum(
+                        [period_stat_dict['stat'] for period_stat_dict in matching_box_score_stat_periods
+                         if period_stat_dict['period'] < curr_period_num]
                     )
                     # update the period stat
-                    if curr_period_num > len(matching_box_score_stat_periods):
-                        matching_box_score_stat_periods.append({ 'period': curr_period_num, 'stat': period_stat })
+                    if curr_period_num != matching_box_score_stat_periods[-1]['period']:
+                        matching_box_score_stat_periods.append(period_score_dict)
+
                     else:
-                        matching_box_score_stat_periods[curr_period_num-1] = {
-                            'period': curr_period_num, 'stat': period_stat
-                        }
+                        matching_box_score_stat_periods[-1] = period_score_dict
                 else:
                     # for 1Q stats only
-                    matching_box_score_stat_periods[0] = {
-                        'period': curr_period_num, 'stat': stat_value
-                    }
+                    matching_box_score_stat_periods.insert(0, period_score_dict)
 
                 # update the total stat
                 matching_box_score_stat_dict['total'] = stat_value

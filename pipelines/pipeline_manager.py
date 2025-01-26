@@ -56,7 +56,7 @@ class PipelineManager(BaseManager):
         try:
             if standardizer := await self._get_standardizer():
                 pipelines = [
-                    GamesPipeline(self.configs['games']).run_pipeline(),
+                    # GamesPipeline(self.configs['games']).run_pipeline(),
                     # RostersPipeline(self.configs['rosters']).run_pipeline(),
                     BoxScoresPipeline(self.configs['box_scores'], standardizer).run_pipeline(),
                     # BettingLinesPipeline(self.configs['betting_lines'], standardizer).run_pipeline(),

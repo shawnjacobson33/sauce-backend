@@ -297,7 +297,7 @@ class BettingLines(BaseCollection):
     def _get_query_for_betting_lines_by_game(box_score_dict: dict) -> dict:
         try:
             return {
-                'game_id': box_score_dict['game_id']
+                'game._id': box_score_dict['game_id']
             }
 
         except Exception as e:
@@ -326,6 +326,7 @@ class BettingLines(BaseCollection):
                     game_filtered_betting_lines = await self.get_betting_lines(query)
 
                     if not game_filtered_betting_lines:
+                        seen_games.add(game_id)
                         irrelevant_games.add(game_id)
                         continue
 
@@ -340,8 +341,8 @@ class BettingLines(BaseCollection):
                         raise InvalidOperation('No game lines to update')
 
                     for betting_line in game_lines_market_domain_betting_lines:
-                        if stat_value := game_stats_dict.get(stored_box_score_doc['market'],
-                                                             stored_box_score_doc['subject']):
+                        if stat_value := game_stats_dict.get(betting_line['market'],
+                                                             betting_line['subject']):
 
                             update_op = await self.update_betting_line(
                                 betting_line['_id'], return_op=True, live_stat=stat_value
@@ -374,7 +375,7 @@ class BettingLines(BaseCollection):
             await self.collection.bulk_write(requests)
 
         except InvalidOperation as e:
-            self.log_message(message=f'No live stats to update: {e}', level='INFO')
+            self.log_message(message=f'No live stats to update: {e}', level='WARNING')
 
         except Exception as e:
             self.log_message(message=f'Failed to update live stats: {e}', level='EXCEPTION')

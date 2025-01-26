@@ -40,7 +40,8 @@ class BoxScoresPipeline(BasePipeline):
             return ((game['period_time'] == '00:00') and (
                     (game['period'] == '4th' and game['league'] == 'NBA') or
                     (game['period'] == '2nd' and game['league'] == 'NCAAM') or
-                    (int(game['period'][0]) > 4)) and
+                    ((int(game['period'][0]) > 4) and game['league'] == 'NBA') or
+                    ((int(game['period'][0]) > 2) and game['league'] == 'NCAAM')) and
                     (game['scores']['away']['total'] - game['scores']['home']['total'] != 0))
 
         except Exception as e:
