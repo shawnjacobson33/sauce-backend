@@ -139,7 +139,9 @@ class BettingLines(BaseCollection):
             list[dict]: The completed betting lines.
         """
         try:
-            return await self.completed_betting_lines_collection.find(*args, **kwargs).to_list()
+            if completed_betting_lines := await self.completed_betting_lines_collection.find(*args, **kwargs).to_list():
+                self.log_message(message=f'Retrieved {len(completed_betting_lines)} completed betting lines', level='INFO')
+                return completed_betting_lines
 
         except Exception as e:
             self.log_message(level='EXCEPTION', message=f'Failed to get completed betting lines: {e}')
@@ -327,6 +329,7 @@ class BettingLines(BaseCollection):
                     if not game_filtered_betting_lines:
                         seen_games.add(game_id)
                         irrelevant_games.add(game_id)
+                        self.log_message(message=f'_update_live_stats(): no betting lines for game {game_id}', level='INFO')
                         continue
 
                     # update for game lines
@@ -336,6 +339,11 @@ class BettingLines(BaseCollection):
                         if betting_line['market_domain'] == 'Gamelines'
                     ]
 
+                    self.log_message(
+                        message=f'_update_live_stats(): found {len(game_lines_market_domain_betting_lines)} game lines for game {game_id}'
+                        , level='INFO')
+
+                    missed_markets = set()
                     for betting_line in game_lines_market_domain_betting_lines:
                         if stat_value := game_stats_dict.get(betting_line['market'],
                                                              betting_line['subject']):
@@ -344,26 +352,42 @@ class BettingLines(BaseCollection):
                                 betting_line['_id'], return_op=True, live_stat=stat_value
                             )
                             requests.append(update_op)
+                        else:
+                            missed_markets.add(betting_line['market'])
 
                     # update for player props
-                    box_score_stats_dict = PlayerStatsDict(stored_box_score_doc['box_score'])
+                    player_stats_dict = PlayerStatsDict(stored_box_score_doc['box_score'])
                     player_prop_lines_market_domain_betting_lines = [
                         betting_line for betting_line in game_filtered_betting_lines
                         if betting_line['market_domain'] == 'PlayerProps'
                     ]
 
+                    self.log_message(
+                        message=f'In _update_live_stats found {len(player_prop_lines_market_domain_betting_lines)} player prop lines for {game_id}',
+                        level='INFO')
+
                     for betting_line in player_prop_lines_market_domain_betting_lines:
-                        if stat_value := box_score_stats_dict.get(betting_line['market']):
+                        if stat_value := player_stats_dict.get(betting_line['market']):
 
                             update_op = await self.update_betting_line(
                                 betting_line['_id'], return_op=True, live_stat=stat_value
                             )
                             requests.append(update_op)
+                        else:
+                            missed_markets.add(betting_line['market'])
+
+
+                    if missed_markets:
+                        self.log_message(
+                            message=f'In _update_live_stats could not get stat for markets in game {game_id}: {missed_markets}',
+                            level='WARNING')
 
                     seen_games.add(game_id)
 
             if irrelevant_games:
                 self.log_message(level='INFO', message=f'No betting lines for: {irrelevant_games}')
+
+
 
             await self.collection.bulk_write(requests)
 
@@ -416,13 +440,15 @@ class BettingLines(BaseCollection):
         Stores completed betting lines in Google Cloud Storage.
         """
         try:
-            completed_betting_lines = await self.get_completed_betting_lines({})
-            betting_lines_json = self._prepare_betting_lines_for_upload(completed_betting_lines)
-            blob_name = f"{datetime.now().strftime('%Y-%m-%d')}.json"
-            self.gcs_uploader.upload(blob_name, betting_lines_json)
+            if completed_betting_lines := await self.get_completed_betting_lines({}):
+                betting_lines_json = self._prepare_betting_lines_for_upload(completed_betting_lines)
+                blob_name = f"{datetime.now().strftime('%Y-%m-%d')}.json"
+                self.gcs_uploader.upload(blob_name, betting_lines_json)
+            else:
+                self.log_message(message='_store_in_gcs(): No completed betting lines to store in GCS', level='INFO')
 
         except Exception as e:
-            self.log_message(level='INFO', message=f'Failed to store completed betting lines in GCS: {e}')
+            self.log_message(message=f'_store_in_gcs(): Failed to store completed betting lines in GCS: {e}', level='EXCEPTION')
 
     @staticmethod
     def _get_projection_for_gcs() -> dict:
@@ -458,7 +484,7 @@ class BettingLines(BaseCollection):
                     await self.completed_betting_lines_collection.insert_many(betting_lines_filtered_for_live_stat)
 
                 else:
-                    self.log_message(message=f'No completed betting lines to store: {game_ids}', level='WARNING')
+                    self.log_message(message=f'store_completed_betting_lines(): No completed betting lines to store because there are no live stats: {game_ids}', level='WARNING')
 
                 await self.delete_betting_lines(betting_lines_filtered_by_game)
 

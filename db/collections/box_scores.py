@@ -72,7 +72,7 @@ class BoxScores(BaseCollection):
             Exception: If there is an error updating the box score document.
         """
         try:
-            curr_period_num = int(box_score['game']['period'][0])
+            curr_period_num = box_score['game']['period'][0]
             matching_box_score = matching_box_score_doc['box_score']
             for stat_label, stat_value in box_score['box_score'].items():
 
@@ -83,8 +83,8 @@ class BoxScores(BaseCollection):
                 if matching_box_score_stat_periods:
                     # for 2Q stats and beyond -- calculate period stats
                     period_score_dict['stat'] = stat_value - sum(
-                        [period_stat_dict['stat'] for period_stat_dict in matching_box_score_stat_periods
-                         if int(period_stat_dict['period']) < curr_period_num]
+                        [matching_box_score_period_stat_dict['stat'] for matching_box_score_period_stat_dict in matching_box_score_stat_periods
+                         if int(matching_box_score_period_stat_dict['period']) < curr_period_num]
                     )
                     # update the period stat
                     if curr_period_num != matching_box_score_stat_periods[-1]['period']:
@@ -129,7 +129,7 @@ class BoxScores(BaseCollection):
             new_box_score_doc = {
                 **{key: value for key, value in box_score.items() if key != 'box_score'},
                 'box_score': {
-                    stat_label: { 'periods': [ {'period': game['period'][0], 'stat': stat_value } ], 'total': stat_value }
+                    stat_label: { 'periods': [ {'period': int(game['period'][0]), 'stat': stat_value } ], 'total': stat_value }
                     for stat_label, stat_value in box_score['box_score'].items()
                 }
             }

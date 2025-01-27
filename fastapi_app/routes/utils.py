@@ -1,9 +1,14 @@
 from datetime import datetime, timedelta
+import os
+import dotenv
 
 import jwt
+from passlib.context import CryptContext
 
 
-SECRET_KEY = 'my_secret_key'
+dotenv.load_dotenv()
+
+SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 ALGO = 'HS256'
 EXPIRES_IN = 3600
 
@@ -21,3 +26,14 @@ def validate_access_token(token: str) -> dict:
         return {'error': 'Token has expired'}
     except jwt.InvalidTokenError:
         return {'error': 'Invalid token'}
+
+
+pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(password, hashed_password)

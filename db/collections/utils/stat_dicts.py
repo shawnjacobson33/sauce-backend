@@ -144,6 +144,8 @@ class GameStatsDict:
         Returns:
             int | None: The value associated with the market, or None if the market is not found.
         """
+        # TODO: TEMPORARY FIX
+        market = market.replace(' Quarter', 'Q').replace(' Half', 'H').replace('1st', '1').replace(' 2nd', '2')
         if period_nums := PERIOD_MAP[league].get(market[:2]):
             return self._get_period_stat_value(market, period_nums, league=league)
 

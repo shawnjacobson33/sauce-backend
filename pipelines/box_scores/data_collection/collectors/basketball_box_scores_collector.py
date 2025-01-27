@@ -88,7 +88,7 @@ class BasketballBoxScoresCollector(BaseCollector):
         try:
             period_time = soup.find('div', {'class': 'time'})
             period_time = period_time.text.strip()
-            return period_time if period_time not in { 'Halftime', 'End', '4th', '2nd', '1st', '3rd', 'OT' }\
+            return period_time if (period_time not in { 'Halftime', 'End', '4th', '2nd', '1st', '3rd' }) and ('OT' not in period_time) \
                 else f'00:00,{period_time}'
 
         except Exception as e:
@@ -106,8 +106,8 @@ class BasketballBoxScoresCollector(BaseCollector):
             if 'OT' in period:
                 overtime_base_period_num = 5 if league == 'NBA' else 3
 
-                period = f'{(int(period[0]) + overtime_base_period_num)  
-                if period[0] != 'O' else overtime_base_period_num}{'th' if overtime_base_period_num == 5 else 'rd'}'
+                converted_overtime_base_period_num = int(period[0]) + overtime_base_period_num if period[0] != 'O' else overtime_base_period_num
+                period = f'{converted_overtime_base_period_num}{'th' if converted_overtime_base_period_num > 3 else 'rd'}'
 
             return period
 
