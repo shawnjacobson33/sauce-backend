@@ -69,43 +69,6 @@ class BettingLines(BaseCollection):
 
         return most_recent_stream_record
 
-    def _get_cursor(self, *args, **kwargs):
-        """
-        Retrieves a cursor for the betting lines collection based on the given arguments.
-
-        Args:
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
-
-        Returns:
-            AsyncIOMotorDatabase.cursor: The cursor for the betting lines collection.
-        """
-        if kwargs.pop('agg', None):
-            return self.collection.aggregate(*args, **kwargs)
-        elif n := kwargs.pop('n', None):
-            return self.collection.find(*args, **kwargs).limit(n)
-
-        return self.collection.find(*args, **kwargs)
-
-    async def _get_most_recent_betting_lines(self, *args, **kwargs) -> list[dict]:
-        """
-        Retrieves the most recent betting lines based on the given arguments.
-
-        Args:
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
-
-        Returns:
-            list[dict]: The most recent betting lines.
-        """
-        most_recent_betting_lines = []
-        async for betting_line in self._get_cursor(*args, **kwargs):
-            most_recent_stream_record = self._get_most_recent_stream_record(betting_line['stream'])
-            most_recent_betting_lines.append(
-                { **{k: v for k, v in betting_line.items() if k != 'stream'}, **most_recent_stream_record }
-            )
-
-        return most_recent_betting_lines
 
     async def get_betting_lines(self, *args, **kwargs) -> list[dict]:
         """
@@ -119,32 +82,26 @@ class BettingLines(BaseCollection):
             list[dict]: The betting lines.
         """
         try:
-            if kwargs.pop('most_recent', None):
-                return await self._get_most_recent_betting_lines(*args, **kwargs)
+            if kwargs.pop('prev_batch', None):
 
-            return await self._get_cursor(*args, **kwargs).to_list()
+                most_recent_betting_lines = []
+                async for betting_line in self.collection.find(*args, **kwargs):
+                    most_recent_betting_lines.append(
+                        {**{k: v for k, v in betting_line.items() if k != 'stream'},
+                         **self._get_most_recent_stream_record(betting_line['stream'])}
+                    )
 
-        except Exception as e:
-            raise Exception(f'Failed to get betting lines: {e}')
+                return most_recent_betting_lines
 
-    async def get_completed_betting_lines(self, *args, **kwargs) -> list[dict]:
-        """
-        Retrieves completed betting lines based on the given arguments.
+            if kwargs.pop('completed', None):
 
-        Args:
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
+                return await self.completed_betting_lines_collection.find(*args, **kwargs).to_list()
 
-        Returns:
-            list[dict]: The completed betting lines.
-        """
-        try:
-            if completed_betting_lines := await self.completed_betting_lines_collection.find(*args, **kwargs).to_list():
-                self.log_message(message=f'Retrieved {len(completed_betting_lines)} completed betting lines', level='INFO')
-                return completed_betting_lines
+            return await self.collection.find({}).to_list()
+
 
         except Exception as e:
-            self.log_message(level='EXCEPTION', message=f'Failed to get completed betting lines: {e}')
+            raise Exception(f'Failed to get betting lines (args: {*args, kwargs}) : {e}')
 
     @staticmethod
     def _create_doc(line: dict) -> dict:
@@ -187,83 +144,63 @@ class BettingLines(BaseCollection):
 
         return record
 
-    async def _update_disappeared_betting_lines(self, seen_betting_lines: list[str], requests: list, batch_timestamp: str):
-        """
-        Updates betting lines that have disappeared.
 
-        Args:
-            seen_betting_lines (list[str]): The list of seen betting lines.
-            requests (list): The list of update requests.
-            batch_timestamp (str): The batch timestamp.
-        """
-        disappeared_betting_lines = await self.get_betting_lines(
-            {'_id': {'$nin': seen_betting_lines}})
-        for disappeared_betting_line in disappeared_betting_lines:
-            stream = disappeared_betting_line['stream']
-            most_recent_record = stream[-1]
-            if len(most_recent_record) != 1:  # Don't need to add an empty record consecutive times
-                stream.append({
-                    'batch_timestamp': batch_timestamp,
-                })
-                update_op = await self.update_betting_line(disappeared_betting_line['_id'], return_op=True,
-                                                           stream=stream)
-                requests.append(update_op)
-
-    async def _update_stream(self, stream: list[dict], new_betting_line: dict, requests: list):
-        """
-        Updates the stream of a betting line.
-
-        Args:
-            stream (list[dict]): The stream of records.
-            new_betting_line (dict): The new betting line data.
-            requests (list): The list of update requests.
-        """
-        most_recent_record = stream[-1]
-        if (not (new_betting_line['line'] == most_recent_record.get('line')) or
-                not (new_betting_line['odds'] == most_recent_record.get('odds'))):
-
-            new_record = self._create_record(new_betting_line)
-            stream.append(new_record)
-            update_op = await self.update_betting_line(new_betting_line['_id'], return_op=True,
-                                                       stream=stream)  # Todo: do you need to replace the entire records field?
-            requests.append(update_op)
-
-    async def store_betting_lines(self, betting_lines: list[dict]) -> int:
+    async def store_betting_lines(self, collected_betting_lines: list[dict]) -> int:
         """
         Stores betting lines in the database.
 
         Args:
-            betting_lines (list[dict]): The list of betting lines to store.
+            collected_betting_lines (list[dict]): The list of betting lines to store.
         """
         try:
             requests = []
-            betting_line_seen_tracker = defaultdict(int)
-            for betting_line_dict in betting_lines:  # Todo: change so it loops through every betting line currently stored and then check if a betting line disappeared for this batch.
-                betting_line_dict_id = betting_line_dict['_id']
-                if betting_line_doc_match := await self.get_betting_line(betting_line_dict_id):
-                    # update stream
-                    stream = betting_line_doc_match['stream']
-                    await self._update_stream(stream, betting_line_dict, requests)
+            collected_betting_line_ids = []
 
-                    # update metrics if they changed
-                    if betting_line_doc_match['metrics'] != betting_line_dict['metrics']:
-                        update_op = await self.update_betting_line(betting_line_dict_id, return_op=True,
-                                                                   metrics=betting_line_dict['metrics'])
+            for collected_betting_line in collected_betting_lines:
+
+                collected_betting_line_id = collected_betting_line['_id']
+                collected_betting_line_ids.append(collected_betting_line_id)
+
+                if stored_betting_line := await self.get_betting_line(collected_betting_line_id):
+
+                    # update stream
+                    stream = stored_betting_line['stream']
+                    most_recent_record = stream[-1]
+                    if (not (collected_betting_line['line'] == most_recent_record['line']) or
+                            not (collected_betting_line['odds'] == most_recent_record['odds'])):
+
+                        new_record = self._create_record(collected_betting_line)
+                        stream.append(new_record)
+                        update_op = await self.update_betting_line(collected_betting_line_id, return_op=True,
+                                                                   stream=stream)  # Todo: do you need to replace the entire records field?
                         requests.append(update_op)
 
+                    # update metrics if they changed
+                    if stored_betting_line['metrics'] != collected_betting_line['metrics']:
+                        update_op = await self.update_betting_line(collected_betting_line_id, return_op=True,
+                                                                   metrics=collected_betting_line['metrics'])
+                        requests.append(update_op)
 
-                elif betting_line_seen_tracker[betting_line_dict_id] == 0:  # For first iteration of batches
-                    # insert a new doc
-                    new_betting_line_doc = self._create_doc(betting_line_dict)
-                    insert_op = pymongo.InsertOne(new_betting_line_doc)
-                    requests.append(insert_op)
+                # insert a new doc
+                new_betting_line_doc = self._create_doc(collected_betting_line)
+                insert_op = pymongo.InsertOne(new_betting_line_doc)
+                requests.append(insert_op)
 
-                betting_line_seen_tracker[betting_line_dict_id] += 1
+            # if stored betting lines don't exist in the collected betting lines, update them
+            stale_betting_lines = await self.get_betting_lines({'_id': {'$nin': collected_betting_line_ids}})
+            for stale_betting_line in stale_betting_lines:
 
-            seen_betting_lines = list(betting_line_seen_tracker.keys())
-            batch_timestamp = betting_lines[0]['batch_timestamp']
-            # if betting lines disappeared, add an empty record to the stream
-            await self._update_disappeared_betting_lines(seen_betting_lines, requests, batch_timestamp)
+                stream = stale_betting_line['stream']
+                most_recent_record = stream[-1]
+
+                # Don't need to add an empty record consecutive times
+                if len(most_recent_record) != 1:
+                    stream.append({
+                        'batch_timestamp': collected_betting_lines[0]['batch_timestamp'],
+                    })
+                    update_op = await self.update_betting_line(stale_betting_line['_id'], return_op=True,
+                                                               stream=stream)
+                    requests.append(update_op)
 
             await self.collection.bulk_write(requests)
             return 1
@@ -274,23 +211,22 @@ class BettingLines(BaseCollection):
         except Exception as e:
             raise Exception(f'Failed to store betting lines: {e}')
 
-    async def update_betting_line(self, unique_id: str, return_op: bool = False, **kwargs):
+    async def update_betting_line(self, betting_line_id: str, **kwargs):
         """
         Updates a betting line in the database.
 
         Args:
-            unique_id (str): The unique ID of the betting line.
-            return_op (bool): Whether to return the update operation.
-            **kwargs: The fields to update.
+            betting_line_id (str): The unique ID of the betting line.
+            **kwargs: The fields to update and along with other options.
 
         Returns:
             pymongo.UpdateOne: The update operation if return_op is True.
         """
         try:
-            if return_op:
-                return pymongo.UpdateOne({ '_id': unique_id }, { '$set': kwargs })
+            if kwargs.pop('return_op', False):
+                return pymongo.UpdateOne({ '_id': betting_line_id }, { '$set': kwargs })
 
-            await self.collection.update_one({ '_id': unique_id }, { '$set': kwargs })
+            await self.collection.update_one({ '_id': betting_line_id }, { '$set': kwargs })
 
         except Exception as e:
             self.log_message(level='EXCEPTION', message=f'Failed to update betting line: {e}')
@@ -387,8 +323,6 @@ class BettingLines(BaseCollection):
             if irrelevant_games:
                 self.log_message(level='INFO', message=f'No betting lines for: {irrelevant_games}')
 
-
-
             await self.collection.bulk_write(requests)
 
         except InvalidOperation as e:
@@ -396,72 +330,6 @@ class BettingLines(BaseCollection):
 
         except Exception as e:
             self.log_message(message=f'Failed to update live stats: {e}', level='EXCEPTION')
-
-    @staticmethod
-    def _restructure_betting_lines_data(betting_lines: list[dict]):
-        """
-        Restructures betting lines data for storage.
-
-        Args:
-            betting_lines (list[dict]): The list of betting lines.
-        """
-        try:
-            for betting_line in betting_lines:
-                final_stat = betting_line.pop('live_stat', None)
-                betting_line['final_stat'] = final_stat
-
-                game = betting_line.pop('game')
-                betting_line['game_id'] = game['_id']
-
-        except Exception as e:
-            raise Exception(f'Failed to restructure betting lines data: {e}')
-
-    @staticmethod
-    def _prepare_betting_lines_for_upload(betting_lines: list[dict]) -> str:
-        """
-        Prepares betting lines data for upload to Google Cloud Storage.
-
-        Args:
-            betting_lines (list[dict]): The list of betting lines.
-
-        Returns:
-            str: The betting lines data as a JSON string.
-        """
-        try:
-            BettingLines._restructure_betting_lines_data(betting_lines)
-            betting_lines_json = json.dumps(betting_lines)
-            return betting_lines_json
-
-        except Exception as e:
-            raise Exception(f'Failed to prepare betting lines for upload: {e}')
-
-    async def _store_in_gcs(self):
-        """
-        Stores completed betting lines in Google Cloud Storage.
-        """
-        try:
-            if completed_betting_lines := await self.get_completed_betting_lines({}):
-                betting_lines_json = self._prepare_betting_lines_for_upload(completed_betting_lines)
-                blob_name = f"{datetime.now().strftime('%Y-%m-%d')}.json"
-                self.gcs_uploader.upload(blob_name, betting_lines_json)
-            else:
-                self.log_message(message='_store_in_gcs(): No completed betting lines to store in GCS', level='INFO')
-
-        except Exception as e:
-            self.log_message(message=f'_store_in_gcs(): Failed to store completed betting lines in GCS: {e}', level='EXCEPTION')
-
-    @staticmethod
-    def _get_projection_for_gcs() -> dict:
-        """
-        Retrieves the projection for Google Cloud Storage upload.
-
-        Returns:
-            dict: The projection dictionary.
-        """
-        return {
-            'url': 0, 'metrics': 0, 'subject': 0, 'bookmaker': 0, 'date': 0, 'label': 0,
-            'league': 0, 'market': 0, 'market_domain': 0
-        }
 
     async def store_completed_betting_lines(self, game_ids: list[dict] = None, in_gcs: bool = False) -> None:
         """
@@ -474,22 +342,26 @@ class BettingLines(BaseCollection):
         # Todo: ANY FINAL STATS TO ADD?, OUTPUT THE SIZE OF THE JSON FILE
         try:
             if game_ids:
-                optimized_projection = self._get_projection_for_gcs()
+                optimized_projection = "get_projection_for_gcs()"
                 betting_lines_filtered_by_game = await self.get_betting_lines({
-                    'game._id': { '$in': game_ids },
+                    'game._id': {'$in': game_ids},
                 }, optimized_projection)
-                if betting_lines_filtered_for_live_stat := [ # only want to store betting lines that have a final box score stat
+                if betting_lines_filtered_for_live_stat := [
+                    # only want to store betting lines that have a final box score stat
                     betting_line for betting_line in betting_lines_filtered_by_game if betting_line.get('live_stat')
                 ]:
-                    await self.completed_betting_lines_collection.insert_many(betting_lines_filtered_for_live_stat)
+                    await self.completed_betting_lines_collection.insert_many(
+                        betting_lines_filtered_for_live_stat)
 
                 else:
-                    self.log_message(message=f'store_completed_betting_lines(): No completed betting lines to store because there are no live stats: {game_ids}', level='WARNING')
+                    self.log_message(
+                        message=f'store_completed_betting_lines(): No completed betting lines to store because there are no live stats: {game_ids}',
+                        level='WARNING')
 
-                await self.delete_betting_lines(betting_lines_filtered_by_game)
+                # await self.delete_betting_lines(betting_lines_filtered_by_game)
 
             if in_gcs:
-                await self._store_in_gcs()
+                # await self._store_in_gcs()
                 await self.completed_betting_lines_collection.delete_many({})
 
         except Exception as e:

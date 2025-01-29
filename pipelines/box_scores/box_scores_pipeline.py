@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 
 from db import db
@@ -85,7 +86,7 @@ class BoxScoresPipeline(BasePipeline):
             game_ids = [game['_id'] for game in games]
             await db.betting_lines.store_completed_betting_lines(game_ids=game_ids)
             await db.games.delete_games(game_ids)
-            await db.box_scores.delete_box_scores(game_ids)
+            # await db.box_scores.delete_box_scores(game_ids)  # Todo: temporary
 
         except Exception as e:
             raise Exception(f"Error in _cleanup_finished_games: {e}")
@@ -114,6 +115,8 @@ class BoxScoresPipeline(BasePipeline):
         try:
             if self.configs['reset']:
                 await db.box_scores.delete_box_scores({})
+
+            await asyncio.sleep(20)
 
         except Exception as e:
             self.log_message(f"Error in _configure_pipeline: {e}", level='EXCEPTION')

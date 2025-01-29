@@ -2,22 +2,25 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from db import collections
 
-client = AsyncIOMotorClient('mongodb://localhost:27017')
 
-database = client['sauce-dev']
+class Database:
+    def __init__(self, client_name: str, database_name: str):
+        self.client = AsyncIOMotorClient(client_name)
 
-metadata = collections.Metadata(database)
+        self.database = self.client[database_name]
 
-pipeline_stats = collections.PipelineStats(database)
+        self.metadata = collections.Metadata(self.database)
 
-betting_lines = collections.BettingLines(database)
+        self.pipeline_stats = collections.PipelineStats(self.database)
 
-teams = collections.Teams(database)
+        self.betting_lines = collections.BettingLines(self.database)
 
-subjects = collections.Subjects(database)
+        self.teams = collections.Teams(self.database)
 
-games = collections.Games(database)
+        self.subjects = collections.Subjects(self.database)
 
-box_scores = collections.BoxScores(database)
+        self.games = collections.Games(self.database)
 
-users = collections.Users(database)
+        self.box_scores = collections.BoxScores(self.database)
+
+        self.users = collections.Users(self.database)

@@ -6,4 +6,6 @@ redis.conf
 __pycache__/
 *.pyc
 venv
+sauce-betting-lines-6b82f731b2ea.json
+.env
 

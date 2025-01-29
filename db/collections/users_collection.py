@@ -9,7 +9,7 @@ class Users(BaseCollection):
         super().__init__('users', db)
 
     async def get_user(self, **kwargs) -> dict | None:
-        return await self.collection.find_one(kwargs)
+        return await self.collection.find_one(kwargs, { '_id': 0 })
 
     async def update_user(self, **kwargs) -> int:
         return await self.collection.update_one(kwargs)
@@ -21,7 +21,4 @@ class Users(BaseCollection):
         return await self.collection.delete_one(kwargs)
 
     async def is_username_valid(self, username: str) -> bool:
-        if await self.collection.find_one({ 'username': username }):
-            return True
-
-        return False
+        return not bool(await self.collection.find_one({'username': username}))

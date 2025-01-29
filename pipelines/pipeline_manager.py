@@ -68,7 +68,7 @@ class PipelineManager(BaseManager):
         except Exception as e:
             self.log_message(f'Failed to run pipelines: {e}', level='EXCEPTION')
 
-
+l
 if __name__ == '__main__':
     from pipelines.configs import load_configs
 

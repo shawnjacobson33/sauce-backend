@@ -39,3 +39,4 @@ class GCSUploader:
 
         except Exception as e:
             raise Exception(f'upload(): Failed to upload to GCS: {e}')
+

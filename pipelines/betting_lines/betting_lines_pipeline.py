@@ -1,3 +1,4 @@
+import asyncio
 import time
 from datetime import datetime
 
@@ -58,6 +59,8 @@ class BettingLinesPipeline(BasePipeline):
                 await db.database['betting_lines'].delete_many({})
                 await db.database['completed_betting_lines'].delete_many({})
                 await db.database['pipeline_stats'].delete_many({})
+
+            await asyncio.sleep(20)
 
         except Exception as e:
             self.log_message(message=f'Failed to configure pipeline: {e}', level='EXCEPTION')
