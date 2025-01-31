@@ -3,7 +3,7 @@ from datetime import datetime
 
 from bs4 import BeautifulSoup
 
-from db import db
+from db import dev_db as db
 from pipelines.base.base_collector import BaseCollector, collector_logger
 from pipelines.utils import utilities as utils
 from pipelines.utils.exceptions import RequestingError

@@ -1,7 +1,8 @@
 import json
 from datetime import datetime
 
-from db import db
+
+from db import dev_db
 from db.collections.utils import GCSUploader
 
 
@@ -61,7 +62,7 @@ async def store_in_gcs():
     Stores completed betting lines in Google Cloud Storage.
     """
     projection = get_projection_for_gcs()  # Todo: Temporary Fix
-    if betting_lines := await db.betting_lines.get_betting_lines({}, projection=projection):  # Todo: Temporary Fix
+    if betting_lines := await dev_db.betting_lines.get_betting_lines({}, projection=projection):  # Todo: Temporary Fix
         betting_lines_json = prepare_betting_lines_for_upload(betting_lines)  # Todo: Temporary Fix
         blob_name = f"{datetime.now().strftime('%Y-%m-%d')}.json"
         uploader = GCSUploader(bucket_name='betting-lines')

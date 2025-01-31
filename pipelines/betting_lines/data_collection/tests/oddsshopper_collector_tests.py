@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 
-from db import db
+from db import dev_db as db
 from pipelines.configs import load_configs
 from pipelines.utils import Standardizer
 from pipelines.betting_lines.data_collection.collectors import OddsShopperCollector

@@ -3,7 +3,7 @@ import time
 
 import modin.pandas as pd
 
-from db import db
+from db import dev_db as db
 from pipelines.utils.exceptions import ProcessingError
 
 

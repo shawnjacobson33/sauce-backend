@@ -4,7 +4,7 @@ from datetime import datetime
 
 from loguru import logger
 
-from db import db
+from db import dev_db as db
 from pipelines.utils import utilities as utils
 
 

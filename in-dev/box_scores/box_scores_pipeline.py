@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime
 
-from db import db
+from db import dev_db as db
 from pipelines.utils import Standardizer
 from pipelines.base.base_pipeline import BasePipeline, pipeline_logger
 from pipelines.box_scores.data_collection import BoxScoresDataCollectionManager

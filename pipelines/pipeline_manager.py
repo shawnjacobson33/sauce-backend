@@ -1,11 +1,10 @@
 import asyncio
 
-from db import db
+from db import dev_db as db
 from pipelines.base import BaseManager
 
 from pipelines.games import GamesPipeline
 from pipelines.rosters import RostersPipeline
-from pipelines.box_scores import BoxScoresPipeline
 from pipelines.betting_lines import BettingLinesPipeline
 from pipelines.storage_pipeline import GCSPipeline
 from pipelines.utils import Standardizer
@@ -56,11 +55,10 @@ class PipelineManager(BaseManager):
         try:
             if standardizer := await self._get_standardizer():
                 pipelines = [
-                    GamesPipeline(self.configs['games']).run_pipeline(),
-                    RostersPipeline(self.configs['rosters']).run_pipeline(),
-                    BoxScoresPipeline(self.configs['box_scores'], standardizer).run_pipeline(),
+                    # GamesPipeline(self.configs['games']).run_pipeline(),
+                    # RostersPipeline(self.configs['rosters']).run_pipeline(),
                     BettingLinesPipeline(self.configs['betting_lines'], standardizer).run_pipeline(),
-                    GCSPipeline(self.configs['gcs']).run_pipeline()
+                    # GCSPipeline(self.configs['gcs']).run_pipeline()
                 ]
 
                 await asyncio.gather(*pipelines)
@@ -68,7 +66,7 @@ class PipelineManager(BaseManager):
         except Exception as e:
             self.log_message(f'Failed to run pipelines: {e}', level='EXCEPTION')
 
-l
+
 if __name__ == '__main__':
     from pipelines.configs import load_configs
 

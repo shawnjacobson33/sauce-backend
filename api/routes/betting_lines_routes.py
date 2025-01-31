@@ -1,4 +1,4 @@
-from db import db
+from db import dev_db
 
 from fastapi.routing import APIRouter
 
@@ -19,17 +19,26 @@ async def get_betting_lines():
         'market_domain': 0,
         'date': 0,
     }
-    betting_lines = await db.betting_lines.get_betting_lines(
+    betting_lines = await dev_db.betting_lines.get_betting_lines(
         query,
         proj,
         most_recent=True,
-        n=50
     )
-    for betting_line in betting_lines:
+    count = 0
+    valid_betting_lines = []
+
+    betting_lines = [betting_line for betting_line in betting_lines if betting_line['metrics']['ev'] != float('nan')]
+    for betting_line in sorted(betting_lines, key=lambda x: x['metrics']['ev'], reverse=True):
+        if count == 50:
+            break
+
         game = betting_line.pop('game')
         betting_line['game'] = f'{game['away_team']} @ {game["home_team"]}'
 
         metrics = betting_line.pop('metrics')
-        betting_line['ev'] = metrics['ev']
 
-    return betting_lines
+        betting_line['ev'] = metrics['ev']
+        valid_betting_lines.append(betting_line)
+        count += 1
+
+    return valid_betting_lines

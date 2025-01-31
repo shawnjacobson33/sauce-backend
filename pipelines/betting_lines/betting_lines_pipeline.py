@@ -2,7 +2,7 @@ import asyncio
 import time
 from datetime import datetime
 
-from db import db
+from db import dev_db as db
 from pipelines.utils import Standardizer
 from pipelines.base.base_pipeline import BasePipeline, pipeline_logger
 from pipelines.betting_lines.data_collection import BettingLinesDataCollectionManager
@@ -75,7 +75,7 @@ class BettingLinesPipeline(BasePipeline):
         """
         try:
             batch_timestamp = datetime.now()
-            db.pipeline_stats.update_batch_details(batch_timestamp)
+            # db.pipeline_stats.update_batch_details(batch_timestamp)
 
             betting_lines_dc_manager = BettingLinesDataCollectionManager(self.configs['data_collection'],
                                                                          self.standardizer)

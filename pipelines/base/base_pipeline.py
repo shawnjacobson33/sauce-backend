@@ -2,7 +2,7 @@ import asyncio
 import functools
 import time
 
-from db import db
+from db import dev_db as db
 
 
 def pipeline_logger(pipeline_func):

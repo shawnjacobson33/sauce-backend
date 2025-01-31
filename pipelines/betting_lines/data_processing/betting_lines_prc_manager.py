@@ -1,6 +1,6 @@
 import pandas as pd
 
-from db import db
+from db import dev_db as db
 from pipelines.betting_lines.data_processing import processors
 from pipelines.base import BaseManager
 

@@ -40,7 +40,7 @@ def _parse_teams(collected_teams: list, league: str, html: str) -> None:
                                             })
 
 async def run_cbssports_team_names_collector() -> None:
-    from db import db
+    from db import dev_db as db
     collected_teams = []
     tasks = []
     for league in CONFIGS['valid_leagues']:

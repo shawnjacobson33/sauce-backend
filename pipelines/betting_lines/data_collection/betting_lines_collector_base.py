@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from db import db
+from db import dev_db as db
 from pipelines import utils
 from pipelines.base.base_collector import BaseCollector
 from pipelines.utils import Standardizer

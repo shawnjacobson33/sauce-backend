@@ -1,6 +1,4 @@
-import json
 from collections import defaultdict
-from datetime import datetime
 
 import pymongo
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -34,22 +32,6 @@ class BettingLines(BaseCollection):
         self.completed_betting_lines_collection = self.db['completed_betting_lines']
 
         self.gcs_uploader = GCSUploader(bucket_name='betting-lines')
-
-    async def get_betting_line(self, query: dict) -> dict:
-        """
-        Retrieves a single betting line document based on the given query.
-
-        Args:
-            query (dict): The query to find the betting line.
-
-        Returns:
-            dict: The betting line document.
-        """
-        try:
-            return await self.collection.find_one(query)
-
-        except Exception as e:
-            self.log_message(level='EXCEPTION', message=f'Failed to get betting line: {e}')
 
     @staticmethod
     def _get_most_recent_stream_record(stream: list[dict]):
@@ -115,7 +97,7 @@ class BettingLines(BaseCollection):
             dict: The new betting line document.
         """
         record_fields = {'batch_timestamp', 'collection_timestamp', 'line', 'odds'}
-        record = BettingLines._create_record(line)
+        record = BettingLines._create_new_record(line)
         if not line['metrics'].get('ev'):
             record_fields.add('ev_formula')
 
@@ -125,21 +107,21 @@ class BettingLines(BaseCollection):
         }
 
     @staticmethod
-    def _create_record(line: dict) -> dict:
+    def _create_new_record(collected_betting_line: dict) -> dict:
         """
         Creates a new record for the betting line stream.
 
         Args:
-            line (dict): The betting line data.
+            collected_betting_line (dict): The betting line data.
 
         Returns:
             dict: The new record.
         """
         record = {
-            'batch_timestamp': line['batch_timestamp'],
-            'collection_timestamp': line['collection_timestamp'],
-            'line': line['line'],
-            'odds': line['odds'],
+            'batch_timestamp': collected_betting_line['batch_timestamp'],
+            'collection_timestamp': collected_betting_line['collection_timestamp'],
+            'lines': [ collected_betting_line['line'] ],  # one betting line could have multiple options for "numeric lines" to bet on
+            'odds': [ collected_betting_line['odds'] ],  # same reason as above
         }
 
         return record
@@ -153,57 +135,128 @@ class BettingLines(BaseCollection):
             collected_betting_lines (list[dict]): The list of betting lines to store.
         """
         try:
-            requests = []
-            collected_betting_line_ids = []
+            if len(collected_betting_lines) == 0:
+                raise ValueError("No betting lines to store!")
 
+            collected_betting_line_update_queries = defaultdict(lambda: defaultdict(dict))
+            collected_betting_line_insert_docs = defaultdict(dict)
+
+            # gets all stored betting lines to limit network requests
+            stored_betting_lines = {
+                betting_line['_id']: {k: v for k, v in betting_line if k != '_id'}
+                async for betting_line in self.collection.find({}).to_list()
+            }
+
+            # first pass to get all updates and inserts
             for collected_betting_line in collected_betting_lines:
 
+                # frequently accessed data
                 collected_betting_line_id = collected_betting_line['_id']
-                collected_betting_line_ids.append(collected_betting_line_id)
+                collected_betting_line_num_line = collected_betting_line['line']
+                collected_betting_line_odds = collected_betting_line['odds']
 
-                if stored_betting_line := await self.get_betting_line(collected_betting_line_id):
+                # does the betting line already exist in the db?
+                if stored_betting_line := stored_betting_lines.get(collected_betting_line_id):
 
-                    # update stream
+                    # frequently accessed data
                     stream = stored_betting_line['stream']
                     most_recent_record = stream[-1]
-                    if (not (collected_betting_line['line'] == most_recent_record['line']) or
-                            not (collected_betting_line['odds'] == most_recent_record['odds'])):
+                    collected_betting_line_metrics = collected_betting_line['metrics']
 
-                        new_record = self._create_record(collected_betting_line)
-                        stream.append(new_record)
-                        update_op = await self.update_betting_line(collected_betting_line_id, return_op=True,
-                                                                   stream=stream)  # Todo: do you need to replace the entire records field?
-                        requests.append(update_op)
+                    # check if data has updated or not
+                    line_or_odds_moved = ((collected_betting_line_num_line not in most_recent_record['line']) or
+                            (collected_betting_line_odds not in most_recent_record['odds']))
+                    metrics_changed = collected_betting_line_metrics != stored_betting_line['metrics']
 
-                    # update metrics if they changed
-                    if stored_betting_line['metrics'] != collected_betting_line['metrics']:
-                        update_op = await self.update_betting_line(collected_betting_line_id, return_op=True,
-                                                                   metrics=collected_betting_line['metrics'])
-                        requests.append(update_op)
+                    # set the update query based off of conditions above
+                    update_query = collected_betting_line_update_queries[collected_betting_line_id]
 
-                # insert a new doc
-                new_betting_line_doc = self._create_doc(collected_betting_line)
-                insert_op = pymongo.InsertOne(new_betting_line_doc)
+                    if line_or_odds_moved:
+
+                        # if this betting line has multiple numeric lines to bet on
+                        if update_push_query := update_query['$push']:
+
+                            # readability
+                            line_and_odds_are_different = (
+                                (collected_betting_line_num_line not in
+                                (update_push_stream_lines_query := update_push_query['stream.lines']['$each'])) and
+                                (collected_betting_line_odds not in
+                                (update_push_stream_odds_query := update_push_query['stream.odds']['$each']))
+                            )
+
+                            # don't want to add a duplicate -- important for scaling out to more collectors
+                            if line_and_odds_are_different:
+                                update_push_stream_lines_query.append(collected_betting_line_num_line)
+                                update_push_stream_odds_query.append(collected_betting_line_odds)
+
+                        else:
+                            # otherwise just add a new record to the stream
+                            update_push_query['stream'] = self._create_new_record(collected_betting_line)
+
+                    if metrics_changed:
+                        update_query['$set']['metrics'] = collected_betting_line_metrics
+
+                else:
+                    # does a doc already exist for this line, if it does then there are multiple num lines to bet on.
+                    if doc := collected_betting_line_insert_docs[collected_betting_line_id]['doc']:
+
+                        # for readability
+                        new_record = doc['stream'][0]
+                        line_and_odds_are_different = (
+                            collected_betting_line_num_line not in (new_record_lines := new_record['lines']) and
+                            collected_betting_line_odds not in (new_record_odds := new_record['odds'])
+                        )
+
+                        # don't want to add a duplicate -- important for scaling out to more collectors
+                        if line_and_odds_are_different:
+                            new_record_lines.append(collected_betting_line_num_line)
+                            new_record_odds.append(collected_betting_line_odds)
+
+                    else:
+                        doc = self._create_doc(collected_betting_line)
+
+            # need to batch all inserts and updates for efficiency
+            requests = []
+
+            # create update operations
+            for collected_betting_line_id, update_query in collected_betting_line_update_queries.items():
+                update_op = pymongo.UpdateOne({'_id': collected_betting_line_id}, update_query)
+                requests.append(update_op)
+
+            # create insert operations
+            for doc in collected_betting_line_insert_docs.values():
+                insert_op = pymongo.InsertOne(doc)
                 requests.append(insert_op)
 
-            # if stored betting lines don't exist in the collected betting lines, update them
-            stale_betting_lines = await self.get_betting_lines({'_id': {'$nin': collected_betting_line_ids}})
-            for stale_betting_line in stale_betting_lines:
+            # were any of the stored betting lines not collected?
+            for stored_betting_line_doc in stored_betting_lines:
 
-                stream = stale_betting_line['stream']
-                most_recent_record = stream[-1]
+                # readability
+                stored_betting_line_was_not_collected = (
+                    (stored_betting_line_doc['_id'] not in collected_betting_line_insert_docs.keys()) and
+                    (stored_betting_line_doc['_id'] not in collected_betting_line_update_queries.keys())
+                )
 
-                # Don't need to add an empty record consecutive times
-                if len(most_recent_record) != 1:
-                    stream.append({
-                        'batch_timestamp': collected_betting_lines[0]['batch_timestamp'],
-                    })
-                    update_op = await self.update_betting_line(stale_betting_line['_id'], return_op=True,
-                                                               stream=stream)
-                    requests.append(update_op)
+                if stored_betting_line_was_not_collected:
+
+                    # frequently accessed
+                    stream = stored_betting_line_doc['stream']
+
+                    # only need to add one empty record
+                    if len(stream[-1]) > 1:
+
+                        # add a sentinel element of sorts to the stream
+                        stream.append({
+                            'batch_timestamp': collected_betting_lines[0]['batch_timestamp']
+                        })
+
+                        # add the update operation to the batch of requests
+                        update_op = pymongo.UpdateOne(
+                            {'_id': stored_betting_line_doc['_id']}, {'$set': { 'stream': stream } }
+                        )
+                        requests.append(update_op)
 
             await self.collection.bulk_write(requests)
-            return 1
 
         except InvalidOperation as e:
             self.log_message(message=f'No betting lines to store: {e}', level='WARNING')
@@ -224,7 +277,7 @@ class BettingLines(BaseCollection):
         """
         try:
             if kwargs.pop('return_op', False):
-                return pymongo.UpdateOne({ '_id': betting_line_id }, { '$set': kwargs })
+                return
 
             await self.collection.update_one({ '_id': betting_line_id }, { '$set': kwargs })
 

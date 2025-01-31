@@ -1,7 +1,7 @@
 import asyncio
 import streamlit as st
 
-from db import db
+from db import dev_db as db
 
 from pipelines.configs import load_configs
 from pipelines import PipelineManager

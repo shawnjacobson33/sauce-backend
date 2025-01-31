@@ -1,4 +1,4 @@
-from db import db
+from db import dev_db as db
 from api.models import User
 from api.routes.utils import create_access_token, hash_password, verify_password
 

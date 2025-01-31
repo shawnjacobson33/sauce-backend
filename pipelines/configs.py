@@ -37,13 +37,6 @@ _CONFIGS = {
             'valid_leagues': {'NBA', 'NCAAM'},
         }
     },
-    'box_scores': {
-        'reset': True,
-        'throttle': 60,
-        'data_collection': {
-            'valid_leagues': {'NBA', 'NCAAM'},
-        }
-    },
     'gcs': {
         'throttle': 120,
     }

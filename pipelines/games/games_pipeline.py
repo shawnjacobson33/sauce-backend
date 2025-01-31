@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from db import db
+from db import dev_db as db
 from pipelines.base.base_pipeline import BasePipeline, pipeline_logger
 from pipelines.games.data_collection import GamesDataCollectionManager
 

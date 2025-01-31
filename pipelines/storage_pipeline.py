@@ -1,4 +1,4 @@
-from db import db
+from db import dev_db as db
 from pipelines.base.base_pipeline import BasePipeline, pipeline_logger
 
 

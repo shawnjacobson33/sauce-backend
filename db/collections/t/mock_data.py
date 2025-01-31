@@ -55,7 +55,8 @@ MOCK_COLLECTED_BETTING_LINE = {
 
 # the document constructed during storage time
 MOCK_STORED_BETTING_LINE = {
-    **{k: v for k, v in MOCK_COLLECTED_BETTING_LINE.items() if k != 'stream'},
+    **{k: v for k, v in MOCK_COLLECTED_BETTING_LINE.items()
+       if k not in {'batch_timestamp', 'collection_timestamp', 'odds', 'line'}},
     'stream': [ {k: v for k, v in MOCK_COLLECTED_BETTING_LINE.items()
                  if k in {'batch_timestamp', 'collection_timestamp', 'odds', 'line'}} ]
 }

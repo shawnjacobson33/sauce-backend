@@ -4,7 +4,9 @@ from db import collections
 
 
 class Database:
+
     def __init__(self, client_name: str, database_name: str):
+
         self.client = AsyncIOMotorClient(client_name)
 
         self.database = self.client[database_name]
@@ -21,6 +23,8 @@ class Database:
 
         self.games = collections.Games(self.database)
 
-        self.box_scores = collections.BoxScores(self.database)
-
         self.users = collections.Users(self.database)
+
+
+dev_db = Database('mongodb://localhost:27017/', 'sauce-dev')
+test_db = Database('mongodb://localhost:27017/', 'sauce-test')
