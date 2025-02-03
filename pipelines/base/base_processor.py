@@ -254,24 +254,16 @@ class BaseProcessor:
             betting_line (dict): The betting line dictionary.
         """
         try:
-            if isinstance(betting_line['url'], float):
-                del betting_line['url']
 
-            if isinstance(betting_line['extra_source_stats'], float):
-                del betting_line['extra_source_stats']
+            del betting_line['impl_prb']
 
-            metrics_dict = {
-                'impl_prb': betting_line.pop('impl_prb')
-            }
+            metrics_dict = dict()
 
             if (tw_prb := betting_line.pop('tw_prb')) != float('NaN'):
                 metrics_dict['tw_prb'] = tw_prb
 
             if (ev := betting_line.pop('ev')) != float('NaN'):
                 metrics_dict['ev'] = ev
-
-            if (ev_formula := betting_line.pop('ev_formula')) != float('NaN'):
-                metrics_dict['ev_formula'] = ev_formula
 
             betting_line['metrics'] = metrics_dict
 

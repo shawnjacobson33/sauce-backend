@@ -416,7 +416,6 @@ class OddsShopperCollector(BaseBettingLinesCollector):
                                                         'odds': odds,
                                                     }
 
-                                                    self._add_extra_source_stats(hold, outcome, betting_line_dict)
                                                     self._store_and_report(betting_line_dict)
 
     async def _gather_betting_lines_requests(self, matchups_resp: dict):

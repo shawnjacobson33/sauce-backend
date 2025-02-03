@@ -38,14 +38,14 @@ class BettingLinesPipeline(BasePipeline):
         Raises:
             Exception: If an error occurs while storing the betting lines.
         """
-        try:
-            start_time = time.time()
-            if await db.betting_lines.store_betting_lines(betting_lines):
-                self.log_message(message=f'Successfully stored {len(betting_lines)} betting lines', level='INFO')
-                self.times['store_betting_lines_time'] = round(time.time() - start_time, 2)
+        # try:
+        start_time = time.time()
+        if await db.betting_lines.store_betting_lines(betting_lines):
+            self.log_message(message=f'Successfully stored {len(betting_lines)} betting lines', level='INFO')
+            self.times['store_betting_lines_time'] = round(time.time() - start_time, 2)
 
-        except Exception as e:
-            self.log_message(message=f'Error storing betting lines: {e}', level='EXCEPTION')
+        # except Exception as e:
+        #     self.log_message(message=f'Error storing betting lines: {e}', level='EXCEPTION')
 
     async def _configure_pipeline(self) -> None:
         """
@@ -73,21 +73,21 @@ class BettingLinesPipeline(BasePipeline):
         Raises:
             Exception: If an error occurs during the pipeline execution.
         """
-        try:
-            batch_timestamp = datetime.now()
-            # db.pipeline_stats.update_batch_details(batch_timestamp)
+        # try:
+        batch_timestamp = datetime.now()
+        # db.pipeline_stats.update_batch_details(batch_timestamp)
 
-            betting_lines_dc_manager = BettingLinesDataCollectionManager(self.configs['data_collection'],
-                                                                         self.standardizer)
-            betting_lines_container = await betting_lines_dc_manager.run_collectors(
-                batch_timestamp)  # Todo: need to collect game markets also
+        betting_lines_dc_manager = BettingLinesDataCollectionManager(self.configs['data_collection'],
+                                                                     self.standardizer)
+        betting_lines_container = await betting_lines_dc_manager.run_collectors(
+            batch_timestamp)  # Todo: need to collect game markets also
 
-            betting_lines_prc_manager = BettingLinesDataProcessingManager(self.configs['data_processing'],
-                                                                          betting_lines_container)
-            betting_lines_container = await betting_lines_prc_manager.run_processors()
+        betting_lines_prc_manager = BettingLinesDataProcessingManager(self.configs['data_processing'],
+                                                                      betting_lines_container)
+        betting_lines_container = await betting_lines_prc_manager.run_processors()
 
-            await self._store_betting_lines(betting_lines_container)
-            await db.pipeline_stats.update_daily_stats(datetime.today())
+        await self._store_betting_lines(betting_lines_container)
+        await db.pipeline_stats.update_daily_stats(datetime.today())
 
-        except Exception as e:
-            self.log_message(message=f'Failed to run pipeline: {e}', level='EXCEPTION')
+        # except Exception as e:
+            # self.log_message(message=f'Failed to run pipeline: {e}', level='EXCEPTION')

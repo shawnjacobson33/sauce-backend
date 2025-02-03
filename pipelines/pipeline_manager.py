@@ -52,19 +52,18 @@ class PipelineManager(BaseManager):
         Raises:
             Exception: If an error occurs during the pipeline execution.
         """
-        try:
-            if standardizer := await self._get_standardizer():
-                pipelines = [
-                    # GamesPipeline(self.configs['games']).run_pipeline(),
-                    # RostersPipeline(self.configs['rosters']).run_pipeline(),
-                    BettingLinesPipeline(self.configs['betting_lines'], standardizer).run_pipeline(),
-                    # GCSPipeline(self.configs['gcs']).run_pipeline()
-                ]
+        # try:
+        if standardizer := await self._get_standardizer():
+            pipelines = [
+                # GamesPipeline(self.configs['games']).run_pipeline(),
+                # RostersPipeline(self.configs['rosters']).run_pipeline(),
+                BettingLinesPipeline(self.configs['betting_lines'], standardizer).run_pipeline(),
+            ]
 
-                await asyncio.gather(*pipelines)
+            await asyncio.gather(*pipelines)
 
-        except Exception as e:
-            self.log_message(f'Failed to run pipelines: {e}', level='EXCEPTION')
+        # except Exception as e:
+        #     self.log_message(f'Failed to run pipelines: {e}', level='EXCEPTION')
 
 
 if __name__ == '__main__':
